@@ -1,0 +1,68 @@
+{{- define "jupyterhub.traefik.yaml" -}}
+# Content of traefik.yaml to be merged merged with
+# proxy.traefik.extraStaticConfig.
+# ----------------------------------------------------------------------------
+
+# Config of logs about web requests
+#
+# ref: https://docs.traefik.io/observability/access-logs/
+accessLog:
+  # Redact commonly sensitive headers
+  fields:
+    headers:
+      names:
+        Authorization: redacted
+        Cookie: redacted
+        Set-Cookie: redacted
+        X-Xsrftoken: redacted
+  # Only log errors
+  filters:
+    statusCodes:
+      - 500-599
+
+# Automatically acquire certificates certificates form a Certificate
+# Authority (CA) like Let's Encrypt using the ACME protocol's HTTP-01
+# challenge.
+#
+# ref: https://docs.traefik.io/https/acme/#certificate-resolvers
+certificatesResolvers:
+  default:
+    acme:
+      caServer: {{ .Values.proxy.https.letsencrypt.acmeServer }}
+      email: {{ .Values.proxy.https.letsencrypt.contactEmail }}
+      httpChallenge:
+        entryPoint: http
+      storage: /etc/acme/acme.json
+
+# Let Traefik listen to port 80 and port 443
+#
+# ref: https://docs.traefik.io/routing/entrypoints/
+entryPoints:
+  # Port 80, used for:
+  # - ACME HTTP-01 challenges
+  # - Redirects to HTTPS
+  http:
+    address: ':8080'
+  # Port 443, used for:
+  # - TLS Termination Proxy, where HTTPS transitions to HTTP.
+  https:
+    address: ':8443'
+    # Configure a high idle timeout for our websockets connections
+    transport:
+      respondingTimeouts:
+        idleTimeout: 10m0s
+
+# Config of logs about what happens to Traefik itself (startup,
+# configuration, events, shutdown, and so on).
+#
+# ref: https://docs.traefik.io/observability/logs
+log:
+  level: {{ if .Values.debug.enabled -}} DEBUG {{- else -}} WARN {{- end }}
+
+# Let Traefik monitor another file we mount for dynamic configuration. As we
+# mount this file through this configmap, we can make a `kubectl edit` on the
+# configmap and have Traefik update on changes to dynamic.yaml.
+providers:
+  file:
+    filename: /etc/traefik/dynamic.yaml
+{{- end }}

@@ -1,0 +1,85 @@
+{{- if .Values.scheduling.userScheduler.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "jupyterhub.user-scheduler-deploy.fullname" . }}
+  labels:
+    {{- include "jupyterhub.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.scheduling.userScheduler.replicas }}
+  selector:
+    matchLabels:
+      {{- include "jupyterhub.matchLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "jupyterhub.matchLabels" . | nindent 8 }}
+      annotations:
+        checksum/config-map: {{ include (print $.Template.BasePath "/scheduling/user-scheduler/configmap.yaml") . | sha256sum }}
+    spec:
+      {{- if .Values.rbac.enabled }}
+      serviceAccountName: {{ include "jupyterhub.user-scheduler-deploy.fullname" . }}
+      {{- end }}
+      {{- if .Values.scheduling.podPriority.enabled }}
+      priorityClassName: {{ include "jupyterhub.priority.fullname" . }}
+      {{- end }}
+      nodeSelector: {{ toJson .Values.scheduling.userScheduler.nodeSelector }}
+      {{- with concat .Values.scheduling.corePods.tolerations .Values.scheduling.userScheduler.tolerations }}
+      tolerations:
+        {{- . | toYaml | nindent 8 }}
+      {{- end }}
+      {{- include "jupyterhub.coreAffinity" . | nindent 6 }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "jupyterhub.user-scheduler-deploy.fullname" . }}
+      {{- with include "jupyterhub.imagePullSecrets" (dict "root" . "image" .Values.scheduling.userScheduler.image) }}
+      imagePullSecrets: {{ . }}
+      {{- end }}
+      containers:
+        - name: kube-scheduler
+          image: {{ .Values.scheduling.userScheduler.image.name }}:{{ .Values.scheduling.userScheduler.image.tag }}
+          {{- with .Values.scheduling.userScheduler.image.pullPolicy }}
+          imagePullPolicy: {{ . }}
+          {{- end }}
+          command:
+            - /usr/local/bin/kube-scheduler
+            # NOTE: --leader-elect-... (new) and --lock-object-... (deprecated)
+            #       flags are silently ignored in favor of whats defined in the
+            #       passed KubeSchedulerConfiguration whenever --config is
+            #       passed.
+            #
+            # ref: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-scheduler/
+            #
+            # NOTE: --authentication-skip-lookup=true is used to avoid a
+            #       seemingly harmless error, if we need to not skip
+            #       "authentication lookup" in the future, see the linked issue.
+            #
+            # ref: https://github.com/jupyterhub/zero-to-jupyterhub-k8s/issues/1894
+            - --config=/etc/user-scheduler/config.yaml
+            - --authentication-skip-lookup=true
+            - --v={{ .Values.scheduling.userScheduler.logLevel }}
+          volumeMounts:
+            - mountPath: /etc/user-scheduler
+              name: config
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 10251
+            initialDelaySeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 10251
+          {{- with .Values.scheduling.userScheduler.resources }}
+          resources:
+            {{- . | toYaml | nindent 12 }}
+          {{- end }}
+          {{- with .Values.scheduling.userScheduler.containerSecurityContext }}
+          securityContext:
+            {{- . | toYaml | nindent 12 }}
+          {{- end }}
+      {{- with .Values.scheduling.userScheduler.extraPodSpec }}
+      {{- . | toYaml | nindent 6 }}
+      {{- end }}
+{{- end }}

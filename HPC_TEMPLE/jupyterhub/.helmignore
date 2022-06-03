@@ -1,0 +1,31 @@
+# Anything within the root folder of the Helm chart, where Chart.yaml resides,
+# will be embedded into the packaged Helm chart. This is reasonable since only
+# when the templates render after the chart has been packaged and distributed,
+# will the templates logic evaluate that determines if other files were
+# referenced, such as our our files/hub/jupyterhub_config.py.
+#
+# Here are files that we intentionally ignore to avoid them being packaged,
+# because we don't want to reference them from our templates anyhow.
+schema.yaml
+
+# Patterns to ignore when building packages.
+# This supports shell glob matching, relative path matching, and
+# negation (prefixed with !). Only one pattern per line.
+.DS_Store
+# Common VCS dirs
+.git/
+.gitignore
+.bzr/
+.bzrignore
+.hg/
+.hgignore
+.svn/
+# Common backup files
+*.swp
+*.bak
+*.tmp
+*~
+# Various IDEs
+.project
+.idea/
+*.tmproj

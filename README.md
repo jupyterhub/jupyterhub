@@ -1,33 +1,23 @@
-**[Technical Overview](#technical-overview)** |
-**[Installation](#installation)** |
-**[Configuration](#configuration)** |
-**[Docker](#docker)** |
-**[Contributing](#contributing)** |
-**[License](#license)** |
-**[Help and Resources](#help-and-resources)**
+<h1 align="center">
+  JupyterHub@TEMPLE_HPC
+</h1>
 
----
+<h4 align="center">
+  MHPC Project 2021
+</h4>
 
-Please note that this repository is participating in a study into the sustainability of open source projects. Data will be gathered about this repository for approximately the next 12 months, starting from 2021-06-11.
+<div align="center">
+  <img alt="Boards" width="20%" src="image/image1.png"/>
+</div>
 
-Data collected will include the number of contributors, number of PRs, time taken to close/merge these PRs, and issues closed.
+<p align="center">
+  <a href="https://">
+    <img alt="GitHub Workflow Status" src="https://img.shields.io/github/workflow/status/jupyterhub/jupyterhub/Test?logo=github&label=tests">
+    <img alt="Documentation build status" src="https://img.shields.io/readthedocs/jupyterhub?logo=read-the-docs)](https://jupyterhub.readthedocs.org/en/latest">
+  </a>
+</p>
 
-For more information, please visit
-[our informational page](https://sustainable-open-science-and-software.github.io/) or download our [participant information sheet](https://sustainable-open-science-and-software.github.io/assets/PIS_sustainable_software.pdf).
 
----
-
-# [JupyterHub](https://github.com/jupyterhub/jupyterhub)
-
-[![Latest PyPI version](https://img.shields.io/pypi/v/jupyterhub?logo=pypi)](https://pypi.python.org/pypi/jupyterhub)
-[![Latest conda-forge version](https://img.shields.io/conda/vn/conda-forge/jupyterhub?logo=conda-forge)](https://anaconda.org/conda-forge/jupyterhub)
-[![Documentation build status](https://img.shields.io/readthedocs/jupyterhub?logo=read-the-docs)](https://jupyterhub.readthedocs.org/en/latest/)
-[![GitHub Workflow Status - Test](https://img.shields.io/github/workflow/status/jupyterhub/jupyterhub/Test?logo=github&label=tests)](https://github.com/jupyterhub/jupyterhub/actions)
-[![DockerHub build status](https://img.shields.io/docker/build/jupyterhub/jupyterhub?logo=docker&label=build)](https://hub.docker.com/r/jupyterhub/jupyterhub/tags)
-[![Test coverage of code](https://codecov.io/gh/jupyterhub/jupyterhub/branch/main/graph/badge.svg)](https://codecov.io/gh/jupyterhub/jupyterhub)
-[![GitHub](https://img.shields.io/badge/issue_tracking-github-blue?logo=github)](https://github.com/jupyterhub/jupyterhub/issues)
-[![Discourse](https://img.shields.io/badge/help_forum-discourse-blue?logo=discourse)](https://discourse.jupyter.org/c/jupyterhub)
-[![Gitter](https://img.shields.io/badge/social_chat-gitter-blue?logo=gitter)](https://gitter.im/jupyterhub/jupyterhub)
 
 With [JupyterHub](https://jupyterhub.readthedocs.io) you can create a
 **multi-user Hub** that spawns, manages, and proxies multiple instances of the
@@ -199,60 +189,3 @@ a new image.
 The command `docker exec -it jupyterhub bash` will spawn a root shell in your docker
 container. You can **use the root shell to create system users in the container**.
 These accounts will be used for authentication in JupyterHub's default configuration.
-
-## Contributing
-
-If you would like to contribute to the project, please read our
-[contributor documentation](https://jupyter.readthedocs.io/en/latest/contributing/content-contributor.html)
-and the [`CONTRIBUTING.md`](CONTRIBUTING.md). The `CONTRIBUTING.md` file
-explains how to set up a development installation, how to run the test suite,
-and how to contribute to documentation.
-
-For a high-level view of the vision and next directions of the project, see the
-[JupyterHub community roadmap](docs/source/contributing/roadmap.md).
-
-### A note about platform support
-
-JupyterHub is supported on Linux/Unix based systems.
-
-JupyterHub officially **does not** support Windows. You may be able to use
-JupyterHub on Windows if you use a Spawner and Authenticator that work on
-Windows, but the JupyterHub defaults will not. Bugs reported on Windows will not
-be accepted, and the test suite will not run on Windows. Small patches that fix
-minor Windows compatibility issues (such as basic installation) **may** be accepted,
-however. For Windows-based systems, we would recommend running JupyterHub in a
-docker container or Linux VM.
-
-[Additional Reference:](http://www.tornadoweb.org/en/stable/#installation) Tornado's documentation on Windows platform support
-
-## License
-
-We use a shared copyright model that enables all contributors to maintain the
-copyright on their contributions.
-
-All code is licensed under the terms of the [revised BSD license](./COPYING.md).
-
-## Help and resources
-
-We encourage you to ask questions and share ideas on the [Jupyter community forum](https://discourse.jupyter.org/).
-You can also talk with us on our JupyterHub [Gitter](https://gitter.im/jupyterhub/jupyterhub) channel.
-
-- [Reporting Issues](https://github.com/jupyterhub/jupyterhub/issues)
-- [JupyterHub tutorial](https://github.com/jupyterhub/jupyterhub-tutorial)
-- [Documentation for JupyterHub](https://jupyterhub.readthedocs.io/en/latest/) | [PDF (latest)](https://media.readthedocs.org/pdf/jupyterhub/latest/jupyterhub.pdf) | [PDF (stable)](https://media.readthedocs.org/pdf/jupyterhub/stable/jupyterhub.pdf)
-- [Documentation for JupyterHub's REST API][rest api]
-- [Documentation for Project Jupyter](http://jupyter.readthedocs.io/en/latest/index.html) | [PDF](https://media.readthedocs.org/pdf/jupyter/latest/jupyter.pdf)
-- [Project Jupyter website](https://jupyter.org)
-- [Project Jupyter community](https://jupyter.org/community)
-
-JupyterHub follows the Jupyter [Community Guides](https://jupyter.readthedocs.io/en/latest/community/content-community.html).
-
----
-
-**[Technical Overview](#technical-overview)** |
-**[Installation](#installation)** |
-**[Configuration](#configuration)** |
-**[Docker](#docker)** |
-**[Contributing](#contributing)** |
-**[License](#license)** |
-**[Help and Resources](#help-and-resources)**

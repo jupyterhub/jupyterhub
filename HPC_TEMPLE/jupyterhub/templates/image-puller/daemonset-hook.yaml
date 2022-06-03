@@ -1,0 +1,9 @@
+{{- /*
+The hook-image-puller daemonset will be created with the highest priority during
+helm upgrades. It's task is to pull the required images on all nodes. When the
+image-awaiter job confirms the required images to be pulled, the daemonset is
+deleted. Only then will the actual helm upgrade start.
+*/}}
+{{- if (include "jupyterhub.imagePuller.daemonset.hook.install" .) -}}
+{{- include "jupyterhub.imagePuller.daemonset.hook" . }}
+{{- end }}

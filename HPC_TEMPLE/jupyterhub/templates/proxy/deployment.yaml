@@ -1,0 +1,168 @@
+{{- $manualHTTPS := and .Values.proxy.https.enabled (eq .Values.proxy.https.type "manual") -}}
+{{- $manualHTTPSwithsecret := and .Values.proxy.https.enabled (eq .Values.proxy.https.type "secret") -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "jupyterhub.proxy.fullname" . }}
+  labels:
+    {{- include "jupyterhub.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "jupyterhub.matchLabels" . | nindent 6 }}
+  strategy:
+    {{- .Values.proxy.deploymentStrategy | toYaml | nindent 4 }}
+  template:
+    metadata:
+      labels:
+        {{- /* Changes here will cause the Deployment to restart the pods. */}}
+        {{- include "jupyterhub.matchLabels" . | nindent 8 }}
+        hub.jupyter.org/network-access-hub: "true"
+        hub.jupyter.org/network-access-singleuser: "true"
+        {{- with .Values.proxy.labels }}
+        {{- . | toYaml | nindent 8 }}
+        {{- end }}
+      annotations:
+        # We want to restart proxy only if the auth token changes
+        # Other changes to the hub config should not restart.
+        # We truncate to 4 chars to avoid leaking auth token info,
+        # since someone could brute force the hash to obtain the token
+        #
+        # Note that if auth_token has to be generated at random, it will be
+        # generated at random here separately from being generated at random in
+        # the k8s Secret template. This will cause this annotation to change to
+        # match the k8s Secret during the first upgrade following an auth_token
+        # was generated.
+        checksum/auth-token: {{ include "jupyterhub.hub.config.ConfigurableHTTPProxy.auth_token" . | sha256sum | trunc 4 | quote }}
+        checksum/proxy-secret: {{ include (print $.Template.BasePath "/proxy/secret.yaml") . | sha256sum | quote }}
+        {{- with .Values.proxy.annotations }}
+        {{- . | toYaml | nindent 8 }}
+        {{- end }}
+    spec:
+      terminationGracePeriodSeconds: 60
+      {{- if .Values.scheduling.podPriority.enabled }}
+      priorityClassName: {{ include "jupyterhub.priority.fullname" . }}
+      {{- end }}
+      nodeSelector: {{ toJson .Values.proxy.chp.nodeSelector }}
+      {{- with concat .Values.scheduling.corePods.tolerations .Values.proxy.chp.tolerations }}
+      tolerations:
+        {{- . | toYaml | nindent 8 }}
+      {{- end }}
+      {{- include "jupyterhub.coreAffinity" . | nindent 6 }}
+      {{- if $manualHTTPS }}
+      volumes:
+        - name: tls-secret
+          secret:
+            secretName: {{ include "jupyterhub.proxy-public-manual-tls.fullname" . }}
+      {{- else if $manualHTTPSwithsecret }}
+      volumes:
+        - name: tls-secret
+          secret:
+            secretName: {{ .Values.proxy.https.secret.name }}
+      {{- end }}
+      {{- with include "jupyterhub.imagePullSecrets" (dict "root" . "image" .Values.proxy.chp.image) }}
+      imagePullSecrets: {{ . }}
+      {{- end }}
+      containers:
+        - name: chp
+          image: {{ .Values.proxy.chp.image.name }}:{{ .Values.proxy.chp.image.tag }}
+          {{- $hubNameAsEnv := include "jupyterhub.hub.fullname" . | upper | replace "-" "_" }}
+          {{- $hubHost := printf "http://%s:$(%s_SERVICE_PORT)" (include "jupyterhub.hub.fullname" .) $hubNameAsEnv }}
+          command:
+            - configurable-http-proxy
+            - "--ip="
+            - "--api-ip="
+            - --api-port=8001
+            - --default-target={{ .Values.proxy.chp.defaultTarget | default $hubHost }}
+            - --error-target={{ .Values.proxy.chp.errorTarget | default (printf "%s/hub/error" $hubHost) }}
+            {{- if $manualHTTPS }}
+            - --port=8443
+            - --redirect-port=8000
+            - --redirect-to=443
+            - --ssl-key=/etc/chp/tls/tls.key
+            - --ssl-cert=/etc/chp/tls/tls.crt
+            {{- else if $manualHTTPSwithsecret }}
+            - --port=8443
+            - --redirect-port=8000
+            - --redirect-to=443
+            - --ssl-key=/etc/chp/tls/{{ .Values.proxy.https.secret.key }}
+            - --ssl-cert=/etc/chp/tls/{{ .Values.proxy.https.secret.crt }}
+            {{- else }}
+            - --port=8000
+            {{- end }}
+            {{- if .Values.debug.enabled }}
+            - --log-level=debug
+            {{- end }}
+            {{- range .Values.proxy.chp.extraCommandLineFlags }}
+            - {{ tpl . $ }}
+            {{- end }}
+          {{- if or $manualHTTPS $manualHTTPSwithsecret }}
+          volumeMounts:
+            - name: tls-secret
+              mountPath: /etc/chp/tls
+              readOnly: true
+          {{- end }}
+          {{- with .Values.proxy.chp.resources }}
+          resources:
+            {{- . | toYaml | nindent 12 }}
+          {{- end }}
+          env:
+            - name: CONFIGPROXY_AUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  # NOTE: References the chart managed k8s Secret even if
+                  #       hub.existingSecret is specified to avoid using the
+                  #       lookup function on the user managed k8s Secret.
+                  name: {{ include "jupyterhub.hub.fullname" . }}
+                  key: hub.config.ConfigurableHTTPProxy.auth_token
+            {{- with .Values.proxy.chp.extraEnv }}
+            {{- include "jupyterhub.extraEnv" . | nindent 12 }}
+            {{- end }}
+          {{- with .Values.proxy.chp.image.pullPolicy }}
+          imagePullPolicy: {{ . }}
+          {{- end }}
+          ports:
+            {{- if or $manualHTTPS $manualHTTPSwithsecret }}
+            - name: https
+              containerPort: 8443
+            {{- end }}
+            - name: http
+              containerPort: 8000
+            - name: api
+              containerPort: 8001
+          {{- if .Values.proxy.chp.livenessProbe.enabled }}
+          livenessProbe:
+            initialDelaySeconds: {{ .Values.proxy.chp.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.proxy.chp.livenessProbe.periodSeconds }}
+            httpGet:
+              path: /_chp_healthz
+              {{- if or $manualHTTPS $manualHTTPSwithsecret }}
+              port: https
+              scheme: HTTPS
+              {{- else }}
+              port: http
+              scheme: HTTP
+              {{- end }}
+          {{- end }}
+          {{- if .Values.proxy.chp.readinessProbe.enabled }}
+          readinessProbe:
+            initialDelaySeconds: {{ .Values.proxy.chp.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.proxy.chp.readinessProbe.periodSeconds }}
+            httpGet:
+              path: /_chp_healthz
+              {{- if or $manualHTTPS $manualHTTPSwithsecret }}
+              port: https
+              scheme: HTTPS
+              {{- else }}
+              port: http
+              scheme: HTTP
+              {{- end }}
+          {{- end }}
+          {{- with .Values.proxy.chp.containerSecurityContext }}
+          securityContext:
+            {{- . | toYaml | nindent 12 }}
+          {{- end }}
+      {{- with .Values.proxy.chp.extraPodSpec }}
+      {{- . | toYaml | nindent 6 }}
+      {{- end }}

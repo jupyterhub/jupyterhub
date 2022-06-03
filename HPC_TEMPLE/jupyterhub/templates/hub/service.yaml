@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "jupyterhub.hub.fullname" . }}
+  labels:
+    {{- include "jupyterhub.labels" . | nindent 4 }}
+  annotations:
+    {{- if not (index .Values.hub.service.annotations "prometheus.io/scrape") }}
+    prometheus.io/scrape: "true"
+    {{- end }}
+    {{- if not (index .Values.hub.service.annotations "prometheus.io/path") }}
+    prometheus.io/path: {{ .Values.hub.baseUrl | trimSuffix "/" }}/hub/metrics
+    {{- end }}
+    {{- if not (index .Values.hub.service.annotations "prometheus.io/port") }}
+    prometheus.io/port: "8081"
+    {{- end }}
+    {{- with .Values.hub.service.annotations }}
+    {{- . | toYaml | nindent 4 }}
+    {{- end }}
+spec:
+  type: {{ .Values.hub.service.type }}
+  {{- with .Values.hub.service.loadBalancerIP }}
+  loadBalancerIP: {{ . }}
+  {{- end }}
+  selector:
+    {{- include "jupyterhub.matchLabels" . | nindent 4 }}
+  ports:
+    - name: hub
+      port: 8081
+      targetPort: http
+      {{- with .Values.hub.service.ports.nodePort }}
+      nodePort: {{ . }}
+      {{- end }}
+
+    {{- with .Values.hub.service.extraPorts }}
+    {{- . | toYaml | nindent 4 }}
+    {{- end }}

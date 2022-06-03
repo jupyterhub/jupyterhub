@@ -1,0 +1,109 @@
+{{- define "jupyterhub.dynamic.yaml" -}}
+# Content of dynamic.yaml to be merged merged with
+# proxy.traefik.extraDynamicConfig.
+# ----------------------------------------------------------------------------
+http:
+  # Middlewares tweaks requests. We define them here and reference them in
+  # our routers. We use them to redirect http traffic and headers to proxied
+  # web requests.
+  #
+  # ref: https://docs.traefik.io/middlewares/overview/
+  middlewares:
+    hsts:
+      # A middleware to add a HTTP Strict-Transport-Security (HSTS) response
+      # header, they function as a request for browsers to enforce HTTPS on
+      # their end in for a given time into the future, and optionally
+      # subdomains for requests to subdomains as well.
+      #
+      # ref: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security
+      headers:
+        stsIncludeSubdomains: {{ .Values.proxy.traefik.hsts.includeSubdomains }}
+        stsPreload: {{ .Values.proxy.traefik.hsts.preload }}
+        stsSeconds: {{ .Values.proxy.traefik.hsts.maxAge }}
+    # A middleware to redirect to https
+    redirect:
+      redirectScheme:
+        permanent: true
+        scheme: https
+    # A middleware to add a X-Scheme (X-Forwarded-Proto) header that
+    # JupyterHub's Tornado web-server needs if expecting to serve https
+    # traffic. Without it we would run into issues like:
+    # https://github.com/jupyterhub/jupyterhub/issues/2284
+    scheme:
+      headers:
+        customRequestHeaders:
+          # DISCUSS ME: Can we use the X-Forwarded-Proto header instead? It
+          # seems more recognized. Mozilla calls it the de-facto standard
+          # header for this purpose, and Tornado recognizes both.
+          #
+          # ref: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Forwarded-Proto
+          # ref: https://www.tornadoweb.org/en/stable/httpserver.html#http-server
+          X-Scheme: https
+
+  # Routers routes web requests to a service and optionally tweaks them with
+  # middleware.
+  #
+  # ref: https://docs.traefik.io/routing/routers/
+  routers:
+    # Route secure https traffic to the configurable-http-proxy managed by
+    # JupyterHub.
+    default:
+      entrypoints:
+        - "https"
+      middlewares:
+        - "hsts"
+        - "scheme"
+      rule: PathPrefix(`/`)
+      service: default
+      # Use our predefined TLS options and certificate resolver, enabling
+      # this route to act as a TLS termination proxy with high security
+      # standards.
+      tls:
+        certResolver: default
+        domains:
+          {{- range $host := .Values.proxy.https.hosts }}
+          - main: {{ $host }}
+          {{- end }}
+        options: default
+
+    # Route insecure http traffic to https
+    insecure:
+      entrypoints:
+        - "http"
+      middlewares:
+        - "redirect"
+      rule: PathPrefix(`/`)
+      service: default
+
+  # Services represents the destinations we route traffic to.
+  #
+  # ref: https://docs.traefik.io/routing/services/
+  services:
+    # Represents the configurable-http-proxy (chp) server that is managed by
+    # JupyterHub to route traffic both to itself and to user pods.
+    default:
+      loadBalancer:
+        servers:
+          - url: 'http://proxy-http:8000/'
+
+# Configure TLS to give us an A+ in the ssllabs.com test
+#
+# ref: https://www.ssllabs.com/ssltest/
+tls:
+  options:
+    default:
+      # Allowed ciphers adapted from Mozillas SSL Configuration Generator
+      # configured for Intermediate support which doesn't support very old
+      # systems but doesn't require very modern either.
+      #
+      # ref: https://ssl-config.mozilla.org/#server=traefik&version=2.1.2&config=intermediate&guideline=5.4
+      cipherSuites:
+        - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+        - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+        - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+        - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+        - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305
+        - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305
+      minVersion: VersionTLS12
+      sniStrict: true
+{{- end }}

@@ -1,0 +1,70 @@
+{{- /*
+This job has a part to play in a helm upgrade process. It simply waits for the
+hook-image-puller daemonset which is started slightly before this job to get
+its' pods running. If all those pods are running they must have pulled all the
+required images on all nodes as they are used as init containers with a dummy
+command.
+*/}}
+{{- if (include "jupyterhub.imagePuller.daemonset.hook.install" .) -}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "jupyterhub.hook-image-awaiter.fullname" . }}
+  labels:
+    {{- include "jupyterhub.labels" . | nindent 4 }}
+    hub.jupyter.org/deletable: "true"
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+    "helm.sh/hook-weight": "10"
+spec:
+  template:
+    # The hook-image-awaiter Job and hook-image-puller DaemonSet was
+    # conditionally created based on this state:
+    #
+    {{- include "jupyterhub.imagePuller.daemonset.hook.install" . | nindent 4 }}
+    #
+    metadata:
+      labels:
+        {{- /* Changes here will cause the Job to restart the pods. */}}
+        {{- include "jupyterhub.matchLabels" . | nindent 8 }}
+      {{- with .Values.prePuller.annotations }}
+      annotations:
+        {{- . | toYaml | nindent 8 }}
+      {{- end }}
+    spec:
+      restartPolicy: Never
+      {{- if .Values.rbac.enabled }}
+      serviceAccountName: {{ include "jupyterhub.hook-image-awaiter.fullname" . }}
+      {{- end }}
+      nodeSelector: {{ toJson .Values.prePuller.hook.nodeSelector }}
+      {{- with concat .Values.scheduling.corePods.tolerations .Values.prePuller.hook.tolerations }}
+      tolerations:
+        {{- . | toYaml | nindent 8 }}
+      {{- end }}
+      {{- with include "jupyterhub.imagePullSecrets" (dict "root" . "image" .Values.prePuller.hook.image) }}
+      imagePullSecrets: {{ . }}
+      {{- end }}
+      containers:
+        - image: {{ .Values.prePuller.hook.image.name }}:{{ .Values.prePuller.hook.image.tag }}
+          name: {{ include "jupyterhub.hook-image-awaiter.fullname" . }}
+          {{- with .Values.prePuller.hook.image.pullPolicy }}
+          imagePullPolicy: {{ . }}
+          {{- end }}
+          command:
+            - /image-awaiter
+            - -ca-path=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+            - -auth-token-path=/var/run/secrets/kubernetes.io/serviceaccount/token
+            - -api-server-address=https://kubernetes.default.svc:$(KUBERNETES_SERVICE_PORT)
+            - -namespace={{ .Release.Namespace }}
+            - -daemonset={{ include "jupyterhub.hook-image-puller.fullname" . }}
+            - -pod-scheduling-wait-duration={{ .Values.prePuller.hook.podSchedulingWaitDuration }}
+          {{- with .Values.prePuller.hook.containerSecurityContext }}
+          securityContext:
+            {{- . | toYaml | nindent 12 }}
+          {{- end }}
+          {{- with .Values.prePuller.hook.resources }}
+          resources:
+            {{- . | toYaml | nindent 12 }}
+          {{- end }}
+{{- end }}

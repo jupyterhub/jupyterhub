@@ -1,0 +1,21 @@
+{{- if .Values.scheduling.userScheduler.enabled -}}
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: {{ include "jupyterhub.user-scheduler-deploy.fullname" . }}
+  labels:
+    {{- include "jupyterhub.labels" . | nindent 4 }}
+data:
+  # ref: https://kubernetes.io/docs/reference/scheduling/config/
+  config.yaml: |
+    apiVersion: kubescheduler.config.k8s.io/v1beta1
+    kind: KubeSchedulerConfiguration
+    leaderElection:
+      resourceLock: endpoints
+      resourceName: {{ include "jupyterhub.user-scheduler-lock.fullname" . }}
+      resourceNamespace: "{{ .Release.Namespace }}"
+    profiles:
+      - schedulerName: {{ include "jupyterhub.user-scheduler.fullname" . }}
+        plugins:
+          {{- .Values.scheduling.userScheduler.plugins | toYaml | nindent 10 }}
+{{- end }}

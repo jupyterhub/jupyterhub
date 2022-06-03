@@ -1,0 +1,28 @@
+{{- if .Values.scheduling.podPriority.enabled }}
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: {{ include "jupyterhub.priority.fullname" . }}
+  annotations:
+    # FIXME: PriorityClasses must be added before the other resources reference
+    #        them, and in the past a workaround was needed to accomplish this:
+    #        to make the resource a Helm hook.
+    #
+    #        To transition this resource to no longer be a Helm hook resource,
+    #        we explicitly add ownership annotations/labels (in 1.0.0) which
+    #        will allow a future upgrade (in 2.0.0) to remove all hook and
+    #        ownership annotations/labels.
+    #
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation
+    helm.sh/hook-weight: "-100"
+    meta.helm.sh/release-name: "{{ .Release.Name }}"
+    meta.helm.sh/release-namespace: "{{ .Release.Namespace }}"
+  labels:
+    app.kubernetes.io/managed-by: Helm
+    {{- $_ := merge (dict "componentLabel" "default-priority") . }}
+    {{- include "jupyterhub.labels" $_ | nindent 4 }}
+value: {{ .Values.scheduling.podPriority.defaultPriority }}
+globalDefault: {{ .Values.scheduling.podPriority.globalDefault }}
+description: "A default priority higher than user placeholders priority."
+{{- end }}

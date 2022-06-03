@@ -1,0 +1,25 @@
+{{- if eq .Values.hub.db.type "sqlite-pvc" -}}
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: {{ include "jupyterhub.hub-pvc.fullname" . }}
+  labels:
+    {{- include "jupyterhub.labels" . | nindent 4 }}
+  {{- with .Values.hub.db.pvc.annotations }}
+  annotations:
+    {{- . | toYaml | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with .Values.hub.db.pvc.selector }}
+  selector:
+    {{- . | toYaml | nindent 4 }}
+  {{- end }}
+  {{- if typeIs "string" .Values.hub.db.pvc.storageClassName }}
+  storageClassName: {{ .Values.hub.db.pvc.storageClassName | quote }}
+  {{- end }}
+  accessModes:
+    {{- .Values.hub.db.pvc.accessModes | toYaml | nindent 4 }}
+  resources:
+    requests:
+      storage: {{ .Values.hub.db.pvc.storage | quote }}
+{{- end }}

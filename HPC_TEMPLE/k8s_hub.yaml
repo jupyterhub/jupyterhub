@@ -1,0 +1,383 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: hub
+  namespace: default
+  uid: 1586733f-c57c-46ed-9b5d-df27c85db06c
+  resourceVersion: '9840'
+  generation: 3
+  creationTimestamp: '2022-05-31T20:45:09Z'
+  labels:
+    app: jupyterhub
+    app.kubernetes.io/managed-by: Helm
+    chart: jupyterhub-1.2.0
+    component: hub
+    heritage: Helm
+    release: jhub2
+  annotations:
+    deployment.kubernetes.io/revision: '3'
+    meta.helm.sh/release-name: jhub2
+    meta.helm.sh/release-namespace: default
+  managedFields:
+    - manager: helm
+      operation: Update
+      apiVersion: apps/v1
+      time: '2022-05-31T20:45:09Z'
+      fieldsType: FieldsV1
+      fieldsV1:
+        f:metadata:
+          f:annotations:
+            .: {}
+            f:meta.helm.sh/release-name: {}
+            f:meta.helm.sh/release-namespace: {}
+          f:labels:
+            .: {}
+            f:app: {}
+            f:app.kubernetes.io/managed-by: {}
+            f:chart: {}
+            f:component: {}
+            f:heritage: {}
+            f:release: {}
+        f:spec:
+          f:progressDeadlineSeconds: {}
+          f:replicas: {}
+          f:revisionHistoryLimit: {}
+          f:selector: {}
+          f:strategy:
+            f:type: {}
+          f:template:
+            f:metadata:
+              f:annotations:
+                .: {}
+                f:checksum/config-map: {}
+                f:checksum/secret: {}
+              f:labels:
+                .: {}
+                f:app: {}
+                f:component: {}
+                f:hub.jupyter.org/network-access-proxy-api: {}
+                f:hub.jupyter.org/network-access-proxy-http: {}
+                f:hub.jupyter.org/network-access-singleuser: {}
+                f:release: {}
+            f:spec:
+              f:affinity:
+                .: {}
+                f:nodeAffinity:
+                  .: {}
+                  f:preferredDuringSchedulingIgnoredDuringExecution: {}
+              f:containers:
+                k:{"name":"hub"}:
+                  .: {}
+                  f:args: {}
+                  f:env:
+                    .: {}
+                    k:{"name":"CONFIGPROXY_AUTH_TOKEN"}:
+                      .: {}
+                      f:name: {}
+                      f:valueFrom:
+                        .: {}
+                        f:secretKeyRef: {}
+                    k:{"name":"HELM_RELEASE_NAME"}:
+                      .: {}
+                      f:name: {}
+                      f:value: {}
+                    k:{"name":"POD_NAMESPACE"}:
+                      .: {}
+                      f:name: {}
+                      f:valueFrom:
+                        .: {}
+                        f:fieldRef: {}
+                    k:{"name":"PYTHONUNBUFFERED"}:
+                      .: {}
+                      f:name: {}
+                      f:value: {}
+                  f:image: {}
+                  f:imagePullPolicy: {}
+                  f:livenessProbe:
+                    .: {}
+                    f:failureThreshold: {}
+                    f:httpGet:
+                      .: {}
+                      f:path: {}
+                      f:port: {}
+                      f:scheme: {}
+                    f:initialDelaySeconds: {}
+                    f:periodSeconds: {}
+                    f:successThreshold: {}
+                    f:timeoutSeconds: {}
+                  f:name: {}
+                  f:ports:
+                    .: {}
+                    k:{"containerPort":8081,"protocol":"TCP"}:
+                      .: {}
+                      f:containerPort: {}
+                      f:name: {}
+                      f:protocol: {}
+                  f:readinessProbe:
+                    .: {}
+                    f:failureThreshold: {}
+                    f:httpGet:
+                      .: {}
+                      f:path: {}
+                      f:port: {}
+                      f:scheme: {}
+                    f:periodSeconds: {}
+                    f:successThreshold: {}
+                    f:timeoutSeconds: {}
+                  f:resources: {}
+                  f:securityContext:
+                    .: {}
+                    f:allowPrivilegeEscalation: {}
+                    f:runAsGroup: {}
+                    f:runAsUser: {}
+                  f:terminationMessagePath: {}
+                  f:terminationMessagePolicy: {}
+                  f:volumeMounts:
+                    .: {}
+                    k:{"mountPath":"/srv/jupyterhub"}:
+                      .: {}
+                      f:mountPath: {}
+                      f:name: {}
+                    k:{"mountPath":"/usr/local/etc/jupyterhub/config/"}:
+                      .: {}
+                      f:mountPath: {}
+                      f:name: {}
+                    k:{"mountPath":"/usr/local/etc/jupyterhub/jupyterhub_config.py"}:
+                      .: {}
+                      f:mountPath: {}
+                      f:name: {}
+                      f:subPath: {}
+                    k:{"mountPath":"/usr/local/etc/jupyterhub/secret/"}:
+                      .: {}
+                      f:mountPath: {}
+                      f:name: {}
+                    k:{"mountPath":"/usr/local/etc/jupyterhub/z2jh.py"}:
+                      .: {}
+                      f:mountPath: {}
+                      f:name: {}
+                      f:subPath: {}
+              f:dnsPolicy: {}
+              f:restartPolicy: {}
+              f:schedulerName: {}
+              f:securityContext:
+                .: {}
+                f:fsGroup: {}
+              f:serviceAccount: {}
+              f:serviceAccountName: {}
+              f:tolerations: {}
+              f:volumes:
+                .: {}
+                k:{"name":"config"}:
+                  .: {}
+                  f:configMap:
+                    .: {}
+                    f:defaultMode: {}
+                    f:name: {}
+                  f:name: {}
+                k:{"name":"pvc"}:
+                  .: {}
+                  f:name: {}
+                  f:persistentVolumeClaim:
+                    .: {}
+                    f:claimName: {}
+                k:{"name":"secret"}:
+                  .: {}
+                  f:name: {}
+                  f:secret:
+                    .: {}
+                    f:defaultMode: {}
+                    f:secretName: {}
+    - manager: kubectl-edit
+      operation: Update
+      apiVersion: apps/v1
+      time: '2022-05-31T21:05:54Z'
+      fieldsType: FieldsV1
+      fieldsV1:
+        f:spec:
+          f:template:
+            f:spec:
+              f:terminationGracePeriodSeconds: {}
+    - manager: kube-controller-manager
+      operation: Update
+      apiVersion: apps/v1
+      time: '2022-06-03T08:34:39Z'
+      fieldsType: FieldsV1
+      fieldsV1:
+        f:metadata:
+          f:annotations:
+            f:deployment.kubernetes.io/revision: {}
+        f:status:
+          f:availableReplicas: {}
+          f:conditions:
+            .: {}
+            k:{"type":"Available"}:
+              .: {}
+              f:lastTransitionTime: {}
+              f:lastUpdateTime: {}
+              f:message: {}
+              f:reason: {}
+              f:status: {}
+              f:type: {}
+            k:{"type":"Progressing"}:
+              .: {}
+              f:lastTransitionTime: {}
+              f:lastUpdateTime: {}
+              f:message: {}
+              f:reason: {}
+              f:status: {}
+              f:type: {}
+          f:observedGeneration: {}
+          f:readyReplicas: {}
+          f:replicas: {}
+          f:updatedReplicas: {}
+      subresource: status
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jupyterhub
+      component: hub
+      release: jhub2
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: jupyterhub
+        component: hub
+        hub.jupyter.org/network-access-proxy-api: 'true'
+        hub.jupyter.org/network-access-proxy-http: 'true'
+        hub.jupyter.org/network-access-singleuser: 'true'
+        release: jhub2
+      annotations:
+        checksum/config-map: 6ea3b31db89b0dcc1c112220d250037a0715f964b3542249336ad30565ac37b5
+        checksum/secret: a18596f8f4f22a8e6f1dac4ad3390544a30aac5021ec2d9910c3571962281957
+    spec:
+      volumes:
+        - name: config
+          configMap:
+            name: hub
+            defaultMode: 420
+        - name: secret
+          secret:
+            secretName: hub
+            defaultMode: 420
+        - name: pvc
+          persistentVolumeClaim:
+            claimName: hub-db-dir
+      containers:
+        - name: hub
+          image: jupyterhub/k8s-hub:1.2.0
+          args:
+            - jupyterhub
+            - '--config'
+            - /usr/local/etc/jupyterhub/jupyterhub_config.py
+            - '--upgrade-db'
+          ports:
+            - name: http
+              containerPort: 8081
+              protocol: TCP
+          env:
+            - name: PYTHONUNBUFFERED
+              value: '1'
+            - name: HELM_RELEASE_NAME
+              value: jhub2
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace
+            - name: CONFIGPROXY_AUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: hub
+                  key: hub.config.ConfigurableHTTPProxy.auth_token
+          resources: {}
+          volumeMounts:
+            - name: config
+              mountPath: /usr/local/etc/jupyterhub/jupyterhub_config.py
+              subPath: jupyterhub_config.py
+            - name: config
+              mountPath: /usr/local/etc/jupyterhub/z2jh.py
+              subPath: z2jh.py
+            - name: config
+              mountPath: /usr/local/etc/jupyterhub/config/
+            - name: secret
+              mountPath: /usr/local/etc/jupyterhub/secret/
+            - name: pvc
+              mountPath: /srv/jupyterhub
+          livenessProbe:
+            httpGet:
+              path: /hub/health
+              port: http
+              scheme: HTTP
+            initialDelaySeconds: 300
+            timeoutSeconds: 3
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /hub/health
+              port: http
+              scheme: HTTP
+            timeoutSeconds: 1
+            periodSeconds: 2
+            successThreshold: 1
+            failureThreshold: 1000
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 29
+      dnsPolicy: ClusterFirst
+      serviceAccountName: hub
+      serviceAccount: hub
+      securityContext:
+        fsGroup: 1000
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: hub.jupyter.org/node-purpose
+                    operator: In
+                    values:
+                      - core
+      schedulerName: default-scheduler
+      tolerations:
+        - key: hub.jupyter.org/dedicated
+          operator: Equal
+          value: core
+          effect: NoSchedule
+        - key: hub.jupyter.org_dedicated
+          operator: Equal
+          value: core
+          effect: NoSchedule
+  strategy:
+    type: Recreate
+  revisionHistoryLimit: 10
+  progressDeadlineSeconds: 600
+status:
+  observedGeneration: 3
+  replicas: 1
+  updatedReplicas: 1
+  readyReplicas: 1
+  availableReplicas: 1
+  conditions:
+    - type: Progressing
+      status: 'True'
+      lastUpdateTime: '2022-05-31T21:05:58Z'
+      lastTransitionTime: '2022-05-31T20:45:09Z'
+      reason: NewReplicaSetAvailable
+      message: ReplicaSet "hub-855499c46c" has successfully progressed.
+    - type: Available
+      status: 'True'
+      lastUpdateTime: '2022-06-03T08:34:39Z'
+      lastTransitionTime: '2022-06-03T08:34:39Z'
+      reason: MinimumReplicasAvailable
+      message: Deployment has minimum availability.

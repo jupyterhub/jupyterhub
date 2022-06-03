@@ -1,0 +1,141 @@
+{{- $HTTPS := (and .Values.proxy.https.hosts .Values.proxy.https.enabled) }}
+{{- $autoHTTPS := (and $HTTPS (eq .Values.proxy.https.type "letsencrypt")) }}
+{{- if $autoHTTPS -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "jupyterhub.autohttps.fullname" . }}
+  labels:
+    {{- include "jupyterhub.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "jupyterhub.matchLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "jupyterhub.matchLabels" . | nindent 8 }}
+        hub.jupyter.org/network-access-proxy-http: "true"
+        {{- with .Values.proxy.traefik.labels }}
+        {{- . | toYaml | nindent 8 }}
+        {{- end }}
+      annotations:
+        # Only force a restart through a change to this checksum when the static
+        # configuration is changed, as the dynamic can be updated after start.
+        # Any disruptions to this deployment impacts everything, it is the
+        # entrypoint of all network traffic.
+        checksum/static-config: {{ include "jupyterhub.traefik.yaml" . | fromYaml | merge .Values.proxy.traefik.extraStaticConfig | toYaml | sha256sum }}
+    spec:
+      {{- if .Values.rbac.enabled }}
+      serviceAccountName: {{ include "jupyterhub.autohttps.fullname" . }}
+      {{- end }}
+      {{- if .Values.scheduling.podPriority.enabled }}
+      priorityClassName: {{ include "jupyterhub.priority.fullname" . }}
+      {{- end }}
+      nodeSelector: {{ toJson .Values.proxy.traefik.nodeSelector }}
+      {{- with concat .Values.scheduling.corePods.tolerations .Values.proxy.traefik.tolerations }}
+      tolerations:
+        {{- . | toYaml | nindent 8 }}
+      {{- end }}
+      {{- include "jupyterhub.coreAffinity" . | nindent 6 }}
+      volumes:
+        - name: certificates
+          emptyDir: {}
+        - name: traefik-config
+          configMap:
+            name: {{ include "jupyterhub.autohttps.fullname" . }}
+        {{- with .Values.proxy.traefik.extraVolumes }}
+        {{- . | toYaml | nindent 8 }}
+        {{- end }}
+      {{- with include "jupyterhub.imagePullSecrets" (dict "root" . "image" .Values.proxy.traefik.image) }}
+      imagePullSecrets: {{ . }}
+      {{- end }}
+      initContainers:
+        - name: load-acme
+          image: "{{ .Values.proxy.secretSync.image.name }}:{{ .Values.proxy.secretSync.image.tag }}"
+          {{- with .Values.proxy.secretSync.image.pullPolicy }}
+          imagePullPolicy: {{ . }}
+          {{- end }}
+          args:
+            - load
+            - {{ include "jupyterhub.proxy-public-tls.fullname" . }}
+            - acme.json
+            - /etc/acme/acme.json
+          env:
+            # We need this to get logs immediately
+            - name: PYTHONUNBUFFERED
+              value: "True"
+            {{- with .Values.proxy.traefik.extraEnv }}
+            {{- include "jupyterhub.extraEnv" . | nindent 12 }}
+            {{- end }}
+          volumeMounts:
+            - name: certificates
+              mountPath: /etc/acme
+          {{- with .Values.proxy.secretSync.containerSecurityContext }}
+          securityContext:
+            {{- . | toYaml | nindent 12 }}
+          {{- end }}
+      containers:
+        - name: traefik
+          image: "{{ .Values.proxy.traefik.image.name }}:{{ .Values.proxy.traefik.image.tag }}"
+          {{- with .Values.proxy.traefik.image.pullPolicy }}
+          imagePullPolicy: {{ . }}
+          {{- end }}
+          {{- with .Values.proxy.traefik.resources }}
+          resources:
+            {{- . | toYaml | nindent 12 }}
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: https
+              containerPort: 8443
+            {{- with .Values.proxy.traefik.extraPorts }}
+            {{- . | toYaml | nindent 12 }}
+            {{- end }}
+          volumeMounts:
+            - name: traefik-config
+              mountPath: /etc/traefik
+            - name: certificates
+              mountPath: /etc/acme
+            {{- with .Values.proxy.traefik.extraVolumeMounts }}
+            {{- . | toYaml | nindent 12 }}
+            {{- end }}
+          {{- with .Values.proxy.traefik.extraEnv }}
+          env:
+            {{- include "jupyterhub.extraEnv" . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.proxy.traefik.containerSecurityContext }}
+          securityContext:
+            {{- . | toYaml | nindent 12 }}
+          {{- end }}
+        - name: secret-sync
+          image: "{{ .Values.proxy.secretSync.image.name }}:{{ .Values.proxy.secretSync.image.tag }}"
+          {{- with .Values.proxy.secretSync.image.pullPolicy }}
+          imagePullPolicy: {{ . }}
+          {{- end }}
+          args:
+            - watch-save
+            - --label=app={{ include "jupyterhub.appLabel" . }}
+            - --label=release={{ .Release.Name }}
+            - --label=chart={{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+            - --label=heritage=secret-sync
+            - {{ include "jupyterhub.proxy-public-tls.fullname" . }}
+            - acme.json
+            - /etc/acme/acme.json
+          env:
+          # We need this to get logs immediately
+          - name: PYTHONUNBUFFERED
+            value: "True"
+          volumeMounts:
+            - name: certificates
+              mountPath: /etc/acme
+          {{- with .Values.proxy.secretSync.containerSecurityContext }}
+          securityContext:
+            {{- . | toYaml | nindent 12 }}
+          {{- end }}
+      {{- with .Values.proxy.traefik.extraPodSpec }}
+      {{- . | toYaml | nindent 6 }}
+      {{- end }}
+{{- end }}

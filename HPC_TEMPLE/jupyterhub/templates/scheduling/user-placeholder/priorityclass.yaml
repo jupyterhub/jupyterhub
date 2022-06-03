@@ -1,0 +1,29 @@
+{{- if .Values.scheduling.podPriority.enabled }}
+{{- if .Values.scheduling.userPlaceholder.enabled -}}
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: {{ include "jupyterhub.user-placeholder-priority.fullname" . }}
+  annotations:
+    # FIXME: PriorityClasses must be added before the other resources reference
+    #        them, and in the past a workaround was needed to accomplish this:
+    #        to make the resource a Helm hook.
+    #
+    #        To transition this resource to no longer be a Helm hook resource,
+    #        we explicitly add ownership annotations/labels (in 1.0.0) which
+    #        will allow a future upgrade (in 2.0.0) to remove all hook and
+    #        ownership annotations/labels.
+    #
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation
+    helm.sh/hook-weight: "-100"
+    meta.helm.sh/release-name: "{{ .Release.Name }}"
+    meta.helm.sh/release-namespace: "{{ .Release.Namespace }}"
+  labels:
+    app.kubernetes.io/managed-by: Helm
+    {{- include "jupyterhub.labels" . | nindent 4 }}
+value: {{ .Values.scheduling.podPriority.userPlaceholderPriority }}
+globalDefault: false
+description: "With a priority higher or eqaul to a cluster autoscalers priority cutoff, a pod can trigger a cluster scale up. At the same time, placeholder pods priority should be lower than other pods to make them evictable."
+{{- end }}
+{{- end }}

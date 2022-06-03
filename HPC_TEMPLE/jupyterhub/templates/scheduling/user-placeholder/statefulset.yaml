@@ -1,0 +1,67 @@
+
+{{- /*
+These user-placeholder pods can be used to test cluster autoscaling in a
+controlled fashion.
+
+Example:
+$ echo 'Simulating four users...'
+$ kubectl scale sts/user-placeholder --replicas 4
+*/}}
+{{- if .Values.scheduling.userPlaceholder.enabled -}}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "jupyterhub.user-placeholder.fullname" . }}
+  labels:
+    {{- include "jupyterhub.labels" . | nindent 4 }}
+spec:
+  podManagementPolicy: Parallel
+  replicas: {{ .Values.scheduling.userPlaceholder.replicas }}
+  selector:
+    matchLabels:
+      {{- include "jupyterhub.matchLabels" . | nindent 6 }}
+  serviceName: {{ include "jupyterhub.user-placeholder.fullname" . }}
+  template:
+    metadata:
+      labels:
+        {{- /* Changes here will cause the Deployment to restart the pods. */}}
+        {{- include "jupyterhub.matchLabels" . | nindent 8 }}
+    spec:
+      {{- if .Values.scheduling.podPriority.enabled }}
+      priorityClassName: {{ include "jupyterhub.user-placeholder-priority.fullname" . }}
+      {{- end }}
+      {{- if .Values.scheduling.userScheduler.enabled }}
+      schedulerName: {{ include "jupyterhub.user-scheduler.fullname" . }}
+      {{- end }}
+      nodeSelector: {{ toJson .Values.singleuser.nodeSelector }}
+      {{- with concat .Values.scheduling.userPods.tolerations .Values.singleuser.extraTolerations }}
+      tolerations:
+        {{- . | toYaml | nindent 8 }}
+      {{- end }}
+      {{- if include "jupyterhub.userAffinity" . }}
+      affinity:
+        {{- include "jupyterhub.userAffinity" . | nindent 8 }}
+      {{- end }}
+      terminationGracePeriodSeconds: 0
+      automountServiceAccountToken: false
+      {{- with include "jupyterhub.imagePullSecrets" (dict "root" . "image" .Values.scheduling.userPlaceholder.image) }}
+      imagePullSecrets: {{ . }}
+      {{- end }}
+      containers:
+        - name: pause
+          image: {{ .Values.scheduling.userPlaceholder.image.name }}:{{ .Values.scheduling.userPlaceholder.image.tag }}
+          {{- if .Values.scheduling.userPlaceholder.resources }}
+          resources:
+            {{- .Values.scheduling.userPlaceholder.resources | toYaml | nindent 12 }}
+          {{- else if (include "jupyterhub.singleuser.resources" .) }}
+          resources:
+            {{- include "jupyterhub.singleuser.resources" . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.scheduling.userPlaceholder.image.pullPolicy }}
+          imagePullPolicy: {{ . }}
+          {{- end }}
+          {{- with .Values.scheduling.userPlaceholder.containerSecurityContext }}
+          securityContext:
+            {{- . | toYaml | nindent 12 }}
+          {{- end }}
+{{- end }}

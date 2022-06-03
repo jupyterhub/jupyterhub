@@ -1,0 +1,155 @@
+Thank you for installing JupyterHub!
+
+Your release is named "{{ .Release.Name }}" and installed into the namespace "{{ .Release.Namespace }}".
+
+You can check whether the hub and proxy are ready by running:
+
+ kubectl --namespace={{ .Release.Namespace }} get pod
+
+and watching for both those pods to be in status 'Running'.{{ println }}
+
+{{- if eq .Values.proxy.service.type "LoadBalancer" }}
+You can find the public (load-balancer) IP of JupyterHub by running:
+
+  kubectl -n {{ .Release.Namespace }} get svc {{ include "jupyterhub.proxy-public.fullname" . }} -o jsonpath='{.status.loadBalancer.ingress[].ip}'
+
+It might take a few minutes for it to appear!
+{{- end }}
+{{- if eq .Values.proxy.service.type "ClusterIP" }}
+You can find the internal (cluster) IP of JupyterHub by running:
+
+  kubectl get -n {{ .Release.Namespace }} svc {{ include "jupyterhub.proxy-public.fullname" . }} -o jsonpath='{.spec.clusterIP}'
+{{- end }}
+{{- if eq .Values.proxy.service.type "NodePort" }}
+You can find the NodePorts of JupyterHub by running:
+
+  kubectl --namespace={{ .Release.Namespace }} get svc {{ include "jupyterhub.proxy-public.fullname" . }} -o jsonpath='{range .spec.ports[*]} {.name}: {.port}{"\n"} {end}'
+{{- end }}
+
+{{- if .Values.ingress.enabled }}
+
+You should be able to access JupyterHub using your configured ingress at:
+{{ range $host := .Values.ingress.hosts }}
+  http://{{ $host }}{{ $.Values.hub.baseUrl | trimSuffix "/" }}/
+{{- end }}
+{{- range $tls := .Values.ingress.tls }}
+  {{- range $host := $tls.hosts }}
+  https://{{ $host }}{{ $.Values.hub.baseUrl | trimSuffix "/" }}/
+  {{- end }}
+{{- end }}
+
+{{- end }}
+
+To get full information about the JupyterHub proxy service run:
+
+  kubectl --namespace={{ .Release.Namespace }} get svc {{ include "jupyterhub.proxy-public.fullname" . }}
+
+If you have questions, please:
+
+  1. Read the guide at https://z2jh.jupyter.org
+  2. Ask for help or chat to us on https://discourse.jupyter.org/
+  3. If you find a bug please report it at https://github.com/jupyterhub/zero-to-jupyterhub-k8s/issues
+
+
+
+
+
+{{- /*
+  Warnings for likely misconfiguration
+*/}}
+
+{{- if and (not .Values.scheduling.podPriority.enabled) (and .Values.scheduling.userPlaceholder.enabled .Values.scheduling.userPlaceholder.replicas) }}{{ println }}
+#################################################################################
+######   WARNING: You are using user placeholders without pod priority      #####
+######            enabled*, either enable pod priority or stop using the    #####
+######            user placeholders** to avoid having placeholders that     #####
+######            refuse to make room for a real user.                      #####
+######                                                                      #####
+######            *scheduling.podPriority.enabled                           #####
+######            **scheduling.userPlaceholder.enabled                      #####
+######            **scheduling.userPlaceholder.replicas                     #####
+#################################################################################
+{{- end }}
+
+
+{{- if eq .Values.proxy.https.enabled false }}
+{{- if or (not (eq .Values.proxy.https.type "letsencrypt")) (not (eq (.Values.proxy.https.letsencrypt.contactEmail | default "") "")) }}{{ println }}
+#################################################################################
+######   WARNING: proxy.https.enabled is set to false by default since      #####
+######            version 0.10.0. It is now set to false but proxy.https    #####
+######            has been modified indicating you may want it enabled.     #####
+#################################################################################
+{{- end }}
+{{- end }}
+
+
+
+
+
+{{- /*
+  Breaking changes.
+*/}}
+
+{{- $breaking := "" }}
+{{- $breaking_title := "\n" }}
+{{- $breaking_title = print $breaking_title "\n#################################################################################" }}
+{{- $breaking_title = print $breaking_title "\n######   BREAKING: The config values passed contained no longer accepted    #####" }}
+{{- $breaking_title = print $breaking_title "\n######             options. See the messages below for more details.        #####" }}
+{{- $breaking_title = print $breaking_title "\n######                                                                      #####" }}
+{{- $breaking_title = print $breaking_title "\n######             To verify your updated config is accepted, you can use   #####" }}
+{{- $breaking_title = print $breaking_title "\n######             the `helm template` command.                             #####" }}
+{{- $breaking_title = print $breaking_title "\n#################################################################################" }}
+
+
+{{- if hasKey .Values.hub "extraConfigMap" }}
+{{- $breaking = print $breaking "\n\nRENAMED: hub.extraConfigMap has been renamed to custom" }}
+{{- end }}
+
+
+{{- if hasKey .Values "auth" }}
+{{- if .Values.auth }}
+{{- $breaking = print $breaking (include "jupyterhub.authDep.remapOldToNew" .) }}
+{{- else }}
+{{- $breaking = print $breaking "\n\nREMOVED: Please remove the empty 'auth' config" }}
+{{- end }}
+{{- end }}
+
+
+{{- if hasKey .Values.proxy "containerSecurityContext" }}
+{{- $breaking = print $breaking "\n\nRENAMED: proxy.containerSecurityContext has been renamed to proxy.chp.containerSecurityContext" }}
+{{- end }}
+
+
+{{- if hasKey .Values.proxy "pdb" }}
+{{- $breaking = print $breaking "\n\nRENAMED: proxy.pdb has renamed to proxy.chp.pdb" }}
+{{- end }}
+
+
+{{- if hasKey .Values.proxy "networkPolicy" }}
+{{- $breaking = print $breaking "\n\nRENAMED: proxy.networkPolicy has been renamed to proxy.chp.networkPolicy" }}
+{{- end }}
+
+
+{{- if hasKey .Values.hub "uid" }}
+{{- $breaking = print $breaking "\n\nRENAMED: hub.uid must as of 1.0.0 be configured using hub.containerSecurityContext.runAsUser" }}
+{{- end }}
+
+
+{{- if hasKey .Values.hub "imagePullSecret" }}
+{{- $breaking = print $breaking "\n\nREMOVED: hub.imagePullSecret has been removed, but there is now a chart wide wide configuration named imagePullSecret" }}
+{{- end }}
+
+
+{{- if hasKey .Values.singleuser "imagePullSecret" }}
+{{- $breaking = print $breaking "\n\nREMOVED: singleuser.imagePullSecret has been removed, but there is now a chart wide wide configuration named imagePullSecret" }}
+{{- end }}
+
+
+{{- if hasKey .Values.singleuser.cloudMetadata "enabled" }}
+{{- $breaking = print $breaking "\n\nCHANGED: singleuser.cloudMetadata.enabled must as of 1.0.0 be configured using singleuser.cloudMetadata.blockWithIptables with the opposite value." }}
+{{- end }}
+
+
+{{- if $breaking }}
+{{- fail (print $breaking_title $breaking) }}
+{{- end }}

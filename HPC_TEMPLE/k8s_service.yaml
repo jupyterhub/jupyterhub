@@ -1,0 +1,78 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: hub
+  namespace: default
+  uid: 2b11be76-fa86-443d-a4b8-b759d78479ac
+  resourceVersion: '4348'
+  creationTimestamp: '2022-05-31T20:32:39Z'
+  labels:
+    app: jupyterhub
+    app.kubernetes.io/managed-by: Helm
+    chart: jupyterhub-1.2.0
+    component: hub
+    heritage: Helm
+    release: jhub2
+  annotations:
+    meta.helm.sh/release-name: jhub2
+    meta.helm.sh/release-namespace: default
+    prometheus.io/path: /hub/metrics
+    prometheus.io/port: '8081'
+    prometheus.io/scrape: 'true'
+  managedFields:
+    - manager: helm
+      operation: Update
+      apiVersion: v1
+      time: '2022-05-31T20:32:39Z'
+      fieldsType: FieldsV1
+      fieldsV1:
+        f:metadata:
+          f:annotations:
+            .: {}
+            f:meta.helm.sh/release-name: {}
+            f:meta.helm.sh/release-namespace: {}
+            f:prometheus.io/path: {}
+            f:prometheus.io/port: {}
+            f:prometheus.io/scrape: {}
+          f:labels:
+            .: {}
+            f:app: {}
+            f:app.kubernetes.io/managed-by: {}
+            f:chart: {}
+            f:component: {}
+            f:heritage: {}
+            f:release: {}
+        f:spec:
+          f:internalTrafficPolicy: {}
+          f:ports:
+            .: {}
+            k:{"port":8081,"protocol":"TCP"}:
+              .: {}
+              f:name: {}
+              f:port: {}
+              f:protocol: {}
+              f:targetPort: {}
+          f:selector: {}
+          f:sessionAffinity: {}
+          f:type: {}
+spec:
+  ports:
+    - name: hub
+      protocol: TCP
+      port: 8081
+      targetPort: http
+  selector:
+    app: jupyterhub
+    component: hub
+    release: jhub2
+  clusterIP: 10.110.119.43
+  clusterIPs:
+    - 10.110.119.43
+  type: ClusterIP
+  sessionAffinity: None
+  ipFamilies:
+    - IPv4
+  ipFamilyPolicy: SingleStack
+  internalTrafficPolicy: Cluster
+status:
+  loadBalancer: {}

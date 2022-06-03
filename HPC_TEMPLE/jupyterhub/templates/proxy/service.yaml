@@ -1,0 +1,80 @@
+{{- $enabled := .Values.proxy.https.enabled -}}
+{{- $autoHTTPS := and $enabled (and (eq .Values.proxy.https.type "letsencrypt") .Values.proxy.https.hosts) -}}
+{{- $manualHTTPS := and $enabled (eq .Values.proxy.https.type "manual") -}}
+{{- $manualHTTPSwithsecret := and $enabled (eq .Values.proxy.https.type "secret") -}}
+{{- $offloadHTTPS := and $enabled (eq .Values.proxy.https.type "offload") -}}
+{{- $valid := or $autoHTTPS (or $manualHTTPS (or $manualHTTPSwithsecret $offloadHTTPS)) -}}
+{{- $HTTPS := and $enabled $valid -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "jupyterhub.proxy-api.fullname" . }}
+  labels:
+    {{- $_ := merge (dict "componentSuffix" "-api") . }}
+    {{- include "jupyterhub.labels" $_ | nindent 4 }}
+spec:
+  selector:
+    {{- include "jupyterhub.matchLabels" . | nindent 4 }}
+  ports:
+    - port: 8001
+      targetPort: api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "jupyterhub.proxy-public.fullname" . }}
+  labels:
+    {{- $_ := merge (dict "componentSuffix" "-public") . }}
+    {{- include "jupyterhub.labels" $_ | nindent 4 }}
+    {{- with .Values.proxy.service.labels }}
+    {{- . | toYaml | nindent 4 }}
+    {{- end }}
+  {{- with .Values.proxy.service.annotations }}
+  annotations:
+    {{- . | toYaml | nindent 4 }}
+  {{- end }}
+spec:
+  selector:
+    {{- if $autoHTTPS }}
+    component: autohttps
+    {{- else }}
+    component: proxy
+    {{- end }}
+    release: {{ .Release.Name }}
+  ports:
+    {{- if $HTTPS }}
+    - name: https
+      port: 443
+      # When HTTPS termination is handled outside our helm chart, pass traffic
+      # coming in via this Service's port 443 to targeted pod's port meant for
+      # HTTP traffic.
+      {{- if $offloadHTTPS }}
+      targetPort: http
+      {{- else }}
+      targetPort: https
+      {{- end }}
+      {{- with .Values.proxy.service.nodePorts.https }}
+      nodePort: {{ . }}
+      {{- end }}
+    {{- end }}
+    {{- if ne .Values.proxy.service.disableHttpPort true }}
+    - name: http
+      port: 80
+      targetPort: http
+      {{- with .Values.proxy.service.nodePorts.http }}
+      nodePort: {{ . }}
+      {{- end }}
+    {{- end }}
+    {{- with .Values.proxy.service.extraPorts }}
+    {{- . | toYaml | nindent 4 }}
+    {{- end }}
+  type: {{ .Values.proxy.service.type }}
+  {{- with .Values.proxy.service.loadBalancerIP }}
+  loadBalancerIP: {{ . }}
+  {{- end }}
+  {{- if eq .Values.proxy.service.type "LoadBalancer" }}
+  {{- with .Values.proxy.service.loadBalancerSourceRanges }}
+  loadBalancerSourceRanges:
+    {{- . | toYaml | nindent 4 }}
+  {{- end }}
+  {{- end }}

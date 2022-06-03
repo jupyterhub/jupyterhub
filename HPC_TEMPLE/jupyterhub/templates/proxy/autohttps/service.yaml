@@ -1,0 +1,25 @@
+{{- $HTTPS := (and .Values.proxy.https.hosts .Values.proxy.https.enabled) }}
+{{- $autoHTTPS := (and $HTTPS (eq .Values.proxy.https.type "letsencrypt")) }}
+{{- if $autoHTTPS -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "jupyterhub.proxy-http.fullname" . }}
+  labels:
+    {{- include "jupyterhub.labels" . | nindent 4 }}
+    {{- with .Values.proxy.service.labels }}
+    {{- . | toYaml | nindent 4 }}
+    {{- end }}
+  {{- with .Values.proxy.service.annotations }}
+  annotations:
+    {{- . | toYaml | nindent 4 }}
+  {{- end }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- $_ := merge (dict "componentLabel" "proxy") . }}
+    {{- include "jupyterhub.matchLabels" $_ | nindent 4 }}
+  ports:
+    - port: 8000
+      targetPort: http
+{{- end }}

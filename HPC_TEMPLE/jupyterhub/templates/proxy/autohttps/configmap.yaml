@@ -1,0 +1,28 @@
+{{- $HTTPS := (and .Values.proxy.https.hosts .Values.proxy.https.enabled) }}
+{{- $autoHTTPS := (and $HTTPS (eq .Values.proxy.https.type "letsencrypt")) }}
+{{- if $autoHTTPS -}}
+{{- $_ := .Values.proxy.https.letsencrypt.contactEmail | required "proxy.https.letsencrypt.contactEmail is a required field" -}}
+
+# This configmap contains Traefik configuration files to be mounted.
+# - traefik.yaml will only be read during startup (static configuration)
+# - dynamic.yaml will be read on change (dynamic configuration)
+#
+# ref: https://docs.traefik.io/getting-started/configuration-overview/
+#
+# The configuration files are first rendered with Helm templating to large YAML
+# strings. Then we use the fromYAML function on these strings to get an object,
+# that we in turn merge with user provided extra configuration.
+#
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: {{ include "jupyterhub.autohttps.fullname" . }}
+  labels:
+    {{- include "jupyterhub.labels" . | nindent 4 }}
+data:
+  traefik.yaml: |
+    {{- include "jupyterhub.traefik.yaml" . | fromYaml | merge .Values.proxy.traefik.extraStaticConfig | toYaml | nindent 4 }}
+  dynamic.yaml: |
+    {{- include "jupyterhub.dynamic.yaml" . | fromYaml | merge .Values.proxy.traefik.extraDynamicConfig | toYaml | nindent 4 }}
+
+{{- end }}

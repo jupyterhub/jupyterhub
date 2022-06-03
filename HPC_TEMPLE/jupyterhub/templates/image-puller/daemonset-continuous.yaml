@@ -1,0 +1,8 @@
+{{- /*
+The continuous-image-puller daemonset task is to pull required images to nodes
+that are added in between helm upgrades, for example by manually adding a node
+or by the cluster autoscaler.
+*/}}
+{{- if .Values.prePuller.continuous.enabled }}
+{{- include "jupyterhub.imagePuller.daemonset.continuous" . }}
+{{- end }}

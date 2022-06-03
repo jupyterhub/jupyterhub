@@ -1,0 +1,116 @@
+{{- $HTTPS := .Values.proxy.https.enabled -}}
+{{- $autoHTTPS := and $HTTPS (and (eq .Values.proxy.https.type "letsencrypt") .Values.proxy.https.hosts) -}}
+{{- $manualHTTPS := and $HTTPS (eq .Values.proxy.https.type "manual") -}}
+{{- $manualHTTPSwithsecret := and $HTTPS (eq .Values.proxy.https.type "secret") -}}
+{{- if .Values.proxy.chp.networkPolicy.enabled -}}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "jupyterhub.proxy.fullname" . }}
+  labels:
+    {{- include "jupyterhub.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "jupyterhub.matchLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+
+  # IMPORTANT:
+  # NetworkPolicy's ingress "from" and egress "to" rule specifications require
+  # great attention to detail. A quick summary is:
+  #
+  # 1. You can provide "from"/"to" rules that provide access either ports or a
+  #    subset of ports.
+  # 2. You can for each "from"/"to" rule provide any number of
+  #    "sources"/"destinations" of four different kinds.
+  #    - podSelector                        - targets pods with a certain label in the same namespace as the NetworkPolicy
+  #    - namespaceSelector                  - targets all pods running in namespaces with a certain label
+  #    - namespaceSelector and podSelector  - targets pods with a certain label running in namespaces with a certain label
+  #    - ipBlock                            - targets network traffic from/to a set of IP address ranges
+  #
+  # Read more at: https://kubernetes.io/docs/concepts/services-networking/network-policies/#behavior-of-to-and-from-selectors
+  #
+  ingress:
+    {{- with .Values.proxy.chp.networkPolicy.allowedIngressPorts }}
+    # allow incoming traffic to these ports independent of source
+    - ports:
+      {{- range $port := . }}
+      - port: {{ $port }}
+      {{- end }}
+    {{- end }}
+
+    # allowed pods (hub.jupyter.org/network-access-proxy-http) --> proxy (http/https port)
+    - ports:
+        - port: http
+        {{- if or $manualHTTPS $manualHTTPSwithsecret }}
+        - port: https
+        {{- end }}
+      from:
+        # source 1 - labeled pods
+        - podSelector:
+            matchLabels:
+              hub.jupyter.org/network-access-proxy-http: "true"
+        {{- if eq .Values.proxy.chp.networkPolicy.interNamespaceAccessLabels "accept" }}
+          namespaceSelector:
+            matchLabels: {}   # without this, the podSelector would only consider pods in the local namespace
+        # source 2 - pods in labeled namespaces
+        - namespaceSelector:
+            matchLabels:
+              hub.jupyter.org/network-access-proxy-http: "true"
+        {{- end }}
+
+    # allowed pods (hub.jupyter.org/network-access-proxy-api) --> proxy (api port)
+    - ports:
+        - port: api
+      from:
+        # source 1 - labeled pods
+        - podSelector:
+            matchLabels:
+              hub.jupyter.org/network-access-proxy-api: "true"
+        {{- if eq .Values.proxy.chp.networkPolicy.interNamespaceAccessLabels "accept" }}
+          namespaceSelector:
+            matchLabels: {}   # without this, the podSelector would only consider pods in the local namespace
+        # source 2 - pods in labeled namespaces
+        - namespaceSelector:
+            matchLabels:
+              hub.jupyter.org/network-access-proxy-api: "true"
+        {{- end }}
+
+    {{- with .Values.proxy.chp.networkPolicy.ingress}}
+    # depends, but default is nothing --> proxy
+    {{- . | toYaml | nindent 4 }}
+    {{- end }}
+
+  egress:
+    # proxy --> hub
+    - ports:
+        - port: 8081
+      to:
+        - podSelector:
+            matchLabels:
+              {{- $_ := merge (dict "componentLabel" "hub") . }}
+              {{- include "jupyterhub.matchLabels" $_ | nindent 14 }}
+
+    # proxy --> singleuser-server
+    - ports:
+        - port: 8888
+      to:
+        - podSelector:
+            matchLabels:
+              {{- $_ := merge (dict "componentLabel" "singleuser-server") . }}
+              {{- include "jupyterhub.matchLabels" $_ | nindent 14 }}
+
+    # proxy --> Kubernetes internal DNS
+    - ports:
+      - protocol: UDP
+        port: 53
+      - protocol: TCP
+        port: 53
+
+    {{- with .Values.proxy.chp.networkPolicy.egress }}
+    # proxy --> depends, but the default is everything
+    {{- . | toYaml | nindent 4 }}
+    {{- end }}
+{{- end }}

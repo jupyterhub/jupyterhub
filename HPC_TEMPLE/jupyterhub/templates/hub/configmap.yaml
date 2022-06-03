@@ -1,0 +1,30 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: {{ include "jupyterhub.hub.fullname" . }}
+  labels:
+    {{- include "jupyterhub.labels" . | nindent 4 }}
+data:
+  {{- /*
+    Resource names exposed to reliably reference them.
+
+    user-scheduler: "my-helm-release-user-scheduler"
+    ...
+  */}}
+  {{- include "jupyterhub.name-templates" . | nindent 2 }}
+
+  {{- /*
+    Glob files to allow them to be mounted by the hub pod
+
+    jupyterhub_config: |
+      multi line string content...
+    z2jh.py: |
+      multi line string content...
+  */}}
+  {{- (.Files.Glob "files/hub/*").AsConfig | nindent 2 }}
+
+  {{- /*
+    Store away a checksum of the hook-image-puller daemonset so future upgrades
+    can compare and decide if it should run or not using the `lookup` function.
+  */}}
+  checksum_hook-image-puller: {{ include "jupyterhub.imagePuller.daemonset.hook.checksum" . | quote }}

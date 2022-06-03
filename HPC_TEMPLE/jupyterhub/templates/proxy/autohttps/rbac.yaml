@@ -1,0 +1,40 @@
+{{- $HTTPS := (and .Values.proxy.https.hosts .Values.proxy.https.enabled) }}
+{{- $autoHTTPS := (and $HTTPS (eq .Values.proxy.https.type "letsencrypt")) }}
+{{- if (and $autoHTTPS .Values.rbac.enabled) -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "jupyterhub.autohttps.fullname" . }}
+  labels:
+    {{- include "jupyterhub.labels" . | nindent 4 }}
+  {{- with .Values.proxy.traefik.serviceAccount.annotations }}
+  annotations:
+    {{- . | toYaml | nindent 4 }}
+  {{- end }}
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "patch", "list", "create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "jupyterhub.autohttps.fullname" . }}
+  labels:
+    {{- include "jupyterhub.labels" . | nindent 4 }}
+subjects:
+- kind: ServiceAccount
+  name: {{ include "jupyterhub.autohttps.fullname" . }}
+  apiGroup:
+roleRef:
+  kind: Role
+  name: {{ include "jupyterhub.autohttps.fullname" . }}
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "jupyterhub.autohttps.fullname" . }}
+  labels:
+    {{- include "jupyterhub.labels" . | nindent 4 }}
+{{- end }}

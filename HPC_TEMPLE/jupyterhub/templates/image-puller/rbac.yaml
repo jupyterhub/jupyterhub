@@ -1,0 +1,66 @@
+{{- /*
+Permissions to be used by the hook-image-awaiter job
+*/}}
+{{- if .Values.rbac.enabled }}
+{{- if (include "jupyterhub.imagePuller.daemonset.hook.install" .) }}
+{{- /*
+This service account...
+*/ -}}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "jupyterhub.hook-image-awaiter.fullname" . }}
+  labels:
+    {{- include "jupyterhub.labels" . | nindent 4 }}
+    hub.jupyter.org/deletable: "true"
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+    "helm.sh/hook-weight": "0"
+    {{- with .Values.prePuller.hook.serviceAccount.annotations }}
+    {{- . | toYaml | nindent 4 }}
+    {{- end }}
+---
+{{- /*
+... will be used by this role...
+*/}}
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{ include "jupyterhub.hook-image-awaiter.fullname" . }}
+  labels:
+    {{- include "jupyterhub.labels" . | nindent 4 }}
+    hub.jupyter.org/deletable: "true"
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+    "helm.sh/hook-weight": "0"
+rules:
+  - apiGroups: ["apps"]       # "" indicates the core API group
+    resources: ["daemonsets"]
+    verbs: ["get"]
+---
+{{- /*
+... as declared by this binding.
+*/}}
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{ include "jupyterhub.hook-image-awaiter.fullname" . }}
+  labels:
+    {{- include "jupyterhub.labels" . | nindent 4 }}
+    hub.jupyter.org/deletable: "true"
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+    "helm.sh/hook-weight": "0"
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "jupyterhub.hook-image-awaiter.fullname" . }}
+    namespace: "{{ .Release.Namespace }}"
+roleRef:
+  kind: Role
+  name: {{ include "jupyterhub.hook-image-awaiter.fullname" . }}
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}
+{{- end }}

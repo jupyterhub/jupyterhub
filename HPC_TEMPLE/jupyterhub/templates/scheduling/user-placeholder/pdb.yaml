@@ -1,0 +1,21 @@
+{{- /*
+The cluster autoscaler should be allowed to evict and reschedule these pods if
+it would help in order to scale down a node.
+*/}}
+{{- if .Values.scheduling.userPlaceholder.enabled -}}
+{{- if .Capabilities.APIVersions.Has "policy/v1" }}
+apiVersion: policy/v1
+{{- else }}
+apiVersion: policy/v1beta1
+{{- end }}
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "jupyterhub.user-placeholder.fullname" . }}
+  labels:
+    {{- include "jupyterhub.labels" . | nindent 4 }}
+spec:
+  minAvailable: 0
+  selector:
+    matchLabels:
+      {{- include "jupyterhub.matchLabels" . | nindent 6 }}
+{{- end }}
