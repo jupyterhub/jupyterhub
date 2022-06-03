@@ -36,7 +36,7 @@ from jupyterhub.traitlets import Command
 from . import utils
 from .metrics import CHECK_ROUTES_DURATION_SECONDS, PROXY_POLL_DURATION_SECONDS
 from .objects import Server
-from .utils import AnyTimeoutError, exponential_backoff, url_path_join
+from .utils import AnyTimeoutError, exponential_backoff, url_escape_path, url_path_join
 
 
 def _one_at_a_time(method):
@@ -295,7 +295,9 @@ class Proxy(LoggingConfigurable):
         """Remove a user's server from the proxy table."""
         routespec = user.proxy_spec
         if server_name:
-            routespec = url_path_join(user.proxy_spec, server_name, '/')
+            routespec = url_path_join(
+                user.proxy_spec, url_escape_path(server_name), '/'
+            )
         self.log.info("Removing user %s from proxy (%s)", user.name, routespec)
         await self.delete_route(routespec)
 

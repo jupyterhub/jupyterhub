@@ -15,7 +15,13 @@ from .. import orm, scopes
 from ..roles import assign_default_roles
 from ..scopes import needs_scope
 from ..user import User
-from ..utils import isoformat, iterate_until, maybe_future, url_path_join
+from ..utils import (
+    isoformat,
+    iterate_until,
+    maybe_future,
+    url_escape_path,
+    url_path_join,
+)
 from .base import APIHandler
 
 
@@ -685,7 +691,7 @@ class SpawnProgressAPIHandler(APIHandler):
         # - spawner not running at all
         # - spawner failed
         # - spawner pending start (what we expect)
-        url = url_path_join(user.url, server_name, '/')
+        url = url_path_join(user.url, url_escape_path(server_name), '/')
         ready_event = {
             'progress': 100,
             'ready': True,

@@ -2,12 +2,14 @@
 import asyncio
 import json
 from unittest import mock
-from urllib.parse import urlencode, urlparse
+from urllib.parse import unquote, urlencode, urlparse
 
 import pytest
+from requests.exceptions import HTTPError
 from tornado.httputil import url_concat
 
-from ..utils import url_path_join
+from .. import orm
+from ..utils import url_escape_path, url_path_join
 from .mocking import FormSpawner, public_url
 from .test_api import TIMESTAMP, add_user, api_request, fill_user, normalize_user
 from .utils import async_requests, get_page
@@ -83,28 +85,54 @@ async def test_default_server(app, named_servers):
     )
 
 
-async def test_create_named_server(app, named_servers):
+@pytest.mark.parametrize(
+    'servername,escapedname,caller_escape',
+    [
+        ('trevor', 'trevor', False),
+        ('$p~c|a! ch@rs', '%24p~c%7Ca%21%20ch@rs', False),
+        ('$p~c|a! ch@rs', '%24p~c%7Ca%21%20ch@rs', True),
+        ('hash#?question', 'hash%23%3Fquestion', True),
+    ],
+)
+async def test_create_named_server(
+    app, named_servers, servername, escapedname, caller_escape
+):
     username = 'walnut'
     user = add_user(app.db, app, name=username)
     # assert user.allow_named_servers == True
     cookies = await app.login_user(username)
-    servername = 'trevor'
-    r = await api_request(app, 'users', username, 'servers', servername, method='post')
+    request_servername = servername
+    if caller_escape:
+        request_servername = url_escape_path(servername)
+
+    r = await api_request(
+        app, 'users', username, 'servers', request_servername, method='post'
+    )
     r.raise_for_status()
     assert r.status_code == 201
     assert r.text == ''
 
-    url = url_path_join(public_url(app, user), servername, 'env')
+    url = url_path_join(public_url(app, user), request_servername, 'env')
+    expected_url = url_path_join(public_url(app, user), escapedname, 'env')
     r = await async_requests.get(url, cookies=cookies)
     r.raise_for_status()
-    assert r.url == url
+    # requests doesn't fully encode the servername: "$p~c%7Ca!%20ch@rs".
+    # Since this is the internal requests representation and not the JupyterHub
+    # representation it just needs to be equivalent.
+    assert unquote(r.url) == unquote(expected_url)
     env = r.json()
     prefix = env.get('JUPYTERHUB_SERVICE_PREFIX')
     assert prefix == user.spawners[servername].server.base_url
-    assert prefix.endswith(f'/user/{username}/{servername}/')
+    assert prefix.endswith(f'/user/{username}/{escapedname}/')
 
     r = await api_request(app, 'users', username)
     r.raise_for_status()
+
+    # Ensure the unescaped name is stored in the DB
+    db_server_names = set(
+        app.db.query(orm.User).filter_by(name=username).first().orm_spawners.keys()
+    )
+    assert db_server_names == {"", servername}
 
     user_model = normalize_user(r.json())
     assert user_model == fill_user(
@@ -117,11 +145,11 @@ async def test_create_named_server(app, named_servers):
                     'name': name,
                     'started': TIMESTAMP,
                     'last_activity': TIMESTAMP,
-                    'url': url_path_join(user.url, name, '/'),
+                    'url': url_path_join(user.url, escapedname, '/'),
                     'pending': None,
                     'ready': True,
                     'progress_url': 'PREFIX/hub/api/users/{}/servers/{}/progress'.format(
-                        username, servername
+                        username, escapedname
                     ),
                     'state': {'pid': 0},
                     'user_options': {},
@@ -130,6 +158,26 @@ async def test_create_named_server(app, named_servers):
             },
         }
     )
+
+
+async def test_create_invalid_named_server(app, named_servers):
+    username = 'walnut'
+    user = add_user(app.db, app, name=username)
+    # assert user.allow_named_servers == True
+    cookies = await app.login_user(username)
+    server_name = "a$/b"
+    request_servername = 'a%24%2fb'
+
+    r = await api_request(
+        app, 'users', username, 'servers', request_servername, method='post'
+    )
+
+    with pytest.raises(HTTPError) as exc:
+        r.raise_for_status()
+    assert exc.value.response.json() == {
+        'status': 400,
+        'message': "Invalid server_name (may not contain '/'): a$/b",
+    }
 
 
 async def test_delete_named_server(app, named_servers):
