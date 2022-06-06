@@ -200,6 +200,25 @@ const ServerDashboard = (props) => {
     );
   };
 
+  const ServerRowTable = ({ data }) => {
+    return (
+      <ReactObjectTableViewer
+        className="table-striped table-bordered"
+        style={{
+          padding: "3px 6px",
+          margin: "auto",
+        }}
+        keyStyle={{
+          padding: "4px",
+        }}
+        valueStyle={{
+          padding: "4px",
+        }}
+        data={data}
+      />
+    );
+  };
+
   const serverRow = (user, server) => {
     const { servers, ...userNoServers } = user;
     const serverNameDash = server.name ? `-${server.name}` : "";
@@ -286,37 +305,11 @@ const ServerDashboard = (props) => {
             >
               <Card style={{ width: "100%", padding: 3, margin: "0 auto" }}>
                 <Card.Title>User</Card.Title>
-                <ReactObjectTableViewer
-                  className="table-striped table-bordered admin-table-head"
-                  style={{
-                    padding: "3px 6px",
-                    margin: "auto",
-                  }}
-                  keyStyle={{
-                    padding: "4px",
-                  }}
-                  valueStyle={{
-                    padding: "4px",
-                  }}
-                  data={userNoServers}
-                />
+                <ServerRowTable data={userNoServers} />
               </Card>
               <Card style={{ width: "100%", padding: 3, margin: "0 auto" }}>
                 <Card.Title>Server</Card.Title>
-                <ReactObjectTableViewer
-                  className="table-striped table-bordered admin-table-head"
-                  style={{
-                    padding: "3px 6px",
-                    margin: "auto",
-                  }}
-                  keyStyle={{
-                    padding: "4px",
-                  }}
-                  valueStyle={{
-                    padding: "4px",
-                  }}
-                  data={server}
-                />
+                <ServerRowTable data={server} />
               </Card>
             </CardGroup>
           </Collapse>
