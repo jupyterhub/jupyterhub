@@ -1798,7 +1798,7 @@ class JupyterHub(Application):
             self.log.error("Failed to connect to db: %s", db_log_url)
             self.log.debug("Database error was:", exc_info=True)
             if self.db_url.startswith('sqlite:///'):
-                self._check_db_path(self.db_url.split(':///', 1)[1])
+                self._check_db_path(self.db_url.split('://', 1)[1])
             self.log.critical(
                 '\n'.join(
                     [
