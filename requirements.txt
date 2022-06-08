@@ -1,7 +1,7 @@
 alembic>=1.4
 async_generator>=1.9
 certipy>=0.1.2
-entrypoints
+importlib_metadata>=3.6; python_version < '3.10'
 jinja2>=2.11.0
 jupyter_telemetry>=0.1.0
 oauthlib>=3.0
