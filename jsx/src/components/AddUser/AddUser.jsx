@@ -88,17 +88,7 @@ const AddUser = (props) => {
                   data-testid="submit"
                   className="btn btn-primary"
                   onClick={() => {
-                    let filtered_users = users.filter(
-                      (e) =>
-                        e.length > 2 &&
-                        /[!@#$%^&*(),.?":{}|<>]/g.test(e) == false
-                    );
-                    if (filtered_users.length < users.length) {
-                      setUsers(filtered_users);
-                      failRegexEvent();
-                    }
-
-                    addUsers(filtered_users, admin)
+                    addUsers(users, admin)
                       .then((data) =>
                         data.status < 300
                           ? updateUsers(0, limit)
