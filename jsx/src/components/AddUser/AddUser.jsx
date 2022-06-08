@@ -60,7 +60,10 @@ const AddUser = (props) => {
                       placeholder="usernames separated by line"
                       data-testid="user-textarea"
                       onBlur={(e) => {
-                        let split_users = e.target.value.split("\n");
+                        let split_users = e.target.value
+                          .split("\n")
+                          .map((u) => u.trim())
+                          .filter((u) => u.length > 0);
                         setUsers(split_users);
                       }}
                     ></textarea>
