@@ -70,12 +70,12 @@ test("Removes users when they fail Regex", async () => {
   let textarea = screen.getByTestId("user-textarea");
   let submit = screen.getByTestId("submit");
 
-  fireEvent.blur(textarea, { target: { value: "foo\nbar\n!!*&*" } });
+  fireEvent.blur(textarea, { target: { value: "foo \n bar\na@b.co\n  \n\n" } });
   await act(async () => {
     fireEvent.click(submit);
   });
 
-  expect(callbackSpy).toHaveBeenCalledWith(["foo", "bar"], false);
+  expect(callbackSpy).toHaveBeenCalledWith(["foo", "bar", "a@b.co"], false);
 });
 
 test("Correctly submits admin", async () => {
