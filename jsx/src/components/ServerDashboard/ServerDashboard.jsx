@@ -30,7 +30,7 @@ const AccessServerButton = ({ url }) => (
 );
 
 const ServerDashboard = (props) => {
-  let base_url = window.base_url;
+  let base_url = window.base_url || "/";
   // sort methods
   var usernameDesc = (e) => e.sort((a, b) => (a.name > b.name ? 1 : -1)),
     usernameAsc = (e) => e.sort((a, b) => (a.name < b.name ? 1 : -1)),
@@ -277,7 +277,7 @@ const ServerDashboard = (props) => {
               />
               <a
                 href={`${base_url}spawn/${user.name}${
-                  server.name && "/" + server.name
+                  server.name ? "/" + server.name : ""
                 }`}
               >
                 <button
