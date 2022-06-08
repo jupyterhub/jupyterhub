@@ -3,7 +3,7 @@
   height: 80vh;
 
   & #insecure-login-warning {
-    @include bg-warning();
+    // @include bg-warning();
     padding: 10px;
   }
 

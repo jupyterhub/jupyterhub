@@ -146,21 +146,14 @@ class CSS(BaseCommand):
         self.run_command('js')
         print("Building css with less")
 
-        style_less = pjoin(static, 'less', 'style.less')
+        style_less = pjoin(static, 'scss', 'style.scss')
         style_css = pjoin(static, 'css', 'style.min.css')
         sourcemap = style_css + '.map'
 
         args = [
             'npm',
             'run',
-            'lessc',
-            '--',
-            '--clean-css',
-            f'--source-map-basepath={static}',
-            f'--source-map={sourcemap}',
-            '--source-map-rootpath=../',
-            style_less,
-            style_css,
+            'css',
         ]
         try:
             check_call(args, cwd=here, shell=shell)

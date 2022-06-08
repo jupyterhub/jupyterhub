@@ -1,18 +1,31 @@
+/*! variables */
+@import "./variables.scss";
+
 /*!
 *
 * Twitter Bootstrap
 *
 */
-@import "../components/bootstrap/less/bootstrap.scss";
-@import "../components/bootstrap/less/responsive-utilities.scss";
+@import "../components/bootstrap/scss/functions"; // Required
+@import "../components/bootstrap/scss/variables"; // Required
+@import "../components/bootstrap/scss/mixins"; // Required
+
+@import "../components/bootstrap/scss/root"; // Required
+@import "../components/bootstrap/scss/reboot"; // Required
+
+@import "../components/bootstrap/scss/alert";
+@import "../components/bootstrap/scss/buttons";
+@import "../components/bootstrap/scss/containers";
+@import "../components/bootstrap/scss/grid";
+@import "../components/bootstrap/scss/utilities";
 
 /*!
 *
 * Font Awesome
 *
 */
-@import "../components/font-awesome/less/font-awesome.scss";
-$fa-font-path: "../components/font-awesome/fonts";
+// $fa-font-path: "../components/font-awesome/fonts";
+// @import "../components/font-awesome/scss/font-awesome.scss";
 
 /*!
 *
@@ -20,7 +33,6 @@ $fa-font-path: "../components/font-awesome/fonts";
 *
 */
 
-@import "./variables.scss";
 @import "./page.scss";
 @import "./admin.scss";
 @import "./error.scss";

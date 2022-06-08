@@ -1,4 +1,4 @@
-@import "../components/bootstrap/less/variables.scss";
+@import "./variables.scss";
 
 $logo-height: 28px;
 
@@ -71,4 +71,7 @@ $logo-height: 28px;
     0 0 8px $jupyter-orange;
   border-color: $jupyter-orange;
   outline-color: $jupyter-orange;
+
+.btn-jupyter {
+  @include button-variant(#fff, $jupyter-orange, $jupyter-red);
 }
