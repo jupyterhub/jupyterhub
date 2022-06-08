@@ -3,7 +3,7 @@
   height: 80vh;
 
   & #insecure-login-warning {
-    .bg-warning();
+    @include bg-warning();
     padding: 10px;
   }
 
@@ -30,8 +30,8 @@
   .auth-form-header {
     padding: 10px 20px;
     color: #fff;
-    background: @jupyter-orange;
-    border-radius: @border-radius-large @border-radius-large 0 0;
+    background: $jupyter-orange;
+    border-radius: $border-radius-large $border-radius-large 0 0;
     font-size: large;
   }
 
@@ -45,6 +45,6 @@
     padding: 20px;
     border: thin silver solid;
     border-top: none;
-    border-radius: 0 0 @border-radius-large @border-radius-large;
+    border-radius: 0 0 $border-radius-large $border-radius-large;
   }
 }
