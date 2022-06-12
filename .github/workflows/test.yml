@@ -30,6 +30,9 @@ env:
   LANG: C.UTF-8
   PYTEST_ADDOPTS: "--verbose --color=yes"
 
+permissions:
+  contents: read
+
 jobs:
   # Run "pytest jupyterhub/tests" in various configurations
   pytest:
