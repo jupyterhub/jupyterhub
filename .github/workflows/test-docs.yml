@@ -15,15 +15,13 @@ on:
       - "docs/**"
       - "jupyterhub/_version.py"
       - "jupyterhub/scopes.py"
-      - ".github/workflows/*"
-      - "!.github/workflows/test-docs.yml"
+      - ".github/workflows/test-docs.yml"
   push:
     paths:
       - "docs/**"
       - "jupyterhub/_version.py"
       - "jupyterhub/scopes.py"
-      - ".github/workflows/*"
-      - "!.github/workflows/test-docs.yml"
+      - ".github/workflows/test-docs.yml"
     branches-ignore:
       - "dependabot/**"
       - "pre-commit-ci-update-config"
