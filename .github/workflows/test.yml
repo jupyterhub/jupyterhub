@@ -113,7 +113,7 @@ jobs:
           if [ "${{ matrix.jupyter_server }}" != "" ]; then
               echo "JUPYTERHUB_SINGLEUSER_APP=jupyterhub.tests.mockserverapp.MockServerApp" >> $GITHUB_ENV
           fi
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       # NOTE: actions/setup-node@v1 make use of a cache within the GitHub base
       #       environment and setup in a fraction of a second.
       - name: Install Node v14
@@ -214,7 +214,7 @@ jobs:
     timeout-minutes: 20
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: build images
         run: |
