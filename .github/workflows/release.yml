@@ -37,7 +37,7 @@ jobs:
         with:
           python-version: 3.8
 
-      - uses: actions/setup-node@v1
+      - uses: actions/setup-node@v3
         with:
           node-version: "14"
 
