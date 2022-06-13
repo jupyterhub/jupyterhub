@@ -114,10 +114,10 @@ jobs:
               echo "JUPYTERHUB_SINGLEUSER_APP=jupyterhub.tests.mockserverapp.MockServerApp" >> $GITHUB_ENV
           fi
       - uses: actions/checkout@v3
-      # NOTE: actions/setup-node@v1 make use of a cache within the GitHub base
+      # NOTE: actions/setup-node@v3 make use of a cache within the GitHub base
       #       environment and setup in a fraction of a second.
       - name: Install Node v14
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v3
         with:
           node-version: "14"
       - name: Install Javascript dependencies
