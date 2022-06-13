@@ -1,6 +1,15 @@
+# dependabot.yml reference: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+#
+# Notes:
+# - Status and logs from dependabot are provided at
+#   https://github.com/jupyterhub/jupyterhub/network/updates.
+#
 version: 2
 updates:
-  - package-ecosystem: "github-actions"
+  # Maintain dependencies in our GitHub Workflows
+  - package-ecosystem: github-actions
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: weekly
+      time: "05:00"
+      timezone: "Etc/UTC"
