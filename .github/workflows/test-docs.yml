@@ -43,7 +43,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Validate REST API definition
-        uses: char0n/swagger-editor-validate@182d1a5d26ff5c2f4f452c43bd55e2c7d8064003
+        uses: char0n/swagger-editor-validate@8829b79e438e100191c1e6ec1519daf0b66fed34
         with:
           definition-file: docs/source/_static/rest-api.yml
 
