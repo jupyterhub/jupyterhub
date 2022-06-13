@@ -126,12 +126,12 @@ jobs:
           npm install -g configurable-http-proxy yarn
           npm list
 
-      # NOTE: actions/setup-python@v2 make use of a cache within the GitHub base
+      # NOTE: actions/setup-python@v4 make use of a cache within the GitHub base
       #       environment and setup in a fraction of a second.
       - name: Install Python ${{ matrix.python }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
-          python-version: ${{ matrix.python }}
+          python-version: "${{ matrix.python }}"
       - name: Install Python dependencies
         run: |
           pip install --upgrade pip
