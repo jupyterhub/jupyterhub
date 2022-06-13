@@ -63,7 +63,7 @@ jobs:
           ./ci/check_installed_data.py
 
       # ref: https://github.com/actions/upload-artifact#readme
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: jupyterhub-${{ github.sha }}
           path: "dist/*"
