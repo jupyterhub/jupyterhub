@@ -305,7 +305,6 @@ class JupyterHub(Application):
 
     load_groups = Dict(
         Dict(),
-        
         help="""Dict of {'group': {'users':['usernames'], properties : {}}  to load at startup.
 
         Example:
