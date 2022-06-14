@@ -305,7 +305,6 @@ class JupyterHub(Application):
 
     load_groups = Dict(
         Dict(),
-        
         help="""Dict of 'group': ['usernames'] to load at startup.
 
         This strictly *adds* groups and users to groups.
@@ -2017,12 +2016,12 @@ class JupyterHub(Application):
     async def init_groups(self):
         """Load predefined groups into the database"""
         db = self.db
-    
+
         if self.authenticator.manage_groups and self.load_groups:
             raise ValueError("Group management has been offloaded to the authenticator")
         for name, contents in self.load_groups.items():
             group = orm.Group.find(db, name)
-            
+
             if group is None:
                 self.log.info(f"Creating group {name}")
                 group = orm.Group(name=name)
@@ -2036,7 +2035,7 @@ class JupyterHub(Application):
                 group_properties = contents['properties']
                 self.log.debug(f"Adding properties {group_properties} to group {name}")
                 group.properties = group_properties
-              
+
         db.commit()
 
     async def init_role_creation(self):
