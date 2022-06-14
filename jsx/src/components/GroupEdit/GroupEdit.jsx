@@ -5,8 +5,6 @@ import PropTypes from "prop-types";
 import GroupSelect from "../GroupSelect/GroupSelect";
 import DynamicTable from "../DynamicTable/DynamicTable";
 
-
-
 const GroupEdit = (props) => {
   var [selected, setSelected] = useState([]),
     [changed, setChanged] = useState(false),
@@ -14,7 +12,7 @@ const GroupEdit = (props) => {
     limit = useSelector((state) => state.limit);
 
   var dispatch = useDispatch();
-  const hasDuplicates = a => a.filter((e, i) => a.indexOf(e) != i).length > 0
+  const hasDuplicates = (a) => a.filter((e, i) => a.indexOf(e) != i).length > 0;
   const dispatchPageUpdate = (data, page) => {
     dispatch({
       type: "GROUPS_PAGE",
