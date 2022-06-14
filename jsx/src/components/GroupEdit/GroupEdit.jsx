@@ -5,17 +5,7 @@ import PropTypes from "prop-types";
 import GroupSelect from "../GroupSelect/GroupSelect";
 import DynamicTable from "../DynamicTable/DynamicTable";
 
-function hasDuplicates(array) {
-  var valuesSoFar = Object.create(null);
-  for (var i = 0; i < array.length; ++i) {
-    var value = array[i];
-    if (value in valuesSoFar) {
-      return true;
-    }
-    valuesSoFar[value] = true;
-  }
-  return false;
-}
+
 
 const GroupEdit = (props) => {
   var [selected, setSelected] = useState([]),
@@ -24,7 +14,7 @@ const GroupEdit = (props) => {
     limit = useSelector((state) => state.limit);
 
   var dispatch = useDispatch();
-
+  const hasDuplicates = a => a.filter((e, i) => a.indexOf(e) != i).length > 0
   const dispatchPageUpdate = (data, page) => {
     dispatch({
       type: "GROUPS_PAGE",
