@@ -22,7 +22,7 @@
     "bootstrap": "^3.4.1",
     "font-awesome": "^4.7.0",
     "jquery": "^3.5.1",
-    "moment": "^2.24.0",
+    "moment": "^2.29.2",
     "requirejs": "^2.3.6"
   }
 }

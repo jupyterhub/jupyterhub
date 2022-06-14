@@ -14,6 +14,7 @@ import warnings
 from inspect import signature
 from subprocess import Popen
 from tempfile import mkdtemp
+from textwrap import dedent
 from urllib.parse import urlparse
 
 from async_generator import aclosing
@@ -42,6 +43,7 @@ from .utils import (
     exponential_backoff,
     maybe_future,
     random_port,
+    url_escape_path,
     url_path_join,
 )
 
@@ -99,10 +101,15 @@ class Spawner(LoggingConfigurable):
 
         Used in logging for consistency with named servers.
         """
-        if self.name:
-            return f'{self.user.name}:{self.name}'
+        if self.user:
+            user_name = self.user.name
         else:
-            return self.user.name
+            # no user, only happens in mock tests
+            user_name = "(no user)"
+        if self.name:
+            return f"{user_name}:{self.name}"
+        else:
+            return user_name
 
     @property
     def _failed(self):
@@ -152,8 +159,26 @@ class Spawner(LoggingConfigurable):
     authenticator = Any()
     hub = Any()
     orm_spawner = Any()
-    db = Any()
     cookie_options = Dict()
+
+    db = Any()
+
+    @default("db")
+    def _deprecated_db(self):
+        self.log.warning(
+            dedent(
+                """
+                The shared database session at Spawner.db is deprecated, and will be removed.
+                Please manage your own database and connections.
+
+                Contact JupyterHub at https://github.com/jupyterhub/jupyterhub/issues/3700
+                if you have questions or ideas about direct database needs for your Spawner.
+                """
+            ),
+        )
+        return self._deprecated_db_session
+
+    _deprecated_db_session = Any()
 
     @observe('orm_spawner')
     def _orm_spawner_changed(self, change):
@@ -230,7 +255,7 @@ class Spawner(LoggingConfigurable):
                 self.orm_spawner.server = server.orm_server
         elif server is not None:
             self.log.warning(
-                "Setting Spawner.server for {self._log_name} with no underlying orm_spawner"
+                f"Setting Spawner.server for {self._log_name} with no underlying orm_spawner"
             )
 
     @property
@@ -847,7 +872,7 @@ class Spawner(LoggingConfigurable):
             env['JUPYTERHUB_COOKIE_OPTIONS'] = json.dumps(self.cookie_options)
         env['JUPYTERHUB_HOST'] = self.hub.public_host
         env['JUPYTERHUB_OAUTH_CALLBACK_URL'] = url_path_join(
-            self.user.url, self.name, 'oauth_callback'
+            self.user.url, url_escape_path(self.name), 'oauth_callback'
         )
 
         env['JUPYTERHUB_OAUTH_SCOPES'] = json.dumps(self.oauth_scopes)
@@ -1118,10 +1143,7 @@ class Spawner(LoggingConfigurable):
     async def run_auth_state_hook(self, auth_state):
         """Run the auth_state_hook if defined"""
         if self.auth_state_hook is not None:
-            try:
-                await maybe_future(self.auth_state_hook(self, auth_state))
-            except Exception:
-                self.log.exception("auth_state_hook failed with exception: %s", self)
+            await maybe_future(self.auth_state_hook(self, auth_state))
 
     @property
     def _progress_url(self):

@@ -43,6 +43,7 @@ from ..utils import (
     get_accepted_mimetype,
     get_browser_protocol,
     maybe_future,
+    url_escape_path,
     url_path_join,
 )
 
@@ -623,33 +624,34 @@ class BaseHandler(RequestHandler):
         next_url = self.get_argument('next', default='')
         # protect against some browsers' buggy handling of backslash as slash
         next_url = next_url.replace('\\', '%5C')
-        if (next_url + '/').startswith(
-            (
-                f'{self.request.protocol}://{self.request.host}/',
-                f'//{self.request.host}/',
-            )
-        ) or (
+        proto = get_browser_protocol(self.request)
+        host = self.request.host
+        if next_url.startswith("///"):
+            # strip more than 2 leading // down to 2
+            # because urlparse treats that as empty netloc,
+            # whereas browsers treat more than two leading // the same as //,
+            # so netloc is the first non-/ bit
+            next_url = "//" + next_url.lstrip("/")
+        parsed_next_url = urlparse(next_url)
+
+        if (next_url + '/').startswith((f'{proto}://{host}/', f'//{host}/',)) or (
             self.subdomain_host
-            and urlparse(next_url).netloc
-            and ("." + urlparse(next_url).netloc).endswith(
+            and parsed_next_url.netloc
+            and ("." + parsed_next_url.netloc).endswith(
                 "." + urlparse(self.subdomain_host).netloc
             )
         ):
             # treat absolute URLs for our host as absolute paths:
-            # below, redirects that aren't strictly paths
-            parsed = urlparse(next_url)
-            next_url = parsed.path
-            if parsed.query:
-                next_url = next_url + '?' + parsed.query
-            if parsed.fragment:
-                next_url = next_url + '#' + parsed.fragment
+            # below, redirects that aren't strictly paths are rejected
+            next_url = parsed_next_url.path
+            if parsed_next_url.query:
+                next_url = next_url + '?' + parsed_next_url.query
+            if parsed_next_url.fragment:
+                next_url = next_url + '#' + parsed_next_url.fragment
+            parsed_next_url = urlparse(next_url)
 
         # if it still has host info, it didn't match our above check for *this* host
-        if next_url and (
-            '://' in next_url
-            or next_url.startswith('//')
-            or not next_url.startswith('/')
-        ):
+        if next_url and (parsed_next_url.netloc or not next_url.startswith('/')):
             self.log.warning("Disallowing redirect outside JupyterHub: %r", next_url)
             next_url = ''
 
@@ -833,6 +835,12 @@ class BaseHandler(RequestHandler):
         user_server_name = user.name
 
         if server_name:
+            if '/' in server_name:
+                error_message = (
+                    f"Invalid server_name (may not contain '/'): {server_name}"
+                )
+                self.log.error(error_message)
+                raise web.HTTPError(400, error_message)
             user_server_name = f'{user.name}:{server_name}'
 
         if server_name in user.spawners and user.spawners[server_name].pending:
@@ -1518,6 +1526,7 @@ class UserUrlHandler(BaseHandler):
                 server_name = ''
         else:
             server_name = ''
+        escaped_server_name = url_escape_path(server_name)
         spawner = user.spawners[server_name]
 
         if spawner.ready:
@@ -1536,7 +1545,10 @@ class UserUrlHandler(BaseHandler):
 
         pending_url = url_concat(
             url_path_join(
-                self.hub.base_url, 'spawn-pending', user.escaped_name, server_name
+                self.hub.base_url,
+                'spawn-pending',
+                user.escaped_name,
+                escaped_server_name,
             ),
             {'next': self.request.uri},
         )
@@ -1550,7 +1562,9 @@ class UserUrlHandler(BaseHandler):
         # page *in* the server is not found, we return a 424 instead of a 404.
         # We allow retaining the old behavior to support older JupyterLab versions
         spawn_url = url_concat(
-            url_path_join(self.hub.base_url, "spawn", user.escaped_name, server_name),
+            url_path_join(
+                self.hub.base_url, "spawn", user.escaped_name, escaped_server_name
+            ),
             {"next": self.request.uri},
         )
         self.set_status(

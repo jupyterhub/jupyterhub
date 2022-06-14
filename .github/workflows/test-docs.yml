@@ -15,15 +15,13 @@ on:
       - "docs/**"
       - "jupyterhub/_version.py"
       - "jupyterhub/scopes.py"
-      - ".github/workflows/*"
-      - "!.github/workflows/test-docs.yml"
+      - ".github/workflows/test-docs.yml"
   push:
     paths:
       - "docs/**"
       - "jupyterhub/_version.py"
       - "jupyterhub/scopes.py"
-      - ".github/workflows/*"
-      - "!.github/workflows/test-docs.yml"
+      - ".github/workflows/test-docs.yml"
     branches-ignore:
       - "dependabot/**"
       - "pre-commit-ci-update-config"
@@ -40,18 +38,18 @@ jobs:
   validate-rest-api-definition:
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Validate REST API definition
-        uses: char0n/swagger-editor-validate@182d1a5d26ff5c2f4f452c43bd55e2c7d8064003
+        uses: char0n/swagger-editor-validate@v1.3.1
         with:
           definition-file: docs/source/_static/rest-api.yml
 
   test-docs:
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
         with:
           python-version: "3.9"
 

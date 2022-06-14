@@ -1152,28 +1152,52 @@ async def test_user_filter_expansion(app, create_user_with_scopes):
 @pytest.mark.parametrize(
     "scopes, expected",
     [
-        ("read:users:name!user", ["read:users:name!user=$user"]),
+        ("read:users:name!user", ["read:users:name!user={user}"]),
         (
             "users:activity!user",
             [
-                "read:users:activity!user=$user",
-                "users:activity!user=$user",
+                "read:users:activity!user={user}",
+                "users:activity!user={user}",
             ],
         ),
         ("self", ["*"]),
         (["access:services", "access:services!service=x"], ["access:services"]),
+        ("access:services!service", ["access:services!service={service}"]),
+        ("access:servers!server", ["access:servers!server={server}"]),
     ],
 )
-def test_expand_scopes(user, scopes, expected):
+def test_expand_scopes(app, user, scopes, expected, mockservice_external):
     if isinstance(scopes, str):
         scopes = [scopes]
-    scopes = {s.replace("$user", user.name) for s in scopes}
-    expected = {s.replace("$user", user.name) for s in expected}
+
+    db = app.db
+    service = mockservice_external
+    spawner_name = "salmon"
+    server_name = f"{user.name}/{spawner_name}"
+    if 'server' in str(scopes):
+        oauth_client = orm.OAuthClient()
+        db.add(oauth_client)
+        spawner = user.spawners[spawner_name]
+        spawner.orm_spawner.oauth_client = oauth_client
+        db.commit()
+        assert oauth_client.spawner is spawner.orm_spawner
+    else:
+        oauth_client = service.oauth_client
+        assert oauth_client is not None
+
+    def format_scopes(scopes):
+        return {
+            s.format(service=service.name, server=server_name, user=user.name)
+            for s in scopes
+        }
+
+    scopes = format_scopes(scopes)
+    expected = format_scopes(expected)
 
     if "*" in expected:
         expected.remove("*")
         expected.update(_expand_self_scope(user.name))
 
-    expanded = expand_scopes(scopes, owner=user.orm_user)
+    expanded = expand_scopes(scopes, owner=user.orm_user, oauth_client=oauth_client)
     assert isinstance(expanded, frozenset)
     assert sorted(expanded) == sorted(expected)

@@ -49,7 +49,7 @@ class GroupListAPIHandler(_GroupAPIHandler):
                 # the only valid filter is group=...
                 # don't expand invalid !server=x to all groups!
                 self.log.warning(
-                    "Invalid filter on list:group for {self.current_user}: {sub_scope}"
+                    f"Invalid filter on list:group for {self.current_user}: {sub_scope}"
                 )
                 raise web.HTTPError(403)
             query = query.filter(orm.Group.name.in_(sub_scope['group']))

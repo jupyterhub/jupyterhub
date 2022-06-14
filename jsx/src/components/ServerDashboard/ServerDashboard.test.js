@@ -98,6 +98,18 @@ test("Renders correctly the status of a single-user server", async () => {
   expect(stop).toBeVisible();
 });
 
+test("Renders spawn page link", async () => {
+  let callbackSpy = mockAsync();
+
+  await act(async () => {
+    render(serverDashboardJsx(callbackSpy));
+  });
+
+  let link = screen.getByText("Spawn Page").closest("a");
+  let url = new URL(link.href);
+  expect(url.pathname).toEqual("/spawn/bar");
+});
+
 test("Invokes the startServer event on button click", async () => {
   let callbackSpy = mockAsync();
 

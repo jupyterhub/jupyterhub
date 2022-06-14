@@ -188,6 +188,8 @@ def cleanup_after(request, io_loop):
         if not MockHub.initialized():
             return
         app = MockHub.instance()
+        if app.db_file.closed:
+            return
         for uid, user in list(app.users.items()):
             for name, spawner in list(user.spawners.items()):
                 if spawner.active:
@@ -285,7 +287,22 @@ class MockServiceSpawner(jupyterhub.services.service._ServiceSpawner):
 _mock_service_counter = 0
 
 
-def _mockservice(request, app, url=False):
+def _mockservice(request, app, external=False, url=False):
+    """
+    Add a service to the application
+
+    Args:
+        request: pytest request fixture
+        app: MockHub application
+        external (bool):
+          If False (default), launch the service.
+          Otherwise, consider it 'external,
+          registering a service in the database,
+          but don't start it.
+        url (bool):
+          If True, register the service at a URL
+          (as opposed to headless, API-only).
+    """
     global _mock_service_counter
     _mock_service_counter += 1
     name = 'mock-service-%i' % _mock_service_counter
@@ -295,6 +312,10 @@ def _mockservice(request, app, url=False):
             spec['url'] = 'https://127.0.0.1:%i' % random_port()
         else:
             spec['url'] = 'http://127.0.0.1:%i' % random_port()
+
+    if external:
+
+        spec['oauth_redirect_uri'] = 'http://127.0.0.1:%i' % random_port()
 
     io_loop = app.io_loop
 
@@ -313,17 +334,20 @@ def _mockservice(request, app, url=False):
             await app.proxy.add_all_services(app._service_map)
             await service.start()
 
-        io_loop.run_sync(start)
+        if not external:
+            io_loop.run_sync(start)
 
         def cleanup():
-            asyncio.get_event_loop().run_until_complete(service.stop())
+            if not external:
+                asyncio.get_event_loop().run_until_complete(service.stop())
             app.services[:] = []
             app._service_map.clear()
 
         request.addfinalizer(cleanup)
         # ensure process finishes starting
-        with raises(TimeoutExpired):
-            service.proc.wait(1)
+        if not external:
+            with raises(TimeoutExpired):
+                service.proc.wait(1)
         if url:
             io_loop.run_sync(partial(service.server.wait_up, http=True))
     return service
@@ -333,6 +357,12 @@ def _mockservice(request, app, url=False):
 def mockservice(request, app):
     """Mock a service with no external service url"""
     yield _mockservice(request, app, url=False)
+
+
+@fixture
+def mockservice_external(request, app):
+    """Mock an externally managed service (don't start anything)"""
+    yield _mockservice(request, app, external=True, url=False)
 
 
 @fixture

@@ -30,6 +30,9 @@ env:
   LANG: C.UTF-8
   PYTEST_ADDOPTS: "--verbose --color=yes"
 
+permissions:
+  contents: read
+
 jobs:
   # Run "pytest jupyterhub/tests" in various configurations
   pytest:
@@ -110,25 +113,25 @@ jobs:
           if [ "${{ matrix.jupyter_server }}" != "" ]; then
               echo "JUPYTERHUB_SINGLEUSER_APP=jupyterhub.tests.mockserverapp.MockServerApp" >> $GITHUB_ENV
           fi
-      - uses: actions/checkout@v2
-      # NOTE: actions/setup-node@v1 make use of a cache within the GitHub base
+      - uses: actions/checkout@v3
+      # NOTE: actions/setup-node@v3 make use of a cache within the GitHub base
       #       environment and setup in a fraction of a second.
       - name: Install Node v14
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v3
         with:
           node-version: "14"
-      - name: Install Node dependencies
+      - name: Install Javascript dependencies
         run: |
           npm install
-          npm install -g configurable-http-proxy
+          npm install -g configurable-http-proxy yarn
           npm list
 
-      # NOTE: actions/setup-python@v2 make use of a cache within the GitHub base
+      # NOTE: actions/setup-python@v4 make use of a cache within the GitHub base
       #       environment and setup in a fraction of a second.
       - name: Install Python ${{ matrix.python }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
-          python-version: ${{ matrix.python }}
+          python-version: "${{ matrix.python }}"
       - name: Install Python dependencies
         run: |
           pip install --upgrade pip
@@ -211,7 +214,7 @@ jobs:
     timeout-minutes: 20
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: build images
         run: |

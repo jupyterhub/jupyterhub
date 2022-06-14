@@ -1391,6 +1391,9 @@ components:
             inherit:
               Everything that the token-owning entity can access _(metascope
               for tokens)_
+            admin-ui:
+              Access the admin page. Permission to take actions via the admin
+              page granted separately.
             admin:users:
               Read, write, create and delete users and their authentication
               state, not including their servers or tokens.

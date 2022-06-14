@@ -371,7 +371,7 @@ a JupyterHub deployment. The commands are:
 - System and deployment information
 
 ```bash
-jupyter troubleshooting
+jupyter troubleshoot
 ```
 
 - Kernel information

@@ -10,6 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from shutil import which
 from subprocess import PIPE, STDOUT, Popen
+from textwrap import dedent
 
 try:
     import pamela
@@ -30,6 +31,23 @@ class Authenticator(LoggingConfigurable):
     """Base class for implementing an authentication provider for JupyterHub"""
 
     db = Any()
+
+    @default("db")
+    def _deprecated_db(self):
+        self.log.warning(
+            dedent(
+                """
+                The shared database session at Authenticator.db is deprecated, and will be removed.
+                Please manage your own database and connections.
+
+                Contact JupyterHub at https://github.com/jupyterhub/jupyterhub/issues/3700
+                if you have questions or ideas about direct database needs for your Authenticator.
+                """
+            ),
+        )
+        return self._deprecated_db_session
+
+    _deprecated_db_session = Any()
 
     enable_auth_state = Bool(
         False,

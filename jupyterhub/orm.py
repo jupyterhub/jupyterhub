@@ -529,9 +529,7 @@ class Hashed(Expiring):
         prefix = token[: cls.prefix_length]
         # since we can't filter on hashed values, filter on prefix
         # so we aren't comparing with all tokens
-        prefix_match = db.query(cls).filter(
-            bindparam('prefix', prefix).startswith(cls.prefix)
-        )
+        prefix_match = db.query(cls).filter_by(prefix=prefix)
         prefix_match = prefix_match.filter(
             or_(cls.expires_at == None, cls.expires_at >= cls.now())
         )
@@ -683,7 +681,8 @@ class APIToken(Hashed, Base):
         generated=True,
         session_id=None,
         expires_in=None,
-        client_id='jupyterhub',
+        client_id=None,
+        oauth_client=None,
         return_orm=False,
     ):
         """Generate a new API token for a user or service"""
@@ -727,11 +726,20 @@ class APIToken(Hashed, Base):
                 orm_roles.append(role)
             scopes = roles_to_scopes(orm_roles)
 
+        if oauth_client is None:
+            # lookup oauth client by identifier
+            if client_id is None:
+                # default: global 'jupyterhub' client
+                client_id = "jupyterhub"
+            oauth_client = db.query(OAuthClient).filter_by(identifier=client_id).one()
+        if client_id is None:
+            client_id = oauth_client.identifier
+
         # avoid circular import
         from .scopes import _check_scopes_exist, _check_token_scopes
 
         _check_scopes_exist(scopes, who_for="token")
-        _check_token_scopes(scopes, owner=user or service)
+        _check_token_scopes(scopes, owner=user or service, oauth_client=oauth_client)
 
         # two stages to ensure orm_token.generated has been set
         # before token setter is called
@@ -761,7 +769,9 @@ class APIToken(Hashed, Base):
         from .scopes import _check_scopes_exist, _check_token_scopes
 
         _check_scopes_exist(new_scopes, who_for="token")
-        _check_token_scopes(new_scopes, owner=self.owner)
+        _check_token_scopes(
+            new_scopes, owner=self.owner, oauth_client=self.oauth_client
+        )
         self.scopes = new_scopes
 
 

@@ -2158,14 +2158,23 @@ def test_shutdown(app):
         )
         return r
 
-    real_stop = loop.stop
+    real_stop = loop.asyncio_loop.stop
 
     def stop():
         stop.called = True
         loop.call_later(1, real_stop)
 
-    with mock.patch.object(loop, 'stop', stop):
+    real_cleanup = app.cleanup
+
+    def cleanup():
+        cleanup.called = True
+        return real_cleanup()
+
+    app.cleanup = cleanup
+
+    with mock.patch.object(loop.asyncio_loop, 'stop', stop):
         r = loop.run_sync(shutdown, timeout=5)
     r.raise_for_status()
     reply = r.json()
+    assert cleanup.called
     assert stop.called
