@@ -2031,11 +2031,12 @@ class JupyterHub(Application):
                 self.log.info(f"Creating group {name}")
                 group = orm.Group(name=name)
                 db.add(group)
-            for username in contents['users']:
-                username = self.authenticator.normalize_username(username)
-                user = await self._get_or_create_user(username)
-                self.log.debug(f"Adding user {username} to group {name}")
-                group.users.append(user)
+            if 'users' in contents:
+                for username in contents['users']:
+                    username = self.authenticator.normalize_username(username)
+                    user = await self._get_or_create_user(username)
+                    self.log.debug(f"Adding user {username} to group {name}")
+                    group.users.append(user)
             if 'properties' in contents:
                 group_properties = contents['properties']
                 self.log.debug(f"Adding properties {group_properties} to group {name}")
