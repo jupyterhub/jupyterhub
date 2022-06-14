@@ -306,9 +306,13 @@ class JupyterHub(Application):
     load_groups = Dict(
         Dict(),
         
-        help="""Dict of 'group': ['usernames'] to load at startup.
+        help="""Dict of  group to load at startup.
 
-        This strictly *adds* groups and users to groups.
+        Example:
+
+            load_groups = {'groupname':{'users':[usernames], 'properties':{'key':'value'}}}
+
+        This strictly *adds* groups, users and properties to groups.
 
         Loading one set of groups, then starting JupyterHub again with a different
         set will not remove users or groups from previous launches.
