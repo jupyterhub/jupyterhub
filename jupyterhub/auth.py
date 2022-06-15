@@ -832,7 +832,7 @@ class LocalAuthenticator(Authenticator):
             raise ValueError("I don't know how to create users on OS X")
         elif which('pw'):
             # Probably BSD
-            return ['pw', 'useradd', '-m']
+            return ['pw', 'useradd', '-m', '-n']
         else:
             # This appears to be the Linux non-interactive adduser command:
             return ['adduser', '-q', '--gecos', '""', '--disabled-password']
