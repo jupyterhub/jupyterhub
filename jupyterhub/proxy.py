@@ -32,6 +32,7 @@ from traitlets import (
     Any,
     Bool,
     Dict,
+    Enum,
     Instance,
     Integer,
     TraitError,
@@ -523,7 +524,21 @@ class ConfigurableHTTPProxy(Proxy):
     def _concurrency_changed(self, change):
         self.semaphore = asyncio.BoundedSemaphore(change.new)
 
+    # https://github.com/jupyterhub/configurable-http-proxy/blob/4.5.1/bin/configurable-http-proxy#L92
+    log_level = Enum(
+        ["debug", "info", "warn", "error", "DEBUG", "INFO", "WARN", "ERROR"],
+        "info",
+        help="Proxy log level",
+        config=True,
+    )
+
     debug = Bool(False, help="Add debug-level logging to the Proxy.", config=True)
+
+    @observe('debug')
+    def _debug_changed(self, change):
+        if change.new:
+            self.log_level = "debug"
+
     auth_token = Unicode(
         help="""The Proxy auth token
 
@@ -719,11 +734,11 @@ class ConfigurableHTTPProxy(Proxy):
             str(api_server.port),
             '--error-target',
             url_path_join(self.hub.url, 'error'),
+            '--log-level',
+            self.log_level,
         ]
         if self.app.subdomain_host:
             cmd.append('--host-routing')
-        if self.debug:
-            cmd.extend(['--log-level', 'debug'])
         if self.ssl_key:
             cmd.extend(['--ssl-key', self.ssl_key])
         if self.ssl_cert:
