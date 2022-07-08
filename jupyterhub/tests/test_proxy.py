@@ -6,6 +6,7 @@ from subprocess import Popen
 from urllib.parse import quote, urlparse
 
 import pytest
+from traitlets import TraitError
 from traitlets.config import Config
 
 from ..utils import url_path_join as ujoin
@@ -193,23 +194,96 @@ async def test_check_routes(app, username, disable_check_routes):
     assert before == after
 
 
-async def test_extra_routes(app):
+@pytest.mark.parametrize(
+    "routespec",
+    [
+        '/has%20space/foo/',
+        '/missing-trailing/slash',
+        '/has/@/',
+        '/has/' + quote('üñîçø∂é'),
+        'host.name/path/',
+        'other.host/path/no/slash',
+    ],
+)
+async def test_extra_routes(app, routespec):
     proxy = app.proxy
     # When using host_routing, it's up to the admin to
     # provide routespecs that have a domain in them.
     # We don't explicitly validate that here.
-    if app.subdomain_host:
-        route_spec = 'example.com/test-extra-routes/'
-    else:
-        route_spec = '/test-extra-routes/'
+    if app.subdomain_host and routespec.startswith("/"):
+        routespec = 'example.com/' + routespec
+    elif not app.subdomain_host and not routespec.startswith("/"):
+        pytest.skip("requires subdomains")
+    validated_routespec = routespec
+    if not routespec.endswith("/"):
+        validated_routespec = routespec + "/"
     target = 'http://localhost:9999/test'
-    proxy.extra_routes = {route_spec: target}
+    proxy.extra_routes = {routespec: target}
 
     await proxy.check_routes(app.users, app._service_map)
 
     routes = await app.proxy.get_all_routes()
-    assert route_spec in routes
-    assert routes[route_spec]['target'] == target
+    print(routes)
+    assert validated_routespec in routes
+    assert routes[validated_routespec]['target'] == target
+    assert routes[validated_routespec]['data']['extra']
+
+
+@pytest.mark.parametrize(
+    "needs_subdomain, routespec, expected",
+    [
+        (False, "/prefix/", "/prefix/"),
+        (False, "/prefix", "/prefix/"),
+        (False, "prefix/", ValueError),
+        (True, "/prefix/", ValueError),
+        (True, "example.com/prefix/", "example.com/prefix/"),
+        (True, "example.com/prefix", "example.com/prefix/"),
+        (False, 100, TraitError),
+    ],
+)
+def test_extra_routes_validate_routespec(
+    request, app, needs_subdomain, routespec, expected
+):
+    save_host = app.subdomain_host
+    request.addfinalizer(lambda: setattr(app, "subdomain_host", save_host))
+    if needs_subdomain:
+        app.subdomain_host = "localhost.jovyan.org"
+    else:
+        app.subdomain_host = ""
+
+    proxy = app.proxy
+
+    extra_routes = {routespec: "https://127.0.0.1"}
+    if isinstance(expected, type) and issubclass(expected, BaseException):
+        with pytest.raises(expected):
+            proxy.extra_routes = extra_routes
+        return
+    proxy.extra_routes = extra_routes
+    assert list(proxy.extra_routes) == [expected]
+
+
+@pytest.mark.parametrize(
+    "target, expected",
+    [
+        ("http://host", "http://host"),
+        ("https://host", "https://host"),
+        ("/missing-host", ValueError),
+        ("://missing-scheme", ValueError),
+        (100, TraitError),
+    ],
+)
+def test_extra_routes_validate_target(app, target, expected):
+    proxy = app.proxy
+    routespec = "/prefix/"
+    if app.subdomain_host:
+        routespec = f"host.tld{routespec}"
+    extra_routes = {routespec: target}
+    if isinstance(expected, type) and issubclass(expected, BaseException):
+        with pytest.raises(expected):
+            proxy.extra_routes = extra_routes
+        return
+    proxy.extra_routes = extra_routes
+    assert list(proxy.extra_routes.values()) == [expected]
 
 
 @pytest.mark.parametrize(

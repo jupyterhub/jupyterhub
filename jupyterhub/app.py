@@ -711,11 +711,14 @@ class JupyterHub(Application):
         """,
     ).tag(config=True)
 
-    def _subdomain_host_changed(self, name, old, new):
+    @validate("subdomain_host")
+    def _validate_subdomain_host(self, proposal):
+        new = proposal.value
         if new and '://' not in new:
             # host should include '://'
             # if not specified, assume https: You have to be really explicit about HTTP!
-            self.subdomain_host = 'https://' + new
+            new = 'https://' + new
+        return new
 
     domain = Unicode(help="domain name, e.g. 'example.com' (excludes protocol, port)")
 
