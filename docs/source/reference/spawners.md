@@ -309,7 +309,7 @@ The process environment is returned by `Spawner.get_env`, which specifies the fo
 - JUPYTERHUB_CLIENT_ID - the OAuth client ID for authenticating visitors.
 - JUPYTERHUB_OAUTH_CALLBACK_URL - the callback URL to use in oauth, typically `/user/:name/oauth_callback`
 - JUPYTERHUB_OAUTH_ACCESS_SCOPES - the scopes required to access the server (called JUPYTERHUB_OAUTH_SCOPES prior to 2.4)
-- JUPYTERHUB_OAUTH_ALLOWED_SCOPES - the scopes the service is allowed to request.
+- JUPYTERHUB_OAUTH_CLIENT_ALLOWED_SCOPES - the scopes the service is allowed to request.
   If no scopes are requested explicitly, these scopes will be requested.
 
 Optional environment variables, depending on configuration:

@@ -235,7 +235,7 @@ against the `.hub_scopes` attribute of each Handler
 
 :::{versionchanged} 2.4
 The JUPYTERHUB_OAUTH_SCOPES environment variable is deprecated and renamed to JUPYTERHUB_OAUTH_ACCESS_SCOPES,
-to avoid ambiguity with JUPYTERHUB_OAUTH_ALLOWED_SCOPES
+to avoid ambiguity with JUPYTERHUB_OAUTH_CLIENT_ALLOWED_SCOPES
 :::
 
 ```python

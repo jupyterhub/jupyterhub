@@ -14,11 +14,11 @@ c.JupyterHub.services = [
         # only requesting access to the service,
         # and identification by name,
         # nothing more.
-        # Specifying 'oauth_allowed_scopes' as a list of scopes
+        # Specifying 'oauth_client_allowed_scopes' as a list of scopes
         # allows requesting more information about users,
         # or the ability to take actions on users' behalf, as required.
         # the 'inherit' scope means the full permissions of the owner
-        # 'oauth_allowed_scopes': ['inherit'],
+        # 'oauth_client_allowed_scopes': ['inherit'],
     },
 ]
 

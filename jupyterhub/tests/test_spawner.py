@@ -439,7 +439,7 @@ async def test_hub_connect_url(db):
 async def test_spawner_oauth_scopes(app, user):
     allowed_scopes = ["read:users"]
     spawner = user.spawners['']
-    spawner.oauth_allowed_scopes = allowed_scopes
+    spawner.oauth_client_allowed_scopes = allowed_scopes
     # exercise start/stop which assign roles to oauth client
     await spawner.user.spawn()
     oauth_client = spawner.orm_spawner.oauth_client

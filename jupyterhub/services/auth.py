@@ -333,21 +333,30 @@ class HubAuth(SingletonConfigurable):
     def _default_cache(self):
         return _ExpiringDict(self.cache_max_age)
 
-    oauth_scopes = Set(
+    @property
+    def oauth_scopes(self):
+        warnings.warn(
+            "HubAuth.oauth_scopes is deprecated in JupyterHub 2.4. Use .access_scopes"
+        )
+        return self.access_scopes
+
+    access_scopes = Set(
         Unicode(),
         help="""OAuth scopes to use for allowing access.
 
-        Get from $JUPYTERHUB_OAUTH_SCOPES by default.
+        Get from $JUPYTERHUB_OAUTH_ACCESS_SCOPES by default.
         """,
     ).tag(config=True)
 
-    @default('oauth_scopes')
+    @default('access_scopes')
     def _default_scopes(self):
         env_scopes = os.getenv('JUPYTERHUB_OAUTH_ACCESS_SCOPES')
         if not env_scopes:
-            env_scopes = os.getenv('JUPYTERHUB_OAUTH_ACCESS_SCOPES')
+            # deprecated name (since 2.4)
+            env_scopes = os.getenv('JUPYTERHUB_OAUTH_SCOPES')
         if env_scopes:
             return set(json.loads(env_scopes))
+        # scopes not specified, use service name if defined
         service_name = os.getenv("JUPYTERHUB_SERVICE_NAME")
         if service_name:
             return {f'access:services!service={service_name}'}
@@ -865,7 +874,7 @@ class HubAuthenticated:
 
     - .hub_auth: A HubAuth instance
     - .hub_scopes: A set of JupyterHub 2.0 OAuth scopes to allow.
-      Default comes from .hub_auth.oauth_scopes,
+      Default comes from .hub_auth.oauth_access_scopes,
       which in turn is set by $JUPYTERHUB_OAUTH_ACCESS_SCOPES
       Default values include:
       - 'access:services', 'access:services!service={service_name}' for services
@@ -905,8 +914,8 @@ class HubAuthenticated:
 
     @property
     def hub_scopes(self):
-        """Set of allowed scopes (use hub_auth.oauth_scopes by default)"""
-        return self.hub_auth.oauth_scopes or None
+        """Set of allowed scopes (use hub_auth.access_scopes by default)"""
+        return self.hub_auth.access_scopes or None
 
     @property
     def allow_all(self):

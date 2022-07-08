@@ -119,7 +119,7 @@ JUPYTERHUB_SERVICE_URL:    Local URL where the service is expected to be listeni
 JUPYTERHUB_OAUTH_SCOPES:   JSON-serialized list of scopes to use for allowing access to the service
                            (deprecated in 2.4, use JUPYTERHUB_OAUTH_ACCESS_SCOPES).
 JUPYTERHUB_OAUTH_ACCESS_SCOPES: JSON-serialized list of scopes to use for allowing access to the service (new in 2.4).
-JUPYTERHUB_OAUTH_ALLOWED_SCOPES: JSON-serialized list of scopes that can be requested on behalf of users (new in 2.4).
+JUPYTERHUB_OAUTH_CLIENT_ALLOWED_SCOPES: JSON-serialized list of scopes that can be requested by the oauth client on behalf of users (new in 2.4).
 ```
 
 For the previous 'cull idle' Service example, these environment variables

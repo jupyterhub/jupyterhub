@@ -894,18 +894,18 @@ async def test_server_role_api_calls(
     assert r.status_code == response
 
 
-async def test_oauth_allowed_scopes(app):
+async def test_oauth_client_allowed_scopes(app):
     allowed_scopes = ['read:users', 'read:groups']
     service = {
         'name': 'oas1',
         'api_token': 'some-token',
-        'oauth_allowed_scopes': allowed_scopes,
+        'oauth_client_allowed_scopes': allowed_scopes,
     }
     app.services.append(service)
     app.init_services()
     app_service = app.services[0]
     assert app_service['name'] == 'oas1'
-    assert set(app_service['oauth_allowed_scopes']) == set(allowed_scopes)
+    assert set(app_service['oauth_client_allowed_scopes']) == set(allowed_scopes)
 
 
 async def test_user_group_roles(app, create_temp_role):

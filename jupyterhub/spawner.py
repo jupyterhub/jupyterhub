@@ -306,7 +306,7 @@ class Spawner(LoggingConfigurable):
         [Callable(), List()],
         help="""Allowed roles for oauth tokens.
 
-        Deprecated in 2.4: use oauth_allowed_scopes
+        Deprecated in 2.4: use oauth_client_allowed_scopes
 
         This sets the maximum and default roles
         assigned to oauth tokens issued by a single-user server's
@@ -318,9 +318,9 @@ class Spawner(LoggingConfigurable):
         """,
     ).tag(config=True)
 
-    oauth_allowed_scopes = Union(
+    oauth_client_allowed_scopes = Union(
         [Callable(), List()],
-        help="""Allowed scopes for oauth tokens.
+        help="""Allowed scopes for oauth tokens issued by this server's oauth client.
 
         This sets the maximum and default scopes
         assigned to oauth tokens issued by a single-user server's
@@ -332,12 +332,12 @@ class Spawner(LoggingConfigurable):
     """,
     ).tag(config=True)
 
-    def _get_oauth_allowed_scopes(self):
+    def _get_oauth_client_allowed_scopes(self):
         """Private method: get oauth allowed scopes
 
         Handle:
 
-        - oauth_allowed_scopes
+        - oauth_client_allowed_scopes
         - callable config
         - deprecated oauth_roles config
         - access_scopes
@@ -347,8 +347,8 @@ class Spawner(LoggingConfigurable):
         # 2. only roles
         # 3. both! (conflict, favor scopes)
         scopes = []
-        if self.oauth_allowed_scopes:
-            allowed_scopes = self.oauth_allowed_scopes
+        if self.oauth_client_allowed_scopes:
+            allowed_scopes = self.oauth_client_allowed_scopes
             if callable(allowed_scopes):
                 allowed_scopes = allowed_scopes(self)
             scopes.extend(allowed_scopes)
@@ -357,7 +357,7 @@ class Spawner(LoggingConfigurable):
             if scopes:
                 # both defined! Warn
                 warnings.warn(
-                    f"Ignoring deprecated Spawner.oauth_roles={self.oauth_roles} in favor of Spawner.oauth_allowed_scopes.",
+                    f"Ignoring deprecated Spawner.oauth_roles={self.oauth_roles} in favor of Spawner.oauth_client_allowed_scopes.",
                 )
             else:
                 role_names = self.oauth_roles
@@ -960,7 +960,9 @@ class Spawner(LoggingConfigurable):
         env['JUPYTERHUB_OAUTH_ACCESS_SCOPES'] = json.dumps(self.oauth_access_scopes)
 
         # added in 2.4
-        env['JUPYTERHUB_OAUTH_ALLOWED_SCOPES'] = json.dumps(self.oauth_allowed_scopes)
+        env['JUPYTERHUB_OAUTH_CLIENT_ALLOWED_SCOPES'] = json.dumps(
+            self.oauth_client_allowed_scopes
+        )
 
         # Info previously passed on args
         env['JUPYTERHUB_USER'] = self.user.name

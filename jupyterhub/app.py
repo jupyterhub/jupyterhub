@@ -2373,8 +2373,8 @@ class JupyterHub(Application):
 
             if service.oauth_available:
                 allowed_scopes = set()
-                if service.oauth_allowed_scopes:
-                    allowed_scopes.update(service.oauth_allowed_scopes)
+                if service.oauth_client_allowed_scopes:
+                    allowed_scopes.update(service.oauth_client_allowed_scopes)
                 if service.oauth_roles:
                     if not allowed_scopes:
                         # DEPRECATED? It's still convenient and valid,
@@ -2388,7 +2388,7 @@ class JupyterHub(Application):
                     else:
                         self.log.warning(
                             f"Ignoring oauth_roles for {service.name}: {service.oauth_roles},"
-                            f" using oauth_allowed_scopes={allowed_scopes}."
+                            f" using oauth_client_allowed_scopes={allowed_scopes}."
                         )
                 oauth_client = self.oauth_provider.add_client(
                     client_id=service.oauth_client_id,
