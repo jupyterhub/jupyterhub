@@ -9,7 +9,7 @@ cryptography
 html5lib  # needed for beautifulsoup
 jupyterlab >=3
 mock
-nbclassic
+nbclassic  # ensures /tree/ handler is present as assumed by tests
 pre-commit
 pytest>=3.3
 pytest-asyncio; python_version < "3.7"
