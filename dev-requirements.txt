@@ -9,7 +9,11 @@ cryptography
 html5lib  # needed for beautifulsoup
 jupyterlab >=3
 mock
-nbclassic  # ensures /tree/ handler is present as assumed by tests
+# nbclassic provides the '/tree/' handler, which we use in tests
+# it is a transitive dependency via jupyterlab,
+# but depend on it directly
+# 0.4 introduces some installation/loading problems (check again after 0.4.3)
+nbclassic<0.4
 pre-commit
 pytest>=3.3
 pytest-asyncio; python_version < "3.7"
