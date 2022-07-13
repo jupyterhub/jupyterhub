@@ -56,9 +56,9 @@ jobs:
         #   Tests everything when JupyterHub works against a dedicated mysql or
         #   postgresql server.
         #
-        # nbclassic:
+        # legacy_notebook:
         #   Tests everything when the user instances are started with
-        #   notebook instead of jupyter_server.
+        #   the legacy notebook server instead of jupyter_server.
         #
         # ssl:
         #   Tests everything using internal SSL connections instead of
@@ -74,8 +74,8 @@ jobs:
         include:
           - python: "3.6"
             oldest_dependencies: oldest_dependencies
-            nbclassic: nbclassic
           - python: "3.6"
+            legacy_notebook: legacy_notebook
             subdomain: subdomain
           - python: "3.7"
             db: mysql
@@ -84,7 +84,7 @@ jobs:
           - python: "3.8"
             db: postgres
           - python: "3.8"
-            nbclassic: nbclassic
+            legacy_notebook: legacy_notebook
           - python: "3.9"
             main_dependencies: main_dependencies
 
@@ -148,9 +148,9 @@ jobs:
           if [ "${{ matrix.main_dependencies }}" != "" ]; then
               pip install git+https://github.com/ipython/traitlets#egg=traitlets --force
           fi
-          if [ "${{ matrix.nbclassic }}" != "" ]; then
+          if [ "${{ matrix.legacy_notebook }}" != "" ]; then
               pip uninstall jupyter_server --yes
-              pip install notebook
+              pip install 'notebook<7'
           fi
           if [ "${{ matrix.db }}" == "mysql" ]; then
               pip install mysql-connector-python
