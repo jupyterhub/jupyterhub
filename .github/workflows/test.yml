@@ -72,20 +72,20 @@ jobs:
         #       GitHub UI when the workflow run, we avoid using true/false as
         #       values by instead duplicating the name to signal true.
         include:
-          - python: "3.6"
+          - python: "3.7"
             oldest_dependencies: oldest_dependencies
-          - python: "3.6"
             legacy_notebook: legacy_notebook
+          - python: "3.8"
             subdomain: subdomain
-          - python: "3.7"
-            db: mysql
-          - python: "3.7"
-            ssl: ssl
-          - python: "3.8"
-            db: postgres
-          - python: "3.8"
-            legacy_notebook: legacy_notebook
           - python: "3.9"
+            db: mysql
+          - python: "3.10"
+            ssl: ssl
+          - python: "3.10"
+            db: postgres
+          - python: "3.10"
+            legacy_notebook: legacy_notebook
+          - python: "3.11.0-beta.4"
             main_dependencies: main_dependencies
 
     steps:
