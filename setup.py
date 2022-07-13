@@ -91,7 +91,7 @@ setup_args = dict(
     license="BSD",
     platforms="Linux, Mac OS X",
     keywords=['Interactive', 'Interpreter', 'Shell', 'Web'],
-    python_requires=">=3.6",
+    python_requires=">=3.7",
     entry_points={
         'jupyterhub.authenticators': [
             'default = jupyterhub.auth:PAMAuthenticator',
