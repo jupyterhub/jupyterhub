@@ -14,12 +14,6 @@ from setuptools.command.bdist_egg import bdist_egg
 from setuptools.command.build_py import build_py
 from setuptools.command.sdist import sdist
 
-v = sys.version_info
-if v[:2] < (3, 6):
-    error = "ERROR: JupyterHub requires Python version 3.6 or above."
-    print(error, file=sys.stderr)
-    sys.exit(1)
-
 shell = False
 if os.name in ('nt', 'dos'):
     shell = True
