@@ -2,6 +2,8 @@
 # 1. start/stop servers, and
 # 2. access the server API
 
+c = get_config()  # noqa
+
 c.JupyterHub.load_roles = [
     {
         "name": "launcher",
