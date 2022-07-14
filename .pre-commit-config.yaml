@@ -11,7 +11,7 @@
 repos:
   # Autoformat: Python code, syntax patterns are modernized
   - repo: https://github.com/asottile/pyupgrade
-    rev: v2.34.0
+    rev: v2.37.1
     hooks:
       - id: pyupgrade
         args:
@@ -25,13 +25,13 @@ repos:
 
   # Autoformat: Python code
   - repo: https://github.com/psf/black
-    rev: 22.3.0
+    rev: 22.6.0
     hooks:
       - id: black
 
   # Autoformat: markdown, yaml, javascript (see the file .prettierignore)
   - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: v2.6.2
+    rev: v2.7.1
     hooks:
       - id: prettier
 

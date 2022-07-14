@@ -26,7 +26,7 @@ class ProxyAPIHandler(APIHandler):
         else:
             routes = {}
             end = offset + limit
-            for i, key in sorted(all_routes.keys()):
+            for i, key in enumerate(sorted(all_routes.keys())):
                 if i < offset:
                     continue
                 elif i >= end:

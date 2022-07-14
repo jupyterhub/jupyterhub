@@ -712,10 +712,12 @@ class SingleUserNotebookAppMixin(Configurable):
         if 'jinja2_env' in settings:
             # default jinja env (should we do this on jupyter-server, or only notebook?)
             jinja_envs.append(settings['jinja2_env'])
-        if 'notebook_jinja2_env' in settings:
-            # when running with jupyter-server, classic notebook (nbclassic server extension)
-            # gets its own jinja env, which needs the same patch
-            jinja_envs.append(settings['notebook_jinja2_env'])
+        for ext_name in ("notebook", "nbclassic"):
+            env_name = f"{ext_name}_jinja2_env"
+            if env_name in settings:
+                # when running with jupyter-server, classic notebook (nbclassic server extension or notebook v7)
+                # gets its own jinja env, which needs the same patch
+                jinja_envs.append(settings['notebook_jinja2_env'])
 
         # patch jinja env loading to get modified template, only for base page.html
         def get_page(name):
