@@ -322,18 +322,17 @@ class APIHandler(BaseHandler):
         return model
 
     def role_model(self, role):
-        """Get the JSON model for a Group object"""
+        """Get the JSON model for a Role object"""
         model = {
             'kind': 'role',
             'name': role.name,
             'groups': [g.name for g in role.groups],
             'users': [u.name for u in role.users],
-            'scopes': [s.name for s in role.scopes],
+            'scopes': [s for s in role.scopes],
             'services': [s.name for s in role.services]
         }
         access_map = {
             'read:roles': {'kind', 'name', 'users', 'groups', 'scopes', 'services'},
-            'read:roles:name': {'kind', 'name'},
         }
         model = self._filter_model(model, access_map, role, 'role')
         return model
