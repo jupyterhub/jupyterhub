@@ -85,7 +85,10 @@ jobs:
             db: postgres
           - python: "3.10"
             legacy_notebook: legacy_notebook
-          - python: "3.11.0-beta.4"
+          # can't test 3.11.0-beta.4 until a greenlet release
+          # greenlet is a dependency of sqlalchemy on linux
+          # - python: "3.11.0-beta.4"
+          - python: "3.10"
             main_dependencies: main_dependencies
 
     steps:
