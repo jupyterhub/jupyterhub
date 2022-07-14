@@ -132,16 +132,13 @@ def event_loop(request):
 
 
 @fixture(scope='module')
-def io_loop(event_loop, request):
+async def io_loop(event_loop, request):
     """Same as pytest-tornado.io_loop, but re-scoped to module-level"""
-    ioloop.IOLoop.configure(AsyncIOMainLoop)
     io_loop = AsyncIOMainLoop()
-    io_loop.make_current()
     assert asyncio.get_event_loop() is event_loop
     assert io_loop.asyncio_loop is event_loop
 
     def _close():
-        io_loop.clear_current()
         io_loop.close(all_fds=True)
 
     request.addfinalizer(_close)
