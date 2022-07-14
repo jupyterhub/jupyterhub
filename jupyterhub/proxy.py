@@ -31,8 +31,8 @@ from tornado.ioloop import PeriodicCallback
 from traitlets import (
     Any,
     Bool,
+    CaselessStrEnum,
     Dict,
-    Enum,
     Instance,
     Integer,
     TraitError,
@@ -525,8 +525,8 @@ class ConfigurableHTTPProxy(Proxy):
         self.semaphore = asyncio.BoundedSemaphore(change.new)
 
     # https://github.com/jupyterhub/configurable-http-proxy/blob/4.5.1/bin/configurable-http-proxy#L92
-    log_level = Enum(
-        ["debug", "info", "warn", "error", "DEBUG", "INFO", "WARN", "ERROR"],
+    log_level = CaselessStrEnum(
+        ["debug", "info", "warn", "error"],
         "info",
         help="Proxy log level",
         config=True,
