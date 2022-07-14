@@ -76,17 +76,18 @@ jobs:
             oldest_dependencies: oldest_dependencies
             legacy_notebook: legacy_notebook
           - python: "3.8"
-            subdomain: subdomain
+            legacy_notebook: legacy_notebook
           - python: "3.9"
             db: mysql
           - python: "3.10"
-            ssl: ssl
-          - python: "3.10"
             db: postgres
           - python: "3.10"
-            legacy_notebook: legacy_notebook
+            subdomain: subdomain
+          - python: "3.10"
+            ssl: ssl
           # can't test 3.11.0-beta.4 until a greenlet release
           # greenlet is a dependency of sqlalchemy on linux
+          # see https://github.com/gevent/gevent/issues/1867
           # - python: "3.11.0-beta.4"
           - python: "3.10"
             main_dependencies: main_dependencies
