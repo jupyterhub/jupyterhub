@@ -94,13 +94,51 @@ def can_connect(ip, port):
         return True
 
 
-def make_ssl_context(keyfile, certfile, cafile=None, verify=True, check_hostname=True):
-    """Setup context for starting an https server or making requests over ssl."""
+def make_ssl_context(
+    keyfile,
+    certfile,
+    cafile=None,
+    verify=None,
+    check_hostname=None,
+    purpose=ssl.Purpose.SERVER_AUTH,
+):
+    """Setup context for starting an https server or making requests over ssl.
+
+    Used for verifying internal ssl connections.
+    Certificates are always verified in both directions.
+    Hostnames are checked for client sockets.
+
+    Client sockets are created with `purpose=ssl.Purpose.SERVER_AUTH` (default),
+    Server sockets are created with `purpose=ssl.Purpose.CLIENT_AUTH`.
+    """
     if not keyfile or not certfile:
         return None
-    purpose = ssl.Purpose.SERVER_AUTH if verify else ssl.Purpose.CLIENT_AUTH
+    if verify is not None:
+        purpose = ssl.Purpose.SERVER_AUTH if verify else ssl.Purpose.CLIENT_AUTH
+        warnings.warn(
+            f"make_ssl_context(verify={verify}) is deprecated in jupyterhub 2.4."
+            f" Use make_ssl_context(purpose={purpose}).",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+    if check_hostname is not None:
+        purpose = ssl.Purpose.SERVER_AUTH if check_hostname else ssl.Purpose.CLIENT_AUTH
+        warnings.warn(
+            f"make_ssl_context(check_hostname={check_hostname}) is deprecated in jupyterhub 2.4."
+            f" Use make_ssl_context(purpose={purpose}).",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
     ssl_context = ssl.create_default_context(purpose, cafile=cafile)
+    # always verify
+    ssl_context.verify_mode = ssl.CERT_REQUIRED
+
+    if purpose == ssl.Purpose.SERVER_AUTH:
+        # SERVER_AUTH is authenticating servers (i.e. for a client)
+        ssl_context.check_hostname = True
     ssl_context.load_default_certs()
+
     ssl_context.load_cert_chain(certfile, keyfile)
     ssl_context.check_hostname = check_hostname
     return ssl_context

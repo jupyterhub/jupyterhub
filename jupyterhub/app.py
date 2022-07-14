@@ -11,6 +11,7 @@ import re
 import secrets
 import signal
 import socket
+import ssl
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -3047,7 +3048,7 @@ class JupyterHub(Application):
             self.internal_ssl_key,
             self.internal_ssl_cert,
             cafile=self.internal_ssl_ca,
-            check_hostname=False,
+            purpose=ssl.Purpose.CLIENT_AUTH,
         )
 
         # start the webserver
