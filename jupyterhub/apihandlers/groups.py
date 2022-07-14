@@ -9,7 +9,11 @@ from .. import orm
 from ..scopes import Scope, needs_scope
 from .base import APIHandler
 
-
+def convertTuple(tup):
+        str = ''
+        for item in tup:
+            str = str + item
+        return str
 class _GroupAPIHandler(APIHandler):
     def _usernames_to_users(self, usernames):
         """Turn a list of usernames into user objects"""
@@ -104,7 +108,7 @@ class GroupListAPIHandler(_GroupAPIHandler):
 
 class GroupAPIHandler(_GroupAPIHandler):
     """View and modify groups by name"""
-
+    
     @needs_scope('read:groups', 'read:groups:name', 'read:roles:groups')
     def get(self, group_name):
         group = self.find_group(group_name)
@@ -136,7 +140,53 @@ class GroupAPIHandler(_GroupAPIHandler):
         self.db.commit()
         self.write(json.dumps(self.group_model(group)))
         self.set_status(201)
+    def put(self, group_name):
+        """Edit a group's permissions by name"""
+        self.check_authenticator_managed_groups()
+        model = self.get_json_body()
+        if model is None:
+            model = {}
+        else:
+            self._check_group_model(model)
 
+        existing = orm.Group.find(self.db, name=group_name)
+        if existing is not None:
+            usernames = model.get('users', [])
+            # check that users exist
+            users = self._usernames_to_users(usernames)
+
+            # select the group
+            group = self.find_group(group_name)
+            # create group roles:
+            if group_name.split(':')[1] == 'instructor':
+                role = orm.Role(name=group_name, scopes=['admin-ui',
+                convertTuple(('list:users!group=',group_name.split(':')[0],':student')),
+                convertTuple(('list:users!group=',group_name.split(':')[0],':instructor')),
+                convertTuple(('groups!group=',group_name.split(':')[0],':student')),
+                convertTuple(('groups!group=',group_name.split(':')[0],':instructor')),
+                convertTuple(('read:servers!group=',group_name.split(':')[0],':student')),
+                convertTuple(('read:servers!group=',group_name.split(':')[0],':instructor')),
+                convertTuple(('access:servers!group=',group_name.split(':')[0],':student')),
+                convertTuple(('access:servers!group=',group_name.split(':')[0],':instructor'))]
+                )
+                role.groups.append(group)
+                self.db.commit()
+            if group_name.split(':')[1] == 'student':
+                role = orm.Role(name=group_name, scopes=['admin-ui',
+                convertTuple(('list:users!group=%s',group_name.split(':')[0],':instructor')),
+                convertTuple(('groups!group=%s',group_name.split(':')[0],':student'))]
+                )
+    
+                role.groups.append(group)
+                self.db.commit()
+            
+            self.db.commit()
+            self.write(json.dumps(self.group_model(group)))
+            self.set_status(201)
+        else:  
+            raise web.HTTPError(409, "Group %s does not exist" % group_name)
+
+        
     @needs_scope('delete:groups')
     def delete(self, group_name):
         """Delete a group by name"""
