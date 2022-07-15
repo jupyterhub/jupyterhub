@@ -195,10 +195,22 @@ def test_singleuser_app_class(JUPYTERHUB_SINGLEUSER_APP):
         import jupyter_server  # noqa
     except ImportError:
         have_server = False
-        expect_error = "jupyter_server" in JUPYTERHUB_SINGLEUSER_APP
     else:
         have_server = True
-        expect_error = False
+    try:
+        import notebook.notebookapp  # noqa
+    except ImportError:
+        have_notebook = False
+    else:
+        have_notebook = True
+
+    if JUPYTERHUB_SINGLEUSER_APP.startswith("notebook."):
+        expect_error = not have_notebook
+    elif JUPYTERHUB_SINGLEUSER_APP.startswith("jupyter_server."):
+        expect_error = not have_server
+    else:
+        # not specified, will try both
+        expect_error = not (have_server or have_notebook)
 
     if expect_error:
         ctx = pytest.raises(CalledProcessError)
