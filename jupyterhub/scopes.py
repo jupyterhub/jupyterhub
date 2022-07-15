@@ -551,7 +551,7 @@ def expand_scopes(scopes, owner=None, oauth_client=None):
             else:
                 warnings.warn(
                     f"Not expanding !{filter} filter without target {filter} in {scope}",
-                    stacklevel=2,
+                    stacklevel=3,
                 )
 
     if 'self' in expanded_scopes:
@@ -561,7 +561,7 @@ def expand_scopes(scopes, owner=None, oauth_client=None):
         else:
             warnings.warn(
                 f"Not expanding 'self' scope for owner {owner} which is not a User",
-                stacklevel=2,
+                stacklevel=3,
             )
 
     # reduce to discard overlapping scopes
