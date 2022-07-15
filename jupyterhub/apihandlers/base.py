@@ -329,7 +329,7 @@ class APIHandler(BaseHandler):
             'groups': [g.name for g in role.groups],
             'users': [u.name for u in role.users],
             'scopes': [s for s in role.scopes],
-            'services': [s.name for s in role.services]
+            'services': [s.name for s in role.services],
         }
         access_map = {
             'read:roles': {'kind', 'name', 'users', 'groups', 'scopes', 'services'},
@@ -378,7 +378,15 @@ class APIHandler(BaseHandler):
     }
 
     _group_model_types = {'name': str, 'users': list, 'roles': list}
-    _role_model_types = {'name': str, 'users': list, 'roles': list, 'groups': list, 'scopes': list, 'services': list}
+    _role_model_types = {
+        'name': str,
+        'users': list,
+        'roles': list,
+        'groups': list,
+        'scopes': list,
+        'services': list,
+    }
+
     def _check_model(self, model, model_types, name):
         """Check a model provided by a REST API request
 
@@ -416,6 +424,7 @@ class APIHandler(BaseHandler):
                 raise web.HTTPError(
                     400, ("group names must be str, not %r", type(groupname))
                 )
+
     def _check_role_model(self, model):
         """Check a request-provided role model from a REST API"""
         self._check_model(model, self._role_model_types, 'role')

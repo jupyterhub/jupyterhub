@@ -1,4 +1,4 @@
-from . import auth, groups, hub, proxy, services, users, roles
+from . import auth, groups, hub, proxy, roles, services, users
 from .base import *
 
 default_handlers = []
