@@ -49,10 +49,11 @@ class RoleAPIHandler(_RoleAPIHandler):
         servicenames = model.get('services', [])
         usernames = model.get('users', [])
         groupnames = model.pop("groups", [])
-        #check if scopes exist
+        # check if scopes exist
         if scopes:
             # avoid circular import
             from ..scopes import _check_scopes_exist
+
             try:
                 _check_scopes_exist(scopes, who_for=f"role {role_name}")
             except:
@@ -108,10 +109,11 @@ class RoleAPIHandler(_RoleAPIHandler):
         servicenames = model.get('services', [])
         usernames = model.get('users', [])
         groupnames = model.pop("groups", [])
-        #check if scopes exist
+        # check if scopes exist
         if scopes:
             # avoid circular import
             from ..scopes import _check_scopes_exist
+
             try:
                 _check_scopes_exist(scopes, who_for=f"role {role_name}")
             except:
