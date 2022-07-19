@@ -49,6 +49,14 @@ class RoleAPIHandler(_RoleAPIHandler):
         servicenames = model.get('services', [])
         usernames = model.get('users', [])
         groupnames = model.pop("groups", [])
+        #check if scopes exist
+        if scopes:
+            # avoid circular import
+            from ..scopes import _check_scopes_exist
+            try:
+                _check_scopes_exist(scopes, who_for=f"role {role_name}")
+            except:
+                raise web.HTTPError(409, "One of the scopes does not exist")
 
         services = []
         for name in servicenames:
@@ -100,7 +108,14 @@ class RoleAPIHandler(_RoleAPIHandler):
         servicenames = model.get('services', [])
         usernames = model.get('users', [])
         groupnames = model.pop("groups", [])
-
+        #check if scopes exist
+        if scopes:
+            # avoid circular import
+            from ..scopes import _check_scopes_exist
+            try:
+                _check_scopes_exist(scopes, who_for=f"role {role_name}")
+            except:
+                raise web.HTTPError(409, "One of the scopes does not exist")
         services = []
         for name in servicenames:
             existing = orm.Service.find(self.db, name=name)
