@@ -1884,6 +1884,116 @@ async def test_auth_managed_groups(request, app, group, user):
 
 
 # -----------------
+# Role API tests
+# -----------------
+
+@mark.role
+async def test_role_get(app):
+    role = orm.Role(name='alphaflight')
+    app.db.add(role)
+    app.db.commit()
+    role = orm.Role.find(app.db, name='alphaflight')
+    app.db.commit()
+
+    r = await api_request(app, 'roles/runaways')
+    assert r.status_code == 404
+
+    r = await api_request(app, 'roles/alphaflight')
+    r.raise_for_status()
+    reply = r.json()
+    assert reply == {
+        'kind': 'role',
+        'name': 'alphaflight',
+        'groups': [],
+        'users': [],
+        'scopes': [],
+        'services': [],
+    }
+
+
+@mark.role
+async def test_role_create_delete(app):
+    db = app.db
+    user = add_user(app.db, app=app, name='sasquatch')
+    r = await api_request(app, 'roles/runaways', method='delete')
+    assert r.status_code == 404
+
+    assert orm.Role.find(db, name='new') is None
+
+    r = await api_request(
+        app,
+        'roles/omegaflight',
+        method='post',
+        data=json.dumps({'users': ['sasquatch']}),
+    )
+    r.raise_for_status()
+
+    omegaflight = orm.Role.find(db, name='omegaflight')
+    sasquatch = find_user(db, name='sasquatch')
+    assert omegaflight in sasquatch.roles
+    assert sasquatch in omegaflight.users
+
+    # create duplicate raises 400
+    r = await api_request(app, 'roles/omegaflight', method='post')
+    assert r.status_code == 409
+
+    r = await api_request(app, 'roles/omegaflight', method='delete')
+    assert r.status_code == 204
+    assert omegaflight not in sasquatch.roles
+    assert orm.Group.find(db, name='omegaflight') is None
+
+    # delete nonexistent gives 404
+    r = await api_request(app, 'roles/omegaflight', method='delete')
+    assert r.status_code == 404
+
+
+
+
+@mark.role
+async def test_role_edit(app):
+    db = app.db
+    role = orm.Role(name='alpharole')
+    app.db.add(role)
+    app.db.commit()
+    #correct scopes
+    
+
+    #update scopes of role by adding correct scopes
+    scopes = ['admin:groups', 'read:users']
+    r = await api_request(
+        app,
+        'roles/alpharole',
+        method='put',
+        data=json.dumps({'scopes': scopes}),
+    )
+    r.raise_for_status()
+    role = orm.Role.find(db, name='alpharole')
+    assert sorted(scope for scope in role.scopes) == sorted(scopes)
+
+    #update scopes of role by adding wrong scopes
+    scopes_wrong = ['read12:groups', 'reads:wrongscope']
+    r = await api_request(
+        app,
+        'roles/alpharole',
+        method='put',
+        data=json.dumps({'scopes': scopes_wrong}),
+    )
+    assert r.status_code== 409
+
+    #removing scopes with put request
+
+    r = await api_request(
+        app,
+        'roles/alpharole',
+        method='put',
+        data=json.dumps({'scopes': []}),
+    )
+    r.raise_for_status()
+    assert role.scopes == []
+ 
+
+
+# -----------------
 # Service API tests
 # -----------------
 
