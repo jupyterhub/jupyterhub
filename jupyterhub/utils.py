@@ -117,7 +117,7 @@ def make_ssl_context(
         purpose = ssl.Purpose.SERVER_AUTH if verify else ssl.Purpose.CLIENT_AUTH
         warnings.warn(
             f"make_ssl_context(verify={verify}) is deprecated in jupyterhub 2.4."
-            f" Use make_ssl_context(purpose={purpose}).",
+            f" Use make_ssl_context(purpose={purpose!s}).",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -125,7 +125,7 @@ def make_ssl_context(
         purpose = ssl.Purpose.SERVER_AUTH if check_hostname else ssl.Purpose.CLIENT_AUTH
         warnings.warn(
             f"make_ssl_context(check_hostname={check_hostname}) is deprecated in jupyterhub 2.4."
-            f" Use make_ssl_context(purpose={purpose}).",
+            f" Use make_ssl_context(purpose={purpose!s}).",
             DeprecationWarning,
             stacklevel=2,
         )
