@@ -11,6 +11,7 @@ import re
 import secrets
 import signal
 import socket
+import ssl
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -22,15 +23,6 @@ from urllib.parse import unquote, urlparse, urlunparse
 
 if sys.version_info[:2] < (3, 3):
     raise ValueError("Python < 3.3 not supported: %s" % sys.version)
-
-# For compatibility with python versions 3.6 or earlier.
-# asyncio.Task.all_tasks() is fully moved to asyncio.all_tasks() starting with 3.9. Also applies to current_task.
-try:
-    asyncio_all_tasks = asyncio.all_tasks
-    asyncio_current_task = asyncio.current_task
-except AttributeError as e:
-    asyncio_all_tasks = asyncio.Task.all_tasks
-    asyncio_current_task = asyncio.Task.current_task
 
 import tornado.httpserver
 import tornado.options
@@ -3059,7 +3051,7 @@ class JupyterHub(Application):
             self.internal_ssl_key,
             self.internal_ssl_cert,
             cafile=self.internal_ssl_ca,
-            check_hostname=False,
+            purpose=ssl.Purpose.CLIENT_AUTH,
         )
 
         # start the webserver
@@ -3251,7 +3243,7 @@ class JupyterHub(Application):
 
         await self.cleanup()
 
-        tasks = [t for t in asyncio_all_tasks() if t is not asyncio_current_task()]
+        tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
 
         if tasks:
             self.log.debug("Cancelling pending tasks")
@@ -3264,7 +3256,7 @@ class JupyterHub(Application):
             except StopAsyncIteration as e:
                 self.log.error("Caught StopAsyncIteration Exception", exc_info=True)
 
-            tasks = [t for t in asyncio_all_tasks()]
+            tasks = [t for t in asyncio.all_tasks()]
             for t in tasks:
                 self.log.debug("Task status: %s", t)
         asyncio.get_event_loop().stop()
