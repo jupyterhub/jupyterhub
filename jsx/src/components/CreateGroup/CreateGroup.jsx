@@ -59,7 +59,7 @@ const CreateGroup = (props) => {
                     value={groupName}
                     placeholder="group name..."
                     onChange={(e) => {
-                      setGroupName(e.target.value);
+                      setGroupName(e.target.value.trim());
                     }}
                   ></input>
                 </div>
