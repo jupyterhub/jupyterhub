@@ -233,7 +233,7 @@ If you use {class}`~.HubOAuthenticated`, this check is performed automatically
 against the `.hub_scopes` attribute of each Handler
 (the default is populated from `$JUPYTERHUB_OAUTH_ACCESS_SCOPES` and usually `access:services!service=myservice`).
 
-:::{versionchanged} 2.4
+:::{versionchanged} 3.0
 The JUPYTERHUB_OAUTH_SCOPES environment variable is deprecated and renamed to JUPYTERHUB_OAUTH_ACCESS_SCOPES,
 to avoid ambiguity with JUPYTERHUB_OAUTH_CLIENT_ALLOWED_SCOPES
 :::

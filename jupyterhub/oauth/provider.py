@@ -570,7 +570,7 @@ class JupyterHubRequestValidator(RequestValidator):
 
         # TODO: handle roles->scopes transition
         # In 2.0-2.2, `?scopes=` only accepted _role_ names,
-        # but in 2.4 we accept and prefer scopes.
+        # but in 3.0 we accept and prefer scopes.
         # For backward-compatibility, we still accept both.
         # Should roles be deprecated here, or kept as a convenience?
         try:

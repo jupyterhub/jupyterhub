@@ -306,7 +306,7 @@ class Spawner(LoggingConfigurable):
         [Callable(), List()],
         help="""Allowed roles for oauth tokens.
 
-        Deprecated in 2.4: use oauth_client_allowed_scopes
+        Deprecated in 3.0: use oauth_client_allowed_scopes
 
         This sets the maximum and default roles
         assigned to oauth tokens issued by a single-user server's
@@ -955,11 +955,11 @@ class Spawner(LoggingConfigurable):
             self.user.url, url_escape_path(self.name), 'oauth_callback'
         )
 
-        # deprecated env, renamed in 2.4 for disambiguation
+        # deprecated env, renamed in 3.0 for disambiguation
         env['JUPYTERHUB_OAUTH_SCOPES'] = json.dumps(self.oauth_access_scopes)
         env['JUPYTERHUB_OAUTH_ACCESS_SCOPES'] = json.dumps(self.oauth_access_scopes)
 
-        # added in 2.4
+        # added in 3.0
         env['JUPYTERHUB_OAUTH_CLIENT_ALLOWED_SCOPES'] = json.dumps(
             self.oauth_client_allowed_scopes
         )

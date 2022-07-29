@@ -203,7 +203,7 @@ class Service(LoggingConfigurable):
     oauth_roles = List(
         help="""OAuth allowed roles.
 
-        DEPRECATED in 2.4: use oauth_client_allowed_scopes
+        DEPRECATED in 3.0: use oauth_client_allowed_scopes
       """
     ).tag(input=True)
 

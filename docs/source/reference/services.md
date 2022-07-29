@@ -117,9 +117,9 @@ JUPYTERHUB_SERVICE_PREFIX: URL path prefix of this service (/services/:service-n
 JUPYTERHUB_SERVICE_URL:    Local URL where the service is expected to be listening.
                            Only for proxied web services.
 JUPYTERHUB_OAUTH_SCOPES:   JSON-serialized list of scopes to use for allowing access to the service
-                           (deprecated in 2.4, use JUPYTERHUB_OAUTH_ACCESS_SCOPES).
-JUPYTERHUB_OAUTH_ACCESS_SCOPES: JSON-serialized list of scopes to use for allowing access to the service (new in 2.4).
-JUPYTERHUB_OAUTH_CLIENT_ALLOWED_SCOPES: JSON-serialized list of scopes that can be requested by the oauth client on behalf of users (new in 2.4).
+                           (deprecated in 3.0, use JUPYTERHUB_OAUTH_ACCESS_SCOPES).
+JUPYTERHUB_OAUTH_ACCESS_SCOPES: JSON-serialized list of scopes to use for allowing access to the service (new in 3.0).
+JUPYTERHUB_OAUTH_CLIENT_ALLOWED_SCOPES: JSON-serialized list of scopes that can be requested by the oauth client on behalf of users (new in 3.0).
 ```
 
 For the previous 'cull idle' Service example, these environment variables

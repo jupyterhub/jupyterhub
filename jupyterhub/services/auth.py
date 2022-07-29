@@ -336,7 +336,7 @@ class HubAuth(SingletonConfigurable):
     @property
     def oauth_scopes(self):
         warnings.warn(
-            "HubAuth.oauth_scopes is deprecated in JupyterHub 2.4. Use .access_scopes"
+            "HubAuth.oauth_scopes is deprecated in JupyterHub 3.0. Use .access_scopes"
         )
         return self.access_scopes
 
@@ -352,7 +352,7 @@ class HubAuth(SingletonConfigurable):
     def _default_scopes(self):
         env_scopes = os.getenv('JUPYTERHUB_OAUTH_ACCESS_SCOPES')
         if not env_scopes:
-            # deprecated name (since 2.4)
+            # deprecated name (since 3.0)
             env_scopes = os.getenv('JUPYTERHUB_OAUTH_SCOPES')
         if env_scopes:
             return set(json.loads(env_scopes))
