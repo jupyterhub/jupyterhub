@@ -135,6 +135,8 @@ Note that only the {ref}`horizontal filtering <horizontal-filtering-target>` can
 Metascopes `self` and `all`, `<resource>`, `<resource>:<subresource>`, `read:<resource>`, `admin:<resource>`, and `access:<resource>` scopes are predefined and cannot be changed otherwise.
 ```
 
+(custom-scopes)=
+
 ### Custom scopes
 
 :::{versionadded} 2.3
