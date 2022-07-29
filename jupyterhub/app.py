@@ -3228,11 +3228,7 @@ class JupyterHub(Application):
         self._atexit_ran = True
         self._init_asyncio_patch()
         # run the cleanup step (in a new loop, because the interrupted one is unclean)
-        asyncio.set_event_loop(asyncio.new_event_loop())
-        IOLoop.clear_current()
-        loop = IOLoop()
-        loop.make_current()
-        loop.run_sync(self.cleanup)
+        asyncio.run(self.cleanup())
 
     async def shutdown_cancel_tasks(self, sig=None):
         """Cancel all other tasks of the event loop and initiate cleanup"""

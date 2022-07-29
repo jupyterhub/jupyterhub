@@ -411,14 +411,10 @@ class StubSingleUserSpawner(MockSpawner):
         print(args, env)
 
         def _run():
-            asyncio.set_event_loop(asyncio.new_event_loop())
-            io_loop = IOLoop()
-            io_loop.make_current()
-            io_loop.add_callback(lambda: evt.set())
-
             with mock.patch.dict(os.environ, env):
                 app = self._app = MockSingleUserServer()
                 app.initialize(args)
+                app.io_loop.add_callback(lambda: evt.set())
                 assert app.hub_auth.oauth_client_id
                 assert app.hub_auth.api_token
                 assert app.hub_auth.oauth_scopes
