@@ -656,14 +656,13 @@ class SingleUserNotebookAppMixin(Configurable):
                 # running, use IOLoop.current
                 self.io_loop = ioloop.IOLoop.current()
 
-        for cls in self.__class__.mro():
-            if cls.__module__.startswith("notebook."):
-                # notebookapp unconditionally calls `self.io_loop = IOLoop.current()` in start.
-                # To avoid problems, we must make sure our event loop is current.
-                # this is not required for jupyter-server.
-                with warnings.catch_warnings():
-                    warnings.simplefilter("ignore")
-                    self.io_loop.make_current()
+        # Make our event loop the 'current' event loop.
+        # FIXME: this shouldn't be necessary, but it is.
+        # notebookapp (<=6.4, at least), and
+        # jupyter-server (<=1.17.0, at least) still need the 'current' event loop to be defined
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            self.io_loop.make_current()
 
     def init_httpserver(self):
         self.io_loop.run_sync(super().init_httpserver)
