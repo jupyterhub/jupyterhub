@@ -183,12 +183,6 @@ itself, ``jupyterhub_config.py``, as a binary string:
 
     c.JupyterHub.cookie_secret = bytes.fromhex('64 CHAR HEX STRING')
 
-
-.. important::
-
-   If the cookie secret value changes for the Hub, all single-user notebook
-   servers must also be restarted.
-
 .. _cookies:
 
 Cookies used by JupyterHub authentication
