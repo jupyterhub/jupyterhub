@@ -258,7 +258,7 @@ const ServerDashboard = (props) => {
           )}
         </td>
         <td data-testid="user-row-last-activity">
-          {server.last_activity ? timeSince(server.last_activity) : "Never"}
+          {user.last_activity ? timeSince(server.last_activity) : "Never"}
         </td>
         <td data-testid="user-row-server-activity">
           {server.started ? (
