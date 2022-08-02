@@ -19,6 +19,9 @@ on:
       - "**"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   # The ./jsx folder contains React based source code files that are to compile
   # to share/jupyterhub/static/js/admin-react.js. The ./jsx folder includes
@@ -29,8 +32,8 @@ jobs:
     timeout-minutes: 5
 
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v1
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
         with:
           node-version: "14"
 

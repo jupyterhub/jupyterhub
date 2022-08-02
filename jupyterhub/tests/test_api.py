@@ -1416,6 +1416,17 @@ async def test_get_proxy(app):
     assert list(reply.keys()) == [app.hub.routespec]
 
 
+@mark.parametrize("offset", (0, 1))
+async def test_get_proxy_pagination(app, offset):
+    r = await api_request(
+        app, f'proxy?offset={offset}', headers={"Accept": PAGINATION_MEDIA_TYPE}
+    )
+    r.raise_for_status()
+    reply = r.json()
+    assert set(reply) == {"items", "_pagination"}
+    assert list(reply["items"].keys()) == [app.hub.routespec][offset:]
+
+
 async def test_cookie(app):
     db = app.db
     name = 'patience'

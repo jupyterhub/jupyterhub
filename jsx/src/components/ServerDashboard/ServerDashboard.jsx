@@ -30,7 +30,7 @@ const AccessServerButton = ({ url }) => (
 );
 
 const ServerDashboard = (props) => {
-  let base_url = window.base_url;
+  let base_url = window.base_url || "/";
   // sort methods
   var usernameDesc = (e) => e.sort((a, b) => (a.name > b.name ? 1 : -1)),
     usernameAsc = (e) => e.sort((a, b) => (a.name < b.name ? 1 : -1)),
@@ -201,6 +201,25 @@ const ServerDashboard = (props) => {
   };
 
   const ServerRowTable = ({ data }) => {
+    const sortedData = Object.keys(data)
+      .sort()
+      .reduce(function (result, key) {
+        let value = data[key];
+        switch (key) {
+          case "last_activity":
+          case "created":
+          case "started":
+            // format timestamps
+            value = value ? timeSince(value) : value;
+            break;
+        }
+        if (Array.isArray(value)) {
+          // cast arrays (e.g. roles, groups) to string
+          value = value.sort().join(", ");
+        }
+        result[key] = value;
+        return result;
+      }, {});
     return (
       <ReactObjectTableViewer
         className="table-striped table-bordered"
@@ -214,7 +233,7 @@ const ServerDashboard = (props) => {
         valueStyle={{
           padding: "4px",
         }}
-        data={data}
+        data={sortedData}
       />
     );
   };
@@ -251,11 +270,7 @@ const ServerDashboard = (props) => {
         <td data-testid="user-row-admin">{user.admin ? "admin" : ""}</td>
 
         <td data-testid="user-row-server">
-          {server.name ? (
-            <p className="text-secondary">{server.name}</p>
-          ) : (
-            <p style={{ color: "lightgrey" }}>[MAIN]</p>
-          )}
+          <p className="text-secondary">{server.name}</p>
         </td>
         <td data-testid="user-row-last-activity">
           {server.last_activity ? timeSince(server.last_activity) : "Never"}
@@ -277,7 +292,7 @@ const ServerDashboard = (props) => {
               />
               <a
                 href={`${base_url}spawn/${user.name}${
-                  server.name && "/" + server.name
+                  server.name ? "/" + server.name : ""
                 }`}
               >
                 <button

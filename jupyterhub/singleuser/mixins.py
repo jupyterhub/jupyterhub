@@ -14,6 +14,7 @@ import logging
 import os
 import random
 import secrets
+import ssl
 import sys
 import warnings
 from datetime import timezone
@@ -635,14 +636,42 @@ class SingleUserNotebookAppMixin(Configurable):
         if default_url:
             self.config[self.__class__.__name__].default_url = default_url
         self._log_app_versions()
+        # call our init_ioloop very early
+        # jupyter-server calls it too late, notebook doesn't define it yet
+        # only called in jupyter-server >= 1.9
+        self.init_ioloop()
         super().initialize(argv)
         self.patch_templates()
+
+    def init_ioloop(self):
+        """init_ioloop added in jupyter-server 1.9"""
+        # avoid deprecated access to current event loop
+        if getattr(self, "io_loop", None) is None:
+            try:
+                asyncio.get_running_loop()
+            except RuntimeError:
+                # not running, make our own loop
+                self.io_loop = ioloop.IOLoop(make_current=False)
+            else:
+                # running, use IOLoop.current
+                self.io_loop = ioloop.IOLoop.current()
+
+        # Make our event loop the 'current' event loop.
+        # FIXME: this shouldn't be necessary, but it is.
+        # notebookapp (<=6.4, at least), and
+        # jupyter-server (<=1.17.0, at least) still need the 'current' event loop to be defined
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            self.io_loop.make_current()
+
+    def init_httpserver(self):
+        self.io_loop.run_sync(super().init_httpserver)
 
     def start(self):
         self.log.info("Starting jupyterhub-singleuser server version %s", __version__)
         # start by hitting Hub to check version
-        ioloop.IOLoop.current().run_sync(self.check_hub_version)
-        ioloop.IOLoop.current().add_callback(self.keep_activity_updated)
+        self.io_loop.run_sync(self.check_hub_version)
+        self.io_loop.add_callback(self.keep_activity_updated)
         super().start()
 
     def init_hub_auth(self):
@@ -749,10 +778,12 @@ class SingleUserNotebookAppMixin(Configurable):
         if 'jinja2_env' in settings:
             # default jinja env (should we do this on jupyter-server, or only notebook?)
             jinja_envs.append(settings['jinja2_env'])
-        if 'notebook_jinja2_env' in settings:
-            # when running with jupyter-server, classic notebook (nbclassic server extension)
-            # gets its own jinja env, which needs the same patch
-            jinja_envs.append(settings['notebook_jinja2_env'])
+        for ext_name in ("notebook", "nbclassic"):
+            env_name = f"{ext_name}_jinja2_env"
+            if env_name in settings:
+                # when running with jupyter-server, classic notebook (nbclassic server extension or notebook v7)
+                # gets its own jinja env, which needs the same patch
+                jinja_envs.append(settings[env_name])
 
         # patch jinja env loading to get modified template, only for base page.html
         def get_page(name):

@@ -30,6 +30,9 @@ env:
   LANG: C.UTF-8
   PYTEST_ADDOPTS: "--verbose --color=yes"
 
+permissions:
+  contents: read
+
 jobs:
   # Run "pytest jupyterhub/tests" in various configurations
   pytest:
@@ -53,9 +56,9 @@ jobs:
         #   Tests everything when JupyterHub works against a dedicated mysql or
         #   postgresql server.
         #
-        # nbclassic:
+        # legacy_notebook:
         #   Tests everything when the user instances are started with
-        #   notebook instead of jupyter_server.
+        #   the legacy notebook server instead of jupyter_server.
         #
         # ssl:
         #   Tests everything using internal SSL connections instead of
@@ -69,20 +72,24 @@ jobs:
         #       GitHub UI when the workflow run, we avoid using true/false as
         #       values by instead duplicating the name to signal true.
         include:
-          - python: "3.6"
+          - python: "3.7"
             oldest_dependencies: oldest_dependencies
-            nbclassic: nbclassic
-          - python: "3.6"
-            subdomain: subdomain
-          - python: "3.7"
-            db: mysql
-          - python: "3.7"
-            ssl: ssl
+            legacy_notebook: legacy_notebook
           - python: "3.8"
-            db: postgres
-          - python: "3.8"
-            nbclassic: nbclassic
+            legacy_notebook: legacy_notebook
           - python: "3.9"
+            db: mysql
+          - python: "3.10"
+            db: postgres
+          - python: "3.10"
+            subdomain: subdomain
+          - python: "3.10"
+            ssl: ssl
+          # can't test 3.11.0-beta.4 until a greenlet release
+          # greenlet is a dependency of sqlalchemy on linux
+          # see https://github.com/gevent/gevent/issues/1867
+          # - python: "3.11.0-beta.4"
+          - python: "3.10"
             main_dependencies: main_dependencies
 
     steps:
@@ -110,11 +117,11 @@ jobs:
           if [ "${{ matrix.jupyter_server }}" != "" ]; then
               echo "JUPYTERHUB_SINGLEUSER_APP=jupyterhub.tests.mockserverapp.MockServerApp" >> $GITHUB_ENV
           fi
-      - uses: actions/checkout@v2
-      # NOTE: actions/setup-node@v1 make use of a cache within the GitHub base
+      - uses: actions/checkout@v3
+      # NOTE: actions/setup-node@v3 make use of a cache within the GitHub base
       #       environment and setup in a fraction of a second.
       - name: Install Node v14
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v3
         with:
           node-version: "14"
       - name: Install Javascript dependencies
@@ -123,12 +130,12 @@ jobs:
           npm install -g configurable-http-proxy yarn
           npm list
 
-      # NOTE: actions/setup-python@v2 make use of a cache within the GitHub base
+      # NOTE: actions/setup-python@v4 make use of a cache within the GitHub base
       #       environment and setup in a fraction of a second.
       - name: Install Python ${{ matrix.python }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
-          python-version: ${{ matrix.python }}
+          python-version: "${{ matrix.python }}"
       - name: Install Python dependencies
         run: |
           pip install --upgrade pip
@@ -145,9 +152,9 @@ jobs:
           if [ "${{ matrix.main_dependencies }}" != "" ]; then
               pip install git+https://github.com/ipython/traitlets#egg=traitlets --force
           fi
-          if [ "${{ matrix.nbclassic }}" != "" ]; then
+          if [ "${{ matrix.legacy_notebook }}" != "" ]; then
               pip uninstall jupyter_server --yes
-              pip install notebook
+              pip install 'notebook<7'
           fi
           if [ "${{ matrix.db }}" == "mysql" ]; then
               pip install mysql-connector-python
@@ -211,7 +218,7 @@ jobs:
     timeout-minutes: 20
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: build images
         run: |
