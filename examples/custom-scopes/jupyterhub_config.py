@@ -7,7 +7,10 @@ c.JupyterHub.services = [
         'name': 'grades',
         'url': 'http://127.0.0.1:10101',
         'command': [sys.executable, './grades.py'],
-        'oauth_roles': ['grader'],
+        'oauth_client_allowed_scopes': [
+            'custom:grades:write',
+            'custom:grades:read',
+        ],
     },
 ]
 

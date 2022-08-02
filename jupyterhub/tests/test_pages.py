@@ -1153,7 +1153,7 @@ async def test_oauth_page_scope_appearance(
         .filter_by(identifier=service.oauth_client_id)
         .one()
     )
-    oauth_client.allowed_roles = [service_role]
+    oauth_client.allowed_scopes = sorted(roles.roles_to_scopes([service_role]))
     app.db.commit()
 
     s = AsyncSession()

@@ -39,7 +39,6 @@ from sqlalchemy.sql.expression import bindparam
 from sqlalchemy.types import LargeBinary, Text, TypeDecorator
 from tornado.log import app_log
 
-from .roles import roles_to_scopes
 from .utils import compare_token, hash_token, new_token, random_port
 
 # top-level variable for easier mocking in tests
@@ -152,7 +151,6 @@ for has_role in (
     'user',
     'group',
     'service',
-    'oauth_client',
 ):
     role_map = Table(
         f'{has_role}_role_map',
@@ -696,6 +694,9 @@ class APIToken(Hashed, Base):
         else:
             cls.check_token(db, token)
 
+        # avoid circular import
+        from .roles import roles_to_scopes
+
         if scopes is not None and roles is not None:
             raise ValueError(
                 "Can only assign one of scopes or roles when creating tokens."
@@ -826,9 +827,9 @@ class OAuthClient(Base):
     )
     codes = relationship(OAuthCode, backref='client', cascade='all, delete-orphan')
 
-    # these are the roles an oauth client is allowed to request
-    # *not* the roles of the client itself
-    allowed_roles = relationship('Role', secondary='oauth_client_role_map')
+    # these are the scopes an oauth client is allowed to request
+    # *not* the scopes of the client itself
+    allowed_scopes = Column(JSONList, default=[])
 
     def __repr__(self):
         return f"<{self.__class__.__name__}(identifier={self.identifier!r})>"

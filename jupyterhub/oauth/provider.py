@@ -151,7 +151,7 @@ class JupyterHubRequestValidator(RequestValidator):
         )
         if orm_client is None:
             raise ValueError("No such client: %s" % client_id)
-        scopes = roles_to_scopes(orm_client.allowed_roles)
+        scopes = set(orm_client.allowed_scopes)
         if 'inherit' not in scopes:
             # add identify-user scope
             # and access-service scope
@@ -569,8 +569,8 @@ class JupyterHubRequestValidator(RequestValidator):
             requested_scopes.discard("identify")
 
         # TODO: handle roles->scopes transition
-        # In 2.0-2.2, `?scopes=` only accepted _role_ names,
-        # but in 2.3 we accept and prefer scopes.
+        # In 2.x, `?scopes=` only accepted _role_ names,
+        # but in 3.0 we accept and prefer scopes.
         # For backward-compatibility, we still accept both.
         # Should roles be deprecated here, or kept as a convenience?
         try:
@@ -589,7 +589,7 @@ class JupyterHubRequestValidator(RequestValidator):
             )
             requested_scopes = roles_to_scopes(requested_roles)
 
-        client_allowed_scopes = roles_to_scopes(orm_client.allowed_roles)
+        client_allowed_scopes = set(orm_client.allowed_scopes)
 
         # always grant reading the token-owner's name
         # and accessing the service itself
@@ -624,7 +624,12 @@ class JupyterHubOAuthServer(WebApplicationServer):
         super().__init__(validator, *args, **kwargs)
 
     def add_client(
-        self, client_id, client_secret, redirect_uri, allowed_roles=None, description=''
+        self,
+        client_id,
+        client_secret,
+        redirect_uri,
+        allowed_scopes=None,
+        description='',
     ):
         """Add a client
 
@@ -646,12 +651,12 @@ class JupyterHubOAuthServer(WebApplicationServer):
             app_log.info(f'Creating oauth client {client_id}')
         else:
             app_log.info(f'Updating oauth client {client_id}')
-        if allowed_roles == None:
-            allowed_roles = []
+        if allowed_scopes == None:
+            allowed_scopes = []
         orm_client.secret = hash_token(client_secret) if client_secret else ""
         orm_client.redirect_uri = redirect_uri
         orm_client.description = description or client_id
-        orm_client.allowed_roles = allowed_roles
+        orm_client.allowed_scopes = list(allowed_scopes)
         self.db.commit()
         return orm_client
 
