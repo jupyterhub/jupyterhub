@@ -54,28 +54,6 @@ from .utils import add_user
 _db = None
 
 
-def _pytest_collection_modifyitems(items):
-    """This function is automatically run by pytest passing all collected test
-    functions.
-
-    We use it to add asyncio marker to all async tests and assert we don't use
-    test functions that are async generators which wouldn't make sense.
-
-    It is no longer required with pytest-asyncio >= 0.17
-    """
-    for item in items:
-        if inspect.iscoroutinefunction(item.obj):
-            item.add_marker('asyncio')
-        assert not inspect.isasyncgenfunction(item.obj)
-
-
-if sys.version_info < (3, 7):
-    # apply pytest-asyncio's 'auto' mode on Python 3.6.
-    # 'auto' mode is new in pytest-asyncio 0.17,
-    # which requires Python 3.7.
-    pytest_collection_modifyitems = _pytest_collection_modifyitems
-
-
 @fixture(scope='module')
 def ssl_tmpdir(tmpdir_factory):
     return tmpdir_factory.mktemp('ssl')
@@ -154,16 +132,13 @@ def event_loop(request):
 
 
 @fixture(scope='module')
-def io_loop(event_loop, request):
+async def io_loop(event_loop, request):
     """Same as pytest-tornado.io_loop, but re-scoped to module-level"""
-    ioloop.IOLoop.configure(AsyncIOMainLoop)
     io_loop = AsyncIOMainLoop()
-    io_loop.make_current()
     assert asyncio.get_event_loop() is event_loop
     assert io_loop.asyncio_loop is event_loop
 
     def _close():
-        io_loop.clear_current()
         io_loop.close(all_fds=True)
 
     request.addfinalizer(_close)

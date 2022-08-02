@@ -11,6 +11,7 @@ import re
 import secrets
 import signal
 import socket
+import ssl
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -22,15 +23,6 @@ from urllib.parse import unquote, urlparse, urlunparse
 
 if sys.version_info[:2] < (3, 3):
     raise ValueError("Python < 3.3 not supported: %s" % sys.version)
-
-# For compatibility with python versions 3.6 or earlier.
-# asyncio.Task.all_tasks() is fully moved to asyncio.all_tasks() starting with 3.9. Also applies to current_task.
-try:
-    asyncio_all_tasks = asyncio.all_tasks
-    asyncio_current_task = asyncio.current_task
-except AttributeError as e:
-    asyncio_all_tasks = asyncio.Task.all_tasks
-    asyncio_current_task = asyncio.Task.current_task
 
 import tornado.httpserver
 import tornado.options
@@ -715,11 +707,14 @@ class JupyterHub(Application):
         """,
     ).tag(config=True)
 
-    def _subdomain_host_changed(self, name, old, new):
+    @validate("subdomain_host")
+    def _validate_subdomain_host(self, proposal):
+        new = proposal.value
         if new and '://' not in new:
             # host should include '://'
             # if not specified, assume https: You have to be really explicit about HTTP!
-            self.subdomain_host = 'https://' + new
+            new = 'https://' + new
+        return new
 
     domain = Unicode(help="domain name, e.g. 'example.com' (excludes protocol, port)")
 
@@ -3067,7 +3062,7 @@ class JupyterHub(Application):
             self.internal_ssl_key,
             self.internal_ssl_cert,
             cafile=self.internal_ssl_ca,
-            check_hostname=False,
+            purpose=ssl.Purpose.CLIENT_AUTH,
         )
 
         # start the webserver
@@ -3244,11 +3239,7 @@ class JupyterHub(Application):
         self._atexit_ran = True
         self._init_asyncio_patch()
         # run the cleanup step (in a new loop, because the interrupted one is unclean)
-        asyncio.set_event_loop(asyncio.new_event_loop())
-        IOLoop.clear_current()
-        loop = IOLoop()
-        loop.make_current()
-        loop.run_sync(self.cleanup)
+        asyncio.run(self.cleanup())
 
     async def shutdown_cancel_tasks(self, sig=None):
         """Cancel all other tasks of the event loop and initiate cleanup"""
@@ -3259,7 +3250,7 @@ class JupyterHub(Application):
 
         await self.cleanup()
 
-        tasks = [t for t in asyncio_all_tasks() if t is not asyncio_current_task()]
+        tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
 
         if tasks:
             self.log.debug("Cancelling pending tasks")
@@ -3272,7 +3263,7 @@ class JupyterHub(Application):
             except StopAsyncIteration as e:
                 self.log.error("Caught StopAsyncIteration Exception", exc_info=True)
 
-            tasks = [t for t in asyncio_all_tasks()]
+            tasks = [t for t in asyncio.all_tasks()]
             for t in tasks:
                 self.log.debug("Task status: %s", t)
         asyncio.get_event_loop().stop()
@@ -3308,16 +3299,19 @@ class JupyterHub(Application):
     def launch_instance(cls, argv=None):
         self = cls.instance()
         self._init_asyncio_patch()
-        loop = IOLoop.current()
-        task = asyncio.ensure_future(self.launch_instance_async(argv))
+        loop = IOLoop(make_current=False)
+
+        try:
+            loop.run_sync(self.launch_instance_async, argv)
+        except Exception:
+            loop.close()
+            raise
+
         try:
             loop.start()
         except KeyboardInterrupt:
             print("\nInterrupted")
         finally:
-            if task.done():
-                # re-raise exceptions in launch_instance_async
-                task.result()
             loop.stop()
             loop.close()
 

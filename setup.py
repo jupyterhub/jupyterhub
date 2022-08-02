@@ -14,12 +14,6 @@ from setuptools.command.bdist_egg import bdist_egg
 from setuptools.command.build_py import build_py
 from setuptools.command.sdist import sdist
 
-v = sys.version_info
-if v[:2] < (3, 6):
-    error = "ERROR: JupyterHub requires Python version 3.6 or above."
-    print(error, file=sys.stderr)
-    sys.exit(1)
-
 shell = False
 if os.name in ('nt', 'dos'):
     shell = True
@@ -91,7 +85,7 @@ setup_args = dict(
     license="BSD",
     platforms="Linux, Mac OS X",
     keywords=['Interactive', 'Interpreter', 'Shell', 'Web'],
-    python_requires=">=3.6",
+    python_requires=">=3.7",
     entry_points={
         'jupyterhub.authenticators': [
             'default = jupyterhub.auth:PAMAuthenticator',

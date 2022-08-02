@@ -1,5 +1,5 @@
 {% extends "page.html" %}
-{% if announcement_login %}
+{% if announcement_login is string %}
   {% set announcement = announcement_login %}
 {% endif %}
 

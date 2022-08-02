@@ -1,9 +1,11 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import json
+import string
 import warnings
 from collections import defaultdict
 from datetime import datetime, timedelta
+from functools import lru_cache
 from urllib.parse import quote, urlparse
 
 from sqlalchemy import inspect
@@ -52,6 +54,42 @@ Common causes of this timeout, and debugging tips:
    To fix: increase `Spawner.http_timeout` configuration
    to a number of seconds that is enough for servers to become responsive.
 """
+
+# set of chars that are safe in dns labels
+# (allow '.' because we don't mind multiple levels of subdomains)
+_dns_safe = set(string.ascii_letters + string.digits + '-.')
+# don't escape % because it's the escape char and we handle it separately
+_dns_needs_replace = _dns_safe | {"%"}
+
+
+@lru_cache()
+def _dns_quote(name):
+    """Escape a name for use in a dns label
+
+    this is _NOT_ fully domain-safe, but works often enough for realistic usernames.
+    Fully safe would be full IDNA encoding,
+    PLUS escaping non-IDNA-legal ascii,
+    PLUS some encoding of boundary conditions
+    """
+    # escape name for subdomain label
+    label = quote(name, safe="").lower()
+    # some characters are not handled by quote,
+    # because they are legal in URLs but not domains,
+    # specifically _ and ~ (starting in 3.7).
+    # Escape these in the same way (%{hex_codepoint}).
+    unique_chars = set(label)
+    for c in unique_chars:
+        if c not in _dns_needs_replace:
+            label = label.replace(c, f"%{ord(c):x}")
+
+    # underscore is our escape char -
+    # it's not officially legal in hostnames,
+    # but is valid in _domain_ names (?),
+    # and always works in practice.
+    # FIXME: We should consider switching to proper IDNA encoding
+    # for 3.0.
+    label = label.replace("%", "_")
+    return label
 
 
 class UserDict(dict):
@@ -520,10 +558,8 @@ class User:
     @property
     def domain(self):
         """Get the domain for my server."""
-        # use underscore as escape char for domains
-        return (
-            quote(self.name).replace('%', '_').lower() + '.' + self.settings['domain']
-        )
+
+        return _dns_quote(self.name) + '.' + self.settings['domain']
 
     @property
     def host(self):
