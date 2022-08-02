@@ -18,13 +18,21 @@ It qualifies as a major upgrade because of two changes:
    The schema change should not be disruptive, but we've decided that
    any schema change qualifies as a major version upgrade.
 2. We've dropped support for Python 3.6, which reached End-of-Life in 2021.
-   If you are using at least Python 3.7, this should have no effect.
+   If you are using at least Python 3.7, this change should have no effect.
+
+The database schema change is small and should not be disruptive,
+but downgrading is always harder than upgrading after a db migration,
+which makes rolling back the update more likely to be problematic.
 
 #### Changes in RBAC
 
-The biggest changes in 3.0 relate to RBAC:
-After 2.0, we learned that we used roles in a few places
-that should have been scopes.
+The biggest changes in 3.0 relate to {ref}`RBAC`,
+which also means they shouldn't affect most users.
+The users most affected will be JupyterHub admins using JupyterHub roles
+extensively to define user permissions.
+
+After testing 2.0 in the wild,
+we learned that we had used _roles_ in a few places that should have been _scopes_.
 Specifically, OAuth tokens now have _scopes_ instead of _roles_
 (and token-issuing oauth clients now have `allowed_scopes` instead of `allowed_roles`).
 The consequences should be fairly transparent to users,
@@ -34,27 +42,31 @@ We tried not to break anything here, so any prior use of roles will still work w
 but the role will be resolved _immediately_ at token-issue time,
 rather than every time the token is used.
 
-This especially came up testing the new [custom scopes] feature.
+This especially came up testing the new {ref}`custom-scopes` feature.
 Authors of JupyterHub-authenticated services can now extend JupyterHub's RBAC functionality to define their own scopes,
 and assign them to users and groups via roles.
 This can be used to e.g. limit student/grader/instructor permissions in a grading service,
 or grant instructors read-only access to their students' single-user servers starting with upcoming Jupyter Server 2.0.
 
 Further extending granular control of permissions,
-we have added `!service` and `!server` filters for scopes,
+we have added `!service` and `!server` filters for scopes (:ref:`self-referencing-filters`),
 like we had for `!user`.
-These make it easier for single-user servers or services
-to have permission (or issue tokens with permission) to take actions
-only about themselves (e.g. access to auth state, start/stop, or custom scopes).
 
 Access to the admin UI is now governed by a dedicated `admin-ui` scope,
 rather than combined `admin:servers` and `admin:users` in 2.0.
-This means that actions to take _via_ the UI, and access _to_ the UI are separated.
-For example, it generally doesn't make sense to grant `admin-ui` without at least `list:users` for some subset of users.
+More info in `ref`{available-scopes-target}.
 
 #### More highlights
 
-- TODO
+- The admin UI can now show more detailed info about users and their servers in a drop-down details table:
+
+  ![Details view in admin UI](./images/dropdown-details-3.0.png)
+
+- Several bugfixes and improvements in the new admin UI.
+- Direct access to the Hub's database is deprecated.
+  We intend to change the database connection lifecycle in the future to enable scalability and high-availability (HA),
+  and limiting where connections and transactions can occur is an important part of making that possible.
+- Lots more bugfixes and error-handling improvements.
 
 ([full changelog](https://github.com/jupyterhub/jupyterhub/compare/2.3.1...ab776e3989bffe9e1a9d0744c96c5f8e8d876988))
 

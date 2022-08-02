@@ -72,6 +72,8 @@ Requested resources are filtered based on the filter of the corresponding scope.
 
 In case a user resource is being accessed, any scopes with _group_ filters will be expanded to filters for each _user_ in those groups.
 
+(self-referencing-filters)=
+
 ### Self-referencing filters
 
 There are some 'shortcut' filters,
@@ -82,7 +84,7 @@ The `!user` filter is a special horizontal filter that strictly refers to the **
 
 For example, the `server` role assigned by default to server tokens contains `access:servers!user` and `users:activity!user` scopes. This allows the token to access and post activity of only the servers owned by the token owner.
 
-:::{versionadded} 2.3
+:::{versionadded} 3.0
 `!service` and `!server` filters.
 :::
 
@@ -130,6 +132,45 @@ There are four exceptions to the general {ref}`scope conventions <scope-conventi
 
 ```
 
+:::{versionadded} 3.0
+The `admin-ui` scope is added to explicitly grant access to the admin page,
+rather than combining `admin:users` and `admin:servers` permissions.
+This means a deployment can enable the admin page with only a subset of functionality enabled.
+
+Note that this means actions to take _via_ the admin UI
+and access _to_ the admin UI are separated.
+For example, it generally doesn't make sense to grant
+`admin-ui` without at least `list:users` for at least some subset of users.
+
+For example:
+
+```python
+c.JupyterHub.load_roles = [
+  {
+    "name": "instructor-data8",
+    "scopes": [
+      # access to the admin page
+      "admin-ui",
+      # list users in the class group
+      "list:users!group=students-data8",
+      # start/stop servers for users in the class
+      "admin:servers!group=students-data8",
+      # access servers for users in the class
+      "access:servers!group=students-data8",
+    ],
+    "group": ["instructors-data8"],
+  }
+]
+```
+
+will grant instructors in the data8 course permission to:
+
+1. view the admin UI
+2. see students in the class (but not all users)
+3. start/stop/access servers for users in the class
+4. but _not_ permission to administer the users themselves (e.g. change their permissions, etc.)
+   :::
+
 ```{Caution}
 Note that only the {ref}`horizontal filtering <horizontal-filtering-target>` can be added to scopes to customize them. \
 Metascopes `self` and `all`, `<resource>`, `<resource>:<subresource>`, `read:<resource>`, `admin:<resource>`, and `access:<resource>` scopes are predefined and cannot be changed otherwise.
@@ -139,10 +180,10 @@ Metascopes `self` and `all`, `<resource>`, `<resource>:<subresource>`, `read:<re
 
 ### Custom scopes
 
-:::{versionadded} 2.3
+:::{versionadded} 3.0
 :::
 
-JupyterHub 2.3 introduces support for custom scopes.
+JupyterHub 3.0 introduces support for custom scopes.
 Services that use JupyterHub for authentication and want to implement their own granular access may define additional _custom_ scopes and assign them to users with JupyterHub roles.
 
 % Note: keep in sync with pattern/description in jupyterhub/scopes.py

@@ -27,7 +27,6 @@ Roles can be assigned to the following entities:
 - Users
 - Services
 - Groups
-- Tokens
 
 An entity can have zero, one, or multiple roles, and there are no restrictions on which roles can be assigned to which entity. Roles can be added to or removed from entities at any time.
 
@@ -41,7 +40,7 @@ Services do not have a default role. Services without roles have no access to th
 A group does not require any role, and has no roles by default. If a user is a member of a group, they automatically inherit any of the group's permissions (see {ref}`resolving-roles-scopes-target` for more details). This is useful for assigning a set of common permissions to several users.
 
 **Tokens** \
-A token’s permissions are evaluated based on their owning entity. Since a token is always issued for a user or service, it can never have more permissions than its owner. If no specific scopes are requested for a new token, the token is assigned the `token` role.
+A token’s permissions are evaluated based on their owning entity. Since a token is always issued for a user or service, it can never have more permissions than its owner. If no specific scopes are requested for a new token, the token is assigned the scopes of the `token` role.
 
 (define-role-target)=
 

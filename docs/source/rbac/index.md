@@ -1,3 +1,5 @@
+(RBAC)=
+
 # JupyterHub RBAC
 
 Role Based Access Control (RBAC) in JupyterHub serves to provide fine grained control of access to Jupyterhub's API resources.

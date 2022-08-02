@@ -714,7 +714,7 @@ class APIToken(Hashed, Base):
             # evaluate roles to scopes immediately
             # TODO: should this be deprecated, or not?
             # warnings.warn(
-            #     "Setting roles on tokens is deprecated in JupyterHub 2.2. Use scopes.",
+            #     "Setting roles on tokens is deprecated in JupyterHub 3.0. Use scopes.",
             #     DeprecationWarning,
             #     stacklevel=3,
             # )
