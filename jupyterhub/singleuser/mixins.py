@@ -636,14 +636,42 @@ class SingleUserNotebookAppMixin(Configurable):
         if default_url:
             self.config[self.__class__.__name__].default_url = default_url
         self._log_app_versions()
+        # call our init_ioloop very early
+        # jupyter-server calls it too late, notebook doesn't define it yet
+        # only called in jupyter-server >= 1.9
+        self.init_ioloop()
         super().initialize(argv)
         self.patch_templates()
+
+    def init_ioloop(self):
+        """init_ioloop added in jupyter-server 1.9"""
+        # avoid deprecated access to current event loop
+        if getattr(self, "io_loop", None) is None:
+            try:
+                asyncio.get_running_loop()
+            except RuntimeError:
+                # not running, make our own loop
+                self.io_loop = ioloop.IOLoop(make_current=False)
+            else:
+                # running, use IOLoop.current
+                self.io_loop = ioloop.IOLoop.current()
+
+        # Make our event loop the 'current' event loop.
+        # FIXME: this shouldn't be necessary, but it is.
+        # notebookapp (<=6.4, at least), and
+        # jupyter-server (<=1.17.0, at least) still need the 'current' event loop to be defined
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            self.io_loop.make_current()
+
+    def init_httpserver(self):
+        self.io_loop.run_sync(super().init_httpserver)
 
     def start(self):
         self.log.info("Starting jupyterhub-singleuser server version %s", __version__)
         # start by hitting Hub to check version
-        ioloop.IOLoop.current().run_sync(self.check_hub_version)
-        ioloop.IOLoop.current().add_callback(self.keep_activity_updated)
+        self.io_loop.run_sync(self.check_hub_version)
+        self.io_loop.add_callback(self.keep_activity_updated)
         super().start()
 
     def init_hub_auth(self):
