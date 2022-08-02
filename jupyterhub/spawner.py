@@ -329,10 +329,13 @@ class Spawner(LoggingConfigurable):
 
         Default is an empty list, meaning minimal permissions to identify users,
         no actions can be taken on their behalf.
+
+        If callable, will be called with the Spawner as a single argument.
+        Callables may be async.
     """,
     ).tag(config=True)
 
-    def _get_oauth_client_allowed_scopes(self):
+    async def _get_oauth_client_allowed_scopes(self):
         """Private method: get oauth allowed scopes
 
         Handle:
@@ -351,6 +354,8 @@ class Spawner(LoggingConfigurable):
             allowed_scopes = self.oauth_client_allowed_scopes
             if callable(allowed_scopes):
                 allowed_scopes = allowed_scopes(self)
+                if inspect.isawaitable(allowed_scopes):
+                    allowed_scopes = await allowed_scopes
             scopes.extend(allowed_scopes)
 
         if self.oauth_roles:

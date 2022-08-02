@@ -666,11 +666,12 @@ class User:
         client_id = spawner.oauth_client_id
         oauth_provider = self.settings.get('oauth_provider')
         if oauth_provider:
+            allowed_scopes = await spawner._get_oauth_client_allowed_scopes()
             oauth_client = oauth_provider.add_client(
                 client_id,
                 api_token,
                 url_path_join(self.url, url_escape_path(server_name), 'oauth_callback'),
-                allowed_scopes=spawner._get_oauth_client_allowed_scopes(),
+                allowed_scopes=allowed_scopes,
                 description="Server at %s"
                 % (url_path_join(self.base_url, server_name) + '/'),
             )
