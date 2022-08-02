@@ -15,8 +15,7 @@ mock
 nbclassic
 pre-commit
 pytest>=3.3
-pytest-asyncio; python_version < "3.7"
-pytest-asyncio>=0.17; python_version >= "3.7"
+pytest-asyncio>=0.17
 pytest-cov
 requests-mock
 tbump

@@ -15,6 +15,7 @@ Handlers and their purpose include:
 import json
 import os
 import pprint
+import ssl
 import sys
 from urllib.parse import urlparse
 
@@ -111,7 +112,9 @@ def main():
         ca = os.environ.get('JUPYTERHUB_SSL_CLIENT_CA') or ''
 
         if key and cert and ca:
-            ssl_context = make_ssl_context(key, cert, cafile=ca, check_hostname=False)
+            ssl_context = make_ssl_context(
+                key, cert, cafile=ca, purpose=ssl.Purpose.CLIENT_AUTH
+            )
 
         server = httpserver.HTTPServer(app, ssl_options=ssl_context)
         server.listen(url.port, url.hostname)
