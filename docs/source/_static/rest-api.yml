@@ -139,6 +139,16 @@ paths:
             If unspecified, use api_page_default_limit.
           schema:
             type: number
+        - name: include_stopped_servers
+          in: query
+          description: |
+            Include stopped servers in user model(s).
+            Added in JupyterHub 3.0.
+            Allows retrieval of information about stopped servers,
+            such as activity and state fields.
+          schema:
+            type: boolean
+          allowEmptyValue: true
       responses:
         200:
           description: The Hub's user list
@@ -1160,7 +1170,11 @@ components:
           format: date-time
         servers:
           type: array
-          description: The active servers for this user.
+          description: |
+            The servers for this user.
+            By default: only includes _active_ servers.
+            Changed in 3.0: if `?include_stopped_servers` parameter is specified,
+            stopped servers will be included as well.
           items:
             $ref: "#/components/schemas/Server"
         auth_state:
@@ -1182,6 +1196,15 @@ components:
           description: |
             Whether the server is ready for traffic.
             Will always be false when any transition is pending.
+        stopped:
+          type: boolean
+          description: |
+            Whether the server is stopped. Added in JupyterHub 3.0,
+            and only useful when using the `?include_stopped_servers`
+            request parameter.
+            Now that stopped servers may be included (since JupyterHub 3.0),
+            this is the simplest way to select stopped servers.
+            Always equivalent to `not (ready or pending)`.
         pending:
           type: string
           description: |
