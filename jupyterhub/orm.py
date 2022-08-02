@@ -829,7 +829,6 @@ class OAuthClient(Base):
 
     # these are the scopes an oauth client is allowed to request
     # *not* the scopes of the client itself
-
     allowed_scopes = Column(JSONList, default=[])
 
     def __repr__(self):
