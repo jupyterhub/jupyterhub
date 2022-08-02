@@ -1350,15 +1350,15 @@ components:
         roles:
           type: array
           description:
-            Deprecated in JupyterHub 2.3, always an empty list. Tokens
-            have 'scopes' starting from JupyterHub 2.3.
+            Deprecated in JupyterHub 3, always an empty list. Tokens have
+            'scopes' starting from JupyterHub 3.
           items:
             type: string
         scopes:
           type: array
           description:
             List of scopes this token has been assigned. New in JupyterHub
-            2.3. In JupyterHub 2.0-2.2, tokens were assigned 'roles' insead of scopes.
+            3. In JupyterHub 2.x, tokens were assigned 'roles' insead of scopes.
           items:
             type: string
         note:
