@@ -430,7 +430,6 @@ class APIHandler(BaseHandler):
         'scopes': list,
         'services': list,
     }
-
     def _check_model(self, model, model_types, name):
         """Check a model provided by a REST API request
 
@@ -468,7 +467,6 @@ class APIHandler(BaseHandler):
                 raise web.HTTPError(
                     400, ("group names must be str, not %r", type(groupname))
                 )
-
     def _check_role_model(self, model):
         """Check a request-provided role model from a REST API"""
         self._check_model(model, self._role_model_types, 'role')
@@ -477,7 +475,7 @@ class APIHandler(BaseHandler):
                 raise web.HTTPError(
                     400, ("Role names must be str, not %r", type(rolename))
                 )
-
+                
     def get_api_pagination(self):
         default_limit = self.settings["api_page_default_limit"]
         max_limit = self.settings["api_page_max_limit"]
