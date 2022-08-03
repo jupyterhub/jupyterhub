@@ -234,8 +234,8 @@ def test_cookie_secret_string_():
 
 async def test_load_groups(tmpdir, request):
     to_load = {
-        'blue':{'users': ['cyclops', 'rogue', 'wolverine'], 'properties':{'setting1':'one', 'setting2':'two'}},
-        'gold':{'users': ['storm', 'jean-grey', 'colossus'], 'properties':{'setting3':'three', 'setting4':'four'}},
+        'blue': ['cyclops', 'rogue', 'wolverine'],
+        'gold': ['storm', 'jean-grey', 'colossus'],
     }
     kwargs = {'load_groups': to_load}
     ssl_enabled = getattr(request.module, "ssl_enabled", False)
@@ -249,11 +249,9 @@ async def test_load_groups(tmpdir, request):
     blue = orm.Group.find(db, name='blue')
     assert blue is not None
     assert sorted(u.name for u in blue.users) == sorted(to_load['blue'])
-    assert sorted(u for u in blue.properties) == sorted(to_load['blue']['properties'])
     gold = orm.Group.find(db, name='gold')
     assert gold is not None
     assert sorted(u.name for u in gold.users) == sorted(to_load['gold'])
-    assert sorted(u for u in gold.properties) == sorted(to_load['gold']['properties'])
 
 
 async def test_resume_spawners(tmpdir, request):
