@@ -16,8 +16,6 @@ const Groups = (props) => {
 
   var { updateGroups, history } = props;
 
-  console.log(groups_data, groups_page);
-
   const dispatchPageUpdate = (data, page) => {
     dispatch({
       type: "GROUPS_PAGE",

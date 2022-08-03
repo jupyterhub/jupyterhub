@@ -13,7 +13,11 @@ const PaginationFooter = (props) => {
         <br></br>
         {offset >= limit ? (
           <button className="btn btn-sm btn-light spaced">
-            <span className="active-pagination" onClick={prev}>
+            <span
+              className="active-pagination"
+              data-testid="paginate-prev"
+              onClick={prev}
+            >
               Previous
             </span>
           </button>
@@ -24,7 +28,11 @@ const PaginationFooter = (props) => {
         )}
         {offset + visible < total ? (
           <button className="btn btn-sm btn-light spaced">
-            <span className="active-pagination" onClick={next}>
+            <span
+              className="active-pagination"
+              data-testid="paginate-next"
+              onClick={next}
+            >
               Next
             </span>
           </button>
