@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import regeneratorRuntime from "regenerator-runtime";
 import { useSelector, useDispatch } from "react-redux";
 import PropTypes from "prop-types";
 
@@ -90,7 +89,7 @@ const ServerDashboard = (props) => {
 
   if (page != user_page) {
     updateUsers(...slice).then((data) =>
-      dispatchPageUpdate(data, page, name_filter)
+      dispatchPageUpdate(data.items, page, name_filter)
     );
   }
 
@@ -98,7 +97,7 @@ const ServerDashboard = (props) => {
   const handleSearch = debounce(async (event) => {
     // setNameFilter(event.target.value);
     updateUsers(page * limit, limit, event.target.value).then((data) =>
-      dispatchPageUpdate(data, page, name_filter)
+      dispatchPageUpdate(data.items, page, name_filter)
     );
   }, 300);
 
@@ -119,7 +118,7 @@ const ServerDashboard = (props) => {
               if (res.status < 300) {
                 updateUsers(...slice)
                   .then((data) => {
-                    dispatchPageUpdate(data, page, name_filter);
+                    dispatchPageUpdate(data.items, page, name_filter);
                   })
                   .catch(() => {
                     setIsDisabled(false);
@@ -155,7 +154,7 @@ const ServerDashboard = (props) => {
               if (res.status < 300) {
                 updateUsers(...slice)
                   .then((data) => {
-                    dispatchPageUpdate(data, page, name_filter);
+                    dispatchPageUpdate(data.items, page, name_filter);
                   })
                   .catch(() => {
                     setErrorAlert(`Failed to update users list.`);
@@ -457,7 +456,7 @@ const ServerDashboard = (props) => {
                       .then((res) => {
                         updateUsers(...slice)
                           .then((data) => {
-                            dispatchPageUpdate(data, page, name_filter);
+                            dispatchPageUpdate(data.items, page, name_filter);
                           })
                           .catch(() =>
                             setErrorAlert(`Failed to update users list.`)
@@ -493,7 +492,7 @@ const ServerDashboard = (props) => {
                       .then((res) => {
                         updateUsers(...slice)
                           .then((data) => {
-                            dispatchPageUpdate(data, page, name_filter);
+                            dispatchPageUpdate(data.items, page, name_filter);
                           })
                           .catch(() =>
                             setErrorAlert(`Failed to update users list.`)

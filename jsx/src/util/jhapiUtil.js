@@ -6,6 +6,7 @@ export const jhapiRequest = (endpoint, method, data) => {
     json: true,
     headers: {
       "Content-Type": "application/json",
+      Accept: "application/jupyterhub-pagination+json",
     },
     body: data ? JSON.stringify(data) : null,
   });
