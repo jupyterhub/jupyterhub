@@ -249,15 +249,20 @@ async def test_load_groups(tmpdir, request):
         kwargs['internal_certs_location'] = str(tmpdir)
     hub = MockHub(**kwargs)
     hub.init_db()
+    db = hub.db
+    await hub.init_role_creation()
+    
     await hub.init_users()
     await hub.init_groups()
-    db = hub.db
+    
     blue = orm.Group.find(db, name='blue')
     assert blue is not None
-    assert sorted(u.name for u in blue.users) == sorted(to_load['blue'])
+    assert sorted(u.name for u in blue.users) == sorted(to_load['blue']['users'])
+    assert sorted(u for u in blue.properties) == sorted(to_load['blue']['properties'])
     gold = orm.Group.find(db, name='gold')
     assert gold is not None
-    assert sorted(u.name for u in gold.users) == sorted(to_load['gold'])
+    assert sorted(u.name for u in gold.users) == sorted(to_load['gold']['users'])
+    assert sorted(u for u in gold.properties) == sorted(to_load['gold']['properties'])
 
 
 async def test_resume_spawners(tmpdir, request):
