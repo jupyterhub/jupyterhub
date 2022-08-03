@@ -14,11 +14,11 @@ c.JupyterHub.services = [
         # only requesting access to the service,
         # and identification by name,
         # nothing more.
-        # Specifying 'oauth_roles' as a list of role names
+        # Specifying 'oauth_client_allowed_scopes' as a list of scopes
         # allows requesting more information about users,
         # or the ability to take actions on users' behalf, as required.
-        # The default 'token' role has the full permissions of its owner:
-        # 'oauth_roles': ['token'],
+        # the 'inherit' scope means the full permissions of the owner
+        # 'oauth_client_allowed_scopes': ['inherit'],
     },
 ]
 

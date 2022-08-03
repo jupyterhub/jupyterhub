@@ -1,6 +1,7 @@
 """Tests for named servers"""
 import asyncio
 import json
+import time
 from unittest import mock
 from urllib.parse import unquote, urlencode, urlparse
 
@@ -61,6 +62,7 @@ async def test_default_server(app, named_servers):
                     'url': user.url,
                     'pending': None,
                     'ready': True,
+                    'stopped': False,
                     'progress_url': 'PREFIX/hub/api/users/{}/server/progress'.format(
                         username
                     ),
@@ -148,6 +150,7 @@ async def test_create_named_server(
                     'url': url_path_join(user.url, escapedname, '/'),
                     'pending': None,
                     'ready': True,
+                    'stopped': False,
                     'progress_url': 'PREFIX/hub/api/users/{}/servers/{}/progress'.format(
                         username, escapedname
                     ),
@@ -433,3 +436,61 @@ async def test_named_server_stop_server(app, username, named_servers):
     assert user.spawners[server_name].server is None
     assert user.spawners[''].server
     assert user.running
+
+
+@pytest.mark.parametrize(
+    "include_stopped_servers",
+    [True, False],
+)
+async def test_stopped_servers(app, user, named_servers, include_stopped_servers):
+    r = await api_request(app, 'users', user.name, 'server', method='post')
+    r.raise_for_status()
+    r = await api_request(app, 'users', user.name, 'servers', "named", method='post')
+    r.raise_for_status()
+
+    # wait for starts
+    for i in range(60):
+        r = await api_request(app, 'users', user.name)
+        r.raise_for_status()
+        user_model = r.json()
+        if not all(s["ready"] for s in user_model["servers"].values()):
+            time.sleep(1)
+        else:
+            break
+    else:
+        raise TimeoutError(f"User never stopped: {user_model}")
+
+    r = await api_request(app, 'users', user.name, 'server', method='delete')
+    r.raise_for_status()
+    r = await api_request(app, 'users', user.name, 'servers', "named", method='delete')
+    r.raise_for_status()
+
+    # wait for stops
+    for i in range(60):
+        r = await api_request(app, 'users', user.name)
+        r.raise_for_status()
+        user_model = r.json()
+        if not all(s["stopped"] for s in user_model["servers"].values()):
+            time.sleep(1)
+        else:
+            break
+    else:
+        raise TimeoutError(f"User never stopped: {user_model}")
+
+    # we have two stopped servers
+    path = f"users/{user.name}"
+    if include_stopped_servers:
+        path = f"{path}?include_stopped_servers"
+    r = await api_request(app, path)
+    r.raise_for_status()
+    user_model = r.json()
+    servers = list(user_model["servers"].values())
+    if include_stopped_servers:
+        assert len(servers) == 2
+        assert all(s["last_activity"] for s in servers)
+        assert all(s["started"] is None for s in servers)
+        assert all(s["stopped"] for s in servers)
+        assert not any(s["ready"] for s in servers)
+        assert not any(s["pending"] for s in servers)
+    else:
+        assert user_model["servers"] == {}
