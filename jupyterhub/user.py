@@ -702,28 +702,12 @@ class User:
         client_id = spawner.oauth_client_id
         oauth_provider = self.settings.get('oauth_provider')
         if oauth_provider:
-            allowed_roles = spawner.oauth_roles
-            if callable(allowed_roles):
-                allowed_roles = allowed_roles(spawner)
-
-            # allowed_roles config is a list of strings
-            # oauth provider.allowed_roles is a list of orm.Roles
-            if allowed_roles:
-                allowed_role_names = allowed_roles
-                allowed_roles = list(
-                    self.db.query(orm.Role).filter(orm.Role.name.in_(allowed_roles))
-                )
-                if len(allowed_roles) != len(allowed_role_names):
-                    missing_roles = set(allowed_role_names).difference(
-                        {role.name for role in allowed_roles}
-                    )
-                    raise ValueError(f"No such role(s): {', '.join(missing_roles)}")
-
+            allowed_scopes = await spawner._get_oauth_client_allowed_scopes()
             oauth_client = oauth_provider.add_client(
                 client_id,
                 api_token,
                 url_path_join(self.url, url_escape_path(server_name), 'oauth_callback'),
-                allowed_roles=allowed_roles,
+                allowed_scopes=allowed_scopes,
                 description="Server at %s"
                 % (url_path_join(self.base_url, server_name) + '/'),
             )
