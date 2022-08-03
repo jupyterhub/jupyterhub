@@ -234,8 +234,14 @@ def test_cookie_secret_string_():
 
 async def test_load_groups(tmpdir, request):
     to_load = {
-        'blue':{'users': ['cyclops', 'rogue', 'wolverine'], 'properties':{'setting1':'one', 'setting2':'two'}},
-        'gold':{'users': ['storm', 'jean-grey', 'colossus'], 'properties':{'setting3':'three', 'setting4':'four'}},
+        'blue': {
+            'users': ['cyclops', 'rogue', 'wolverine'],
+            'properties': {'setting1': 'one', 'setting2': 'two'},
+        },
+        'gold': {
+            'users': ['storm', 'jean-grey', 'colossus'],
+            'properties': {'setting3': 'three', 'setting4': 'four'},
+        },
     }
     kwargs = {'load_groups': to_load}
     ssl_enabled = getattr(request.module, "ssl_enabled", False)
