@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React from "react";
 import ReactDOM from "react-dom";
 import { Provider } from "react-redux";
 import { createStore } from "redux";
@@ -19,33 +19,33 @@ import "./style/root.css";
 const store = createStore(reducers, initialState);
 
 const App = () => {
-  useEffect(() => {
-    let { limit, user_page, groups_page } = initialState;
-    let api = withAPI()().props;
-    api
-      .updateUsers(user_page * limit, limit)
-      .then((data) => {
-        console.log(data);
-        let { _pagination, items } = data;
-        store.dispatch({
-          type: "USER_PAGE",
-          value: { data: items, page: _pagination },
-        });
-      })
-      .catch((err) => console.log(err));
+  // useEffect(() => {
+  //   let { limit, user_page, groups_page } = initialState;
+  //   let api = withAPI()().props;
+  //   api
+  //     .updateUsers(user_page * limit, limit)
+  //     .then((data) => {
+  //       console.log(data);
+  //       let { _pagination, items } = data;
+  //       store.dispatch({
+  //         type: "USER_PAGE",
+  //         value: { data: items, page: _pagination },
+  //       });
+  //     })
+  //     .catch((err) => console.log(err));
 
-    api
-      .updateGroups(groups_page * limit, limit)
-      .then((data) => {
-        console.log(data);
-        let { _pagination, items } = data;
-        store.dispatch({
-          type: "GROUPS_PAGE",
-          value: { data: items, page: _pagination },
-        });
-      })
-      .catch((err) => console.log(err));
-  });
+  //   api
+  //     .updateGroups(groups_page * limit, limit)
+  //     .then((data) => {
+  //       console.log(data);
+  //       let { _pagination, items } = data;
+  //       store.dispatch({
+  //         type: "GROUPS_PAGE",
+  //         value: { data: items, page: _pagination },
+  //       });
+  //     })
+  //     .catch((err) => console.log(err));
+  // });
 
   return (
     <div className="resets">

@@ -6,8 +6,7 @@ import { Link } from "react-router-dom";
 import PaginationFooter from "../PaginationFooter/PaginationFooter";
 
 const Groups = (props) => {
-  var user_data = useSelector((state) => state.user_data),
-    groups_data = useSelector((state) => state.groups_data),
+  var groups_data = useSelector((state) => state.groups_data),
     groups_page = useSelector((state) => state.groups_page),
     dispatch = useDispatch();
 
@@ -19,16 +18,6 @@ const Groups = (props) => {
 
   console.log(groups_data, groups_page);
 
-  useEffect(() => {
-    updateGroups(offset, limit).then((data) =>
-      dispatchPageUpdate(data.items, data._pagination)
-    );
-  }, [offset, limit]);
-
-  if (!groups_data || !user_data || !groups_page) {
-    return <div data-testid="no-show"></div>;
-  }
-
   const dispatchPageUpdate = (data, page) => {
     dispatch({
       type: "GROUPS_PAGE",
@@ -38,6 +27,16 @@ const Groups = (props) => {
       },
     });
   };
+
+  useEffect(() => {
+    updateGroups(offset, limit).then((data) =>
+      dispatchPageUpdate(data.items, data._pagination)
+    );
+  }, [offset, limit]);
+
+  if (!groups_data || !groups_page) {
+    return <div data-testid="no-show"></div>;
+  }
 
   return (
     <div className="container" data-testid="container">
@@ -60,7 +59,6 @@ const Groups = (props) => {
                           pathname: "/group-edit",
                           state: {
                             group_data: e,
-                            user_data: user_data,
                           },
                         }}
                       >
@@ -104,8 +102,6 @@ const Groups = (props) => {
 };
 
 Groups.propTypes = {
-  user_data: PropTypes.array,
-  groups_data: PropTypes.array,
   updateUsers: PropTypes.func,
   updateGroups: PropTypes.func,
   history: PropTypes.shape({
