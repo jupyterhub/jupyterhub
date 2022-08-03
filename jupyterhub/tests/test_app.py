@@ -251,10 +251,10 @@ async def test_load_groups(tmpdir, request):
     hub.init_db()
     db = hub.db
     await hub.init_role_creation()
-    
+
     await hub.init_users()
     await hub.init_groups()
-    
+
     blue = orm.Group.find(db, name='blue')
     assert blue is not None
     assert sorted(u.name for u in blue.users) == sorted(to_load['blue']['users'])
