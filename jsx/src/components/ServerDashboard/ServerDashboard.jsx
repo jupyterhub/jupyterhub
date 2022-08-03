@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
+import { debounce } from "lodash";
 import PropTypes from "prop-types";
 
 import {
@@ -49,16 +50,15 @@ const ServerDashboard = (props) => {
   var [errorAlert, setErrorAlert] = useState(null);
   var [sortMethod, setSortMethod] = useState(null);
   var [disabledButtons, setDisabledButtons] = useState({});
-  const [collapseStates, setCollapseStates] = useState({});
+  var [collapseStates, setCollapseStates] = useState({});
 
   var user_data = useSelector((state) => state.user_data),
     user_page = useSelector((state) => state.user_page),
-    limit = useSelector((state) => state.limit),
-    name_filter = useSelector((state) => state.name_filter),
-    page = parseInt(new URLSearchParams(props.location.search).get("page"));
+    name_filter = useSelector((state) => state.name_filter);
 
-  page = isNaN(page) ? 0 : page;
-  var slice = [page * limit, limit, name_filter];
+  var [offset, setOffset] = useState(user_page ? user_page.offset : 0);
+  var limit = user_page ? user_page.limit : window.api_page_limit;
+  var total = user_page ? user_page.total : undefined;
 
   const dispatch = useDispatch();
 
@@ -83,21 +83,25 @@ const ServerDashboard = (props) => {
     });
   };
 
-  if (!user_data) {
+  useEffect(() => {
+    updateUsers(offset, limit, name_filter)
+      .then((data) =>
+        dispatchPageUpdate(data.items, data._pagination, name_filter)
+      )
+      .catch((err) => setErrorAlert("Failed to update user list."));
+  }, [offset, limit]);
+
+  if (!user_data || !user_page) {
     return <div data-testid="no-show"></div>;
   }
 
-  if (page != user_page) {
-    updateUsers(...slice).then((data) =>
-      dispatchPageUpdate(data.items, page, name_filter)
-    );
-  }
+  let page = offset / limit;
+  var slice = [offset, limit, name_filter];
 
-  var debounce = require("lodash.debounce");
   const handleSearch = debounce(async (event) => {
     // setNameFilter(event.target.value);
-    updateUsers(page * limit, limit, event.target.value).then((data) =>
-      dispatchPageUpdate(data.items, page, name_filter)
+    updateUsers(offset, limit, event.target.value).then((data) =>
+      dispatchPageUpdate(data.items, data._pagination, name_filter)
     );
   }, 300);
 
@@ -118,7 +122,11 @@ const ServerDashboard = (props) => {
               if (res.status < 300) {
                 updateUsers(...slice)
                   .then((data) => {
-                    dispatchPageUpdate(data.items, page, name_filter);
+                    dispatchPageUpdate(
+                      data.items,
+                      data._pagination,
+                      name_filter
+                    );
                   })
                   .catch(() => {
                     setIsDisabled(false);
@@ -154,7 +162,11 @@ const ServerDashboard = (props) => {
               if (res.status < 300) {
                 updateUsers(...slice)
                   .then((data) => {
-                    dispatchPageUpdate(data.items, page, name_filter);
+                    dispatchPageUpdate(
+                      data.items,
+                      data._pagination,
+                      name_filter
+                    );
                   })
                   .catch(() => {
                     setErrorAlert(`Failed to update users list.`);
@@ -456,7 +468,11 @@ const ServerDashboard = (props) => {
                       .then((res) => {
                         updateUsers(...slice)
                           .then((data) => {
-                            dispatchPageUpdate(data.items, page, name_filter);
+                            dispatchPageUpdate(
+                              data.items,
+                              data._pagination,
+                              name_filter
+                            );
                           })
                           .catch(() =>
                             setErrorAlert(`Failed to update users list.`)
@@ -492,7 +508,11 @@ const ServerDashboard = (props) => {
                       .then((res) => {
                         updateUsers(...slice)
                           .then((data) => {
-                            dispatchPageUpdate(data.items, page, name_filter);
+                            dispatchPageUpdate(
+                              data.items,
+                              data._pagination,
+                              name_filter
+                            );
                           })
                           .catch(() =>
                             setErrorAlert(`Failed to update users list.`)
@@ -520,11 +540,12 @@ const ServerDashboard = (props) => {
           </tbody>
         </table>
         <PaginationFooter
-          endpoint="/"
-          page={page}
+          offset={offset}
           limit={limit}
-          numOffset={slice[0]}
-          numElements={user_data.length}
+          visible={user_data.length}
+          total={total}
+          next={() => setOffset(offset + limit)}
+          prev={() => setOffset(offset - limit)}
         />
         <br></br>
       </div>

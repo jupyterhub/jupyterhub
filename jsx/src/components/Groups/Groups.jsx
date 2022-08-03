@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import PropTypes from "prop-types";
 
@@ -9,20 +9,27 @@ const Groups = (props) => {
   var user_data = useSelector((state) => state.user_data),
     groups_data = useSelector((state) => state.groups_data),
     groups_page = useSelector((state) => state.groups_page),
-    limit = useSelector((state) => state.limit),
-    dispatch = useDispatch(),
-    page = parseInt(new URLSearchParams(props.location.search).get("page"));
+    dispatch = useDispatch();
 
-  page = isNaN(page) ? 0 : page;
-  var slice = [page * limit, limit];
+  var [offset, setOffset] = useState(groups_page ? groups_page.offset : 0);
+  var limit = groups_page ? groups_page.limit : window.api_page_limit;
+  var total = groups_page ? groups_page.total : undefined;
 
   var { updateGroups, history } = props;
 
-  if (!groups_data || !user_data) {
+  console.log(groups_data, groups_page);
+
+  useEffect(() => {
+    updateGroups(offset, limit).then((data) =>
+      dispatchPageUpdate(data.items, data._pagination)
+    );
+  }, [offset, limit]);
+
+  if (!groups_data || !user_data || !groups_page) {
     return <div data-testid="no-show"></div>;
   }
 
-  const dispatchPageChange = (data, page) => {
+  const dispatchPageUpdate = (data, page) => {
     dispatch({
       type: "GROUPS_PAGE",
       value: {
@@ -31,12 +38,6 @@ const Groups = (props) => {
       },
     });
   };
-
-  if (groups_page != page) {
-    updateGroups(...slice).then((data) => {
-      dispatchPageChange(data, page);
-    });
-  }
 
   return (
     <div className="container" data-testid="container">
@@ -74,11 +75,12 @@ const Groups = (props) => {
                 )}
               </ul>
               <PaginationFooter
-                endpoint="/groups"
-                page={page}
+                offset={offset}
                 limit={limit}
-                numOffset={slice[0]}
-                numElements={groups_data.length}
+                visible={groups_data.length}
+                total={total}
+                next={() => setOffset(offset + limit)}
+                prev={() => setOffset(offset - limit)}
               />
             </div>
             <div className="panel-footer">

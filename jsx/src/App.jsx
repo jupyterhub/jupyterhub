@@ -26,11 +26,10 @@ const App = () => {
       .updateUsers(user_page * limit, limit)
       .then((data) => {
         console.log(data);
-        let { _pagination, items } = data,
-          { offset, limit } = _pagination;
+        let { _pagination, items } = data;
         store.dispatch({
           type: "USER_PAGE",
-          value: { data: items, page: Math.floor(offset / limit) },
+          value: { data: items, page: _pagination },
         });
       })
       .catch((err) => console.log(err));
@@ -39,11 +38,10 @@ const App = () => {
       .updateGroups(groups_page * limit, limit)
       .then((data) => {
         console.log(data);
-        let { _pagination, items } = data,
-          { offset, limit } = _pagination;
+        let { _pagination, items } = data;
         store.dispatch({
           type: "GROUPS_PAGE",
-          value: { data: items, page: Math.floor(offset / limit) },
+          value: { data: items, page: _pagination },
         });
       })
       .catch((err) => console.log(err));
