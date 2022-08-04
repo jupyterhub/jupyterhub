@@ -11,7 +11,7 @@ const PaginationFooter = (props) => {
         Displaying {offset}-{offset + visible}
         <br></br>
         <br></br>
-        {offset >= limit ? (
+        {offset >= 1 ? (
           <button className="btn btn-sm btn-light spaced">
             <span
               className="active-pagination"
