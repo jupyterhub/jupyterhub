@@ -6,6 +6,7 @@ import os
 import re
 import sys
 import time
+from distutils.version import LooseVersion as V
 from subprocess import PIPE, Popen, check_output
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 from unittest.mock import patch
@@ -28,7 +29,7 @@ def test_help_all():
     assert '--JupyterHub.ip' in out
 
 
-@pytest.mark.skipif(traitlets.version_info < (5,), reason="requires traitlets 5")
+@pytest.mark.skipif(V(traitlets.__version__) < V('5'), reason="requires traitlets 5")
 def test_show_config(tmpdir):
     tmpdir.chdir()
     p = Popen(
@@ -233,8 +234,14 @@ def test_cookie_secret_string_():
 
 async def test_load_groups(tmpdir, request):
     to_load = {
-        'blue': ['cyclops', 'rogue', 'wolverine'],
-        'gold': ['storm', 'jean-grey', 'colossus'],
+        'blue': {
+            'users': ['cyclops', 'rogue', 'wolverine'],
+            'properties': {'setting1': 'one', 'setting2': 'two'},
+        },
+        'gold': {
+            'users': ['storm', 'jean-grey', 'colossus'],
+            'properties': {'setting3': 'three', 'setting4': 'four'},
+        },
     }
     kwargs = {'load_groups': to_load}
     ssl_enabled = getattr(request.module, "ssl_enabled", False)
@@ -242,16 +249,20 @@ async def test_load_groups(tmpdir, request):
         kwargs['internal_certs_location'] = str(tmpdir)
     hub = MockHub(**kwargs)
     hub.init_db()
+    db = hub.db
     await hub.init_role_creation()
+
     await hub.init_users()
     await hub.init_groups()
-    db = hub.db
+
     blue = orm.Group.find(db, name='blue')
     assert blue is not None
-    assert sorted(u.name for u in blue.users) == sorted(to_load['blue'])
+    assert sorted(u.name for u in blue.users) == sorted(to_load['blue']['users'])
+    assert sorted(u for u in blue.properties) == sorted(to_load['blue']['properties'])
     gold = orm.Group.find(db, name='gold')
     assert gold is not None
-    assert sorted(u.name for u in gold.users) == sorted(to_load['gold'])
+    assert sorted(u.name for u in gold.users) == sorted(to_load['gold']['users'])
+    assert sorted(u for u in gold.properties) == sorted(to_load['gold']['properties'])
 
 
 async def test_resume_spawners(tmpdir, request):
