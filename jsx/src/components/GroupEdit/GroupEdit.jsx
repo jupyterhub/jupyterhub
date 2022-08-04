@@ -3,6 +3,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { Link } from "react-router-dom";
 import PropTypes from "prop-types";
 import GroupSelect from "../GroupSelect/GroupSelect";
+import DynamicTable from "../DynamicTable/DynamicTable";
 
 const GroupEdit = (props) => {
   var [selected, setSelected] = useState([]),
@@ -11,7 +12,7 @@ const GroupEdit = (props) => {
     limit = useSelector((state) => state.limit);
 
   var dispatch = useDispatch();
-
+  const hasDuplicates = (a) => a.filter((e, i) => a.indexOf(e) != i).length > 0;
   const dispatchPageUpdate = (data, page) => {
     dispatch({
       type: "GROUPS_PAGE",
@@ -24,6 +25,7 @@ const GroupEdit = (props) => {
 
   var {
     addToGroup,
+    updateProp,
     removeFromGroup,
     deleteGroup,
     updateGroups,
@@ -38,6 +40,9 @@ const GroupEdit = (props) => {
   }
 
   var { group_data } = location.state;
+  var [propobject, setProp] = useState(group_data.properties);
+  var [propkeys, setPropKeys] = useState([]);
+  var [propvalues, setPropValues] = useState([]);
 
   if (!group_data) return <div></div>;
 
@@ -78,6 +83,24 @@ const GroupEdit = (props) => {
       />
       <div className="row">
         <div className="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
+          <div className="alert alert-info">Manage group properties</div>
+        </div>
+      </div>
+      <div className="row">
+        <div className="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
+          <DynamicTable
+            current_propobject={group_data.properties}
+            setProp={setProp}
+            setPropKeys={setPropKeys}
+            setPropValues={setPropValues}
+
+            //Add keys
+          />
+        </div>
+      </div>
+
+      <div className="row">
+        <div className="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
           <button id="return" className="btn btn-light">
             <Link to="/groups">Back</Link>
           </button>
@@ -87,27 +110,36 @@ const GroupEdit = (props) => {
             data-testid="submit"
             className="btn btn-primary"
             onClick={() => {
-              // check for changes
-              if (!changed) {
-                history.push("/groups");
-                return;
-              }
-
               let new_users = selected.filter(
                 (e) => !group_data.users.includes(e)
               );
               let removed_users = group_data.users.filter(
                 (e) => !selected.includes(e)
               );
-
               let promiseQueue = [];
-              if (new_users.length > 0)
-                promiseQueue.push(addToGroup(new_users, group_data.name));
-              if (removed_users.length > 0)
-                promiseQueue.push(
-                  removeFromGroup(removed_users, group_data.name)
-                );
+              // check for changes
+              if (changed) {
+                if (new_users.length > 0)
+                  promiseQueue.push(addToGroup(new_users, group_data.name));
+                if (removed_users.length > 0)
+                  promiseQueue.push(
+                    removeFromGroup(removed_users, group_data.name)
+                  );
+              }
 
+              if (hasDuplicates(propkeys) == true) {
+                error.textContent = "Duplicate key found!";
+                error.style.color = "red";
+              } else {
+                //error.textContent = "";
+                propkeys.forEach((key, i) => (propobject[key] = propvalues[i]));
+              }
+              if (
+                propobject != group_data.properties &&
+                hasDuplicates(propkeys) == false
+              ) {
+                promiseQueue.push(updateProp(propobject, group_data.name));
+              }
               Promise.all(promiseQueue)
                 .then((data) => {
                   // ensure status of all requests are < 300
@@ -129,6 +161,9 @@ const GroupEdit = (props) => {
           >
             Apply
           </button>
+          <div>
+            <span id="error"></span>
+          </div>
           <button
             id="delete-group"
             data-testid="delete-group"

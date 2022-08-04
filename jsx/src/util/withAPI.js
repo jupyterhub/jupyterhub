@@ -24,6 +24,8 @@ const withAPI = withProps(() => ({
     names.map((e) => jhapiRequest("/users/" + e + "/server", "DELETE")),
   addToGroup: (users, groupname) =>
     jhapiRequest("/groups/" + groupname + "/users", "POST", { users }),
+  updateProp: (propobject, groupname) =>
+    jhapiRequest("/groups/" + groupname + "/properties", "PUT", propobject),
   removeFromGroup: (users, groupname) =>
     jhapiRequest("/groups/" + groupname + "/users", "DELETE", { users }),
   createGroup: (groupName) => jhapiRequest("/groups/" + groupName, "POST"),
