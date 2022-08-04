@@ -1,7 +1,7 @@
 """Tests for jupyterhub.singleuser"""
 import os
 import sys
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from subprocess import CalledProcessError, check_output
 from unittest import mock
 from urllib.parse import urlencode, urlparse
@@ -15,12 +15,6 @@ from .. import orm
 from ..utils import url_path_join
 from .mocking import StubSingleUserSpawner, public_url
 from .utils import AsyncSession, async_requests, get_page
-
-
-@contextmanager
-def nullcontext():
-    """Python 3.7+ contextlib.nullcontext, backport for 3.6"""
-    yield
 
 
 @pytest.mark.parametrize(

@@ -102,8 +102,8 @@ class _ServiceSpawner(LocalProcessSpawner):
     cmd = Command(minlen=0)
     _service_name = Unicode()
 
-    @default("oauth_scopes")
-    def _default_oauth_scopes(self):
+    @default("oauth_access_scopes")
+    def _default_oauth_access_scopes(self):
         return [
             "access:services",
             f"access:services!service={self._service_name}",
@@ -203,7 +203,14 @@ class Service(LoggingConfigurable):
     oauth_roles = List(
         help="""OAuth allowed roles.
 
-        This sets the maximum and default roles
+        DEPRECATED in 3.0: use oauth_client_allowed_scopes
+      """
+    ).tag(input=True)
+
+    oauth_client_allowed_scopes = List(
+        help="""OAuth allowed scopes.
+
+        This sets the maximum and default scopes
         assigned to oauth tokens issued for this service
         (i.e. tokens stored in browsers after authenticating with the server),
         defining what actions the service can take on behalf of logged-in users.

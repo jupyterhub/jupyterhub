@@ -4,7 +4,7 @@ import os
 import sys
 from binascii import hexlify
 from unittest import mock
-from urllib.parse import parse_qs, quote, urlparse
+from urllib.parse import parse_qs, urlparse
 
 import pytest
 from bs4 import BeautifulSoup
@@ -13,6 +13,7 @@ from tornado.httputil import url_concat
 from tornado.log import app_log
 
 from .. import orm, roles, scopes
+from ..roles import roles_to_scopes
 from ..services.auth import _ExpiringDict
 from ..utils import url_path_join
 from .mocking import public_url
@@ -292,9 +293,11 @@ async def test_oauth_service_roles(
             ],
         },
     )
-    oauth_client.allowed_roles = [
-        orm.Role.find(app.db, role_name) for role_name in client_allowed_roles
-    ]
+    oauth_client.allowed_scopes = sorted(
+        roles_to_scopes(
+            [orm.Role.find(app.db, role_name) for role_name in client_allowed_roles]
+        )
+    )
     app.db.commit()
     url = url_path_join(public_url(app, mockservice_url) + 'owhoami/?arg=x')
     if request_scopes:
@@ -486,7 +489,7 @@ async def test_oauth_page_hit(
         .filter_by(identifier=service.oauth_client_id)
         .one()
     )
-    oauth_client.allowed_roles = list(test_roles.values())
+    oauth_client.allowed_scopes = sorted(roles_to_scopes(list(test_roles.values())))
 
     authorized_scopes = roles.roles_to_scopes([test_roles[t] for t in token_roles])
     authorized_scopes.update(scopes.identify_scopes())

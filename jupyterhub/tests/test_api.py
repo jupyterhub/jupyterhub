@@ -1887,6 +1887,7 @@ async def test_auth_managed_groups(request, app, group, user):
 # Role API tests
 # -----------------
 
+
 @mark.role
 async def test_role_get(app):
     role = orm.Role(name='alphaflight')
@@ -1947,18 +1948,15 @@ async def test_role_create_delete(app):
     assert r.status_code == 404
 
 
-
-
 @mark.role
 async def test_role_edit(app):
     db = app.db
     role = orm.Role(name='alpharole')
     app.db.add(role)
     app.db.commit()
-    #correct scopes
-    
+    # correct scopes
 
-    #update scopes of role by adding correct scopes
+    # update scopes of role by adding correct scopes
     scopes = ['admin:groups', 'read:users']
     r = await api_request(
         app,
@@ -1970,7 +1968,7 @@ async def test_role_edit(app):
     role = orm.Role.find(db, name='alpharole')
     assert sorted(scope for scope in role.scopes) == sorted(scopes)
 
-    #update scopes of role by adding wrong scopes
+    # update scopes of role by adding wrong scopes
     scopes_wrong = ['read12:groups', 'reads:wrongscope']
     r = await api_request(
         app,
@@ -1978,9 +1976,9 @@ async def test_role_edit(app):
         method='put',
         data=json.dumps({'scopes': scopes_wrong}),
     )
-    assert r.status_code== 409
+    assert r.status_code == 409
 
-    #removing scopes with put request
+    # removing scopes with put request
 
     r = await api_request(
         app,
@@ -1990,7 +1988,6 @@ async def test_role_edit(app):
     )
     r.raise_for_status()
     assert role.scopes == []
- 
 
 
 # -----------------

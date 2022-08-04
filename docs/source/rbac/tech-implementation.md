@@ -22,39 +22,47 @@ Roles and scopes utilities can be found in `roles.py` and `scopes.py` modules. S
 
 ## Resolving roles and scopes
 
-**Resolving roles** refers to determining which roles a user, service, token, or group has, extracting the list of scopes from each role and combining them into a single set of scopes.
+**Resolving roles** refers to determining which roles a user, service, or group has, extracting the list of scopes from each role and combining them into a single set of scopes.
 
 **Resolving scopes** involves expanding scopes into all their possible subscopes (_expanded scopes_), parsing them into format used for access evaluation (_parsed scopes_) and, if applicable, comparing two sets of scopes (_intersection_). All procedures take into account the scope hierarchy, {ref}`vertical <vertical-filtering-target>` and {ref}`horizontal filtering <horizontal-filtering-target>`, limiting or elevated permissions (`read:<resource>` or `admin:<resource>`, respectively), and metascopes.
 
-Roles and scopes are resolved on several occasions, for example when requesting an API token with specific roles or making an API request. The following sections provide more details.
+Roles and scopes are resolved on several occasions, for example when requesting an API token with specific scopes or making an API request. The following sections provide more details.
 
 (requesting-api-token-target)=
 
-### Requesting API token with specific roles
+### Requesting API token with specific scopes
 
-:::{versionchanged} 2.3
+:::{versionchanged} 3.0
 API tokens have _scopes_ instead of roles,
 so that their permissions cannot be updated.
 
 You may still request roles for a token,
 but those roles will be evaluated to the corresponding _scopes_ immediately.
+
+Prior to 3.0, tokens stored _roles_,
+which meant their scopes were resolved on each request.
 :::
 
 API tokens grant access to JupyterHub's APIs. The RBAC framework allows for requesting tokens with specific permissions.
-As of JupyterHub 2.3, it is only possible to specify scopes for a token through the _POST /users/:name/tokens_ API where the scopes can be specified in the token parameters body (see [](../reference/rest-api.rst)).
 
-RBAC adds several steps into the token issue flow.
+RBAC is involved in several stages of the OAuth token flow.
 
-If no scopes are requested, the token is issued with the permissions stored on the default `token` role
+When requesting a token via the tokens API (`/users/:name/tokens`), or the token page (`/hub/token`),
+if no scopes are requested, the token is issued with the permissions stored on the default `token` role
 (providing the requester is allowed to create the token).
+
+OAuth tokens are also requested via OAuth flow
 
 If the token is requested with any scopes, the permissions of requesting entity are checked against the requested permissions to ensure the token would not grant its owner additional privileges.
 
-If, due to modifications of roles or entities, at API request time a token has any scopes that its owner does not, those scopes are removed.
-The API request is resolved without additional errors using the scope _intersection_,
-but the Hub logs a warning (see {ref}`Figure 2 <api-request-chart>`).
+If, due to modifications of permissions of the token or token owner,
+at API request time a token has any scopes that its owner does not,
+those scopes are removed.
+The API request is resolved without additional errors using the scope _intersection_;
+the Hub logs a warning in this case (see {ref}`Figure 2 <api-request-chart>`).
 
-Resolving a token's scope (yellow box in {ref}`Figure 1 <token-request-chart>`) corresponds to resolving all the token's owner roles (including the roles associated with their groups) and the token's requested roles into a set of scopes. The two sets are compared (Resolve the scopes box in orange in {ref}`Figure 1 <token-request-chart>`), taking into account the scope hierarchy but, solely for role assignment, omitting any {ref}`horizontal filter <horizontal-filtering-target>` comparison. If the token's scopes are a subset of the token owner's scopes, the token is issued with the requested roles; if not, JupyterHub will raise an error.
+Resolving a token's scope (yellow box in {ref}`Figure 1 <token-request-chart>`) corresponds to resolving all the token's owner roles (including the roles associated with their groups) and the token's own scopes into a set of scopes. The two sets are compared (Resolve the scopes box in orange in {ref}`Figure 1 <token-request-chart>`), taking into account the scope hierarchy.
+If the token's scopes are a subset of the token owner's scopes, the token is issued with the requested scopes; if not, JupyterHub will raise an error.
 
 {ref}`Figure 1 <token-request-chart>` below illustrates the steps involved. The orange rectangles highlight where in the process the roles and scopes are resolved.
 
@@ -67,9 +75,9 @@ Figure 1. Resolving roles and scopes during API token request
 
 ### Making an API request
 
-With the RBAC framework each authenticated JupyterHub API request is guarded by a scope decorator that specifies which scopes are required to gain the access to the API.
+With the RBAC framework, each authenticated JupyterHub API request is guarded by a scope decorator that specifies which scopes are required to gain the access to the API.
 
-When an API request is performed, the requesting API token's roles are again resolved (yellow box in {ref}`Figure 2 <api-request-chart>`) to ensure the token does not grant more permissions than its owner has at the request time (e.g., due to changing/losing roles).
+When an API request is performed, the requesting API token's scopes are again intersected with its owner's (yellow box in {ref}`Figure 2 <api-request-chart>`) to ensure the token does not grant more permissions than its owner has at the request time (e.g., due to changing/losing roles).
 If the owner's roles do not include some scopes of the token's scopes, only the _intersection_ of the token's and owner's scopes will be used. For example, using a token with scope `users` whose owner's role scope is `read:users:name` will result in only the `read:users:name` scope being passed on. In the case of no _intersection_, an empty set of scopes will be used.
 
 The passed scopes are compared to the scopes required to access the API as follows:
