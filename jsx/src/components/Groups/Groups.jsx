@@ -76,7 +76,7 @@ const Groups = (props) => {
                 visible={groups_data.length}
                 total={total}
                 next={() => setOffset(offset + limit)}
-                prev={() => setOffset(offset >= limit ? offset - limit : 0 )}
+                prev={() => setOffset(offset >= limit ? offset - limit : 0)}
               />
             </div>
             <div className="panel-footer">
