@@ -332,7 +332,7 @@ class APIHandler(BaseHandler):
             'services': [s.name for s in role.services],
         }
         access_map = {
-            'read:roles': {'kind', 'name', 'users', 'groups', 'scopes', 'services'},
+            'read:roles': {'kind', 'name', 'users', 'scopes', 'groups', 'services'},
         }
         model = self._filter_model(model, access_map, role, 'role')
         return model
