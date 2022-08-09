@@ -9,6 +9,7 @@ well as other information relevant to running your own JupyterHub over time.
    :maxdepth: 2
 
    troubleshooting
+   admin/capacity-planning
    admin/upgrading
    admin/log-messages
    changelog
