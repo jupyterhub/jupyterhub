@@ -740,9 +740,17 @@ async def test_login_fail(app):
     assert not r.cookies
 
 
-async def test_login_strip(app):
-    """Test that login form doesn't strip whitespace from passwords"""
-    form_data = {'username': 'spiff', 'password': ' space man '}
+@pytest.mark.parametrize(
+    "form_user, auth_user, form_password",
+    [
+        ("spiff", "spiff", " space man "),
+        (" spiff ", "spiff", " space man "),
+    ],
+)
+async def test_login_strip(app, form_user, auth_user, form_password):
+    """Test that login form strips space form usernames, but not passwords"""
+    form_data = {"username": form_user, "password": form_password}
+    expected_auth = {"username": auth_user, "password": form_password}
     base_url = public_url(app)
     called_with = []
 
@@ -754,7 +762,7 @@ async def test_login_strip(app):
             base_url + 'hub/login', data=form_data, allow_redirects=False
         )
 
-    assert called_with == [form_data]
+    assert called_with == [expected_auth]
 
 
 @pytest.mark.parametrize(
