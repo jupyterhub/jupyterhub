@@ -71,6 +71,8 @@ jobs:
         # NOTE: Since only the value of these parameters are presented in the
         #       GitHub UI when the workflow run, we avoid using true/false as
         #       values by instead duplicating the name to signal true.
+        # Python versions available at:
+        #   https://github.com/actions/python-versions/blob/HEAD/versions-manifest.json
         include:
           - python: "3.7"
             oldest_dependencies: oldest_dependencies
@@ -85,10 +87,7 @@ jobs:
             subdomain: subdomain
           - python: "3.10"
             ssl: ssl
-          # can't test 3.11.0-beta.4 until a greenlet release
-          # greenlet is a dependency of sqlalchemy on linux
-          # see https://github.com/gevent/gevent/issues/1867
-          # - python: "3.11.0-beta.4"
+          - python: "3.11.0-rc.1"
           - python: "3.10"
             main_dependencies: main_dependencies
 
@@ -136,9 +135,19 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: "${{ matrix.python }}"
+
       - name: Install Python dependencies
         run: |
           pip install --upgrade pip
+
+          if [[ "${{ matrix.python }}" == "3.11"* ]]; then
+            # greenlet is not actually required,
+            # but is an install dependency of sqlalchemy.
+            # It does not yet install on 3.11
+            # see: see https://github.com/gevent/gevent/issues/1867
+            pip install ./ci/mock-greenlet
+          fi
+
           pip install --upgrade . -r dev-requirements.txt
 
           if [ "${{ matrix.oldest_dependencies }}" != "" ]; then
