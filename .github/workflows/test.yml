@@ -140,7 +140,7 @@ jobs:
         run: |
           pip install --upgrade pip
 
-          if [ "${{ matrix.python }}" == "3.11"* ]; then
+          if [[ "${{ matrix.python }}" == "3.11"* ]]; then
             # gevent is not actually required,
             # but is an install dependency of sqlalchemy.
             # It does not yet install on 3.11
