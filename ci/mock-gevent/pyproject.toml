@@ -1,0 +1,13 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "gevent"
+description = 'Mock gevent to allow install on 3.11'
+requires-python = ">=3.7"
+dynamic = ["version"]
+
+
+[tool.hatch.version]
+path = "gevent.py"

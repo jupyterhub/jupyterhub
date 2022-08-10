@@ -135,9 +135,19 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: "${{ matrix.python }}"
+
       - name: Install Python dependencies
         run: |
           pip install --upgrade pip
+
+          if [ "${{ matrix.python }}" == "3.11"* ]; then
+            # gevent is not actually required,
+            # but is an install dependency of sqlalchemy.
+            # It does not yet install on 3.11
+            # see: see https://github.com/gevent/gevent/issues/1867
+            pip install ./ci/mock-gevent
+          fi
+
           pip install --upgrade . -r dev-requirements.txt
 
           if [ "${{ matrix.oldest_dependencies }}" != "" ]; then
