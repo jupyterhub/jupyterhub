@@ -125,38 +125,12 @@ const EditUser = (props) => {
                     if (updatedUsername == "" && admin == has_admin) {
                       noChangeEvent();
                       return;
-                    } else if (updatedUsername != "") {
-                      if (
-                        updatedUsername.length > 2 &&
-                        /[!@#$%^&*(),.?":{}|<>]/g.test(updatedUsername) == false
-                      ) {
-                        editUser(
-                          username,
-                          updatedUsername != "" ? updatedUsername : username,
-                          admin
-                        )
-                          .then((data) => {
-                            data.status < 300
-                              ? updateUsers(0, limit)
-                                  .then((data) => dispatchPageChange(data, 0))
-                                  .then(() => history.push("/"))
-                                  .catch(() =>
-                                    setErrorAlert(
-                                      `Could not update users list.`
-                                    )
-                                  )
-                              : setErrorAlert(`Failed to edit user.`);
-                          })
-                          .catch(() => {
-                            setErrorAlert(`Failed to edit user.`);
-                          });
-                      } else {
-                        setErrorAlert(
-                          `Failed to edit user. Make sure the username does not contain special characters.`
-                        );
-                      }
                     } else {
-                      editUser(username, username, admin)
+                      editUser(
+                        username,
+                        updatedUsername != "" ? updatedUsername : username,
+                        admin
+                      )
                         .then((data) => {
                           data.status < 300
                             ? updateUsers(0, limit)
