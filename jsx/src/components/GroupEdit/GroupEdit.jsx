@@ -122,7 +122,6 @@ const GroupEdit = (props) => {
                     : setErrorAlert(`Failed to edit group.`);
                 })
                 .catch(() => {
-                  console.log("outer");
                   setErrorAlert(`Failed to edit group.`);
                 });
             }}

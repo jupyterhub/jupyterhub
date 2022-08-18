@@ -38,6 +38,15 @@ A Service may have the following properties:
 - `display: bool (default - True)` - When set to true, display a link to the
   service's URL under the 'Services' dropdown in user's hub home page.
 
+- `oauth_no_confirm: bool (default - False)` - When set to true,
+  skip the OAuth confirmation page when users access this service.
+
+  By default, when users authenticate with a service using JupyterHub,
+  they are prompted to confirm that they want to grant that service
+  access to their credentials.
+  Skipping the confirmation page is useful for admin-managed services that are considered part of the Hub
+  and shouldn't need extra prompts for login.
+
 If a service is also to be managed by the Hub, it has a few extra options:
 
 - `command: (str/Popen list)` - Command for JupyterHub to spawn the service. - Only use this if the service should be a subprocess. - If command is not specified, the Service is assumed to be managed

@@ -46,6 +46,16 @@ var mockAppState = () => ({
   user_data: JSON.parse(
     '[{"kind":"user","name":"foo","admin":true,"groups":[],"server":"/user/foo/","pending":null,"created":"2020-12-07T18:46:27.112695Z","last_activity":"2020-12-07T21:00:33.336354Z","servers":{"":{"name":"","last_activity":"2020-12-07T20:58:02.437408Z","started":"2020-12-07T20:58:01.508266Z","pending":null,"ready":true,"state":{"pid":28085},"url":"/user/foo/","user_options":{},"progress_url":"/hub/api/users/foo/server/progress"}}},{"kind":"user","name":"bar","admin":false,"groups":[],"server":null,"pending":null,"created":"2020-12-07T18:46:27.115528Z","last_activity":"2020-12-07T20:43:51.013613Z","servers":{}}]'
   ),
+  user_page: {
+    offset: 0,
+    limit: 2,
+    total: 4,
+    next: {
+      offset: 2,
+      limit: 2,
+      url: "http://localhost:8000/hub/api/groups?offset=2&limit=2",
+    },
+  },
 });
 
 beforeEach(() => {
@@ -532,4 +542,19 @@ test("Search for user calls updateUsers with name filter", async () => {
   clock.tick(400);
   expect(mockUpdateUsers.mock.calls[2][2]).toEqual("ab");
   expect(mockUpdateUsers.mock.calls).toHaveLength(3);
+});
+
+test("Interacting with PaginationFooter causes state update and refresh via useEffect call", async () => {
+  let callbackSpy = mockAsync();
+
+  await act(async () => {
+    render(serverDashboardJsx(callbackSpy));
+  });
+
+  expect(callbackSpy).toBeCalledWith(0, 2, undefined);
+
+  let next = screen.getByTestId("paginate-next");
+  fireEvent.click(next);
+
+  expect(callbackSpy).toHaveBeenCalledWith(2, 2, undefined);
 });

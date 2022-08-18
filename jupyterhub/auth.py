@@ -256,6 +256,9 @@ class Authenticator(LoggingConfigurable):
         if not username:
             # empty usernames are not allowed
             return False
+        if username != username.strip():
+            # starting/ending with space is not allowed
+            return False
         if not self.username_regex:
             return True
         return bool(self.username_regex.match(username))
