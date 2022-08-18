@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import PropTypes from "prop-types";
 
@@ -6,23 +6,17 @@ import { Link } from "react-router-dom";
 import PaginationFooter from "../PaginationFooter/PaginationFooter";
 
 const Groups = (props) => {
-  var user_data = useSelector((state) => state.user_data),
-    groups_data = useSelector((state) => state.groups_data),
+  var groups_data = useSelector((state) => state.groups_data),
     groups_page = useSelector((state) => state.groups_page),
-    limit = useSelector((state) => state.limit),
-    dispatch = useDispatch(),
-    page = parseInt(new URLSearchParams(props.location.search).get("page"));
+    dispatch = useDispatch();
 
-  page = isNaN(page) ? 0 : page;
-  var slice = [page * limit, limit];
+  var [offset, setOffset] = useState(groups_page ? groups_page.offset : 0);
+  var limit = groups_page ? groups_page.limit : window.api_page_limit;
+  var total = groups_page ? groups_page.total : undefined;
 
   var { updateGroups, history } = props;
 
-  if (!groups_data || !user_data) {
-    return <div data-testid="no-show"></div>;
-  }
-
-  const dispatchPageChange = (data, page) => {
+  const dispatchPageUpdate = (data, page) => {
     dispatch({
       type: "GROUPS_PAGE",
       value: {
@@ -32,10 +26,14 @@ const Groups = (props) => {
     });
   };
 
-  if (groups_page != page) {
-    updateGroups(...slice).then((data) => {
-      dispatchPageChange(data, page);
-    });
+  useEffect(() => {
+    updateGroups(offset, limit).then((data) =>
+      dispatchPageUpdate(data.items, data._pagination)
+    );
+  }, [offset, limit]);
+
+  if (!groups_data || !groups_page) {
+    return <div data-testid="no-show"></div>;
   }
 
   return (
@@ -59,7 +57,6 @@ const Groups = (props) => {
                           pathname: "/group-edit",
                           state: {
                             group_data: e,
-                            user_data: user_data,
                           },
                         }}
                       >
@@ -74,11 +71,12 @@ const Groups = (props) => {
                 )}
               </ul>
               <PaginationFooter
-                endpoint="/groups"
-                page={page}
+                offset={offset}
                 limit={limit}
-                numOffset={slice[0]}
-                numElements={groups_data.length}
+                visible={groups_data.length}
+                total={total}
+                next={() => setOffset(offset + limit)}
+                prev={() => setOffset(offset >= limit ? offset - limit : 0)}
               />
             </div>
             <div className="panel-footer">
@@ -102,8 +100,6 @@ const Groups = (props) => {
 };
 
 Groups.propTypes = {
-  user_data: PropTypes.array,
-  groups_data: PropTypes.array,
   updateUsers: PropTypes.func,
   updateGroups: PropTypes.func,
   history: PropTypes.shape({
