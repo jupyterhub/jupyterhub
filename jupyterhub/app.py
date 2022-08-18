@@ -324,7 +324,7 @@ class JupyterHub(Application):
                                 'scopes': ['users', 'groups'],
                                 'users': ['cyclops', 'gandalf'],
                                 'services': [],
-                                'groups': []custom_scopes
+                                'groups': []
                             }
                         ]
 
