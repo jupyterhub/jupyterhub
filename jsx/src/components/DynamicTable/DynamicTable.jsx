@@ -228,12 +228,15 @@ export default class DynamicTable extends React.Component {
               />
             </td>
             <td>
-              <button
-                className="btn btn-default"
-                onClick={this.handleClick.bind(this)}
-              >
-                Add Item
-              </button>
+                <button
+                  id="validate-user"
+                  data-testid="validate-user"
+                  className="btn btn-default"
+                  type="button"
+                  onClick={this.handleClick.bind(this)}
+                 >
+                  Add Item
+                </button>
             </td>
           </tr>
         </form>
