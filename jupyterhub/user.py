@@ -310,19 +310,19 @@ class User:
             return
 
         # log group changes
-        new_groups = set(group_names).difference(current_groups)
+        added_groups = new_groups.difference(current_groups)
         removed_groups = current_groups.difference(group_names)
-        if new_groups:
-            self.log.info(f"Adding user {self.name} to group(s): {new_groups}")
+        if added_groups:
+            self.log.info(f"Adding user {self.name} to group(s): {added_groups}")
         if removed_groups:
             self.log.info(f"Removing user {self.name} from group(s): {removed_groups}")
 
         if group_names:
             groups = (
-                self.db.query(orm.Group).filter(orm.Group.name.in_(group_names)).all()
+                self.db.query(orm.Group).filter(orm.Group.name.in_(new_groups)).all()
             )
             existing_groups = {g.name for g in groups}
-            for group_name in group_names:
+            for group_name in added_groups:
                 if group_name not in existing_groups:
                     # create groups that don't exist yet
                     self.log.info(
@@ -331,9 +331,9 @@ class User:
                     group = orm.Group(name=group_name)
                     self.db.add(group)
                     groups.append(group)
-            self.groups = groups
+            self.orm_user.groups = groups
         else:
-            self.groups = []
+            self.orm_user.groups = []
         self.db.commit()
 
     async def save_auth_state(self, auth_state):
