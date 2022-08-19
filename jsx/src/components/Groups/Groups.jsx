@@ -10,7 +10,16 @@ const Groups = (props) => {
     groups_page = useSelector((state) => state.groups_page),
     dispatch = useDispatch();
 
-  var [offset, setOffset] = useState(groups_page ? groups_page.offset : 0);
+  var offset = groups_page ? groups_page.offset : 0;
+
+  const setOffset = (offset) => {
+    dispatch({
+      type: "GROUPS_OFFSET",
+      value: {
+        offset: offset,
+      },
+    });
+  };
   var limit = groups_page ? groups_page.limit : window.api_page_limit;
   var total = groups_page ? groups_page.total : undefined;
 
