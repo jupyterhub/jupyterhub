@@ -229,8 +229,8 @@ export default class DynamicTable extends React.Component {
             </td>
             <td>
               <button
-                id="validate-user"
-                data-testid="validate-user"
+                id="add-item"
+                data-testid="add-item"
                 className="btn btn-default"
                 type="button"
                 onClick={this.handleClick.bind(this)}
