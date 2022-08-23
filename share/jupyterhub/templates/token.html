@@ -24,9 +24,10 @@
         {% block expiration_options %}
         <select id="token-expiration-seconds"
                 class="form-control">
-          <option value="3600">1 Day</option>
-          <option value="86400">1 Week</option>
-          <option value="604800">1 Month</option>
+          <!-- unit used for each value is `seconds` -->
+          <option value="3600">1 Hour</option>
+          <option value="86400">1 Day</option>
+          <option value="604800">1 Week</option>
           <option value="" selected="selected">Never</option>
         </select>
         {% endblock expiration_options %}
