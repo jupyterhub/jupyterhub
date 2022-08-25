@@ -50,7 +50,6 @@ export default class DynamicTable extends React.Component {
     this.setPropKeys(propkeys);
     this.setPropValues(propvalues);
 
-
     this.setState({
       propkeys: propkeys,
       propvalues: propvalues,
