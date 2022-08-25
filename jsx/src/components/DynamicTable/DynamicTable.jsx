@@ -8,7 +8,6 @@ export default class DynamicTable extends React.Component {
     this.setProp = props.setProp;
     this.setPropKeys = props.setPropKeys;
     this.setPropValues = props.setPropValues;
-    this.setChanged = props.setChanged;
 
     let current_keys = [];
     let current_values = [];
@@ -50,7 +49,7 @@ export default class DynamicTable extends React.Component {
     this.setProp(propobject);
     this.setPropKeys(propkeys);
     this.setPropValues(propvalues);
-    this.setChanged(true);
+
 
     this.setState({
       propkeys: propkeys,
@@ -80,7 +79,6 @@ export default class DynamicTable extends React.Component {
     this.setProp(propobject);
     this.setPropKeys(propkeys);
     this.setPropValues(propvalues);
-    this.setChanged(true);
     this.setState({
       propkeys: propkeys,
       propvalues: propvalues,
