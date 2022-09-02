@@ -29,6 +29,8 @@ from jupyterhub.utils import exponential_backoff
 from ...utils import url_escape_path, url_path_join
 from ..utils import async_requests, get_page, public_host, public_url, ujoin
 
+pytestmark = pytest.mark.selenium
+
 
 async def webdriver_wait(driver, condition, timeout=30):
     return await exponential_backoff(
@@ -333,7 +335,7 @@ async def test_login_redirect(app, browser, running, next_url, location, params,
 
     """
     print("url ---" +browser.current_url)
-    
+
     #print("user ()" +f"{user}")
     print("user (type)" +str(user))
     assert location in browser.current_url      """
