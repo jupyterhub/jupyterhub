@@ -215,13 +215,11 @@ jobs:
               DB=postgres bash ci/init-db.sh
           fi
       - name: Setup Firefox
-        if: matrix.os == 'ubuntu-latest'
         uses: browser-actions/setup-firefox@latest
         with:
           firefox-version: latest
 
       - name: Setup Geckodriver
-        if: matrix.os == 'ubuntu-latest'
         uses: browser-actions/setup-geckodriver@latest
 
       - name: Run pytest
