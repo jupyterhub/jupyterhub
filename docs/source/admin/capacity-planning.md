@@ -173,6 +173,8 @@ For instance, some of Google Cloud's ratios are:
 | n2-standard | 4                 |
 | n2-highcpu  | 1                 |
 
+(idleness)=
+
 ### Idleness
 
 Jupyter being an interactive tool means people tend to spend a lot more time reading and thinking than actually running resource-intensive code.
@@ -201,6 +203,33 @@ without any actual intention of running code.
 ```[figure} ../images/mybinder-load5.png
 mybinder.org node CPU usage is low with 50-150 users sharing just 8 cores
 ```
+
+### Concurrent users and culling idle servers
+
+Related to [][idleness], all of these resource consumptions and limits are calculated based on **concurrently active users**,
+not total users.
+You might have 10,000 users of your JupyterHub deployment, but only 100 of them running at any given time.
+That 100 is the main number you need to use for your capacity planning.
+JupyterHub costs scale very little based on the number of _total_ users,
+up to a point.
+
+There are two important definitions for **active user**:
+
+- Are they _actually_ there (i.e. a human interacting with Jupyter, or running code that might be )
+- Is their server running (this is where resource reservations and limits are actually applied)
+
+Connecting those two definitions (how long are servers running if their humans aren't using them) is an important area of deployment configuration, usually implemented via the [JupyterHub idle culler service][idle-culler].
+
+[idle-culler]: https://github.com/jupyterhub/jupyterhub-idle-culler
+
+There are a lot of considerations when it comes to culling idle users that will depend:
+
+- How much does it save me to shut down user servers? (e.g. keeping an elastic cluster small, or keeping a fixed-size deployment available to active users)
+- How much does it cost my users to have their servers shut down? (e.g. lost work if shutdown prematurely)
+- How easy do I want it to be for users to keep their servers running? (e.g. Do they want to run unattended simulations overnight? Do you want them to?)
+
+Like many other things in this guide, there are many correct answers leading to different configuration choices.
+For more detail on culling configuration and considerations, consult the [JupyterHub idle culler documentation][idle-culler].
 
 ## More tips
 
