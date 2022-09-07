@@ -40,17 +40,19 @@ The rest is going to be up to your users.
 Per-user overhead from JupyterHub is typically negligible
 up to at least a few hundred concurrent active users.
 
-![Hub component resource usage for mybinder.org](../images/mybinder-hub-components-cpu-memory.png)
+```[figure} ../images/mybinder-hub-components-cpu-memory.png
+JupyterHub component resource usage for mybinder.org.
+```
 
-## Factors
+## Factors to consider
 
 ### Static vs elastic resources
 
 A big factor in planning resources is:
 **how much does it cost to change your mind?**
 If you are using a single shared machine with local storage,
-migrating to a new one because it turns out your users don't fit might be very costly,
-because you have to get a new machine, set it up, and maybe even migrate user data.
+migrating to a new one because it turns out your users don't fit might be very costly.
+You will have to get a new machine, set it up, and maybe even migrate user data.
 
 On the other hand, if you are using ephemeral resources,
 such as node pools in Kubernetes,
@@ -70,26 +72,26 @@ but which are **less predictable**.
 
 (limits-requests)=
 
-### Limit vs Request
+### Limit vs Request for resources
 
 Many scheduling tools like Kubernetes have two separate ways of allocating resources to users.
 A **Request** or **Reservation** describes how much resources are _set aside_ for each user.
 Often, this doesn't have any practical effect other than deciding when a given machine is considered 'full'.
 If you are using expandable resources like an autoscaling Kubernetes cluster,
-'requesting' more resources than fit on currently running nodes is when a new node is launched and added to the pool (a cluster **scale-up event**).
+a new node must be launched and added to the pool if you 'request' more resources than fit on currently running nodes (a cluster **scale-up event**).
 If you are running on a single VM, this describes how many users you can run at the same time, full stop.
 
-A **Limit**, on the other hand, actually enforces a limit to how much resources any given user can consume.
-We'll see more information on what happens when users try to exceed their limits [below](oversubscription).
+A **Limit**, on the other hand, enforces a limit to how much resources any given user can consume.
+For more information on what happens when users try to exceed their limits, see [](oversubscription).
 
 In the strictest, safest case, you can have these two numbers be the same.
 That means that each user is _limited_ to fit within the resources allocated to it.
 This avoids **[oversubscription](oversubscription)** of resources (allowing use of more than you have available),
 at the expense (in a literal, this-costs-money sense) of reserving lots of usually-idle capacity.
 
-But when deploying JupyterHub,
-you will likely find that a relatively small fraction of users use lots more resources than others,
-making oversubscription attractive (to a point).
+However, you often find that a small fraction of users use more resources than others.
+In this case you may give users limits that _go beyond the amount of resources requested_.
+This is called **oversubscribing** the resources available to users.
 
 Having a gap between the request and the limit means you can fit a number of _typical_ users on a node (based on the request),
 but still limit how much a runaway user can gobble up for themselves.
@@ -98,13 +100,14 @@ but still limit how much a runaway user can gobble up for themselves.
 
 ### Oversubscribed CPU is okay, running out of memory is bad
 
-An important consideration when assigning resources to users is:
+An important consideration when assigning resources to users is: **What happens when users need more than I've given them?**
 
-> What happens when users need more than I've given them?
+A good summary to keep in mind:
 
-A good summary to keep in mind: **when tasks don't get enough CPU, things are slow.
-When they don't get enough memory, things are broken.**
-Which means it's very important that users have enough memory,
+> When tasks don't get enough CPU, things are slow.
+  When they don't get enough memory, things are broken.
+
+This means it's **very important that users have enough memory**,
 but much less important that they always have exclusive access to all the CPU they can use.
 
 This relates to [Limits and Requests](limits-requests),
@@ -125,7 +128,7 @@ meaning that the total reserved resources isn't enough for the total _actual_ co
 This doesn't mean that _all_ your users exceed the request,
 just that the _limit_ gives enough room for the _average_ user to exceed the request.
 
-### Example case for oversubscribe memory
+### Example case for oversubscribing memory
 
 Take for example, this system and sampling of user behavior:
 
@@ -143,10 +146,10 @@ But _not_ everyone uses the full limit, which is the point!
 This pattern is fine if 1/8 of your users are 'heavy' because _typical_ usage will be ~0.7G,
 and your total usage will be ~5G (1 × 2 + 7 × 0.5 = 5.5).
 
-But if _50%_ of your users are 'heavy' you have a problem because that means your users will be trying to use 10G (4 × 2 + 4 × 0.5 = 10),
+But if _50%_ of your users are 'heavy' you have a problem because that means your users will be trying to use 10G (`4 × 2 + 4 × 0.5 = 10`),
 which you don't have.
 
-You can make guesses at these numbers, but the only _real_ way to get them is to measure (more [below](measuring)).
+You can make guesses at these numbers, but the only _real_ way to get them is to measure (see [](measuring)).
 
 ### CPU:memory ratio
 
@@ -191,7 +194,9 @@ The limit here is actually Kubernetes' pods per node, not memory _or_ CPU.
 This is likely a extreme case, as many Binder users come from clicking links on webpages
 without any actual intention of running code.
 
-![mybinder.org node CPU usage is low with 50-150 users sharing just 8 cores](../images/mybinder-load5.png)
+```[figure} ../images/mybinder-load5.png
+mybinder.org node CPU usage is low with 50-150 users sharing just 8 cores
+```
 
 ## More tips
 
