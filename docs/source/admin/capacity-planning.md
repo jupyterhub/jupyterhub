@@ -105,7 +105,7 @@ An important consideration when assigning resources to users is: **What happens 
 A good summary to keep in mind:
 
 > When tasks don't get enough CPU, things are slow.
-  When they don't get enough memory, things are broken.
+> When they don't get enough memory, things are broken.
 
 This means it's **very important that users have enough memory**,
 but much less important that they always have exclusive access to all the CPU they can use.
