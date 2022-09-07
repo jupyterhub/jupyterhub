@@ -8,10 +8,10 @@ and what JupyterHub users do varies _wildly_ in terms of resource consumption.
 
 Here are three _typical_ Jupyter use patterns that require vastly different resources:
 
-- negligible resources because computation is mostly idle,
+- **Learning**: negligible resources because computation is mostly idle,
   e.g. students learning programming for the first time
-- very intense, sustained load, e.g. training machine learning models
-- _mostly_ idle, but needs a lot of resources for short periods of time
+- **Production code**: very intense, sustained load, e.g. training machine learning models
+- **Bursting**: _mostly_ idle, but needs a lot of resources for short periods of time
   (interactive research often looks like this)
 
 But just because there's no single answer doesn't mean we can't help.
@@ -128,6 +128,10 @@ meaning that the total reserved resources isn't enough for the total _actual_ co
 This doesn't mean that _all_ your users exceed the request,
 just that the _limit_ gives enough room for the _average_ user to exceed the request.
 
+All of these considerations are important _per node_.
+Larger nodes means more users per node, and therefore more users to average over.
+It also means more chances for multiple outliers on the same node.
+
 ### Example case for oversubscribing memory
 
 Take for example, this system and sampling of user behavior:
@@ -144,7 +148,7 @@ which would be a mess if everyone used their full limit.
 But _not_ everyone uses the full limit, which is the point!
 
 This pattern is fine if 1/8 of your users are 'heavy' because _typical_ usage will be ~0.7G,
-and your total usage will be ~5G (1 × 2 + 7 × 0.5 = 5.5).
+and your total usage will be ~5G (`1 × 2 + 7 × 0.5 = 5.5`).
 
 But if _50%_ of your users are 'heavy' you have a problem because that means your users will be trying to use 10G (`4 × 2 + 4 × 0.5 = 10`),
 which you don't have.
@@ -249,3 +253,27 @@ This is the kind of information you can use to tune your requests and limits.
 [prometheus]: https://prometheus.io
 [grafana]: https://grafana.com
 [grafana dashboards]: https://github.com/jupyterhub/grafana-dashboards
+
+### Measuring costs
+
+Measuring costs may be as important as measuring your users activity.
+If you are using a cloud provider, you can often use cost thresholds and quotas to instruct them to notify you if your costs are too high,
+e.g. "Have AWS send me an email if I hit X spending trajectory on week 3 of the month."
+You can then use this information to tune your resources based on what you can afford.
+You can mix this information with user resource consumption to figure out if you have a problem,
+e.g. "my users really do need X resources, but I can only afford to give them 80% of X."
+This information may prove useful when asking your budget-approving folks for more funds.
+
+### Additional resources
+
+There are lots of other resources for cost and capacity planning that may be specific to JupyterHub and/or your cloud provider.
+
+Here are some useful links to other resources
+
+- [Zero to JupyterHub](https://zero-to-jupyterhub.readthedocs.io) documentation on
+  - [projecting costs](https://zero-to-jupyterhub.readthedocs.io/en/latest/administrator/cost.html)
+  - [configuring user resources](https://zero-to-jupyterhub.readthedocs.io/en/latest/jupyterhub/customizing/user-resources.html)
+- Cloud platform cost calculators:
+  - [Google Cloud](https://cloud.google.com/products/calculator/)
+  - [Amazon AWS](https://calculator.s3.amazonaws.com)
+  - [Microsoft Azure](https://azure.microsoft.com/en-us/pricing/calculator/)
