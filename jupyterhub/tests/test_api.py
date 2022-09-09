@@ -6,7 +6,7 @@ import sys
 import uuid
 from datetime import datetime, timedelta
 from unittest import mock
-from urllib.parse import quote, urlparse, urlunparse
+from urllib.parse import quote, urlparse
 
 from pytest import fixture, mark
 from tornado.httputil import url_concat
@@ -95,108 +95,31 @@ async def test_post_content_type(app, content_type, status):
     assert r.status_code == status
 
 
+@mark.parametrize("xsrf_in_url", [True, False])
 @mark.parametrize(
-    "host, referer, extraheaders, status",
+    "method, path",
     [
-        ('$host', '$url', {}, 200),
-        (None, None, {}, 200),
-        (None, 'null', {}, 403),
-        (None, 'http://attack.com/csrf/vulnerability', {}, 403),
-        ('$host', {"path": "/user/someuser"}, {}, 403),
-        ('$host', {"path": "{path}/foo/bar/subpath"}, {}, 200),
-        # mismatch host
-        ("mismatch.com", "$url", {}, 403),
-        # explicit host, matches
-        ("fake.example", {"netloc": "fake.example"}, {}, 200),
-        # explicit port, matches implicit port
-        ("fake.example:80", {"netloc": "fake.example"}, {}, 200),
-        # explicit port, mismatch
-        ("fake.example:81", {"netloc": "fake.example"}, {}, 403),
-        # implicit ports, mismatch proto
-        ("fake.example", {"netloc": "fake.example", "scheme": "https"}, {}, 403),
-        # explicit ports, match
-        ("fake.example:81", {"netloc": "fake.example:81"}, {}, 200),
-        # Test proxy protocol defined headers taken into account by utils.get_browser_protocol
-        (
-            "fake.example",
-            {"netloc": "fake.example", "scheme": "https"},
-            {'X-Scheme': 'https'},
-            200,
-        ),
-        (
-            "fake.example",
-            {"netloc": "fake.example", "scheme": "https"},
-            {'X-Forwarded-Proto': 'https'},
-            200,
-        ),
-        (
-            "fake.example",
-            {"netloc": "fake.example", "scheme": "https"},
-            {
-                'Forwarded': 'host=fake.example;proto=https,for=1.2.34;proto=http',
-                'X-Scheme': 'http',
-            },
-            200,
-        ),
-        (
-            "fake.example",
-            {"netloc": "fake.example", "scheme": "https"},
-            {
-                'Forwarded': 'host=fake.example;proto=http,for=1.2.34;proto=http',
-                'X-Scheme': 'https',
-            },
-            403,
-        ),
-        ("fake.example", {"netloc": "fake.example"}, {'X-Scheme': 'https'}, 403),
-        ("fake.example", {"netloc": "fake.example"}, {'X-Scheme': 'https, http'}, 403),
+        ("GET", "user"),
+        ("POST", "users/{username}/tokens"),
     ],
 )
-async def test_cors_check(request, app, host, referer, extraheaders, status):
-    url = ujoin(public_host(app), app.hub.base_url)
-    real_host = urlparse(url).netloc
-    if host == "$host":
-        host = real_host
-
-    if referer == '$url':
-        referer = url
-    elif isinstance(referer, dict):
-        parsed_url = urlparse(url)
-        # apply {}
-        url_ns = {key: getattr(parsed_url, key) for key in parsed_url._fields}
-        for key, value in referer.items():
-            referer[key] = value.format(**url_ns)
-        referer = urlunparse(parsed_url._replace(**referer))
-
-    # disable default auth header, cors is for cookie auth
-    headers = {"Authorization": ""}
-    if host is not None:
-        headers['X-Forwarded-Host'] = host
-    if referer is not None:
-        headers['Referer'] = referer
-    headers.update(extraheaders)
-
-    # add admin user
-    user = find_user(app.db, 'admin')
-    if user is None:
-        user = add_user(app.db, name='admin', admin=True)
-    cookies = await app.login_user('admin')
-
-    # test custom forwarded_host_header behavior
-    app.forwarded_host_header = 'X-Forwarded-Host'
-
-    # reset the config after the test to avoid leaking state
-    def reset_header():
-        app.forwarded_host_header = ""
-
-    request.addfinalizer(reset_header)
+async def test_xsrf_check(app, username, method, path, xsrf_in_url):
+    cookies = await app.login_user(username)
+    xsrf = cookies['_xsrf']
+    url = path.format(username=username)
+    if xsrf_in_url:
+        url = f"{url}?_xsrf={xsrf}"
 
     r = await api_request(
         app,
-        'users',
-        headers=headers,
+        url,
+        noauth=True,
         cookies=cookies,
     )
-    assert r.status_code == status
+    if xsrf_in_url:
+        assert r.status_code == 200
+    else:
+        assert r.status_code == 403
 
 
 # --------------

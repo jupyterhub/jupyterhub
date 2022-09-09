@@ -15,6 +15,11 @@ from .base import APIHandler, BaseHandler
 
 
 class TokenAPIHandler(APIHandler):
+    def check_xsrf_cookie(self):
+        # no xsrf check needed here
+        # post is just a 404
+        return
+
     @token_authenticated
     def get(self, token):
         # FIXME: deprecate this API for oauth token resolution, in favor of using /api/user
@@ -378,31 +383,7 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
     @web.authenticated
     def post(self):
         uri, http_method, body, headers = self.extract_oauth_params()
-        referer = self.request.headers.get('Referer', 'no referer')
-        full_url = self.request.full_url()
-        # trim protocol, which cannot be trusted with multiple layers of proxies anyway
-        # Referer is set by browser, but full_url can be modified by proxy layers to appear as http
-        # when it is actually https
-        referer_proto, _, stripped_referer = referer.partition("://")
-        referer_proto = referer_proto.lower()
-        req_proto, _, stripped_full_url = full_url.partition("://")
-        req_proto = req_proto.lower()
-        if referer_proto != req_proto:
-            self.log.warning("Protocol mismatch: %s != %s", referer, full_url)
-            if req_proto == "https":
-                # insecure origin to secure target is not allowed
-                raise web.HTTPError(
-                    403, "Not allowing authorization form submitted from insecure page"
-                )
-        if stripped_referer != stripped_full_url:
-            # OAuth post must be made to the URL it came from
-            self.log.error("Original OAuth POST from %s != %s", referer, full_url)
-            self.log.error(
-                "Stripped OAuth POST from %s != %s", stripped_referer, stripped_full_url
-            )
-            raise web.HTTPError(
-                403, "Authorization form must be sent from authorization page"
-            )
+        # TODO: per-page xsrf token to verify origin on this page!
 
         # The scopes the user actually authorized, i.e. checkboxes
         # that were selected.

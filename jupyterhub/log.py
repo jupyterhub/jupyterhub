@@ -66,7 +66,7 @@ class CoroutineLogFormatter(LogFormatter):
 # url params to be scrubbed if seen
 # any url param that *contains* one of these
 # will be scrubbed from logs
-SCRUB_PARAM_KEYS = ('token', 'auth', 'key', 'code', 'state')
+SCRUB_PARAM_KEYS = ('token', 'auth', 'key', 'code', 'state', '_xsrf')
 
 
 def _scrub_uri(uri):

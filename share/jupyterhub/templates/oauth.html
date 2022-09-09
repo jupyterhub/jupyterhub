@@ -23,6 +23,7 @@
     <h3>This will grant the application permission to:</h3>
     <div>
         <form method="POST" action="">
+            <input type="hidden" name="_xsrf" value="{{ xsrf }}"/>
             {# these are the 'real' inputs to the form -#}
             {% for scope in allowed_scopes %}
             <input type="hidden" name="scopes" value="{{ scope }}"/>
