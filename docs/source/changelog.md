@@ -8,7 +8,7 @@ command line for details.
 
 ## 3.0
 
-### 3.0.0 - 2022-09-07
+### 3.0.0 - 2022-09-08
 
 3.0 is a major upgrade, but a small one.
 
