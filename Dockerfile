@@ -38,11 +38,11 @@ RUN apt-get update \
     python3-venv \
     nodejs \
     npm \
-    yarn \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
 RUN python3 -m pip install --upgrade setuptools pip build wheel
+RUN npm install --global yarn
 
 # copy everything except whats in .dockerignore, its a
 # compromise between needing to rebuild and maintaining
