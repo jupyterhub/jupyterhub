@@ -27,6 +27,7 @@ Or by placing the following lines in a **configuration file**,
 ```python
 c.JupyterHub.bind_ip = '192.168.1.2:443'
 ```
+
 Port 443 is used in the examples since 443 is the default port for SSL/HTTPS.
 
 Configuring only the main IP and port of JupyterHub should be sufficient for
@@ -46,7 +47,6 @@ c.JupyterHub.port = 443
 
 We strongly recommend using the `bind_ip` setting instead of the deprecated
 settings, `ip` and `port`.
-
 
 ## Set the Proxy's REST API communication URL (optional)
 
