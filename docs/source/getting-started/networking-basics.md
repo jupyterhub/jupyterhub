@@ -25,19 +25,28 @@ Or by placing the following lines in a **configuration file**,
 `jupyterhub_config.py`:
 
 ```python
-c.JupyterHub.ip = '192.168.1.2'
-c.JupyterHub.port = 443
+c.JupyterHub.bind_ip = '192.168.1.2:443'
 ```
-
 Port 443 is used in the examples since 443 is the default port for SSL/HTTPS.
 
 Configuring only the main IP and port of JupyterHub should be sufficient for
 most deployments of JupyterHub. However, more customized scenarios may need
 additional networking details to be configured.
 
-Note that `c.JupyterHub.ip` and `c.JupyterHub.port` are single values,
+Note that `c.JupyterHub.bind_ip` and `c.JupyterHub.port` are single values,
 not tuples or lists – JupyterHub listens to only a single IP address and
 port.
+
+**Deprecated in 0.9:** Alternatively, Proxy's main IP address and port can be set by placing the following lines in the configuration file:
+
+```python
+c.JupyterHub.ip = '192.168.1.2'
+c.JupyterHub.port = 443
+```
+
+We strongly recommend using the `bind_ip` setting instead of the deprecated
+settings, `ip` and `port`.
+
 
 ## Set the Proxy's REST API communication URL (optional)
 
