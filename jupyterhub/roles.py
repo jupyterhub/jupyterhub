@@ -172,7 +172,7 @@ def create_role(db, role_dict):
             app_log.info('Role %s added to database', name)
     else:
         for attr in ["description", "scopes"]:
-            default_value = getattr(orm.Role,attr).default
+            default_value = getattr(orm.Role, attr).default
             if default_value:
                 default_value = default_value.arg
 
