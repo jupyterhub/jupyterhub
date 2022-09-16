@@ -162,21 +162,21 @@ def create_role(db, role_dict):
         from .scopes import _check_scopes_exist
 
         _check_scopes_exist(scopes, who_for=f"role {role_dict['name']}")
+    else:
+        app_log.warning('Role %s will have no scopes', name)
 
     if role is None:
-        if not scopes:
-            app_log.warning('Warning: New defined role %s has no scopes', name)
-
         role = orm.Role(name=name, description=description, scopes=scopes)
         db.add(role)
         if role_dict not in default_roles:
             app_log.info('Role %s added to database', name)
     else:
         for attr in ["description", "scopes"]:
-            try:
-                new_value = role_dict[attr]
-            except KeyError:
-                continue
+            default_value = getattr(orm.Role,attr).default
+            if default_value:
+                default_value = default_value.arg
+
+            new_value = role_dict.get(attr, default_value)
             old_value = getattr(role, attr)
             if new_value != old_value:
                 setattr(role, attr, new_value)
