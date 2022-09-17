@@ -246,8 +246,9 @@ class MyAuthenticator(Authenticator):
             return
         spawner.environment['UPSTREAM_TOKEN'] = auth_state['upstream_token']
 ```
+
 Please note the `spawner.environment` expects a string or byte array set in the environment but not dictionary.
-To set anything complex other than string please look at {meth}`Spawner.auth_state_hook` available in most of the spawners which can read the entire `auth_state` dictionary. 
+To set anything complex other than string please look at {meth}`Spawner.auth_state_hook` available in most of the spawners which can read the entire `auth_state` dictionary.
 
 (authenticator-groups)=
 
