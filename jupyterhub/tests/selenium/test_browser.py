@@ -255,7 +255,13 @@ async def test_invalid_credantials(app, browser, user, pass_w):
 # HOME PAGE
 async def open_home_page(app, browser, user="test_user", pass_w="test_user"):
 
-    await open_url(app, browser)
+    """await open_url(app, browser)
+    redirected_url = url_path_join(public_host(app), app.base_url, '/hub/home')
+    await login(browser, user, pass_w)
+    await in_thread(browser.get, redirected_url)"""
+
+    url = url_path_join(public_host(app), app.hub.base_url, "/login?next=/hub/home")
+    await in_thread(browser.get, url)
     redirected_url = url_path_join(public_host(app), app.base_url, '/hub/home')
     await login(browser, user, pass_w)
     await in_thread(browser.get, redirected_url)
@@ -267,7 +273,7 @@ async def open_home_page(app, browser, user="test_user", pass_w="test_user"):
     assert browser.current_url == redirected_url
 
 
-async def test_open_home_page(app, browser):
+async def test_open_home_Opage(app, browser):
     await open_home_page(app, browser, user="test_user", pass_w="test_user")
     assert '/hub/home' in browser.current_url
     # navigate_bar: checking links
@@ -314,20 +320,90 @@ async def test_open_home_page(app, browser):
     # EC.text_to_be_present_in_element_value(HomePageLocators.BUTTON_STOP_SERVER, text_)
 
 
+async def test_open_home_page(app, browser):
+    user = "test_user"
+    await open_home_page(app, browser, user="test_user", pass_w="test_user")
+    assert '/hub/home' in browser.current_url
+    # navigate_bar: checking links
+    links_bar = browser.find_elements(*HomePageLocators.LINK_HOME_BAR)
+    for link in links_bar:
+        link.get_attribute('href')
+        print(link.get_attribute('href'))
+        """if not link.get_attribute('href').endswith('hub/'):
+            result = requests.head(link.get_attribute('href'))
+            print(result)
+            if result.status_code != 200:
+                print(link.get_attribute('href'), result.status_code)
+        else:
+            pass        
+        #assert result.status_code == 200
+        """
+    """to be done - add checking if server is not up and not running"""
+    # buttons: only Start button is on the page
+    assert is_displayed(browser, HomePageLocators.BUTTON_START_SERVER) == True
+    buttons = browser.find_elements(*HomePageLocators.BUTTONS_SERVER)
+    assert len(buttons) == 1
+    for button in buttons:
+        id = button.get_attribute('id')
+        href_start = button.get_attribute('href')
+        name_button = button.text
+    assert id == "start"
+    assert name_button == HomePageLocators.BUTTON_START_SERVER_NAME_DOWN
+    assert href_start.endswith(f"/hub/spawn/{user}")
+
+
 async def test_buttons_stop_start(app, browser):
     user = "test_user"
     await open_home_page(app, browser, user="test_user", pass_w="test_user")
-    is_displayed(browser, HomePageLocators.BUTTON_STOP_SERVER)
     is_displayed(browser, HomePageLocators.BUTTON_START_SERVER)
 
     # checking link of start button when server is started
     href_start = browser.find_element(
         *HomePageLocators.BUTTON_START_SERVER
     ).get_attribute('href')
-    assert href_start.endswith(f"/user/{user}")
-    """Stop server"""
+    assert href_start.endswith(f"/hub/spawn/{user}")
 
+    """Start server"""
+
+    click(browser, HomePageLocators.BUTTON_START_SERVER)
+    # spawn redirects to the spawn-pending page
+    next_url = ujoin(app.hub.base_url, '/spawn-pending', user)
+    spawn_url = url_concat('/spawn/' + user, dict(next=next_url))
+    await in_thread(browser.get, url_path_join(public_host(app), next_url))
+    await webdriver_wait(browser, EC.url_to_be(browser.current_url))
+
+    assert browser.current_url == url_path_join(public_host(app), next_url)
+
+    # check elements on the spawn-pending page
+    texts = browser.find_elements(*HomePageLocators.TEXT_SERVER)
+    texts_list = []
+    for text in texts:
+        text.text
+        texts_list.append(text.text)
+
+    assert str(texts_list[0]) == HomePageLocators.TEXT_SERVER_STARTING
+    assert str(texts_list[1]) == HomePageLocators.TEXT_SERVER_REDIRECT
+
+    next_url = ujoin(app.hub.base_url, '/home')
+    await in_thread(browser.get, url_path_join(public_host(app), next_url))
+    await webdriver_wait(browser, EC.url_to_be(browser.current_url))
+    # checking that 2 buttons are pressed
+    assert is_displayed(browser, HomePageLocators.BUTTON_START_SERVER) == True
+    assert is_displayed(browser, HomePageLocators.BUTTON_STOP_SERVER) == True
+
+    buttons = browser.find_elements(*HomePageLocators.BUTTONS_SERVER)
+    assert len(buttons) == 2
+    await asyncio.sleep(1)
     click(browser, HomePageLocators.BUTTON_STOP_SERVER)
+
+    # next_url = ujoin(app.hub.base_url, '/home')
+    # await in_thread(browser.get, url_path_join(public_host(app), next_url))
+
+    el = browser.find_element(*HomePageLocators.BUTTON_STOP_SERVER)
+
+    # await webdriver_wait(browser, EC.url_changes(browser.current_url))
+
+    await webdriver_wait(browser, EC.invisibility_of_element(el))
 
     # await webdriver_wait(browser, EC.url_changes(browser.current_url))
 
@@ -341,7 +417,7 @@ async def test_buttons_stop_start(app, browser):
     # browser.execute_async_script("document.stopServer()")
     # browser.set_script_timeout(4000)
     # browser.execute_async_script("""$("#stop").click(function () {$("#start").attr("disabled", true).attr("title", "Your server is stopping").click(function () {return false;});api.stop_server(user, {success: function () {$("#stop").hide();$("#start").text("Start My Server").attr("title", "Start your default server").attr("disabled", false).attr("href", base_url + "spawn/" + user).off("click");},});});""")
-    time.sleep(15)
+
     """browser.execute_async_script('''
     var row = getRow($(this));
     var serverName = row.data("server-name");
@@ -357,38 +433,41 @@ async def test_buttons_stop_start(app, browser):
     });''')"""
 
     # browser.execute_script("return jQuery.active==0")
-    await asyncio.sleep(25)
-    await webdriver_wait(
-        browser, EC.invisibility_of_element_located(HomePageLocators.BUTTON_STOP_SERVER)
-    )
 
-    """el=browser.find_element(*HomePageLocators.BUTTON_STOP_SERVER)
+    """await webdriver_wait(
+        browser, EC.visibility_of_element_located(HomePageLocators.BUTTON_STOP_SERVER)
+    )
+    assert is_displayed(browser, HomePageLocators.BUTTON_STOP_SERVER) == True
+
+    el=browser.find_element(*HomePageLocators.BUTTON_STOP_SERVER)
     await webdriver_wait(browser, EC.invisibility_of_element(el))
     print(await webdriver_wait(browser, EC.invisibility_of_element(el)))
     #time.sleep(20)"""
-    await asyncio.sleep(0.5)
-    # checking link of start button when server is stopped
+
+    """# checking link of start button when server is stopped
     href_start = browser.find_element(
         *HomePageLocators.BUTTON_START_SERVER
     ).get_attribute('href')
-    assert href_start.endswith(f"/hub/spawn/{user}")
+    assert href_start.endswith(f"/user/{user}")
 
     # checking stop button is invisible, url is not changed
-    assert is_displayed(browser, HomePageLocators.BUTTON_STOP_SERVER) == False
+    #assert is_displayed(browser, HomePageLocators.BUTTON_STOP_SERVER) == False
     assert (
         browser.find_element(*HomePageLocators.BUTTON_STOP_SERVER).get_attribute(
             'style'
         )
         == 'display:none;'
     )
-    assert '/hub/home' in browser.current_url()
+    assert '/hub/home' in browser.current_url()"""
     """Start server"""
+    """
     click(browser, HomePageLocators.BUTTON_START_SERVER)
     if f'/user/{user}' not in browser.current_url:
         await webdriver_wait(browser, EC.url_to_be(browser.current_url))
     else:
         pass
     assert f'/user/{user}/' in browser.current_url()
+    """
 
 
 async def test_user_logout_home_page(app, browser):
@@ -413,7 +492,8 @@ async def test_user_logout_home_page(app, browser):
 # TOKEN PAGE
 async def open_token_page(app, browser, user="test_user", pass_w="test_user"):
 
-    await open_url(app, browser)
+    url = url_path_join(public_host(app), app.hub.base_url, "/login?next=/hub/token")
+    await in_thread(browser.get, url)
     redirected_url = url_path_join(public_host(app), app.base_url, '/hub/token')
     await login(browser, user, pass_w)
     await in_thread(browser.get, redirected_url)
@@ -428,8 +508,11 @@ async def open_token_page(app, browser, user="test_user", pass_w="test_user"):
 async def test_elements_of_token_page(app, browser):
     await open_token_page(app, browser, user="test_user123", pass_w="test_user123")
     user = "test_user123"
+
+    """to be done - add checking of HOME_BAR"""
     ### Request token form ###
     assert is_displayed(browser, TokenPageLocators.BUTTON_API_REQ) == True
+    time.sleep(20)
     button_api_req_color = Color.from_string(
         browser.find_element(*TokenPageLocators.BUTTON_API_REQ).value_of_css_property(
             'background-color'
@@ -478,6 +561,20 @@ async def test_elements_of_token_page(app, browser):
     # verify that dropdown list contains expected items
     assert Dict_opt_list == TokenPageLocators.LIST_EXP_TOKEN_OPT_DICT
 
+    ### No API Tokens table ###
+
+    """TBD"""
+    # assert buttonAPI == True
+    # assert token_note == True
+    # assert token_dropdown == True
+
+
+async def test_request_token(app, browser, user, pass_w):
+    await login(app, browser, user, pass_w)
+    cookies = await app.login_user(user)
+    await get_page("token", app, cookies=cookies)
+
+    ######################################################################
     ### API Tokens table ###
     table = browser.find_element(*TokenPageLocators.TABLE_API)
     head = table.find_element(*TokenPageLocators.TABLE_API_HEAD)
@@ -523,13 +620,16 @@ async def test_elements_of_token_page(app, browser):
         ujoin(app.base_url, f"/user/{user}/")
     )
     assert Dict_body_columns.get(3) == "Never"
-    buttons = body.find_elements(*TokenPageLocators.BUTTON_REVOKE)
+    buttons = rows_body.find_elements(*TokenPageLocators.BUTTON_REVOKE)
+    print(len(buttons))
+    # button = rows_body.find_element(By.XPATH, '/html/body/div[1]/div[3]/table/tbody/tr[1]/td[5]/button')
+    # print(button.text)
 
-    for button in buttons:
-        text = button.text
-        text1 = button.get_attribute('text')
-        print(text1)
-    print(text1)
+    """for button in buttons:
+        button = button.text
+        button.get_attribute('text')"""
+
+    # print(button[0].get_attribute('text'))
     # = button.find_element(*TokenPageLocators.BUTTON_REVOKE)
     # assert text in Dict_body_columns.get(4)
 
@@ -537,17 +637,6 @@ async def test_elements_of_token_page(app, browser):
     time.sleep(5)
     # assert is_displayed(browser,TokenPageLocators.PANEL_AREA)== False
     # assert browser.find_element(*TokenPageLocators.PANEL_AREA).get_attribute('style') !="display: none;"
-
-    """TBD"""
-    # assert buttonAPI == True
-    # assert token_note == True
-    # assert token_dropdown == True
-
-
-async def test_request_token(app, browser, user, pass_w):
-    await login(app, browser, user, pass_w)
-    cookies = await app.login_user(user)
-    await get_page("token", app, cookies=cookies)
 
 
 async def test_user_logout_token_page(app, browser):

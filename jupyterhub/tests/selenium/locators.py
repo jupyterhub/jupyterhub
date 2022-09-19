@@ -54,6 +54,11 @@ class HomePageLocators:
     BUTTON_START_SERVER_NAME_DOWN = "Start My Server"
     BUTTON_STOP_SERVER = (By.ID, "stop")
     BUTTON_STOP_SERVER_NAME = "Stop My Server"
+    TEXT_SERVER = (By.CSS_SELECTOR, "div.text-center p")
+    TEXT_SERVER_STARTING = "Your server is starting up."
+    TEXT_SERVER_REDIRECT = (
+        "You will be redirected automatically when it's ready for you."
+    )
 
 
 class TokenPageLocators:
@@ -103,6 +108,6 @@ class TokenPageLocators:
     TABLE_API_ROWS_BY_CLASS = (By.CLASS_NAME, 'token-row')
     TABLE_API_COLUMNS = (By.TAG_NAME, 'td')
 
-    # BUTTON_REVOKE = (By.NAME, 'revoke')
-    BUTTON_REVOKE = (By.CLASS_NAME, 'revoke-token-btn btn btn-xs btn-danger')
+    BUTTON_REVOKE = (By.NAME, 'revoke')
+    # BUTTON_REVOKE = (By.CLASS_NAME, 'revoke-token-btn btn btn-xs btn-danger')
     """<button class="revoke-token-btn btn btn-xs btn-danger">revoke</button>"""
