@@ -196,6 +196,8 @@ async def test_open_url_login(app, browser, url, params, redirected_url, form_ac
 async def test_invalid_credantials(app, browser, user, pass_w):
     await open_url(app, browser)
     await login(browser, user, pass_w)
+    await asyncio.sleep(0.1)
+    """adding for a catching of the reflected error"""
     try:
         error = browser.find_element(*LoginPageLocators.ERROR_INVALID_CREDANTIALS)
         await webdriver_wait(browser, EC.visibility_of(error))
