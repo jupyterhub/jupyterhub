@@ -1,13 +1,8 @@
 import asyncio
-import pprint
 import time
 from functools import partial
-from operator import index, indexOf
-from urllib.parse import parse_qs, urlencode, urlparse
-from xml.dom.minidom import Text
 
 import pytest
-import requests
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.common.by import By
@@ -26,14 +21,7 @@ from jupyterhub.tests.selenium.locators import (
 from jupyterhub.utils import exponential_backoff
 
 from ...utils import url_path_join
-from ..utils import (
-    api_request,
-    async_requests,
-    get_page,
-    public_host,
-    public_url,
-    ujoin,
-)
+from ..utils import get_page, public_host, public_url, ujoin
 
 pytestmark = pytest.mark.selenium
 
@@ -241,6 +229,8 @@ async def test_open_url_login(app, browser, url, params, redirected_url, form_ac
 async def test_invalid_credantials(app, browser, user, pass_w):
     await open_url(app, browser)
     await login(browser, user, pass_w)
+    await asyncio.sleep(0.1)
+    """adding for a catching of the reflected error"""
     try:
         error = browser.find_element(*LoginPageLocators.ERROR_INVALID_CREDANTIALS)
         await webdriver_wait(browser, EC.visibility_of(error))
@@ -393,7 +383,10 @@ async def test_buttons_stop_start(app, browser):
 
     buttons = browser.find_elements(*HomePageLocators.BUTTONS_SERVER)
     assert len(buttons) == 2
+
     await asyncio.sleep(1)
+    """add this stop click event is registred in JS"""
+
     click(browser, HomePageLocators.BUTTON_STOP_SERVER)
 
     # next_url = ujoin(app.hub.base_url, '/home')
