@@ -28,6 +28,9 @@ on:
       - "**"
   workflow_dispatch:
 
+permissions:
+  contents: read # to fetch code (actions/checkout)
+
 jobs:
   build-release:
     runs-on: ubuntu-20.04
@@ -79,6 +82,10 @@ jobs:
           twine upload --skip-existing dist/*
 
   publish-docker:
+    permissions:
+      contents: read # to fetch code (actions/checkout)
+      metadata: read # to get tags
+
     runs-on: ubuntu-20.04
 
     services:
