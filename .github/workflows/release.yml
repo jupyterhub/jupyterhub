@@ -82,10 +82,6 @@ jobs:
           twine upload --skip-existing dist/*
 
   publish-docker:
-    permissions:
-      contents: read # to fetch code (actions/checkout)
-      metadata: read # to get tags
-
     runs-on: ubuntu-20.04
 
     services:
