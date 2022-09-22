@@ -218,7 +218,7 @@ def admin_user(app, username):
 
 
 _groupname_counter = 0
-
+_rolename_counter = 0
 
 def new_group_name(prefix='testgroup'):
     """Return a new unique group name"""
