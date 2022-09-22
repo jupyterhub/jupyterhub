@@ -253,6 +253,18 @@ def group(app):
     app.db.commit()
     yield group
 
+@fixture
+def role(app):
+    """Fixture for creating a temporary role
+
+    Each time the fixture is used, a new role is created
+
+    The role is deleted after the test
+    """
+    role = orm.Role(name=new_role_name())
+    app.db.add(role)
+    app.db.commit()
+    yield role
 
 class MockServiceSpawner(jupyterhub.services.service._ServiceSpawner):
     """mock services for testing.
