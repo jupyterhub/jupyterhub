@@ -11,8 +11,11 @@ const DynamicTable = (props) => {
   
   var propobject = current_propobject;
 
-  var [propkeys, setOwnKeys] = useState(Object.keys(current_propobject));
-  var [propvalues, setOwnValues] = useState(Object.values(current_propobject));
+  if (current_propobject) {
+    var [propkeys, setOwnKeys] = useState(Object.keys(current_propobject));
+    var [propvalues, setOwnValues] = useState(Object.values(current_propobject));
+};
+  
   var updateMessageKey = (event) => {
     setMessage(event.target.value);
   }
