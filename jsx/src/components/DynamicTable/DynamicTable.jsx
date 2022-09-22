@@ -58,7 +58,7 @@ const DynamicTable = (props) => {
   };
 
   const renderKeyRows = () => {
-    if (propkeys){
+    if (propkeys) {
       return propkeys.map(function (o, i) {
         return (
           <tr key={"item-" + i}>
@@ -85,10 +85,10 @@ const DynamicTable = (props) => {
           </tr>
         );
       });
-    };
+    }
   };
   const renderValueRows = () => {
-    if (propvalues){
+    if (propvalues) {
       return propvalues.map(function (o, i) {
         //console.log("ValRows" +i)
         //console.log("ValRows" +o)
@@ -110,10 +110,10 @@ const DynamicTable = (props) => {
           </tr>
         );
       });
-    };
+    }
   };
   const renderDelete = () => {
-    if (propvalues){
+    if (propvalues) {
       return propvalues.map(function (o, i) {
         return (
           <tr key={"item-" + i}>
@@ -124,7 +124,9 @@ const DynamicTable = (props) => {
                   propvalues.splice(i, 1);
                   propkeys.splice(i, 1);
                   var propobject = {};
-                  propkeys.forEach((key, i) => (propobject[key] = propvalues[i]));
+                  propkeys.forEach(
+                    (key, i) => (propobject[key] = propvalues[i])
+                  );
                   props.setProp(propobject);
                   props.setPropKeys(propkeys);
                   props.setPropValues(propvalues);
@@ -139,7 +141,7 @@ const DynamicTable = (props) => {
           </tr>
         );
       });
-    };
+    }
   };
 
   return (
