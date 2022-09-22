@@ -58,82 +58,88 @@ const DynamicTable = (props) => {
   };
 
   const renderKeyRows = () => {
-    return propkeys.map(function (o, i) {
-      return (
-        <tr key={"item-" + i}>
-          <td>
-            <input
-              className="form-control"
-              type="text"
-              value={propkeys[i]}
-              id={o}
-              onChange={(e) => {
-                if (e.target.value != "") {
-                  propkeys[i] = e.target.value;
-                } else {
-                  propvalues.splice(i, 1);
-                  propkeys.splice(i, 1);
-                }
-                setOwnKeys(propkeys);
-                props.setPropKeys(propkeys);
-                props.setProp(propobject);
-                handleRefresh();
-              }}
-            />
-          </td>
-        </tr>
-      );
-    });
+    if (propkeys){
+      return propkeys.map(function (o, i) {
+        return (
+          <tr key={"item-" + i}>
+            <td>
+              <input
+                className="form-control"
+                type="text"
+                value={propkeys[i]}
+                id={o}
+                onChange={(e) => {
+                  if (e.target.value != "") {
+                    propkeys[i] = e.target.value;
+                  } else {
+                    propvalues.splice(i, 1);
+                    propkeys.splice(i, 1);
+                  }
+                  setOwnKeys(propkeys);
+                  props.setPropKeys(propkeys);
+                  props.setProp(propobject);
+                  handleRefresh();
+                }}
+              />
+            </td>
+          </tr>
+        );
+      });
+    };
   };
   const renderValueRows = () => {
-    return propvalues.map(function (o, i) {
-      //console.log("ValRows" +i)
-      //console.log("ValRows" +o)
-      return (
-        <tr key={"item-" + i}>
-          <td>
-            <input
-              className="form-control"
-              type="text"
-              value={o}
-              onChange={(e) => {
-                propvalues[i] = e.target.value;
-                props.setPropValues(propvalues);
-                setOwnValues(propvalues);
-                handleRefresh();
-              }}
-            />
-          </td>
-        </tr>
-      );
-    });
+    if (propvalues){
+      return propvalues.map(function (o, i) {
+        //console.log("ValRows" +i)
+        //console.log("ValRows" +o)
+        return (
+          <tr key={"item-" + i}>
+            <td>
+              <input
+                className="form-control"
+                type="text"
+                value={o}
+                onChange={(e) => {
+                  propvalues[i] = e.target.value;
+                  props.setPropValues(propvalues);
+                  setOwnValues(propvalues);
+                  handleRefresh();
+                }}
+              />
+            </td>
+          </tr>
+        );
+      });
+    };
   };
   const renderDelete = () => {
-    return propvalues.map(function (o, i) {
-      return (
-        <tr key={"item-" + i}>
-          <td>
-            <button
-              className="btn btn-default"
-              onClick={() => {
-                propvalues.splice(i, 1);
-                propkeys.splice(i, 1);
-                var propobject = {};
-                propkeys.forEach((key, i) => (propobject[key] = propvalues[i]));
-                props.setProp(propobject);
-                props.setPropKeys(propkeys);
-                props.setPropValues(propvalues);
-                setOwnValues(propvalues);
-                setOwnKeys(propkeys);
-                handleRefresh();
-              }}
-            >
-              Delete
-            </button>
-          </td>
-        </tr>
-      );
-    });
+    if (propvalues){
+      return propvalues.map(function (o, i) {
+        return (
+          <tr key={"item-" + i}>
+            <td>
+              <button
+                className="btn btn-default"
+                onClick={() => {
+                  propvalues.splice(i, 1);
+                  propkeys.splice(i, 1);
+                  var propobject = {};
+                  propkeys.forEach((key, i) => (propobject[key] = propvalues[i]));
+                  props.setProp(propobject);
+                  props.setPropKeys(propkeys);
+                  props.setPropValues(propvalues);
+                  setOwnValues(propvalues);
+                  setOwnKeys(propkeys);
+                  handleRefresh();
+                }}
+              >
+                Delete
+              </button>
+            </td>
+          </tr>
+        );
+      });
+    };
   };
 
   return (
