@@ -2061,7 +2061,7 @@ class JupyterHub(Application):
             # Check if some roles have obtained new permissions (to avoid 'scope creep')
             old_role = orm.Role.find(self.db, name=role_name)
             if old_role:
-                if not set(role_spec['scopes']).issubset(old_role.scopes):
+                if not set(role_spec.get('scopes', [])).issubset(old_role.scopes):
                     self.log.warning(
                         "Role %s has obtained extra permissions" % role_name
                     )
