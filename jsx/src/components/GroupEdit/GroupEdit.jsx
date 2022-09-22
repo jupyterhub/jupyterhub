@@ -91,9 +91,6 @@ const GroupEdit = (props) => {
           <DynamicTable
             current_propobject={group_data.properties}
             setProp={setProp}
-            setPropKeys={setPropKeys}
-            setPropValues={setPropValues}
-
             //Add keys
           />
         </div>
