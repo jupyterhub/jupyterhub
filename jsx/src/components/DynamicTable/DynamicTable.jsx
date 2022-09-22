@@ -2,13 +2,11 @@ import React, { useState, useEffect } from "react";
 import "./table-select.css";
 import PropTypes from "prop-types";
 
-
 const DynamicTable = (props) => {
-  
   var [message, setMessage] = useState(""),
     [message2, setMessage2] = useState("");
-  var {current_propobject} = props;
-  
+  var { current_propobject } = props;
+
   var propobject = current_propobject;
 
   if (current_propobject) {
@@ -18,12 +16,11 @@ const DynamicTable = (props) => {
   
   var updateMessageKey = (event) => {
     setMessage(event.target.value);
-  }
+  };
   var updateMessageValue = (event) => {
     setMessage2(event.target.value);
-  }
+  };
   const handleRefresh = () => {
-    
     var propobject = {};
     propkeys.forEach((key, i) => (propobject[key] = propvalues[i]));
     props.setProp(propobject);
@@ -31,9 +28,8 @@ const DynamicTable = (props) => {
     props.setPropValues(propvalues);
     setMessage("");
     setMessage2("");
+  };
 
-  }
-  
   const handleClick = () => {
     if (message != "") {
       if (message2 != "") {
@@ -57,8 +53,7 @@ const DynamicTable = (props) => {
     console.log(propkeys);
     console.log(propvalues);
     console.log(propobject);
-  }
-  
+  };
 
   const renderKeyRows = () => {
     return propkeys.map(function (o, i) {
@@ -70,26 +65,25 @@ const DynamicTable = (props) => {
               type="text"
               value={propkeys[i]}
               id={o}
-              onChange= {(e) => {
+              onChange={(e) => {
                 if (e.target.value != "") {
-                  propkeys[i] = e.target.value ;
-                } else{
+                  propkeys[i] = e.target.value;
+                } else {
                   propvalues.splice(i, 1);
                   propkeys.splice(i, 1);
                 }
                 setOwnKeys(propkeys);
                 props.setPropKeys(propkeys);
-                props.setProp(propobject)
+                props.setProp(propobject);
                 handleRefresh();
-                }}
+              }}
             />
           </td>
         </tr>
       );
     });
-  }
+  };
   const renderValueRows = () => {
-
     return propvalues.map(function (o, i) {
       //console.log("ValRows" +i)
       //console.log("ValRows" +o)
@@ -111,9 +105,8 @@ const DynamicTable = (props) => {
         </tr>
       );
     });
-  }
+  };
   const renderDelete = () => {
-
     return propvalues.map(function (o, i) {
       return (
         <tr key={"item-" + i}>
@@ -139,9 +132,7 @@ const DynamicTable = (props) => {
         </tr>
       );
     });
-  }
-
-
+  };
 
   return (
     <div>
@@ -171,13 +162,13 @@ const DynamicTable = (props) => {
             />
           </td>
           <td>
-              <input
-                className="form-control"
-                type="text"
-                value={message2}
-                onChange={(e) => updateMessageValue(e)}
-              />
-            </td>
+            <input
+              className="form-control"
+              type="text"
+              value={message2}
+              onChange={(e) => updateMessageValue(e)}
+            />
+          </td>
           <td>
             <button
               id="add-item"
@@ -194,7 +185,7 @@ const DynamicTable = (props) => {
       <hr />
     </div>
   );
-}
+};
 DynamicTable.propTypes = {
   current_keys: PropTypes.array,
   current_values: PropTypes.array,
