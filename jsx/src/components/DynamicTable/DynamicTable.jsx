@@ -1,141 +1,95 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./table-select.css";
+import PropTypes from "prop-types";
 
-export default class DynamicTable extends React.Component {
-  constructor(props) {
-    super(props);
-    this.current_propobject = props.current_propobject;
-    this.setProp = props.setProp;
-    this.setPropKeys = props.setPropKeys;
-    this.setPropValues = props.setPropValues;
 
-    let current_keys = [];
-    let current_values = [];
+const DynamicTable = (props) => {
+  
+  var [message, setMessage] = useState(""),
+    [message2, setMessage2] = useState("");
+  var {current_propobject} = props;
+  
+  var propobject = current_propobject;
 
-    for (var property in this.current_propobject) {
-      current_keys.push(property);
-      current_values.push(this.current_propobject[property]);
-    }
-    //current_keys = this.current_propobject.propkeys
-    //current_values = this.current_propobject.propvalues
-
-    this.state = {
-      message: "",
-      message2: "",
-      propkeys: current_keys,
-      propvalues: current_values,
-      propobject: "",
-    };
+  var [propkeys, setOwnKeys] = useState(Object.keys(current_propobject));
+  var [propvalues, setOwnValues] = useState(Object.values(current_propobject));
+  var updateMessageKey = (event) => {
+    setMessage(event.target.value);
   }
-
-  updateMessageKey(event) {
-    this.setState({
-      message: event.target.value,
-    });
+  var updateMessageValue = (event) => {
+    setMessage2(event.target.value);
   }
-
-  updateMessageValue(event) {
-    this.setState({
-      message2: event.target.value,
-    });
-  }
-  handleRefresh(i) {
-    var propkeys = this.state.propkeys;
-    var propvalues = this.state.propvalues;
+  const handleRefresh = () => {
+    
     var propobject = {};
     propkeys.forEach((key, i) => (propobject[key] = propvalues[i]));
+    props.setProp(propobject);
+    props.setPropKeys(propkeys);
+    props.setPropValues(propvalues);
+    setMessage("");
+    setMessage2("");
 
-    console.log(propobject);
-    this.setProp(propobject);
-    this.setPropKeys(propkeys);
-    this.setPropValues(propvalues);
-
-    this.setState({
-      propkeys: propkeys,
-      propvalues: propvalues,
-      message: "",
-      message2: "",
-      propobject: propobject,
-    });
   }
-  handleClick() {
-    var propkeys = this.state.propkeys;
-    var propvalues = this.state.propvalues;
-    if (this.state.message != "") {
-      if (this.state.message2 != "") {
-        propkeys.push(this.state.message);
-        propvalues.push(this.state.message2);
+  
+  const handleClick = () => {
+    if (message != "") {
+      if (message2 != "") {
+        propkeys.push(message);
+        propvalues.push(message2);
       } else {
         console.log("Value not valid");
       }
     } else {
       console.log("Value not valid");
     }
-
     var propobject = {};
     propkeys.forEach((key, i) => (propobject[key] = propvalues[i]));
+    props.setProp(propobject);
+    props.setPropKeys(propkeys);
+    setOwnKeys(propkeys);
+    props.setPropValues(propvalues);
+    setOwnValues(propvalues);
+    setMessage("");
+    setMessage2("");
+    console.log(propkeys);
+    console.log(propvalues);
     console.log(propobject);
-    this.setProp(propobject);
-    this.setPropKeys(propkeys);
-    this.setPropValues(propvalues);
-    this.setState({
-      propkeys: propkeys,
-      propvalues: propvalues,
-      message: "",
-      message2: "",
-      propobject: propobject,
+  }
+  
+
+  const renderKeyRows = () => {
+    return propkeys.map(function (o, i) {
+      return (
+        <tr key={"item-" + i}>
+          <td>
+            <input
+              className="form-control"
+              type="text"
+              value={propkeys[i]}
+              id={o}
+              onChange= {(e) => {
+                if (e.target.value != "") {
+                  propkeys[i] = e.target.value ;
+                } else{
+                  propvalues.splice(i, 1);
+                  propkeys.splice(i, 1);
+                }
+                setOwnKeys(propkeys);
+                props.setPropKeys(propkeys);
+                props.setProp(propobject)
+                handleRefresh();
+                }}
+            />
+          </td>
+        </tr>
+      );
     });
   }
+  const renderValueRows = () => {
 
-  handleValueChanged(i, event) {
-    var propvalues = this.state.propvalues;
-    var propkeys = this.state.propkeys;
-    propvalues[i] = event.target.value;
-
-    this.handleRefresh();
-    this.setPropKeys(propkeys);
-    this.setPropValues(propvalues);
-    this.setState({
-      propvalues: propvalues,
-    });
-  }
-  handleKeyChanged(i, event) {
-    var propkeys = this.state.propkeys;
-
-    if (event.target.value != "") {
-      propkeys[i] = event.target.value;
-    }
-    console.log(event.target.value);
-
-    if (event.target.value == "") {
-      this.handleItemDeleted(i);
-    }
-    this.handleRefresh(i);
-    this.setPropKeys(propkeys);
-    this.setState({
-      propkeys: propkeys,
-    });
-  }
-
-  handleItemDeleted(i) {
-    var propvalues = this.state.propvalues;
-    var propkeys = this.state.propkeys;
-
-    propvalues.splice(i, 1);
-    propkeys.splice(i, 1);
-    this.setPropKeys(propkeys);
-    this.setPropValues(propvalues);
-    this.handleRefresh(i);
-    this.setState({
-      propvalues: propvalues,
-      propkeys: propkeys,
-    });
-  }
-
-  renderKeyRows() {
-    var context = this;
-
-    return this.state.propkeys.map(function (o, i) {
+    return propvalues.map(function (o, i) {
+      //console.log("ValRows" +i)
+      //console.log("ValRows" +o)
       return (
         <tr key={"item-" + i}>
           <td>
@@ -143,42 +97,38 @@ export default class DynamicTable extends React.Component {
               className="form-control"
               type="text"
               value={o}
-              id={o + i}
-              onChange={context.handleKeyChanged.bind(context, i)}
+              onChange={(e) => {
+                propvalues[i] = e.target.value;
+                props.setPropValues(propvalues);
+                setOwnValues(propvalues);
+                handleRefresh();
+              }}
             />
           </td>
         </tr>
       );
     });
   }
-  renderValueRows() {
-    var context = this;
+  const renderDelete = () => {
 
-    return this.state.propvalues.map(function (o, i) {
-      return (
-        <tr key={"item-" + i}>
-          <td>
-            <input
-              className="form-control"
-              type="text"
-              value={o}
-              onChange={context.handleValueChanged.bind(context, i)}
-            />
-          </td>
-        </tr>
-      );
-    });
-  }
-  renderDelete() {
-    var context = this;
-
-    return this.state.propvalues.map(function (o, i) {
+    return propvalues.map(function (o, i) {
       return (
         <tr key={"item-" + i}>
           <td>
             <button
               className="btn btn-default"
-              onClick={context.handleItemDeleted.bind(context, i)}
+              onClick={() => {
+                propvalues.splice(i, 1);
+                propkeys.splice(i, 1);
+                var propobject = {};
+                propkeys.forEach((key, i) => (propobject[key] = propvalues[i]));
+                props.setProp(propobject);
+                props.setPropKeys(propkeys);
+                props.setPropValues(propvalues);
+                setOwnValues(propvalues);
+                setOwnKeys(propkeys);
+                handleRefresh();
+              }}
             >
               Delete
             </button>
@@ -188,57 +138,65 @@ export default class DynamicTable extends React.Component {
     });
   }
 
-  render() {
-    return (
-      <div>
-        <table className="">
-          <thead>
-            <tr>
-              <th>Key</th>
-              <th>Value</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>{this.renderKeyRows()}</td>
-              <td>{this.renderValueRows()}</td>
-              <td>{this.renderDelete()}</td>
-            </tr>
-          </tbody>
-        </table>
-        <form>
+
+
+  return (
+    <div>
+      <table className="">
+        <thead>
           <tr>
-            <td>
-              <input
-                className="form-control"
-                type="text"
-                value={this.state.message}
-                onChange={this.updateMessageKey.bind(this)}
-              />
-            </td>
-            <td>
-              <input
-                className="form-control"
-                type="text"
-                value={this.state.message2}
-                onChange={this.updateMessageValue.bind(this)}
-              />
-            </td>
-            <td>
-              <button
-                id="add-item"
-                data-testid="add-item"
-                className="btn btn-default"
-                type="button"
-                onClick={this.handleClick.bind(this)}
-              >
-                Add Item
-              </button>
-            </td>
+            <th>Key</th>
+            <th>Value</th>
           </tr>
-        </form>
-        <hr />
-      </div>
-    );
-  }
+        </thead>
+        <tbody>
+          <tr>
+            <td>{renderKeyRows()}</td>
+            <td>{renderValueRows()}</td>
+            <td>{renderDelete()}</td>
+          </tr>
+        </tbody>
+      </table>
+      <form>
+        <tr>
+          <td>
+            <input
+              className="form-control"
+              type="text"
+              value={message}
+              onChange={(e) => updateMessageKey(e)}
+            />
+          </td>
+          <td>
+              <input
+                className="form-control"
+                type="text"
+                value={message2}
+                onChange={(e) => updateMessageValue(e)}
+              />
+            </td>
+          <td>
+            <button
+              id="add-item"
+              data-testid="add-item"
+              className="btn btn-default"
+              type="button"
+              onClick={() => handleClick()}
+            >
+              Add Item
+            </button>
+          </td>
+        </tr>
+      </form>
+      <hr />
+    </div>
+  );
 }
+DynamicTable.propTypes = {
+  current_keys: PropTypes.array,
+  current_values: PropTypes.array,
+  setPropKeys: PropTypes.array,
+  setPropValues: PropTypes.array,
+  setProp: PropTypes.func,
+};
+export default DynamicTable;
