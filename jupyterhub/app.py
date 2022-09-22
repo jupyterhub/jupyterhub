@@ -16,6 +16,7 @@ import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
+from functools import partial
 from getpass import getuser
 from operator import itemgetter
 from textwrap import dedent
@@ -3315,7 +3316,7 @@ class JupyterHub(Application):
         loop = IOLoop(make_current=False)
 
         try:
-            loop.run_sync(self.launch_instance_async, argv)
+            loop.run_sync(partial(self.launch_instance_async, argv))
         except Exception:
             loop.close()
             raise

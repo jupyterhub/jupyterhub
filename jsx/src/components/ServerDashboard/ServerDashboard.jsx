@@ -56,7 +56,7 @@ const ServerDashboard = (props) => {
     user_page = useSelector((state) => state.user_page),
     name_filter = useSelector((state) => state.name_filter);
 
-  var [offset, setOffset] = useState(user_page ? user_page.offset : 0);
+  var offset = user_page ? user_page.offset : 0;
   var limit = user_page ? user_page.limit : window.api_page_limit;
   var total = user_page ? user_page.total : undefined;
 
@@ -72,12 +72,29 @@ const ServerDashboard = (props) => {
     history,
   } = props;
 
-  var dispatchPageUpdate = (data, page, name_filter) => {
+  const dispatchPageUpdate = (data, page) => {
     dispatch({
       type: "USER_PAGE",
       value: {
         data: data,
         page: page,
+      },
+    });
+  };
+
+  const setOffset = (newOffset) => {
+    dispatch({
+      type: "USER_OFFSET",
+      value: {
+        offset: newOffset,
+      },
+    });
+  };
+
+  const setNameFilter = (name_filter) => {
+    dispatch({
+      type: "USER_NAME_FILTER",
+      value: {
         name_filter: name_filter,
       },
     });
@@ -85,24 +102,18 @@ const ServerDashboard = (props) => {
 
   useEffect(() => {
     updateUsers(offset, limit, name_filter)
-      .then((data) =>
-        dispatchPageUpdate(data.items, data._pagination, name_filter)
-      )
+      .then((data) => dispatchPageUpdate(data.items, data._pagination))
       .catch((err) => setErrorAlert("Failed to update user list."));
-  }, [offset, limit]);
+  }, [offset, limit, name_filter]);
 
   if (!user_data || !user_page) {
     return <div data-testid="no-show"></div>;
   }
 
-  let page = offset / limit;
   var slice = [offset, limit, name_filter];
 
   const handleSearch = debounce(async (event) => {
-    // setNameFilter(event.target.value);
-    updateUsers(offset, limit, event.target.value).then((data) =>
-      dispatchPageUpdate(data.items, data._pagination, name_filter)
-    );
+    setNameFilter(event.target.value);
   }, 300);
 
   if (sortMethod != null) {

@@ -29,12 +29,12 @@ async def test_userdict_get(db, attr):
         ["isin1", "isin2"],
         ["isin1"],
         ["notin", "isin1"],
-        ["new-group", "isin1"],
+        ["new-group", "new-group", "isin1"],
         [],
     ],
 )
 def test_sync_groups(app, user, group_names):
-    expected = sorted(group_names)
+    expected = sorted(set(group_names))
     db = app.db
     db.add(orm.Group(name="notin"))
     in_groups = [orm.Group(name="isin1"), orm.Group(name="isin2")]
