@@ -226,7 +226,11 @@ def new_group_name(prefix='testgroup'):
     _groupname_counter += 1
     return f'{prefix}-{_groupname_counter}'
 
-
+def new_role_name(prefix='testrole'):
+    """Return a new unique role name"""
+    global _rolename_counter
+    _rolename_counter += 1
+    return f'{prefix}-{_rolename_counter}'
 @fixture
 def groupname():
     """allocate a temporary group name
