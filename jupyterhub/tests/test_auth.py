@@ -591,3 +591,64 @@ async def test_auth_managed_groups(
         assert not app.db.dirty
         groups = sorted(g.name for g in user.groups)
         assert groups == expected_refresh_groups
+
+
+def getRoleNames(role_list):
+        return [role['name'] for role in role_list]
+class MockRolesAuthenticator(auth.Authenticator):
+    authenticated_roles = Any()
+
+    manage_roles = True
+
+    def authenticate(self, handler, data):
+        return {
+            "name": data["username"],
+            "roles": self.authenticated_roles,
+        }
+
+
+
+@pytest.mark.parametrize(
+    "authenticated_roles",
+    [
+        ([{"name":"testrole-1", "users":"testuser-1"}]),
+        ([{"name":"testrole-2", "users":"testuser-1"}]),
+        ([{"name":"testrole-3", "users":"testuser-1"}]),
+        ([{"name":"testrole-4", "users":"testuser-1"}]),
+        ([{"name":"testrole-5", "users":"testuser-1"}]),
+     
+    ],
+)
+async def test_auth_managed_roles(
+    app, user, role, authenticated_roles
+):
+
+    authenticator = MockRolesAuthenticator(
+        parent=app,
+        authenticated_roles=authenticated_roles,
+    )
+    
+    user.roles.append(role)
+    app.db.commit()
+    before_roles = role.name
+    
+    
+    print("authenticated roles ", authenticated_roles)
+    print("before roles ", before_roles)
+    if authenticated_roles is None:
+        expected_authenticated_roles = before_roles
+    else:
+        expected_authenticated_roles = authenticated_roles
+
+
+
+    with mock.patch.dict(app.tornado_settings, {"authenticator": authenticator}):
+        assert not app.db.dirty
+        all_roles= app.db.query(orm.Role).all()
+        default_roles=sorted(g.name for g in all_roles if g.name)
+        user_roles = sorted(g.name for g in user.roles) 
+        expected_authenticated_roles_names = getRoleNames(expected_authenticated_roles)
+        for name in expected_authenticated_roles_names:
+            assert name in user_roles
+            role = orm.Role.find(app.db, name)
+            app.db.delete(role)
