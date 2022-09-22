@@ -669,7 +669,18 @@ class Authenticator(LoggingConfigurable):
         All group-assignment APIs are disabled if this is True.
         """,
     )
+    manage_roles = Bool(
+        False,
+        config=True,
+        help="""Let authenticator manage roles
 
+        If True, Authenticator.authenticate and/or .refresh_user
+        may return a list of roles in the 'roles' field,
+        which will be added to the database.
+
+        All role-assignment APIs are disabled if this is True.
+        """,
+    )
     auto_login = Bool(
         False,
         config=True,
