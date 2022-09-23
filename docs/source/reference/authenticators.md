@@ -246,9 +246,24 @@ class MyAuthenticator(Authenticator):
             return
         spawner.environment['UPSTREAM_TOKEN'] = auth_state['upstream_token']
 ```
+Note that environment variable names and values are always strings, so passing multiple values means setting multiple environment variables or serializing more complex data into a single variable, e.g. as a JSON string.
 
-Please note the `spawner.environment` expects a string or byte array set in the environment but not dictionary.
-To set anything complex other than string please look at {meth}`Spawner.auth_state_hook` available in most of the spawners which can read the entire `auth_state` dictionary.
+
+auth state can also be used to configure the spawner via _config_ without subclassing
+by setting `c.Spawner.auth_state_hook`. This function will be called with `(spawner, auth_state)`,
+only when auth_state is defined.
+
+For example:
+(for KubeSpawner)
+
+```python
+def auth_state_hook(spawner, auth_state):
+    spawner.volumes = auth_state['user_volumes']
+    spawner.mounts = auth_state['user_mounts']
+
+c.Spawner.auth_state_hook = auth_state_hook
+```
+
 
 (authenticator-groups)=
 
