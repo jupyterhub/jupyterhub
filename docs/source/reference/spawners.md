@@ -28,6 +28,7 @@ Some examples include:
   servers in YARN containers on a Hadoop cluster
 - [SSHSpawner](https://github.com/NERSC/sshspawner) to spawn notebooks
   on a remote server using SSH
+- [KubeSpawner](https://github.com/jupyterhub/kubespawner) to spawn notebook servers on kubernetes cluster.
 
 ## Spawner control methods
 
