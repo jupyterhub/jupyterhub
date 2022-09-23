@@ -168,9 +168,6 @@ class NPM(BaseCommand):
     bower_dir = pjoin(static, 'components')
 
     def should_run(self):
-        if not shutil.which('npm'):
-            print("npm unavailable", file=sys.stderr)
-            return False
         if not os.path.exists(self.bower_dir):
             return True
         if not os.path.exists(self.node_modules):
@@ -195,6 +192,7 @@ class NPM(BaseCommand):
         os.utime(self.bower_dir)
         # update data-files in case this created new files
         self.distribution.data_files = get_data_files()
+        assert not self.should_run(), 'NPM.run failed'
 
 
 class CSS(BaseCommand):
@@ -255,6 +253,7 @@ class CSS(BaseCommand):
             raise
         # update data-files in case this created new files
         self.distribution.data_files = get_data_files()
+        assert not self.should_run(), 'CSS.run failed'
 
 
 class JSX(BaseCommand):
@@ -314,6 +313,7 @@ class JSX(BaseCommand):
 
         # update data-files in case this created new files
         self.distribution.data_files = get_data_files()
+        assert not self.should_run(), 'JSX.run failed'
 
 
 def js_css_first(cls, strict=True):
