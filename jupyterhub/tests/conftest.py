@@ -220,17 +220,21 @@ def admin_user(app, username):
 _groupname_counter = 0
 _rolename_counter = 0
 
+
 def new_group_name(prefix='testgroup'):
     """Return a new unique group name"""
     global _groupname_counter
     _groupname_counter += 1
     return f'{prefix}-{_groupname_counter}'
 
+
 def new_role_name(prefix='testrole'):
     """Return a new unique role name"""
     global _rolename_counter
     _rolename_counter += 1
     return f'{prefix}-{_rolename_counter}'
+
+
 @fixture
 def groupname():
     """allocate a temporary group name
@@ -253,6 +257,7 @@ def group(app):
     app.db.commit()
     yield group
 
+
 @fixture
 def role(app):
     """Fixture for creating a temporary role
@@ -265,6 +270,7 @@ def role(app):
     app.db.add(role)
     app.db.commit()
     yield role
+
 
 class MockServiceSpawner(jupyterhub.services.service._ServiceSpawner):
     """mock services for testing.

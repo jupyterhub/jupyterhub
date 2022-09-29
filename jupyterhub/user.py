@@ -236,11 +236,15 @@ class UserDict(dict):
                     counts['ready'] += 1
 
         return counts
+
+
 def getRoleNames(role_list):
-        return [role['name'] for role in role_list]
+    return [role['name'] for role in role_list]
+
 
 def getRoleObject(role_list, role_name):
-    return [role for role in role_list if role['name']== role_name][0]
+    return [role for role in role_list if role['name'] == role_name][0]
+
 
 class _SpawnerDict(dict):
     def __init__(self, spawner_factory):
@@ -339,63 +343,66 @@ class User:
         else:
             self.orm_user.groups = []
         self.db.commit()
-        
+
     def sync_roles(self, auth_roles):
         """Synchronize roles with database"""
         current_roles = {g.name for g in self.db.query(orm.Role).all()}
-    
+
         auth_roles_names = getRoleNames(auth_roles)
-  
+
         new_roles_names = set(auth_roles_names).difference(current_roles)
         if new_roles_names:
             self.log.info(f"Adding new roles {new_roles_names} to the database")
         if auth_roles:
-            roles = (
-                self.db.query(orm.Role).all()
-            )
+            roles = self.db.query(orm.Role).all()
             existing_roles = {g.name for g in roles}
             for role_name in auth_roles_names:
                 if role_name not in existing_roles:
                     # create roles that don't exist yet
-                    self.log.info(
-                        f"Creating new role {role_name}"
-                    )
+                    self.log.info(f"Creating new role {role_name}")
 
-                    role = getRoleObject(auth_roles,role_name)
+                    role = getRoleObject(auth_roles, role_name)
 
                     role_name = []
                     if 'name' in role.keys():
-                        role_name= role['name']
+                        role_name = role['name']
 
                     scopes = []
                     if 'scopes' in role.keys():
-                        scopes= role['scopes']
+                        scopes = role['scopes']
                         from .scopes import _check_scopes_exist
+
                         try:
                             _check_scopes_exist(scopes, who_for=f"role {role_name}")
                         except:
                             raise web.HTTPError(409, "One of the scopes does not exist")
-                        
+
                     groups = []
                     if 'groups' in role.keys():
                         for group_name in role['groups']:
-                            group= orm.Group.find(self.db,group_name)
+                            group = orm.Group.find(self.db, group_name)
                             if group is not None:
                                 groups.append(group)
 
                     services = []
                     if 'services' in role.keys():
                         for service_name in role['services']:
-                            service=  orm.Service.find(self.db,service_name)
+                            service = orm.Service.find(self.db, service_name)
                             if service is not None:
                                 services.append(service)
                     users = []
                     if 'users' in role.keys():
                         for user_name in role['users']:
-                            user = orm.User.find(self.db,user_name)
+                            user = orm.User.find(self.db, user_name)
                             if user is not None:
                                 users.append(user)
-                    orm_role = orm.Role(name=role_name, scopes=scopes, groups=groups, services=services, users= users)
+                    orm_role = orm.Role(
+                        name=role_name,
+                        scopes=scopes,
+                        groups=groups,
+                        services=services,
+                        users=users,
+                    )
                     self.db.add(orm_role)
                     roles.append(orm_role)
         self.db.commit()

@@ -594,7 +594,9 @@ async def test_auth_managed_groups(
 
 
 def getRoleNames(role_list):
-        return [role['name'] for role in role_list]
+    return [role['name'] for role in role_list]
+
+
 class MockRolesAuthenticator(auth.Authenticator):
     authenticated_roles = Any()
     refresh_roles= Any()
