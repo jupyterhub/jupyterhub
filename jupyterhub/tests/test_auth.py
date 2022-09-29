@@ -12,7 +12,7 @@ from traitlets.config import Config
 
 from jupyterhub import auth, crypto, orm
 
-from .mocking import MockPAMAuthenticator, MockStructGroup, MockStructPasswd
+from .mocking import MockPAMAuthenticator, MockStructGroup, MockStructPasswd, MockHub
 from .utils import add_user, async_requests, get_page, public_url
 
 
@@ -597,7 +597,7 @@ def getRoleNames(role_list):
         return [role['name'] for role in role_list]
 class MockRolesAuthenticator(auth.Authenticator):
     authenticated_roles = Any()
-
+    refresh_roles= Any()
     manage_roles = True
 
     def authenticate(self, handler, data):
@@ -606,49 +606,68 @@ class MockRolesAuthenticator(auth.Authenticator):
             "roles": self.authenticated_roles,
         }
 
-
+    async def refresh_user(self, user, handler):
+        return {
+            "name": user.name,
+            "roles": self.refresh_roles,
+        }
 
 @pytest.mark.parametrize(
-    "authenticated_roles",
+    "authenticated_roles, refresh_roles",
     [
-        ([{"name":"testrole-1", "users":"testuser-1"}]),
-        ([{"name":"testrole-2", "users":"testuser-1"}]),
-        ([{"name":"testrole-3", "users":"testuser-1"}]),
-        ([{"name":"testrole-4", "users":"testuser-1"}]),
-        ([{"name":"testrole-5", "users":"testuser-1"}]),
+        ([{"name":"testrole-1", "users":"testuser-1"}],None),
+        ([{"name":"testrole-2", "users":"testuser-1"}],None),
+        ([{"name":"testrole-3", "users":"testuser-1"}],None),
+        ([{"name":"testrole-4", "users":"testuser-1"}],None),
+        ([{"name":"testrole-5", "users":"testuser-1"}],None),
      
     ],
 )
 async def test_auth_managed_roles(
-    app, user, role, authenticated_roles
+    app, user, role, authenticated_roles, refresh_roles
 ):
 
     authenticator = MockRolesAuthenticator(
         parent=app,
         authenticated_roles=authenticated_roles,
     )
-    
+    hub = MockHub(db_url='sqlite:///jupyterhub.sqlite')
     user.roles.append(role)
     app.db.commit()
     before_roles = role.name
     
     
-    print("authenticated roles ", authenticated_roles)
-    print("before roles ", before_roles)
     if authenticated_roles is None:
         expected_authenticated_roles = before_roles
     else:
         expected_authenticated_roles = authenticated_roles
 
 
+    if authenticated_roles is None:
+        expected_authenticated_groups = before_roles
+    else:
+        expected_authenticated_groups = authenticated_roles
+    if refresh_roles is None:
+        expected_refresh_groups = expected_authenticated_groups
+    else:
+        expected_refresh_groups = refresh_roles
 
+
+    #Check if user gets auth-managed roles
     with mock.patch.dict(app.tornado_settings, {"authenticator": authenticator}):
         assert not app.db.dirty
         all_roles= app.db.query(orm.Role).all()
-        default_roles=sorted(g.name for g in all_roles if g.name)
         user_roles = sorted(g.name for g in user.roles) 
         expected_authenticated_roles_names = getRoleNames(expected_authenticated_roles)
         for name in expected_authenticated_roles_names:
             assert name in user_roles
             role = orm.Role.find(app.db, name)
             app.db.delete(role)
+
+    #Check if roles are deleted after restart
+    await hub.initialize()
+    all_roles= app.db.query(orm.Role).all()
+    all_roles_names=sorted(g.name for g in all_roles )
+    for name in expected_authenticated_roles_names:
+        assert name not in all_roles_names
+   
