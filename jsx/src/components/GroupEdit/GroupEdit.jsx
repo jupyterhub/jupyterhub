@@ -128,7 +128,7 @@ const GroupEdit = (props) => {
               }
 
               if (hasDuplicates(propkeys) == true) {
-                setErrorAlert(`Duplicate keys found!`)
+                setErrorAlert(`Duplicate keys found!`);
               } else {
                 propkeys.forEach((key, i) => (propobject[key] = propvalues[i]));
               }
@@ -137,6 +137,7 @@ const GroupEdit = (props) => {
                 hasDuplicates(propkeys) == false
               ) {
                 promiseQueue.push(updateProp(propobject, group_data.name));
+                setErrorAlert(null);
               }
               Promise.all(promiseQueue)
                 .then((data) => {
