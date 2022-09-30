@@ -238,11 +238,11 @@ class UserDict(dict):
         return counts
 
 
-def getRoleNames(role_list):
+def _get_role_names(role_list):
     return [role['name'] for role in role_list]
 
 
-def getRoleObject(role_list, role_name):
+def _get_role_object(role_list, role_name):
     return [role for role in role_list if role['name'] == role_name][0]
 
 
