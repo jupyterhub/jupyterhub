@@ -11,32 +11,31 @@ This section will help you with basic proxy and network configuration to:
 
 The Proxy's main IP address setting determines where JupyterHub is available to users.
 By default, JupyterHub is configured to be available on all network interfaces
-(`''`) on port 8000. _Note_: Use of `'*'` is discouraged for IP configuration;
+(`''`) on port 8000. This is the port on which the proxy will listen. _Note_: Use of `'*'` is discouraged for IP configuration;
 instead, use of `'0.0.0.0'` is preferred.
 
-Changing the Proxy's main IP address and port can be done with the following
-JupyterHub **command line options**:
+Changing the Proxy's main IP address can be done with the following
+JupyterHub **command line option**:
 
 ```bash
-jupyterhub --ip=192.168.1.2 --port=443
+jupyterhub --ip=192.168.1.2
 ```
 
-Or by placing the following lines in a **configuration file**,
+Or by placing the following line in a **configuration file**,
 `jupyterhub_config.py`:
 
 ```python
 c.JupyterHub.ip = '192.168.1.2'
-c.JupyterHub.port = 443
 ```
 
-Port 443 is used in the examples since 443 is the default port for SSL/HTTPS.
+Port 8000 is the only port through which JupyterHub should be accessed by users.
 
-Configuring only the main IP and port of JupyterHub should be sufficient for
+Configuring only the main IP of JupyterHub should be sufficient for
 most deployments of JupyterHub. However, more customized scenarios may need
 additional networking details to be configured.
 
-Note that `c.JupyterHub.ip` and `c.JupyterHub.port` are single values,
-not tuples or lists – JupyterHub listens to only a single IP address and
+Note that `c.JupyterHub.ip` is a single value,
+not a tuple or a list – JupyterHub listens to only a single IP address and
 port.
 
 ## Set the Proxy's REST API communication URL (optional)
