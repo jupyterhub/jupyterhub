@@ -1150,14 +1150,27 @@ class JupyterHub(Application):
         False, help="Allow named single-user servers per user"
     ).tag(config=True)
 
-    named_server_limit_per_user = Integer(
-        0,
+    named_server_limit_per_user = Union(
+        [Integer(), Callable()],
+        default_value=0,
         help="""
         Maximum number of concurrent named servers that can be created by a user at a time.
 
         Setting this can limit the total resources a user can consume.
 
         If set to 0, no limit is enforced.
+        
+        Can be an integer or a callable/awaitable based on the handler object:
+
+        ::
+
+            def named_server_limit_per_user_fn(handler):
+                user = handler.current_user
+                if user and user.admin:
+                    return 0
+                return 5
+
+            c.JupyterHub.named_server_limit_per_user = named_server_limit_per_user_fn
         """,
     ).tag(config=True)
 
