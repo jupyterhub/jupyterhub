@@ -72,7 +72,7 @@ class HomeHandler(BaseHandler):
             user=user,
             url=url,
             allow_named_servers=self.allow_named_servers,
-            named_server_limit_per_user=self.named_server_limit_per_user,
+            named_server_limit_per_user=await self.get_current_user_named_server_limit(),
             url_path_join=url_path_join,
             # can't use user.spawners because the stop method of User pops named servers from user.spawners when they're stopped
             spawners=user.orm_user._orm_spawners,
@@ -129,17 +129,19 @@ class SpawnHandler(BaseHandler):
         if server_name:
             if not self.allow_named_servers:
                 raise web.HTTPError(400, "Named servers are not enabled.")
-            if (
-                self.named_server_limit_per_user > 0
-                and server_name not in user.orm_spawners
-            ):
+
+            named_server_limit_per_user = (
+                await self.get_current_user_named_server_limit()
+            )
+
+            if named_server_limit_per_user > 0 and server_name not in user.orm_spawners:
                 named_spawners = list(user.all_spawners(include_default=False))
-                if self.named_server_limit_per_user <= len(named_spawners):
+                if named_server_limit_per_user <= len(named_spawners):
                     raise web.HTTPError(
                         400,
                         "User {} already has the maximum of {} named servers."
                         "  One must be deleted before a new server can be created".format(
-                            user.name, self.named_server_limit_per_user
+                            user.name, named_server_limit_per_user
                         ),
                     )
 
@@ -458,7 +460,7 @@ class AdminHandler(BaseHandler):
             auth_state=auth_state,
             admin_access=True,
             allow_named_servers=self.allow_named_servers,
-            named_server_limit_per_user=self.named_server_limit_per_user,
+            named_server_limit_per_user=await self.get_current_user_named_server_limit(),
             server_version=f'{__version__} {self.version_hash}',
             api_page_limit=self.settings["api_page_default_limit"],
             base_url=self.settings["base_url"],

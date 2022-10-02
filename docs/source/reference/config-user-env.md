@@ -183,11 +183,27 @@ as well as the admin page:
 Named servers can be accessed, created, started, stopped, and deleted
 from these pages. Activity tracking is now per-server as well.
 
-The number of named servers per user can be limited by setting
+The number of named servers per user can be limited by setting a constant value:
 
 ```python
 c.JupyterHub.named_server_limit_per_user = 5
 ```
+
+or a callable/awaitable based on the handler object:
+
+```python
+def named_server_limit_per_user_fn(handler):
+    user = handler.current_user
+    if user and user.admin:
+        return 0
+    return 5
+
+c.JupyterHub.named_server_limit_per_user = named_server_limit_per_user_fn
+```
+
+This can be useful for quota service implementations. The example above limits the number of named servers for non-admin users only.
+
+If `named_server_limit_per_user` is set to `0`, no limit is enforced.
 
 (classic-notebook-ui)=
 
