@@ -44,7 +44,8 @@ change renders correctly, it is good practice to test it locally.
 
    .. tip::
 
-      On macOS, you can open a file from the terminal with ``open <path-to-file>``.
+      On Windows, you can open a file from the terminal with ``start <path-to-file>``.
+      On macOS, you can do the same with ``open <path-to-file>``.
       On Linux, you can do the same with ``xdg-open <path-to-file>``.
 
 
