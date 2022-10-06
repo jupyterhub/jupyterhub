@@ -561,6 +561,71 @@ def expand_scopes(scopes, owner=None, oauth_client=None):
     return frozenset(reduce_scopes(expanded_scopes))
 
 
+def _resolve_requested_scopes(requested_scopes, have_scopes, user, client, db):
+    """Resolve requested scopes for an OAuth token
+
+    Intersects requested scopes with user scopes.
+
+    First, at the raw scope level,
+    then if some scopes remain, intersect expanded scopes.
+
+    Args:
+        requested_scopes (set):
+            raw scopes being requested.
+        user (orm.User):
+            user for whom the scopes will be issued
+        client (orm.OAuthClient):
+            oauth client which will own the token
+
+    Returns:
+        (allowed_scopes, excluded_scopes): sets of allowed scopes and excluded scopes from the request
+    """
+
+    allowed_scopes = requested_scopes.intersection(have_scopes)
+    excluded_scopes = requested_scopes.difference(have_scopes)
+
+    if not excluded_scopes:
+        # simple intersection worked, all scopes granted
+        return (allowed_scopes, excluded_scopes)
+
+    # if we got here, some scopes were excluded.
+    # resolve fully expanded scopes to make sure scope intersections are properly allowed.
+    expanded_allowed = expand_scopes(allowed_scopes, user, client)
+    expanded_have = expand_scopes(have_scopes, user, client)
+    # compute one at a time so we can keep the abbreviated scopes
+    # if they are a subset of user scopes (e.g. requested !server, have !user)
+    for scope in list(excluded_scopes):
+        expanded_excluded = expand_scopes({scope}, user, client)
+        # don't check already-allowed scopes
+        expanded_excluded -= expanded_allowed
+        if expanded_excluded:
+            allowed_intersection = _intersect_expanded_scopes(
+                expanded_excluded, expanded_have, db=db
+            )
+        else:
+            allowed_intersection = set()
+
+        if allowed_intersection == expanded_excluded:
+            # full scope allowed (requested scope is subset of user scopes)
+            allowed_scopes.add(scope)
+            excluded_scopes.remove(scope)
+            expanded_allowed = expand_scopes(allowed_scopes, user, client)
+
+        elif allowed_intersection:
+            # some scopes get through, but not all,
+            # allow the subset
+            allowed_scopes |= allowed_intersection
+            expanded_allowed = expand_scopes(allowed_scopes, user, client)
+            # choice: report that the requested scope wasn't _fully_ granted (current behavior)
+            # or report the exact (likely too detailed) set of not granted scopes (below)
+            # excluded_scopes.remove(scope)
+            # excluded_scopes |= expanded_excluded.difference(allowed_intersection)
+        else:
+            # no new scopes granted, original check was right
+            pass
+    return (allowed_scopes, excluded_scopes)
+
+
 def _needs_scope_expansion(filter_, filter_value, sub_scope):
     """
     Check if there is a requirements to expand the `group` scope to individual `user` scopes.
