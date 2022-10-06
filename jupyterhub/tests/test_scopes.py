@@ -554,7 +554,9 @@ async def test_server_state_access(
             await api_request(
                 app, 'users', user.name, 'servers', server_name, method='post'
             )
-        service = create_service_with_scopes(*scopes)
+        service = create_service_with_scopes(
+            f"read:users:name!user={user.name}", *scopes
+        )
         api_token = service.new_api_token()
         headers = {'Authorization': 'token %s' % api_token}
         r = await api_request(app, 'users', user.name, headers=headers)

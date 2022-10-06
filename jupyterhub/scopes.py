@@ -95,7 +95,7 @@ scope_definitions = {
     },
     'read:servers': {
         'description': 'Read users’ names and their server models (excluding the server state).',
-        'subscopes': ['read:users:name'],
+        'subscopes': [],
     },
     'delete:servers': {'description': "Stop and delete users' servers."},
     'tokens': {
@@ -463,14 +463,6 @@ def _expand_scope(scope):
         expanded_scopes = {
             f"{scope_name}!{filter_}" for scope_name in expanded_scope_names
         }
-        # special handling of server filter
-        # any read access via server filter includes permission to read the user's name
-        resource, _, value = filter_.partition('=')
-        if resource == 'server' and any(
-            scope_name.startswith("read:") for scope_name in expanded_scope_names
-        ):
-            username, _, server = value.partition('/')
-            expanded_scopes.add(f'read:users:name!user={username}')
     else:
         expanded_scopes = expanded_scope_names
 

@@ -203,7 +203,7 @@ def test_orm_roles_delete_cascade(db):
                 'read:users:activity',
             },
         ),
-        (['read:servers'], {'read:servers', 'read:users:name'}),
+        (['read:servers'], {'read:servers'}),
         (
             ['admin:groups'],
             {
@@ -227,7 +227,6 @@ def test_orm_roles_delete_cascade(db):
                 'read:roles:groups',
                 'read:groups:name',
                 'read:servers',
-                'read:users:name',
             },
         ),
         (
