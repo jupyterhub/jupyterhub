@@ -296,7 +296,7 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
             required_scopes = {*scopes.identify_scopes(), *scopes.access_scopes(client)}
             user_scopes |= {"inherit", *required_scopes}
 
-            allowed_scopes, excluded_scopes = scopes._resolve_requested_scopes(
+            allowed_scopes, disallowed_scopes = scopes._resolve_requested_scopes(
                 requested_scopes,
                 user_scopes,
                 user=user.orm_user,
@@ -304,7 +304,7 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
                 db=self.db,
             )
 
-            if excluded_scopes:
+            if disallowed_scopes:
                 self.log.warning(
                     f"Service {client.description} requested scopes {','.join(requested_scopes)}"
                     f" for user {self.current_user.name},"
