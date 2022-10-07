@@ -95,7 +95,7 @@ scope_definitions = {
     },
     'read:servers': {
         'description': 'Read users’ names and their server models (excluding the server state).',
-        'subscopes': [],
+        'subscopes': ['read:users:name'],
     },
     'delete:servers': {'description': "Stop and delete users' servers."},
     'tokens': {
@@ -461,7 +461,12 @@ def _expand_scope(scope):
     # reapply !filter
     if filter_:
         expanded_scopes = {
-            f"{scope_name}!{filter_}" for scope_name in expanded_scope_names
+            f"{scope_name}!{filter_}"
+            for scope_name in expanded_scope_names
+            # server scopes have some cross-resource subscopes
+            # where the !server filter doesn't make sense,
+            # e.g. read:servers -> read:users:name
+            if not (filter_.startswith("server") and scope_name.startswith("read:user"))
         }
     else:
         expanded_scopes = expanded_scope_names

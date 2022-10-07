@@ -555,23 +555,28 @@ async def test_server_state_access(
             await api_request(
                 app, 'users', user.name, 'servers', server_name, method='post'
             )
-        service = create_service_with_scopes(
-            f"read:users:name!user={user.name}", *scopes
-        )
+        service = create_service_with_scopes("read:users:name!user=", *scopes)
         api_token = service.new_api_token()
         headers = {'Authorization': 'token %s' % api_token}
+
+        # can I get the user model?
         r = await api_request(app, 'users', user.name, headers=headers)
-        r.raise_for_status()
-        user_model = r.json()
-        if num_servers:
-            assert 'servers' in user_model
-            server_models = user_model['servers']
-            assert len(server_models) == num_servers
-            for server, server_model in server_models.items():
-                assert keys_in.issubset(server_model)
-                assert keys_out.isdisjoint(server_model)
+        can_read_user_model = num_servers > 1 or 'read:users' in scopes
+        if can_read_user_model:
+            r.raise_for_status()
+            user_model = r.json()
+            if num_servers > 1:
+                assert 'servers' in user_model
+                server_models = user_model['servers']
+                assert len(server_models) == num_servers
+                for server, server_model in server_models.items():
+                    assert keys_in.issubset(server_model)
+                    assert keys_out.isdisjoint(server_model)
+            else:
+                assert 'servers' not in user_model
         else:
-            assert 'servers' not in user_model
+            assert r.status_code == 404
+
         r = await api_request(
             app,
             'users',
