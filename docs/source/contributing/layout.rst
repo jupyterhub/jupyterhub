@@ -124,4 +124,3 @@ The dotfiles contained in the repository provide configuration details. They are
 
 .readthedocs.yaml
     The configuration file for JupyterHub documentation host(Read the Docs).
-
