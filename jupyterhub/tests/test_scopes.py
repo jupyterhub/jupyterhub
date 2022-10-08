@@ -1211,7 +1211,7 @@ def test_expand_scopes(app, user, scopes, expected, mockservice_external):
 
 
 @pytest.mark.parametrize(
-    "requested_scopes, have_scopes, expected_allowed, expected_excluded",
+    "requested_scopes, have_scopes, expected_allowed, expected_disallowed",
     [
         (
             ["read:users:name!user"],
@@ -1252,7 +1252,7 @@ def test_resolve_requested_scopes(
     requested_scopes,
     have_scopes,
     expected_allowed,
-    expected_excluded,
+    expected_disallowed,
     mockservice_external,
 ):
     if isinstance(requested_scopes, str):
@@ -1282,9 +1282,9 @@ def test_resolve_requested_scopes(
     requested_scopes = format_scopes(requested_scopes)
     have_scopes = format_scopes(have_scopes)
     expected_allowed = format_scopes(expected_allowed)
-    expected_excluded = format_scopes(expected_excluded)
+    expected_disallowed = format_scopes(expected_disallowed)
 
-    allowed, excluded = _resolve_requested_scopes(
+    allowed, disallowed = _resolve_requested_scopes(
         requested_scopes,
         have_scopes,
         user=user.orm_user,
@@ -1292,4 +1292,4 @@ def test_resolve_requested_scopes(
         db=db,
     )
     assert allowed == expected_allowed
-    assert excluded == expected_excluded
+    assert disallowed == expected_disallowed
