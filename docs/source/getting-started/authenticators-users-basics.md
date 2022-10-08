@@ -4,7 +4,7 @@ The default Authenticator uses [PAM][] to authenticate system users with
 their username and password. With the default Authenticator, any user
 with an account and password on the system will be allowed to login.
 
-## Create a set of allowed users
+## Create a set of allowed users (`allowed_users`)
 
 You can restrict which users are allowed to login with a set,
 `Authenticator.allowed_users`:
@@ -25,9 +25,11 @@ If this configuration value is not set, then **all authenticated users will be a
 ```{note}
 As of JupyterHub 2.0, the full permissions of `admin_users`
 should not be required.
-Instead, you can assign [roles][] to users or groups
+Instead, you can assign roles to users or groups
 with only the scopes they require.
 ```
+
+To learn more about roles, click [here](https://jupyterhub.readthedocs.io/en/stable/rbac/roles.html#define-role-target).
 
 Admin users of JupyterHub, `admin_users`, can add and remove users from
 the user `allowed_users` set. `admin_users` can take actions on other users'
@@ -43,9 +45,9 @@ Users in the admin set are automatically added to the user `allowed_users` set,
 if they are not already present.
 
 Each authenticator may have different ways of determining whether a user is an
-administrator. By default JupyterHub uses the PAMAuthenticator which provides the
+administrator. By default, JupyterHub uses the PAMAuthenticator which provides the
 `admin_groups` option and can set administrator status based on a user
-group. For example we can let any user in the `wheel` group be admin:
+group. For example, we can let any user in the `wheel` group be an admin:
 
 ```python
 c.PAMAuthenticator.admin_groups = {'wheel'}
@@ -57,12 +59,12 @@ Since the default `JupyterHub.admin_access` setting is `False`, the admins
 do not have permission to log in to the single user notebook servers
 owned by _other users_. If `JupyterHub.admin_access` is set to `True`,
 then admins have permission to log in _as other users_ on their
-respective machines, for debugging. **As a courtesy, you should make
+respective machines for debugging. **As a courtesy, you should make
 sure your users know if admin_access is enabled.**
 
 ## Add or remove users from the Hub
 
-Users can be added to and removed from the Hub via either the admin
+Users can be added to and removed from the Hub via the admin
 panel or the REST API. When a user is **added**, the user will be
 automatically added to the `allowed_users` set and database. Restarting the Hub
 will not require manually updating the `allowed_users` set in your config file,
@@ -81,7 +83,7 @@ the ability to manage users on the local system. When you try to add a
 new user to the Hub, a `LocalAuthenticator` will check if the user
 already exists. If you set the configuration value, `create_system_users`,
 to `True` in the configuration file, the `LocalAuthenticator` has
-the privileges to add users to the system. The setting in the config
+the privilege to add users to the system. The setting in the config
 file is:
 
 ```python
@@ -91,7 +93,7 @@ c.LocalAuthenticator.create_system_users = True
 Adding a user to the Hub that doesn't already exist on the system will
 result in the Hub creating that user via the system `adduser` command
 line tool. This option is typically used on hosted deployments of
-JupyterHub, to avoid the need to manually create all your users before
+JupyterHub to avoid the need to manually create all your users before
 launching the service. This approach is not recommended when running
 JupyterHub in situations where JupyterHub users map directly onto the
 system's UNIX users.
@@ -101,19 +103,20 @@ system's UNIX users.
 JupyterHub's [OAuthenticator][] currently supports the following
 popular services:
 
-- Auth0
-- Azure AD
-- Bitbucket
-- CILogon
-- GitHub
-- GitLab
-- Globus
-- Google
-- MediaWiki
-- Okpy
-- OpenShift
+- [Auth0](https://github.com/jupyterhub/oauthenticator/blob/main/oauthenticator/auth0.py)
+- [Azure AD](https://github.com/jupyterhub/oauthenticator/blob/main/oauthenticator/azuread.py)
+- [Bitbucket](https://github.com/jupyterhub/oauthenticator/blob/main/oauthenticator/bitbucket.py)
+- [CILogon](https://github.com/jupyterhub/oauthenticator/blob/main/oauthenticator/cilogon.py)
+- [FeiShu](https://github.com/tezignlab/jupyterhub_feishu_authenticator)
+- [GitHub](https://github.com/jupyterhub/oauthenticator/blob/main/oauthenticator/github.py)
+- [GitLab](https://github.com/jupyterhub/oauthenticator/blob/main/oauthenticator/gitlab.py)
+- [Globus](https://github.com/jupyterhub/oauthenticator/blob/main/oauthenticator/globus.py)
+- [Google](https://oauthenticator.readthedocs.io/en/latest/getting-started.html#google-setup)
+- [MediaWiki](https://github.com/jupyterhub/oauthenticator/blob/main/oauthenticator/mediawiki.py)
+- [Okpy](https://github.com/jupyterhub/oauthenticator/blob/main/oauthenticator/okpy.py)
+- [OpenShift](https://github.com/jupyterhub/oauthenticator/blob/main/oauthenticator/openshift.py)
 
-A generic implementation, which you can use for OAuth authentication
+A [generic implementation](https://github.com/jupyterhub/oauthenticator/blob/main/oauthenticator/generic.py), which you can use for OAuth authentication
 with any provider, is also available.
 
 ## Use DummyAuthenticator for testing
