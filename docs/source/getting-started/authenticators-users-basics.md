@@ -29,7 +29,7 @@ Instead, you can assign roles to users or groups
 with only the scopes they require.
 ```
 
-To learn more about roles, click [here](https://jupyterhub.readthedocs.io/en/stable/rbac/roles.html#define-role-target).
+To learn more about [roles](https://jupyterhub.readthedocs.io/en/stable/rbac/roles.html#define-role-target).
 
 Admin users of JupyterHub, `admin_users`, can add and remove users from
 the user `allowed_users` set. `admin_users` can take actions on other users'
@@ -83,7 +83,7 @@ the ability to manage users on the local system. When you try to add a
 new user to the Hub, a `LocalAuthenticator` will check if the user
 already exists. If you set the configuration value, `create_system_users`,
 to `True` in the configuration file, the `LocalAuthenticator` has
-the privilege to add users to the system. The setting in the config
+the ability to add users to the system. The setting in the config
 file is:
 
 ```python
@@ -103,20 +103,19 @@ system's UNIX users.
 JupyterHub's [OAuthenticator][] currently supports the following
 popular services:
 
-- [Auth0](https://github.com/jupyterhub/oauthenticator/blob/main/oauthenticator/auth0.py)
-- [Azure AD](https://github.com/jupyterhub/oauthenticator/blob/main/oauthenticator/azuread.py)
-- [Bitbucket](https://github.com/jupyterhub/oauthenticator/blob/main/oauthenticator/bitbucket.py)
-- [CILogon](https://github.com/jupyterhub/oauthenticator/blob/main/oauthenticator/cilogon.py)
-- [FeiShu](https://github.com/tezignlab/jupyterhub_feishu_authenticator)
-- [GitHub](https://github.com/jupyterhub/oauthenticator/blob/main/oauthenticator/github.py)
-- [GitLab](https://github.com/jupyterhub/oauthenticator/blob/main/oauthenticator/gitlab.py)
-- [Globus](https://github.com/jupyterhub/oauthenticator/blob/main/oauthenticator/globus.py)
-- [Google](https://oauthenticator.readthedocs.io/en/latest/getting-started.html#google-setup)
-- [MediaWiki](https://github.com/jupyterhub/oauthenticator/blob/main/oauthenticator/mediawiki.py)
-- [Okpy](https://github.com/jupyterhub/oauthenticator/blob/main/oauthenticator/okpy.py)
-- [OpenShift](https://github.com/jupyterhub/oauthenticator/blob/main/oauthenticator/openshift.py)
+- [Auth0](https://oauthenticator.readthedocs.io/en/latest/api/gen/oauthenticator.auth0.html#module-oauthenticator.auth0)
+- [Azure AD](https://oauthenticator.readthedocs.io/en/latest/api/gen/oauthenticator.azuread.html#module-oauthenticator.azuread)
+- [Bitbucket](https://oauthenticator.readthedocs.io/en/latest/api/gen/oauthenticator.bitbucket.html#module-oauthenticator.bitbucket)
+- [CILogon](https://oauthenticator.readthedocs.io/en/latest/api/gen/oauthenticator.cilogon.html#module-oauthenticator.cilogon)
+- [GitHub](https://oauthenticator.readthedocs.io/en/latest/api/gen/oauthenticator.github.html#module-oauthenticator.github)
+- [GitLab](https://oauthenticator.readthedocs.io/en/latest/api/gen/oauthenticator.gitlab.html#module-oauthenticator.gitlab)
+- [Globus](https://oauthenticator.readthedocs.io/en/latest/api/gen/oauthenticator.globus.html#module-oauthenticator.globus)
+- [Google](https://oauthenticator.readthedocs.io/en/latest/api/gen/oauthenticator.google.html#module-oauthenticator.google)
+- [MediaWiki](https://oauthenticator.readthedocs.io/en/latest/api/gen/oauthenticator.mediawiki.html#module-oauthenticator.mediawiki)
+- [Okpy](https://oauthenticator.readthedocs.io/en/latest/api/gen/oauthenticator.okpy.html#module-oauthenticator.okpy)
+- [OpenShift](https://oauthenticator.readthedocs.io/en/latest/api/gen/oauthenticator.openshift.html#module-oauthenticator.openshift)
 
-A [generic implementation](https://github.com/jupyterhub/oauthenticator/blob/main/oauthenticator/generic.py), which you can use for OAuth authentication
+A [generic implementation](https://oauthenticator.readthedocs.io/en/latest/api/gen/oauthenticator.generic.html#module-oauthenticator.generic), which you can use for OAuth authentication
 with any provider, is also available.
 
 ## Use DummyAuthenticator for testing
