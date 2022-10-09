@@ -107,7 +107,6 @@ If no scopes are defined for _new role_, JupyterHub will raise a warning. Provid
 
 In case the role with a certain name already exists in the database, its definition and scopes will be overwritten. This holds true for all roles except the `admin` role, which cannot be overwritten; an error will be raised if trying to do so. All the role bearers permissions present in the definition will change accordingly.
 
-
 ### Overriding Default Roles
 
 Role definitions can include those of the "default" roles listed above (admin excluded),
