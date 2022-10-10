@@ -3,7 +3,7 @@ JupyterHub
 ==========
 
 `JupyterHub`_ is the best way to serve `Jupyter notebook`_ for multiple users. Because of it's distributed nature,
-It can be used in a class of students, a corporate data science group or scientific
+it can be used in a class of students, a corporate data science group, or a scientific
 research group. It is a multi-user **Hub** that spawns, manages, and proxies multiple
 instances of the single-user `Jupyter notebook`_ server.
 
@@ -11,14 +11,14 @@ JupyterHub offers distributions for different use cases. Be sure to
 take a look at them before continuing with the configuration of the broad
 original system of `JupyterHub`_. As of now, you can find two main cases:
 
-1. `The Littlest JupyterHub <https://github.com/jupyterhub/the-littlest-jupyterhub>`__ distribution is suitable if you need small amount of users (0-100) and single server with a simple environment.
-2. `Zero to JupyterHub with Kubernetes <https://github.com/jupyterhub/zero-to-jupyterhub-k8s>`__ allows you to deploy dynamic servers on cloud if you need even more users.
+1. `The Littlest JupyterHub <https://github.com/jupyterhub/the-littlest-jupyterhub>`__ distribution is suitable if you need a small number of users (0-100) and a single server with a simple environment.
+2. `Zero to JupyterHub with Kubernetes <https://github.com/jupyterhub/zero-to-jupyterhub-k8s>`__ allows you to deploy dynamic servers on the cloud if you need even more users.
 
 
 Four subsystems make up JupyterHub:
 
 * a **Hub** (tornado process) that is the heart of JupyterHub
-* a **configurable http proxy** (node-http-proxy) that receives the requests from the client's browser
+* a **configurable HTTP proxy** (node-http-proxy) that receives the requests from the client's browser
 * multiple **single-user Jupyter notebook servers** (Python/IPython/tornado) that are monitored by Spawners
 * an **authentication class** that manages how users can access the system
 
