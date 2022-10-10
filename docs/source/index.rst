@@ -2,20 +2,17 @@
 JupyterHub
 ==========
 
-`JupyterHub`_ is the best way to serve `Jupyter notebook`_ for multiple users.
+`JupyterHub`_ is the best way to serve `Jupyter notebook`_ for multiple users. Because of it's distributed nature,
 It can be used in a class of students, a corporate data science group or scientific
 research group. It is a multi-user **Hub** that spawns, manages, and proxies multiple
 instances of the single-user `Jupyter notebook`_ server.
 
-To make life easier, JupyterHub has distributions. Be sure to
+JupyterHub offers distributions for different use cases. Be sure to
 take a look at them before continuing with the configuration of the broad
-original system of `JupyterHub`_. Today, you can find two main cases:
+original system of `JupyterHub`_. As of now, you can find two main cases:
 
-1. If you need a simple case for a small amount of users (0-100) and single server
-   take a look at
-   `The Littlest JupyterHub <https://github.com/jupyterhub/the-littlest-jupyterhub>`__ distribution.
-2. If you need to allow for even more users, a dynamic amount of servers can be used on a cloud,
-   take a look at the `Zero to JupyterHub with Kubernetes <https://github.com/jupyterhub/zero-to-jupyterhub-k8s>`__ .
+1. `The Littlest JupyterHub <https://github.com/jupyterhub/the-littlest-jupyterhub>`__ distribution is suitable if you need small amount of users (0-100) and single server with a simple environment.
+2. `Zero to JupyterHub with Kubernetes <https://github.com/jupyterhub/zero-to-jupyterhub-k8s>`__ allows you to deploy dynamic servers on cloud if you need even more users.
 
 
 Four subsystems make up JupyterHub:
@@ -26,7 +23,7 @@ Four subsystems make up JupyterHub:
 * an **authentication class** that manages how users can access the system
 
 
-Besides these central pieces, you can add optional configurations through a `config.py` file and manage users kernels on an admin panel. A simplification of the whole system can be seen in the figure below:
+Besides these central pieces, you can add optional configurations through a `config.py` file and manage users' kernels through admin panel. A simplification of the whole system can be seen in the figure below:
 
 .. image:: images/jhub-fluxogram.jpeg
    :alt: JupyterHub subsystems
