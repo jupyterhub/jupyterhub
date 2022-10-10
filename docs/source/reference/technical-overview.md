@@ -80,7 +80,7 @@ When a user accesses JupyterHub, the following events take place:
 How does the single-user server identify the user with the Hub via OAuth?
 
 - On request, the single-user server checks a cookie
-- If no cookie is set, it redirects to the Hub for verification via OAuth
+- If no cookie is set, the single-user server redirects to the Hub for verification via OAuth
 - After verification at the Hub, the browser is redirected back to the
   single-user server
 - The token is verified and stored in a cookie
@@ -101,7 +101,7 @@ only.
 By default, starting JupyterHub will write two files to disk in the current
 working directory:
 
-- `jupyterhub.sqlite` is the SQLite database containing all of the states of the
+- `jupyterhub.sqlite` is the SQLite database containing all of the state of the
   **Hub**. This file allows the **Hub** to remember which users are running and
   where, as well as storing other information enabling you to restart parts of
   JupyterHub separately. It is important to note that this database contains
