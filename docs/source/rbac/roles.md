@@ -1,4 +1,5 @@
 (roles)=
+
 # Roles
 
 JupyterHub provides four (4) roles that are available by default:
@@ -42,6 +43,7 @@ A group does not require any role, and has no roles by default. If a user is a m
 A token’s permissions are evaluated based on their owning entity. Since a token is always issued for a user or service, it can never have more permissions than its owner. If no specific scopes are requested for a new token, the token is assigned the scopes of the `token` role.
 
 (define-role-target)=
+
 ## Defining Roles
 
 Roles can be defined or modified in the configuration file as a list of dictionaries. An example:
@@ -110,6 +112,7 @@ If no scopes are defined for _new role_, JupyterHub will raise a warning. Provid
 In case the role with a certain name already exists in the database, its definition and scopes will be overwritten. This holds true for all roles except the `admin` role, which cannot be overwritten; an error will be raised if trying to do so. All the role bearers permissions present in the definition will change accordingly.
 
 (overriding-default-roles)=
+
 ### Overriding Default Roles
 
 Role definitions can include those of the "default" roles listed above (admin excluded),
@@ -150,6 +153,7 @@ c.JupyterHub.load_roles = [
 ```
 
 (removing-roles-target)=
+
 ## Removing Roles
 
 Only the entities present in the role definition in the `jupyterhub_config.py` remain the role bearers. If a user, service or group is removed from the role definition, they will lose the role on the next startup.
