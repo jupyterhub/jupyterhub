@@ -9,15 +9,16 @@ log messages, and what necessary actions to take.
 ### Example
 
 Your log might display lines that seem cryptic
+
 ```
 [W 2022-03-10 17:25:19.774 JupyterHub base:1349] Failing suspected API request to not-running server: /hub/user/<user-name>/api/metrics/v1
 ```
 
 ### Most likely cause
 
-The possible reason may be that the user's server has stopped running 
+The possible reason may be that the user's server has stopped running
 but they still have a browser tab open. For example, you might have 3 tabs open and you shut
-the server down via one. The other possible reason could be that you closed your laptop and the server was culled for inactivity, then reopen the laptop!  However, the client-side code (JupyterLab, Classic Notebook, etc) doesn't interpret the shut-down server and continues to make some API requests.
+the server down via one. The other possible reason could be that you closed your laptop and the server was culled for inactivity, then reopen the laptop! However, the client-side code (JupyterLab, Classic Notebook, etc) doesn't interpret the shut-down server and continues to make some API requests.
 JupyterHub's architecture means that the proxy routes all requests that
 don't go to a running user server to the hub process itself. The hub
 process then explicitly returns a failure response, so the client knows
