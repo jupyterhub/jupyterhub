@@ -11,7 +11,7 @@ JupyterHub provides four (4) roles that are available by default:
 **These roles cannot be deleted.**
 ```
 
-These roles are so named because they have a default collection of scopes.
+We call these 'default' roles because they are available by default and have a default collection of scopes.
 However, you can define the scopes associated with each role (excluding the admin role) to suit your needs,
 as seen [below](overriding-default-roles).
 
