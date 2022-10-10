@@ -25,11 +25,9 @@ If this configuration value is not set, then **all authenticated users will be a
 ```{note}
 As of JupyterHub 2.0, the full permissions of `admin_users`
 should not be required.
-Instead, you can assign roles to users or groups
+Instead, you can assign [roles](https://jupyterhub.readthedocs.io/en/stable/rbac/roles.html#define-role-target) to users or groups
 with only the scopes they require.
 ```
-
-To learn more about [roles](https://jupyterhub.readthedocs.io/en/stable/rbac/roles.html#define-role-target).
 
 Admin users of JupyterHub, `admin_users`, can add and remove users from
 the user `allowed_users` set. `admin_users` can take actions on other users'
