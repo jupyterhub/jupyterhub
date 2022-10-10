@@ -16,7 +16,7 @@ JupyterHub is designed to be a _simple multi-user server for modestly sized
 groups_ of **semi-trusted** users. While the design reflects serving semi-trusted
 users, JupyterHub is not necessarily unsuitable for serving **untrusted** users.
 
-Using JupyterHub with **untrusted** users does mean more work by the
+Using JupyterHub with **untrusted** users does involves more work by the
 administrator. Much care is required to secure a Hub, with extra caution on
 protecting users from each other as the Hub is serving untrusted users.
 
