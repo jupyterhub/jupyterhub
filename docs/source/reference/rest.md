@@ -1,4 +1,3 @@
-
 # Using JupyterHub's REST API
 
 This section will give you information on:
@@ -60,9 +59,11 @@ In [version 0.8.0](../changelog.md), a token request page for
 generating an API token is available from the JupyterHub user interface:
 
 ![Request API token page](../images/token-request.png)
+
 <p style="text-align: center">Figure 1.0: JupyterHub's Request API token page</p>
 
 ![API token success page](../images/token-request-success.png)
+
 <p style="text-align: center">Figure 1.1: JupyterHub's API token success page</p>
 
 ## Assigning permissions to a token
@@ -83,7 +84,7 @@ This allows e.g. a user with full admin permissions to request a token with limi
 
 ## Updating to admin services
 
-```{note} 
+```{note}
 The `api_tokens` configuration has been softly deprecated since the introduction of services.
 We have no plans to remove it,
 but deployments are encouraged to use service configuration instead.
