@@ -4,7 +4,7 @@ When debugging errors and outages, looking at the logs emitted by
 JupyterHub is very helpful. This document intends to describe some common
 log messages, what they mean and what are the most common causes that generated them, as well as some possible ways to fix them.
 
-## Failing suspected API request to run-down server
+## Failing suspected API request to not-running server
 
 ### Example
 
