@@ -76,7 +76,7 @@ things like inspect other users' servers or modify the user list at runtime).
 
 Even though the command to start your Docker container exposes port 8000
 (`docker run -p 8000:8000 -d --name jupyterhub jupyterhub/jupyterhub jupyterhub`),
-it is possible that the IP address itself is not accessible/visible. As a result, 
+it is possible that the IP address itself is not accessible/visible. As a result,
 when you try http://localhost:8000 in your browser, you are unable to connect
 even though the container is running properly. One workaround is to explicitly
 tell Jupyterhub to start at `0.0.0.0` which is visible to everyone. Try this
@@ -352,7 +352,7 @@ logrotate /path/to/above-config
 Or use syslog:
 
     jupyterhub | logger -t jupyterhub
-    
+
 ### Toree integration with HDFS rack awareness script
 
 The Apache Toree kernel will have an issue when running with JupyterHub if the standard HDFS
@@ -384,7 +384,7 @@ provides an example single-user notebook server for use with DockerSpawner.
 Additional single-user notebook server images can be found at the [Jupyter
 organization on DockerHub](https://hub.docker.com/r/jupyter/) and information
 about each image at the [jupyter/docker-stacks repo](https://github.com/jupyter/docker-stacks).
-    
+
 ### How can I view the logs for JupyterHub or the user's Notebook servers when using the DockerSpawner?
 
 Use `docker logs <container>` where `<container>` is the container name defined within `docker-compose.yml`. For example, to view the logs of the JupyterHub container use:
