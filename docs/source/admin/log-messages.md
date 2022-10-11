@@ -1,22 +1,20 @@
 # Interpreting common log messages
 
-When debugging errors and outages, looking at the logs emitted by
-JupyterHub is very helpful. This document tries to document some common
-log messages, and what they mean.
+In this subsection of the documentation, you will get to understand the meaning of common log messages and how to resolve them. When debugging errors and outages, it is very helpful to look at the logs emitted by JupyterHub. 
 
 ## Failing suspected API request to not-running server
 
 ### Example
 
-Your logs might be littered with lines that might look slightly scary
+When your screen displays the log message as shown below, you need not to get scared.
 
 ```
 [W 2022-03-10 17:25:19.774 JupyterHub base:1349] Failing suspected API request to not-running server: /hub/user/<user-name>/api/metrics/v1
 ```
 
-### Most likely cause
+### Cause
 
-This likely means is that the user's server has stopped running but they
+This likely cause is that the user's server has stopped running but they
 still have a browser tab open. For example, you might have 3 tabs open, and shut
 your server down via one. Or you closed your laptop, your server was
 culled for inactivity, and then you reopen your laptop again! The
