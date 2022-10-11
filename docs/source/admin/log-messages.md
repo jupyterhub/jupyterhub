@@ -18,7 +18,9 @@ Your log might display lines that seem cryptic
 
 The possible reason may be that the user's server has stopped running
 but they still have a browser tab open. For example, you might have 3 tabs open and you shut
-the server down via one. The other possible reason could be that you closed your laptop and the server was culled for inactivity, then reopen the laptop! However, the client-side code (JupyterLab, Classic Notebook, etc) doesn't interpret the shut-down server and continues to make some API requests.
+the server down via one.
+The other possible reason could be that you closed your laptop and the server was culled for inactivity, then reopened the laptop!
+However, the client-side code (JupyterLab, Classic Notebook, etc) doesn't interpret the shut-down server and continues to make some API requests.
 JupyterHub's architecture means that the proxy routes all requests that
 don't go to a running user server to the hub process itself. The hub
 process then explicitly returns a failure response, so the client knows
