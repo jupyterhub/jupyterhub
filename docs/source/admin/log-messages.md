@@ -48,7 +48,7 @@ This log message is benign, and there is usually no action for you to take.
 JupyterHub requires the `jupyterhub` python package installed inside the image or
 environment, the user server starts in. This message indicates that the version of
 the `jupyterhub` package installed inside the user image or environment is not
-the same as the JupyterHub server itself. This is not necessarily always a
+the same as the JupyterHub server's version itself. This is not necessarily always a
 problem - some version drift is mostly acceptable, and the only two known cases of
 breakage are across the 0.7 and 2.0 version releases. In those cases, issues pop
 up immediately after upgrading your version of JupyterHub, so **always check the JupyterHub
