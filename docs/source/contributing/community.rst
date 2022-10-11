@@ -26,4 +26,3 @@ As a community, we use various platforms and channels to drive our communication
 
 4. A `mailing list <https://groups.google.com/forum/#!forum/jupyter>`_ for all of Project Jupyter exists, along with one for `teaching with Jupyter
     <https://groups.google.com/forum/#!forum/jupyter-education>`_. 
-
