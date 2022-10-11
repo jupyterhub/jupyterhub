@@ -223,7 +223,7 @@ async def test_hubauth_service_token(request, app, mockservice_url, scopes, allo
         # explicit 'identify' maps to read:users:name!user
         (["token", "user"], ["identify"], ["read:users:name!user=$user"]),
         # any item outside the list isn't allowed
-        (["token", "user"], ["token", "server"], None),
+        (["token", "server"], ["token", "user"], None),
         (["read-only"], ["access:services"], None),
         # requesting subset
         (["admin", "user"], ["user"], ["user"]),
@@ -246,7 +246,11 @@ async def test_hubauth_service_token(request, app, mockservice_url, scopes, allo
             ["custom:jupyter_server:read:*"],
         ),
         # this one _should_ work, but doesn't until we implement expanded_scope filtering
-        # (["read-only"], ["custom:jupyter_server:read:*!user=$user"], ["custom:jupyter_server:read:*!user=$user"]),
+        (
+            ["read-only"],
+            ["custom:jupyter_server:read:*!user=$user"],
+            ["custom:jupyter_server:read:*!user=$user"],
+        ),
     ],
 )
 async def test_oauth_service_roles(
@@ -289,7 +293,7 @@ async def test_oauth_service_roles(
             "name": "other",
             "description": "A role not held by our test user",
             "scopes": [
-                "admin:users",
+                "admin-ui",
             ],
         },
     )
@@ -299,12 +303,13 @@ async def test_oauth_service_roles(
         )
     )
     app.db.commit()
+    user = create_user_with_scopes("access:services")
     url = url_path_join(public_url(app, mockservice_url) + 'owhoami/?arg=x')
     if request_scopes:
+        request_scopes = {s.replace("$user", user.name) for s in request_scopes}
         url = url_concat(url, {"request-scope": " ".join(request_scopes)})
     # first request is only going to login and get us to the oauth form page
     s = AsyncSession()
-    user = create_user_with_scopes("access:services")
     roles.grant_role(app.db, user, "user")
     roles.grant_role(app.db, user, "read-only")
     name = user.name
