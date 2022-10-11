@@ -135,7 +135,7 @@ To simplify testing of JupyterHub, it’s helpful to use
 authenticator and SimpleLocalProcessSpawner instead of the default spawner.
 
 There is a sample configuration file that does this in
-``testing/jupyterhub_config.py``. To launch Jupyterhub with this
+``testing/jupyterhub_config.py``. To launch JupyterHub with this
 configuration:
 
 .. code:: bash
