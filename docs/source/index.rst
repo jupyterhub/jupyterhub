@@ -1,32 +1,28 @@
 ==========
 JupyterHub
 ==========
-
 `JupyterHub`_ is the best way to serve `Jupyter notebook`_ for multiple users.
-It can be used in a class of students, a corporate data science group or scientific
-research group. It is a multi-user **Hub** that spawns, manages, and proxies multiple
-instances of the single-user `Jupyter notebook`_ server.
+It is a multi-user **Hub** that spawns, manages, and proxies multiple instances 
+of the single-user `Jupyter notebook`_ server. Therefore, with JupyterHub, 
+users can log in to the server, and write Python code in a web browser, 
+without having to install software on their local machine. 
 
-To make life easier, JupyterHub has distributions. Be sure to
-take a look at them before continuing with the configuration of the broad
-original system of `JupyterHub`_. Today, you can find two main cases:
+JupyterHub supports web browsers, tablets and smartphones and can be used by 
+multiple users at the same time such as; a class of students, a corporate data 
+science group or scientific research group. 
+JupyterHub makes life easier by enabling collaboration between both small (0-100 users) and 
+large teams (more than 100 users). It has distributions which are developed to serve the needs
+of each of these teams respectively. 
 
-1. If you need a simple case for a small amount of users (0-100) and single server
-   take a look at
-   `The Littlest JupyterHub <https://github.com/jupyterhub/the-littlest-jupyterhub>`__ distribution.
-2. If you need to allow for even more users, a dynamic amount of servers can be used on a cloud,
-   take a look at the `Zero to JupyterHub with Kubernetes <https://github.com/jupyterhub/zero-to-jupyterhub-k8s>`__ .
+JupyterHub is made up of four subsystems:
 
+* A **Hub** (tornado process) that is the heart of JupyterHub
+* A **configurable http proxy** (node-http-proxy) that receives the requests from the client's browser
+* Multiple **single-user Jupyter notebook servers** (Python/IPython/tornado) that are monitored by Spawners
+* An **authentication class** that manages how users can access the system
 
-Four subsystems make up JupyterHub:
-
-* a **Hub** (tornado process) that is the heart of JupyterHub
-* a **configurable http proxy** (node-http-proxy) that receives the requests from the client's browser
-* multiple **single-user Jupyter notebook servers** (Python/IPython/tornado) that are monitored by Spawners
-* an **authentication class** that manages how users can access the system
-
-
-Besides these central pieces, you can add optional configurations through a `config.py` file and manage users kernels on an admin panel. A simplification of the whole system can be seen in the figure below:
+Additionally, optional configurations can be added through a `config.py` file and manage users 
+kernels on an admin panel. A simplification of the whole system is displayed in the figure below:
 
 .. image:: images/jhub-fluxogram.jpeg
    :alt: JupyterHub subsystems
@@ -56,17 +52,23 @@ Contents
 Distributions
 -------------
 
-A JupyterHub **distribution** is tailored towards a particular set of
-use cases. These are generally easier to set up than setting up
-JupyterHub from scratch, assuming they fit your use case.
+As earlier mentioned, a JupyterHub **distribution** is tailored 
+towards a particular set of use cases. These are generally easier 
+to set up than setting up JupyterHub from scratch, assuming they fit your use case.
 
-The two popular ones are:
+Today, you can find two main use cases:
 
-* `Zero to JupyterHub on Kubernetes <http://z2jh.jupyter.org>`_, for
-  running JupyterHub on top of `Kubernetes <https://k8s.io>`_. This
-  can scale to large number of machines & users.
-* `The Littlest JupyterHub <http://tljh.jupyter.org>`_, for an easy
-  to set up & run JupyterHub supporting 1-100 users on a single machine.
+1. If you need a simple case for a small amount of users (0-100) and single server
+   take a look at
+   `The Littlest JupyterHub <https://github.com/jupyterhub/the-littlest-jupyterhub>`__ distribution.
+2. If you need to allow for a larger number of machines and users, 
+   a dynamic amount of servers can be used on a cloud,
+   take a look at the `Zero to JupyterHub with Kubernetes <https://github.com/jupyterhub/zero-to-jupyterhub-k8s>`__ distribution.
+   This distribution runs JupyterHub on top of  `Kubernetes <https://k8s.io>`_.
+
+*It is important to evaluate these distributions before you can continue with the 
+configuration of the broad original system of* **JupyterHub**.
+
 
 Installation Guide
 ------------------
@@ -123,9 +125,8 @@ We want you to contribute to JupyterHub in ways that are most exciting
 & useful to you. We value documentation, testing, bug reporting & code equally,
 and are glad to have your contributions in whatever form you wish :)
 
-Our `Code of Conduct <https://github.com/jupyter/governance/blob/HEAD/conduct/code_of_conduct.md>`_
-(`reporting guidelines <https://github.com/jupyter/governance/blob/HEAD/conduct/reporting_online.md>`_)
-helps keep our community welcoming to as many people as possible.
+Our `Code of Conduct <https://github.com/jupyter/governance/blob/HEAD/conduct/code_of_conduct.md>`_ and `reporting guidelines <https://github.com/jupyter/governance/blob/HEAD/conduct/reporting_online.md>`_
+help keep our community welcoming to as many people as possible.
 
 .. toctree::
    :maxdepth: 2
@@ -149,9 +150,9 @@ Indices and tables
 
 Questions? Suggestions?
 =======================
+All questions and suggestions are welcome. Please feel free to use our `Jupyter mailing list <https://groups.google.com/forum/#!forum/jupyter>`_ and `Jupyter website <https://jupyter.org>`_ to contact our team.
 
-- `Jupyter mailing list <https://groups.google.com/forum/#!forum/jupyter>`_
-- `Jupyter website <https://jupyter.org>`_
+Looking forward to hearing from you!
 
 .. _JupyterHub: https://github.com/jupyterhub/jupyterhub
 .. _Jupyter notebook: https://jupyter-notebook.readthedocs.io/en/latest/
