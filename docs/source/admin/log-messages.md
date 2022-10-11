@@ -1,6 +1,6 @@
 # Interpreting common log messages
 
-In this subsection of the documentation, you will get to understand the meaning of common log messages and how to resolve them. When debugging errors and outages, it is very helpful to look at the logs emitted by JupyterHub. 
+In this subsection of the documentation, you will get to understand the meaning of common log messages and how to resolve them. When debugging errors and outages, it is very helpful to look at the logs emitted by JupyterHub.
 
 ## Failing suspected API request to not-running server
 
