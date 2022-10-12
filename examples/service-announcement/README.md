@@ -7,8 +7,7 @@ To run the service as a hub-managed service simply include in your JupyterHub
 configuration file something like:
 
 :notebook:**Info**: You can run the announcement service example from the `examples`
- directory, using one of the several services provided by JupyterHub.
-
+directory, using one of the several services provided by JupyterHub.
 
 ```python
 
