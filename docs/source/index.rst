@@ -2,7 +2,8 @@
 JupyterHub
 ==========
 
-`JupyterHub`_ is the best way to serve `Jupyter notebook`_ for multiple users. The distributed Jupyter Notebook environment allows 
+`JupyterHub`_ is the best way to serve `Jupyter notebook`_ for multiple users. 
+Because JupyterHub manages a separate Jupyter environment for each user,
 it to be used in a class of students, a corporate data science group, or a scientific
 research group. It is a multi-user **Hub** that spawns, manages, and proxies multiple
 instances of the single-user `Jupyter notebook`_ server.
@@ -18,9 +19,9 @@ original system of `JupyterHub`_. As of now, you can find two main cases:
 Four subsystems make up JupyterHub:
 
 * a **Hub** (tornado process) that is the heart of JupyterHub
-* a **configurable HTTP proxy** (node-http-proxy) that receives the requests from the client's browser
-* multiple **single-user Jupyter notebook servers** (Python/IPython/tornado) that are monitored by Spawners
-* an **authentication class** that manages how users can access the system
+* a **Configurable HTTP Proxy** (node-http-proxy) that receives the requests from the client's browser
+* multiple **Single-User Jupyter Notebook Servers** (Python/IPython/tornado) that are monitored by Spawners
+* an **Authentication Class** that manages how users can access the system
 
 
 Besides these central pieces, you can add optional configurations through a `config.py` file and manage users' environments through an admin panel. A simplification of the whole system can be seen in the figure below:
