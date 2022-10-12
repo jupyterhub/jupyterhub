@@ -1,6 +1,6 @@
 # Starting servers with the JupyterHub API
 
-Sometimes, such as when working with applications such as [BinderHub](https://binderhub.readthedocs.io), it may be necessary to launch Jupyter-based services on behalf of your users. Doing so can be achieved through JupyterHub's [REST API](../reference/rest.md), which allows one to launch and manage servers on behalf of users through API calls instead of through the JupyterHub UI. In doing so, you can take advantage of other user/launch/lifecycle patterns that are not natively supported by JupyterHub, all without the need to develop the server management features of JupyterHub Spawners and/or Authenticators. 
+Sometimes, such as when working with applications such as [BinderHub](https://binderhub.readthedocs.io), it may be necessary to launch Jupyter-based services on behalf of your users. Doing so can be achieved through JupyterHub's [REST API](../reference/rest.md), which allows one to launch and manage servers on behalf of users through API calls instead of through the JupyterHub UI. In doing so, you can take advantage of other user/launch/lifecycle patterns that are not natively supported by JupyterHub, all without the need to develop the server management features of JupyterHub Spawners and/or Authenticators.
 
 This tutorial goes through the processes involved while working with the JupyterHub API to manage servers for users. In particular, it covers how to:
 
@@ -10,7 +10,7 @@ This tutorial goes through the processes involved while working with the Jupyter
 4. [Communicate with servers](communicating)
 5. [Stop servers](stopping)
 
-In the end, we also provide a sample Python code that can be used to implement these steps. 
+In the end, we also provide a sample Python code that can be used to implement these steps.
 
 (checking)=
 
@@ -21,6 +21,7 @@ First, request information about a particular user using a GET request as below.
 ```
 GET /hub/api/users/:username
 ```
+
 The response you get will include a `servers` field, which is a dictionary, as shown in the json-formatted response below.
 
 **Required scope: `read:servers`**
@@ -42,7 +43,7 @@ The response you get will include a `servers` field, which is a dictionary, as s
 
 Many JupyterHub deployments only use a 'default' server, represented as an empty string `''` for a name. An investigation of the `servers` field can yield one of two results. First, it can be empty as in the sample json response above. In such a case, the user has no running servers.
 
-However, should the user have running servers, then the returned dict should contain various information, as shown in the response below. 
+However, should the user have running servers, then the returned dict should contain various information, as shown in the response below.
 
 ```json
   "servers": {
