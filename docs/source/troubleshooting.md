@@ -6,32 +6,32 @@ problem and how to resolve it.
 
 [_Behavior_](#behavior)
 
-- [JupyterHub proxy fails to start](#jupyterhub-proxy-fails-to-start)
-- [sudospawner fails to run](#sudospawner-fails-to-run)
-- [What is the default behavior when none of the lists (admin, allowed,
-  allowed groups) are set?](#what-is-the-default-behavior-when-none-of-the-lists-admin-allowed-allowed-groups-are-set)
-- [JupyterHub Docker container not accessible at localhost](#jupyterhub-docker-container-not-accessible-at-localhost)
-- [How can I kill ports from JupyterHub-managed services that have been orphaned?](#how-can-i-kill-ports-from-jupyterhub-managed-services-that-have-been-orphaned)
-- [Why am I getting a Spawn failed error message?](#why-am-i-getting-a-spawn-failed-error-message)
-- [How can I run JupyterHub with sudo but use my current env vars and virtualenv location?](#how-can-i-run-jupyterhub-with-sudo-but-use-my-current-env-vars-and-virtualenv-location)
+- JupyterHub proxy fails to start
+- sudospawner fails to run]
+- What is the default behavior when none of the lists (admin, allowed,
+  allowed groups) are set?
+- JupyterHub Docker container not accessible at localhost
+- How can I kill ports from JupyterHub-managed services that have been orphaned?
+- Why am I getting a Spawn failed error message?
+- How can I run JupyterHub with sudo but use my current env vars and virtualenv location?
 
 [_Errors_](#errors)
 
-- [Error 500 after spawning my single-user server](#error-500-after-spawning-my-single-user-server)
-- [Launching Jupyter Notebooks to run as an externally managed JupyterHub service with the `jupyterhub-singleuser` command returns a `JUPYTERHUB_API_TOKEN` error](#launching-jupyter-notebooks-to-run-as-an-externally-managed-jupyterhub-service-with-the-jupyterhub-singleuser-command-returns-a-jupyterhub-api-token-error)
+- Error 500 after spawning my single-user server
+- Launching Jupyter Notebooks to run as an externally managed JupyterHub service with the `jupyterhub-singleuser` command returns a `JUPYTERHUB_API_TOKEN` error
 
 [_How do I...?_](#how-do-i)
 
-- [Use a chained SSL certificate](#use-a-chained-ssl-certificate)
-- [Install JupyterHub without a network connection](#install-jupyterhub-without-a-network-connection)
-- [I want access to the whole filesystem and still default users to their home directory](#i-want-access-to-the-whole-filesystem-and-still-default-users-to-their-home-directory)
-- [How do I increase the number of pySpark executors on YARN?](#how-do-i-increase-the-number-of-pyspark-executors-on-yarn)
-- [How do I use JupyterLab's prerelease version with JupyterHub?](#how-do-i-use-jupyterlab-s-prerelease-version-with-jupyterhub)
-- [How do I set up JupyterHub for a workshop (when users are not known ahead of time)?](#how-do-i-set-up-jupyterhub-for-a-workshop-when-users-are-not-known-ahead-of-time)
-- [How do I set up rotating daily logs?](#how-do-i-set-up-rotating-daily-logs)
-- [Toree integration with HDFS rack awareness script](#toree-integration-with-hdfs-rack-awareness-script)
-- [Where do I find Docker images and Dockerfiles related to JupyterHub?](#where-do-i-find-docker-images-and-dockerfiles-related-to-jupyterhub)
-- [How can I view the logs for JupyterHub or the user's Notebook servers when using the DockerSpawner?](#how-can-i-view-the-logs-for-jupyterhub-or-the-user-s-notebook-servers-when-using-the-dockerspawner)
+- Use a chained SSL certificate
+- Install JupyterHub without a network connection
+- I want access to the whole filesystem and still default users to their home directory
+- How do I increase the number of pySpark executors on YARN?
+- How do I use JupyterLab's prerelease version with JupyterHub?
+- How do I set up JupyterHub for a workshop (when users are not known ahead of time)?
+- How do I set up rotating daily logs?
+- Toree integration with HDFS rack awareness script
+- Where do I find Docker images and Dockerfiles related to JupyterHub?
+- How can I view the logs for JupyterHub or the user's Notebook servers when using the DockerSpawner?
 
 [_Troubleshooting commands_](#troubleshooting-commands)
 
@@ -312,7 +312,7 @@ For instance:
     python3 -m pip install jupyterlab
     jupyter serverextension enable --py jupyterlab --sys-prefix
 
-The important thing is that Jupyterlab is installed and enabled in the
+The important thing is that JupyterLab is installed and enabled in the
 single-user notebook server environment. For system users, this means
 system-wide, as indicated above. For Docker containers, it means inside
 the single-user docker image, etc.
