@@ -1,7 +1,7 @@
 # Spawners and single-user notebook servers
 
 Since the single-user server is an instance of `jupyter notebook`, an entirely separate
-multi-process application. There are many aspects of that server that can be configured and a lot
+multi-process application, there are many aspects of that server that can be configured and a lot
 of ways to express that configuration.
 
 At the JupyterHub level, you can set some values on the Spawner. The simplest of these is
