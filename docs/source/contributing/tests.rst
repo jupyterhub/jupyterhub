@@ -13,7 +13,7 @@ Running the tests
 ==================
 
 #. Make sure you have completed :ref:`contributing/setup`. Once completed, you should be able
-   to start ``jupyterhub`` through a web browser as well as the command line. By doing this, it is ensured that the dev environment is properly set
+   to run ``jupyterhub`` on your command line and access JupyterHub from your browser at http://localhost:8000. By doing this, it is ensured that the dev environment is properly set
    up for tests to run.
 
 #. You can run all tests in JupyterHub 
@@ -104,8 +104,7 @@ Troubleshooting Test Failures
 All the tests are failing
 -------------------------
 
-Make sure you have completed all the steps in :ref:`contributing/setup` successfully, and
-can launch ``jupyterhub`` from the terminal as well as the web browser.
+Make sure you have completed all the steps in :ref:`contributing/setup` successfully, and are able to can access JupyterHub from your browser at http://localhost:8000 after starting ``jupyterhub`` in your command line.
 
 
 Code formatting and linting
