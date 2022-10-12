@@ -56,7 +56,7 @@ Basic principles for operation are:
   servers.
 
 JupyterHub also provides a
-[REST API][]
+[REST API]:https://jupyterhub.readthedocs.io/en/latest/reference/rest-api.html
 for administration of the Hub and its users.
 
 [rest api]: https://jupyterhub.readthedocs.io/en/latest/reference/rest-api.html
