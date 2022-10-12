@@ -1,31 +1,30 @@
-# Upgrading JupyterHub with RBAC framework
+The RBAC framework new in JupyterHub 2.0. enables for the different degrees of permissions to be granted to tokens via scopes tied to roles. This, no doubt eliminates the distinction between OAuth and API tokens as was been used in previous versions - (see {ref}`oauth-vs-api-tokens-target` to learn more). As a result, the different database setup in the previous JupyterHub versions are merged into one and as such, all tokens that already exist and were created prior to the upgrade must be replaced because they are no longer compatible with the updated database.
 
-RBAC framework requires different database setup than any previous JupyterHub versions due to eliminating the distinction between OAuth and API tokens (see {ref}`oauth-vs-api-tokens-target` for more details). This requires merging the previously two different database tables into one. By doing so, all existing tokens created before the upgrade no longer comply with the new database version and must be replaced.
+Here is how it works- During the database upgrade, all existing tokens are deleted and the tokens loaded via the `jupyterhub_config.py` file are recreated with updated structure. But following the upgrade, any manually created or saved tokens must be manually reissued because they are not automatically created.
 
-This is achieved by the Hub deleting all existing tokens during the database upgrade and recreating the tokens loaded via the `jupyterhub_config.py` file with updated structure. However, any manually issued or stored tokens are not recreated automatically and must be manually re-issued after the upgrade.
-
-No other database records are affected.
+**Please note that upgrading JupyterHub does not affect any database record**.
 
 (rbac-upgrade-steps-target)=
 
 ## Upgrade steps
+Let's take a look at the steps to follow when upgrading JupyterHub with RBAC framework.
 
-1. All running **servers must be stopped** before proceeding with the upgrade.
-2. To upgrade the Hub, follow the [Upgrading JupyterHub](../admin/upgrading.rst) instructions.
+Step1. Stop **all running servers** before proceeding with the upgrade.
+Step2. To upgrade the Hub, follow the [Upgrading JupyterHub](../admin/upgrading.rst) instructions.
    ```{attention}
    We advise against defining any new roles in the `jupyterhub.config.py` file right after the upgrade is completed and JupyterHub restarted for the first time. This preserves the 'current' state of the Hub. You can define and assign new roles on any other following startup.
    ```
-3. After restarting the Hub **re-issue all tokens that were previously issued manually** (i.e., not through the `jupyterhub_config.py` file).
+Step3. After restarting the Hub from ```step2 above``` **re-issue all tokens that were previously issued manually** (i.e., not through the `jupyterhub_config.py` file).
 
-When the JupyterHub is restarted for the first time after the upgrade, all users, services and tokens stored in the database or re-loaded through the configuration file will be assigned their default role. Any newly added entities after that will be assigned their default role only if no other specific role is requested for them.
+**Note** When the JupyterHub is restarted for the first time after the upgrade, all users, services and tokens stored in the database or re-loaded through the configuration file will be assigned their default role. Any newly added entities after that will be assigned their default role only if no other specific role is requested for them.
 
 ## Changing the permissions after the upgrade
 
 Once all the {ref}`upgrade steps <rbac-upgrade-steps-target>` above are completed, the RBAC framework will be available for utilization. You can define new roles, modify default roles (apart from `admin`) and assign them to entities as described in the {ref}`define-role-target` section.
 
-We recommended the following procedure to start with RBAC:
+To begin using RBAC, we advised the approach listed below:
 
-1. Identify which admin users and services you would like to grant only the permissions they need through the new roles.
+1. Identify the admin users and services to which you want to assign the new roles, giving them access to only the rights they require
 2. Strip these users and services of their admin status via API or UI. This will change their roles from `admin` to `user`.
    ```{note}
    Stripping entities of their roles is currently available only via `jupyterhub_config.py` (see {ref}`removing-roles-target`).
