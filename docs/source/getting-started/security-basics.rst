@@ -31,7 +31,7 @@ Using an SSL certificate
 
 This will require you to obtain an official, trusted SSL certificate or create a
 self-signed certificate. Once you have obtained and installed a key and
-certificate you need to specify their locations in the ``jupyterhub_config.py``
+certificate, you need to specify their locations in the ``jupyterhub_config.py``
 configuration file as follows:
 
 .. code-block:: python
@@ -233,7 +233,7 @@ jupyterhub-session-id
 This is a random string, meaningless in itself, and the only cookie
 shared by the Hub and single-user servers.
 
-Its sole purpose is to coordinate logout of the multiple OAuth cookies.
+Its sole purpose is to coordinate the logout of multiple OAuth cookies.
 
 This cookie is set to ``/`` so all endpoints can receive it, or clear it, etc.
 
