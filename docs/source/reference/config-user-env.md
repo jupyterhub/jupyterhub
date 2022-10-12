@@ -7,7 +7,7 @@ environment in some way.
 Since the `jupyterhub-singleuser` server extends the standard Jupyter notebook
 server, most configuration and documentation that applies to Jupyter Notebook
 applies to the single-user environments. Configuration of user environments
-typically does not occur through JupyterHub itself, but rather through the system-wide 
+typically does not occur through JupyterHub itself, but rather through the system-wide
 configuration of Jupyter, which is inherited by `jupyterhub-singleuser`.
 
 **Tip:** When searching for configuration tips for JupyterHub user
