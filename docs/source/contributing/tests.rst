@@ -54,7 +54,7 @@ Running the tests
       
       pytest -v jupyterhub/tests/test_api.py::test_shutdown
 
-   For more information, refer to `pytest usage documentation <https://pytest.readthedocs.io/en/latest/usage.html>`_.
+   For more information, refer to the `pytest usage documentation <https://pytest.readthedocs.io/en/latest/usage.html>`_.
 
 Test organisation
 =================
