@@ -95,7 +95,7 @@ And fixtures to add functionality or spawning behavior:
 - ``bad_spawn``: enables the BadSpawner (a spawner that fails immediately)
 - ``slow_bad_spawn``: enables the SlowBadSpawner (a spawner that fails after a short delay)
 
-For information on using the existing fixtures and creating new ones, refer to `pytest fixtures documentation <https://pytest.readthedocs.io/en/latest/fixture.html>`_
+For information on using the existing fixtures and creating new ones, refer to the `pytest fixtures documentation <https://pytest.readthedocs.io/en/latest/fixture.html>`_
 
 
 Troubleshooting Test Failures
