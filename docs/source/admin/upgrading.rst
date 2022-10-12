@@ -27,11 +27,11 @@ Notify your users
 
 If you are using the default configuration where ``configurable-http-proxy``
 is managed by JupyterHub, your users will see service disruption during
-the upgrade process. You will need notify them, and pick a time to do the
+the upgrade process. You will need to notify them, and pick a time to do the
 upgrade where they will be least disrupted.
 
 If you are using a different proxy or running ``configurable-http-proxy``
-independent of JupyterHub, your users will be able to continue using a notebook
+independent of JupyterHub, your users will be able to continue using notebook
 servers they had already launched, but will not be able to launch new servers
 or sign in.
 
