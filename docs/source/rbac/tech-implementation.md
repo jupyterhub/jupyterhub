@@ -11,7 +11,7 @@ Roles and scopes utilities can be found in `roles.py` and `scopes.py` modules. S
 - _expanded scopes_ \
   Set of fully expanded scopes without abbreviations (i.e., resolved metascopes, filters, and subscopes). E.g., `{"users:activity!user=charlie", "read:users:activity!user=charlie"}`.
 - _parsed scopes_ \
-  Dictionary represenation of expanded scopes. E.g., `{"users:activity": {"user": ["charlie"]}, "read:users:activity": {"users": ["charlie"]}}`.
+  Dictionary representation of expanded scopes. E.g., `{"users:activity": {"user": ["charlie"]}, "read:users:activity": {"users": ["charlie"]}}`.
 - _intersection_ \
   Set of expanded scopes as intersection of 2 expanded scope sets.
 - _identify scopes_ \
@@ -78,15 +78,15 @@ Figure 1. Resolving roles and scopes during API token request
 With the RBAC framework, each authenticated JupyterHub API request is guarded by a scope decorator that specifies which scopes are required to gain the access to the API.
 
 When an API request is performed, the requesting API token's scopes are again intersected with its owner's (yellow box in {ref}`Figure 2 <api-request-chart>`) to ensure the token does not grant more permissions than its owner has at the request time (e.g., due to changing/losing roles).
-If the owner's roles do not include some scopes of the token's scopes, only the _intersection_ of the token's and owner's scopes will be used. For example, using a token with scope `users` whose owner's role scope is `read:users:name` will result in only the `read:users:name` scope being passed on. In the case of no _intersection_, an empty set of scopes will be used.
+If the owner's roles do not include some scopes of the token's scopes, only the _intersection_ of the token's and owner's scopes will be used. For example, using a token with scope `users` whose owner's role scope is `read:users:name` will result in only the `read:users:name` scope being parsed on. In the case of no _intersection_, an empty set of scopes will be used.
 
-The passed scopes are compared to the scopes required to access the API as follows:
+The parsed scopes are compared to the scopes required to access the API as follows:
 
-- if the API scopes are present within the set of passed scopes, the access is granted and the API returns its "full" response
+- if the API scopes are present within the set of parsed scopes, the access is granted and the API returns its "full" response
 
-- if that is not the case, another check is utilized to determine if subscopes of the required API scopes can be found in the passed scope set:
+- if that is not the case, another check is utilized to determine if subscopes of the required API scopes can be found in the parsed scope set:
 
-  - if found, the RBAC framework employs the {ref}`filtering <vertical-filtering-target>` procedures to refine the API response to access only resource attributes corresponding to the passed scopes. For example, providing a scope `read:users:activity!group=class-C` for the _GET /users_ API will return a list of user models from group `class-C` containing only the `last_activity` attribute for each user model
+  - if found, the RBAC framework employs the {ref}`filtering <vertical-filtering-target>` procedures to refine the API response to access only resource attributes corresponding to the parsed scopes. For example, providing a scope `read:users:activity!group=class-C` for the _GET /users_ API will return a list of user models from group `class-C` containing only the `last_activity` attribute for each user model
 
   - if not found, the access to API is denied
 
