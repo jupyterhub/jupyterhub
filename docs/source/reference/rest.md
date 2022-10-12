@@ -1,4 +1,5 @@
 (rest-api)=
+
 # Using JupyterHub's REST API
 
 This section will give you information on:
@@ -72,6 +73,7 @@ name: token-request-success
 ---
 JupyterHub's API token success page
 ```
+
 ## Assigning permissions to a token
 
 Prior to JupyterHub 2.0, there were two levels of permissions:
