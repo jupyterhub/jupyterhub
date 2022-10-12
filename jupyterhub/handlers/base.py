@@ -81,9 +81,14 @@ class BaseHandler(RequestHandler):
         """
         try:
             await self.get_current_user()
-        except Exception:
-            self.log.exception("Failed to get current user")
+        except Exception as e:
+            # ensure get_current_user is never called again for this handler,
+            # since it failed
             self._jupyterhub_user = None
+            self.log.exception("Failed to get current user")
+            if isinstance(e, SQLAlchemyError):
+                self.log.error("Rolling back session due to database error")
+                self.db.rollback()
 
         return await maybe_future(super().prepare())
 
@@ -426,7 +431,8 @@ class BaseHandler(RequestHandler):
             except Exception:
                 # don't let errors here raise more than once
                 self._jupyterhub_user = None
-                self.log.exception("Error getting current user")
+                # but still raise, which will get handled in .prepare()
+                raise
         return self._jupyterhub_user
 
     @property
@@ -1499,14 +1505,10 @@ class UserUrlHandler(BaseHandler):
 
         # if request is expecting JSON, assume it's an API request and fail with 503
         # because it won't like the redirect to the pending page
-        if (
-            get_accepted_mimetype(
-                self.request.headers.get('Accept', ''),
-                choices=['application/json', 'text/html'],
-            )
-            == 'application/json'
-            or 'api' in user_path.split('/')
-        ):
+        if get_accepted_mimetype(
+            self.request.headers.get('Accept', ''),
+            choices=['application/json', 'text/html'],
+        ) == 'application/json' or 'api' in user_path.split('/'):
             self._fail_api_request(user_name, server_name)
             return
 
@@ -1588,7 +1590,7 @@ class UserUrlHandler(BaseHandler):
         if redirects:
             self.log.warning("Redirect loop detected on %s", self.request.uri)
             # add capped exponential backoff where cap is 10s
-            await asyncio.sleep(min(1 * (2 ** redirects), 10))
+            await asyncio.sleep(min(1 * (2**redirects), 10))
             # rewrite target url with new `redirects` query value
             url_parts = urlparse(target)
             query_parts = parse_qs(url_parts.query)

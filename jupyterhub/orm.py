@@ -223,7 +223,7 @@ class User(Base):
 
 
 class Spawner(Base):
-    """"State about a Spawner"""
+    """ "State about a Spawner"""
 
     __tablename__ = 'spawners'
 

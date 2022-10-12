@@ -26,8 +26,8 @@ import os
 import pipes
 import shutil
 from contextlib import contextmanager
-from distutils.version import LooseVersion as V
 
+from distutils.version import LooseVersion as V
 from invoke import run as invoke_run
 from invoke import task
 
