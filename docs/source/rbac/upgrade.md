@@ -7,14 +7,17 @@ Here is how it works- During the database upgrade, all existing tokens are delet
 (rbac-upgrade-steps-target)=
 
 ## Upgrade steps
+
 Let's take a look at the steps to follow when upgrading JupyterHub with RBAC framework.
 
 Step1. Stop **all running servers** before proceeding with the upgrade.
 Step2. To upgrade the Hub, follow the [Upgrading JupyterHub](../admin/upgrading.rst) instructions.
-   ```{attention}
-   We advise against defining any new roles in the `jupyterhub.config.py` file right after the upgrade is completed and JupyterHub restarted for the first time. This preserves the 'current' state of the Hub. You can define and assign new roles on any other following startup.
-   ```
-Step3. After restarting the Hub from ```step2 above``` **re-issue all tokens that were previously issued manually** (i.e., not through the `jupyterhub_config.py` file).
+
+```{attention}
+We advise against defining any new roles in the `jupyterhub.config.py` file right after the upgrade is completed and JupyterHub restarted for the first time. This preserves the 'current' state of the Hub. You can define and assign new roles on any other following startup.
+```
+
+Step3. After restarting the Hub from `step2 above` **re-issue all tokens that were previously issued manually** (i.e., not through the `jupyterhub_config.py` file).
 
 **Note** When the JupyterHub is restarted for the first time after the upgrade, all users, services and tokens stored in the database or re-loaded through the configuration file will be assigned their default role. Any newly added entities after that will be assigned their default role only if no other specific role is requested for them.
 
