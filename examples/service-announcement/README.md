@@ -18,7 +18,7 @@ from pathlib import Path
 # absolute path to announcement.py
 announcement_py = str(Path(__file__).parent.joinpath("announcement.py").resolve())
 
-#ensure get_config() is added to in
+#ensure get_config() is added in
  c = get_config()
 
 ...
