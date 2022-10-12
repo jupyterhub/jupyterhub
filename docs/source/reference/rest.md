@@ -1,3 +1,4 @@
+(rest-api)=
 # Using JupyterHub's REST API
 
 This section will give you information on:
@@ -58,14 +59,19 @@ it for the given user with the Hub's database.
 In [version 0.8.0](../changelog.md), a token request page for
 generating an API token is available from the JupyterHub user interface:
 
-![Request API token page](../images/token-request.png)
+```{figure} ../images/token-request.png
+---
+name: token-request
+---
+JupyterHub's API token page
+```
 
-<p style="text-align: center">Figure 1.0: JupyterHub's Request API token page</p>
-
-![API token success page](../images/token-request-success.png)
-
-<p style="text-align: center">Figure 1.1: JupyterHub's API token success page</p>
-
+```{figure} ../images/token-request-success.png
+---
+name: token-request-success
+---
+JupyterHub's API token success page
+```
 ## Assigning permissions to a token
 
 Prior to JupyterHub 2.0, there were two levels of permissions:
@@ -97,7 +103,7 @@ the services' mechanism may be a better fit if you have the following configurat
 ```python
 c.JupyterHub.admin_users = {"service-admin"}
 c.JupyterHub.api_tokens = {
-    "secret-token": "service-admin"
+    "secret-token": "service-admin",
 }
 ```
 
@@ -121,7 +127,7 @@ c.JupyterHub.load_roles = [
         "name": "service-role",
         "scopes": [
             # specify the permissions the token should have
-            "admin": "users",
+            "admin:users",
         ],
         "services": [
             # assign the service the above permissions
@@ -145,7 +151,7 @@ Authorization header.
 ### Use requests
 
 Using the popular Python [requests](https://docs.python-requests.org)
-library, here's an example code to make an API request for the users of a JupyterHub
+library, here's example code to make an API request for the users of a JupyterHub
 deployment. An API GET request is made, and the request sends an API token for
 authorization. The response contains information about the users:
 
@@ -197,7 +203,7 @@ provided by notebook servers managed by JupyterHub if it has the necessary `acce
 
 Pagination is available through the `offset` and `limit` query parameters on
 list endpoints, which can be used to return ideally sized windows of results.
-Here's an example code demonstrating pagination on the `GET /users`
+Here's example code demonstrating pagination on the `GET /users`
 endpoint to fetch the first 20 records.
 
 ```python
@@ -316,5 +322,5 @@ You can see the full [JupyterHub REST API][] for more details.
 
 [openapi initiative]: https://www.openapis.org/
 [jupyterhub rest api]: ./rest-api
-[scopes]: http://localhost:63342/jupyterhub/docs/build/html/rbac/scopes.html
+[scopes]: https://jupyterhub.readthedocs.io/en/stable/rbac/scopes.html
 [jupyter notebook rest api]: https://petstore3.swagger.io/?url=https://raw.githubusercontent.com/jupyter/notebook/HEAD/notebook/services/api/api.yaml
