@@ -24,7 +24,7 @@ examples/
     This directory details several services provided by the JupyterHub project, alongside their configurations to enable you configure JupyterHub to use those services.
 
 jsx/
-    This directory contains current updates to the JupyterHub Admin Dashboard.
+    This directory contains javascript sources for the JupyterHub Admin Dashboard.
 
 JupyterHub/
     This directory contains the core code files for the JupyterHub project.
@@ -60,7 +60,7 @@ pytest.ini
     A configuration file for customizing Pytest behaviors to suit the usage of Pytest in the JupyterHub project. Pytest is a python tool for running tests.
 
 pyproject.toml
-    A requirement for using setuptools(a build backend) in building the JupyterHub distribution package.
+    A file for configuring code formatting and release tools(tbump).
 
 MANIFEST.in
     A file for instructing setuptools on the files to add or remove when building the JupyterHub distribution package (sdist).
@@ -69,7 +69,7 @@ requirements.txt
     This file lists the dependencies of the JupyterHub codebase.
 
 dev-requirements.txt
-    This file lists additional dependencies of the JupyterHub codebase.
+    This file lists the testing/development dependencies of the JupyterHub codebase.
 
 
 Informational Files
