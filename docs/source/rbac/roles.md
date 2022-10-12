@@ -61,7 +61,7 @@ c.JupyterHub.load_roles = [
    'scopes': ['servers'],
    'users': ['alice', 'bob'],
    'services': ['idle-culler'],
-   'groups': ['admin-group'],
+   'groups': ['admin-group']
  }
 ]
 ```
@@ -128,7 +128,7 @@ use the scope `inherit` (for 'inheriting' the owner's permissions):
 c.JupyterHub.load_roles = [
  {
    'name': 'server',
-   'scopes': ['inherit'],
+   'scopes': ['inherit']
  }
 ]
 ```
@@ -147,7 +147,7 @@ instead of being able to take actions on behalf of all other users.
 c.JupyterHub.load_roles = [
  {
    'name': 'server',
-   'scopes': ['self'],
+   'scopes': ['self']
  }
 ]
 ```
