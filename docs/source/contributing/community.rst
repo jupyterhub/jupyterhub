@@ -14,4 +14,3 @@ JupyterHub repository <https://github.com/jupyterhub/jupyterhub/>`_ and our
 community will help you figure it out.
 
 Please be patient if you do not recieve a response right away; keep in mind that our comunity is spread out over the globe in different timezones.
-
