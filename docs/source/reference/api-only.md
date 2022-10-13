@@ -1,23 +1,21 @@
-
 # Deploying JupyterHub In "API Only Mode"
 
 Jupyterhub, as a service for deploying and managing jupiter servers for users, exposes its functionality, _primarily_ through a [REST API](rest).
 
 For convenience, Jupyterhub also ships a basic web UI, built on the REST API. The basic web UI enables users to easily interact with their servers. E.g by clicking on the button to quickly start or stop their servers. It also enable admins to perform basic user and server mananagement tasks.
 
-
 ## The REST API
 
 Previously, one could only achieve some admin UI functionalities through admin pages, such as paginated requests. The REST API provides additional functionality beyond what is available in the basic web UI. With Jupyterhub 2.0, the UI will always be composed from the REST API. This means that information on the pages will not be reliable, unless made available through the API.
 
-
 ## Why Rest API Only?
 
 ### Limited UI customization via templates
+
 The JupiterHub UI can be customized through extensivle HTML [templates](templates), but the scope at which it can be customized, is limited. It supports adding of content and messages to existing pages, but the page flow and available pages, cannot be customized.
 
-
 ### Rich UI Customization with REST API based Apps
+
 JuptiterHub is primarily used as an API for managing Jupiter servers for other Jupiter-based appicatons that might want to present a different User Experience. Additionally, With an option of a fully customized experience available, you can now disable the hub UI and easily use your own pages, together with the JupiterHub Rest API, to build your own web applications to serve your users; relying on the hub only as an API for managing Users and Servers.
 
 An Example of such application is the BinderHub, which powers https://mybinder.org,
@@ -45,13 +43,10 @@ users are presented with a form to specify what environment they would like to l
 - When a server isn't running, there isn't a 'restart your server' action available because the user has been deleted
 - Users do not have any access to any Hub functionality, so presenting pages for those features would be confusing.
 
-
 BinderHub is one of the motivating use cases for JupyterHub supporting being used _only_ via its API.
 We'll use BinderHub here as an example of various configuration options.
 
 [binderhub]: https://binderhub.readthedocs.io
-
-
 
 ## Disabling Hub UI
 
