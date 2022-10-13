@@ -1,37 +1,26 @@
-(api-only)=
 
-# Deploying JupyterHub in "API only mode"
+# Deploying JupyterHub In "API Only Mode"
 
-As a service for deploying and managing Jupyter servers for users, JupyterHub
-exposes this functionality _primarily_ via a [REST API](rest).
-For convenience, JupyterHub also ships with a _basic_ web UI built using that REST API.
-The basic web UI enables users to click a button to quickly start and stop their servers,
-and it lets admins perform some basic user and server management tasks.
+Jupyterhub, as a service for deploying and managing jupiter servers for users, exposes its functionality, _primarily_ through a [REST API](rest).
 
-The REST API has always provided additional functionality beyond what is available in the basic web UI.
-Similarly, we avoid implementing UI functionality that is also not available via the API.
-With JupyterHub 2.0, the basic web UI will **always** be composed using the REST API.
-In other words, no UI pages should rely on information not available via the REST API.
-Previously, some admin UI functionality could only be achieved via admin pages,
-such as paginated requests.
+For convenience, Jupyterhub also ships a basic web UI, built on the REST API. The basic web UI enables users to easily interact with their servers. E.g by clicking on the button to quickly start or stop their servers. It also enable admins to perform basic user and server mananagement tasks.
 
-## Limited UI customization via templates
 
-The JupyterHub UI is customizable via extensible HTML [templates](templates),
-but this has some limited scope to what can be customized.
-Adding some content and messages to existing pages is well supported,
-but changing the page flow and what pages are available are beyond the scope of what is customizable.
+## The REST API
 
-## Rich UI customization with REST API based apps
+Previously, one could only achieve some admin UI functionalities through admin pages, such as paginated requests. The REST API provides additional functionality beyond what is available in the basic web UI. With Jupyterhub 2.0, the UI will always be composed from the REST API. This means that information on the pages will not be reliable, unless made available through the API.
 
-Increasingly, JupyterHub is used purely as an API for managing Jupyter servers
-for other Jupyter-based applications that might want to present a different user experience.
-If you want a fully customized user experience,
-you can now disable the Hub UI and use your own pages together with the JupyterHub REST API
-to build your own web application to serve your users,
-relying on the Hub only as an API for managing users and servers.
 
-One example of such an application is [BinderHub][], which powers https://mybinder.org,
+## Why Rest API Only?
+
+### Limited UI customization via templates
+The JupiterHub UI can be customized through extensivle HTML [templates](templates), but the scope at which it can be customized, is limited. It supports adding of content and messages to existing pages, but the page flow and available pages, cannot be customized.
+
+
+### Rich UI Customization with REST API based Apps
+JuptiterHub is primarily used as an API for managing Jupiter servers for other Jupiter-based appicatons that might want to present a different User Experience. Additionally, With an option of a fully customized experience available, you can now disable the hub UI and easily use your own pages, together with the JupiterHub Rest API, to build your own web applications to serve your users; relying on the hub only as an API for managing Users and Servers.
+
+An Example of such application is the BinderHub, which powers https://mybinder.org,
 and motivates many of these changes.
 
 BinderHub is distinct from a traditional JupyterHub deployment
@@ -41,25 +30,28 @@ users are presented with a form to specify what environment they would like to l
 
 ![Binder launch form](../images/binderhub-form.png)
 
-When a launch is requested:
+**When a launch is requested:**
 
-1. an image is built, if necessary
-2. a temporary user is created,
-3. a server is launched for that user, and
-4. when running, users are redirected to an already running server with an auth token in the URL
-5. after the session is over, the user is deleted
+1. An image is built, if necessary
+2. A temporary user is created,
+3. A server is launched for that user, and
+4. When running, users are redirected to an already running server with an auth token in the URL
+5. After the session is over, the user is deleted
 
-This means that a lot of JupyterHub's UI flow doesn't make sense:
+**This means that a lot of JupyterHub's UI flow doesn't make sense:**
 
-- there is no way for users to login
-- the human user doesn't map onto a JupyterHub `User` in a meaningful way
-- when a server isn't running, there isn't a 'restart your server' action available because the user has been deleted
-- users do not have any access to any Hub functionality, so presenting pages for those features would be confusing
+- There is no way for users to login
+- The human user doesn't map onto a JupyterHub `User` in a meaningful way
+- When a server isn't running, there isn't a 'restart your server' action available because the user has been deleted
+- Users do not have any access to any Hub functionality, so presenting pages for those features would be confusing.
+
 
 BinderHub is one of the motivating use cases for JupyterHub supporting being used _only_ via its API.
 We'll use BinderHub here as an example of various configuration options.
 
 [binderhub]: https://binderhub.readthedocs.io
+
+
 
 ## Disabling Hub UI
 
@@ -68,10 +60,10 @@ The default is `/` which means that the Hub will receive all requests not alread
 
 There are three values that are most logical for `hub_routespec`:
 
-- `/` - this is the default, and used in most deployments.
+- `/` - This is the default, and used in most deployments.
   It is also the only option prior to JupyterHub 1.4.
-- `/hub/` - this serves only Hub pages, both UI and API
-- `/hub/api` - this serves _only the Hub API_, so all Hub UI is disabled,
+- `/hub/` - This serves only Hub pages, both UI and API
+- `/hub/api` - This serves _only the Hub API_, so all Hub UI is disabled,
   aside from the OAuth confirmation page, if used.
 
 If you choose a hub routespec other than `/`,
@@ -98,6 +90,7 @@ Instead, we provide hints about how to get back to a link to start a _new_ serve
 
 To achieve this, mybinder.org registers a route for `/` that goes to a custom endpoint
 that runs nginx and only serves this static HTML error page.
+
 This is set with
 
 ```python
