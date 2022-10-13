@@ -28,7 +28,7 @@ which defaults to the user's default server.
 That is, it redirects to `/hub/spawn` if the user's server is not running,
 or the server itself (`/user/:name`) if the server is running.
 
-This default url behavior can be customized in two ways:
+This default URL behavior can be customized in two ways:
 
 To redirect users to the JupyterHub home page (`/hub/home`)
 instead of spawning their server,
@@ -120,8 +120,8 @@ if the specified server were running).
 Handling this URL is the most complicated condition in JupyterHub,
 because there can be many states:
 
-1. server is not active
-   a. user matches
+1. server is not active/
+   a. user matches/
    b. user doesn't match
 2. server is ready
 3. server is pending, but not ready
