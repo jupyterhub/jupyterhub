@@ -63,7 +63,7 @@ to the config file, `jupyterhub_config.py`.
 When nothing is given for these lists, there will be no admins, and all users
 who can authenticate on the system (i.e. all the unix users on the server with
 a password) will be allowed to start a server. The allowed username set lets you limit
-this to a particular set of users, and admin_users lets you specify who
+this to a particular set of users, and admin,_users lets you specify who
 among them may use the admin interface (not necessary, unless you need to do
 things like inspect other users' servers, or modify the user list at runtime).
 
@@ -88,7 +88,7 @@ Run the following command:
 
     sudo kill -9 $(sudo lsof -t -i:<service_port>)
 
-Where `<service_port>` is the port used by the nbgrader course service. This configuration is specified in `jupyterhub_config.py`.
+Where `<service_port>` is the port used by the [nbgrader](https://doc.cocalc.com/teaching-nbgrader.html) course service. This configuration is specified in `jupyterhub_config.py`.
 
 ### Why am I getting a Spawn failed error message?
 
@@ -141,9 +141,7 @@ There are two likely reasons for this:
 
 The main symptom is a failure to load _any_ page served by the single-user
 server, met with a 500 error. This is typically the first page at `/user/<your_name>`
-after logging in or clicking "Start my server". When a single-user notebook server
-receives a request, the notebook server makes an API request to the Hub to
-check if the cookie corresponds to the right user. This request is logged.
+after logging in or clicking "Start my server". When a single-user notebook server receives a request, the notebook server makes an API request to the Hub to check if the cookie corresponds to the right user. This request is logged.
 
 If everything is working, the response logged will be similar to this:
 
@@ -152,8 +150,7 @@ If everything is working, the response logged will be similar to this:
 ```
 
 You should see a similar 200 message, as above, in the Hub log when you first
-visit your single-user notebook server. If you don't see this message in the log, it
-may mean that your single-user notebook server isn't connecting to your Hub.
+visit your single-user notebook server. If you don't see this message in the log, it may mean that your single-user notebook server isn't connecting to your Hub.
 
 If you see 403 (forbidden) like this, it's likely a token problem:
 
@@ -171,9 +168,7 @@ information on the cause.
 If you make an API request and it is not received by the server, you likely
 have a network configuration issue. Often, this happens when the Hub is only
 listening on 127.0.0.1 (default) and the single-user servers are not on the
-same 'machine' (can be physically remote, or in a docker container or VM). The
-fix for this case is to make sure that `c.JupyterHub.hub_ip` is an address
-that all single-user servers can connect to, e.g.:
+same 'machine' (can be physically remote, or in a docker container or VM). The fix for this case is to make sure that `c.JupyterHub.hub_ip` is an address that all single-user servers can connect to, e.g.:
 
 ```python
 c.JupyterHub.hub_ip = '10.0.0.1'
@@ -201,7 +196,7 @@ your server again.
 
 ##### Proxy settings (403 GET)
 
-When your whole JupyterHub sits behind a organization proxy (_not_ a reverse proxy like NGINX as part of your setup and _not_ the configurable-http-proxy) the environment variables `HTTP_PROXY`, `HTTPS_PROXY`, `http_proxy` and `https_proxy` might be set. This confuses the jupyterhub-singleuser servers: When connecting to the Hub for authorization they connect via the proxy instead of directly connecting to the Hub on localhost. The proxy might deny the request (403 GET). This results in the singleuser server thinking it has a wrong auth token. To circumvent this you should add `<hub_url>,<hub_ip>,localhost,127.0.0.1` to the environment variables `NO_PROXY` and `no_proxy`.
+When your whole JupyterHub sits behind a organization proxy (_not_ a reverse proxy like NGINX as part of your setup and _not_ the configurable-http-proxy) the environment variables `HTTP_PROXY`, `HTTPS_PROXY`, `http_proxy` and `https_proxy` might be set. This confuses the jupyterhub-single-user servers: When connecting to the Hub for authorization they connect via the proxy instead of directly connecting to the Hub on localhost. The proxy might deny the request (403 GET). This results in the single-user server thinking it has a wrong auth(authentication) token. To circumvent this you should add `<hub_url>,<hub_ip>,localhost,127.0.0.1` to the environment variables `NO_PROXY` and `no_proxy`.
 
 ### Launching Jupyter Notebooks to run as an externally managed JupyterHub service with the `jupyterhub-singleuser` command returns a `JUPYTERHUB_API_TOKEN` error
 
@@ -240,7 +235,7 @@ With a docker container, pass in the environment variable with the run command:
 
 ### Use a chained SSL certificate
 
-Some certificate providers, i.e. Entrust, may provide you with a chained
+Some certificate providers, i.e. **Entrust**, may provide you with a chained
 certificate that contains multiple files. If you are using a chained
 certificate you will need to concatenate the individual files by appending the
 chain cert and root cert to your host cert:
@@ -343,7 +338,7 @@ Users will need a GitHub account to login and be authenticated by the Hub.
 You can do this with [logrotate](https://linux.die.net/man/8/logrotate),
 or pipe to `logger` to use syslog instead of directly to a file.
 
-For example, with this logrotate config file:
+For example, with this **logrotate** config file:
 
 ```
 /var/log/jupyterhub.log {
