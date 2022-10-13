@@ -1,6 +1,5 @@
 ![jupyterhub](https://jupyter.org/assets/homepage/hublogo.svg)
 
-
 # Configuring user environments
 
 To deploy JupyterHub means you are providing Jupyter notebook environments for
@@ -8,7 +7,7 @@ multiple users. Often, this includes a desire to configure the user
 environment in a custom way.
 
 Since the `jupyterhub-singleuser` server extends the standard Jupyter notebook
-server, most Jupyter notebook configuration and documentation also applies to single-user environments. 
+server, most Jupyter notebook configuration and documentation also applies to single-user environments.
 Configuration of user environments typically does not occur through JupyterHub itself, but rather through system-
 wide Jupyter's configuration, which is inherited by `jupyterhub-singleuser`.
 
