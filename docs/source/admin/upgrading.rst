@@ -5,12 +5,12 @@ Upgrading JupyterHub
 JupyterHub offers easy upgrade pathways between minor versions. This
 document describes how to do these upgrades.
 
-If you are using :ref:`a JupyterHub distribution <index/distributions>`, you
+If you use :ref:`a JupyterHub distribution <index/distributions>`, you
 should consult the distribution's documentation on how to upgrade. This
-document is if you have set up your own JupyterHub without using a
+document is applicable if you have set up your own JupyterHub without using a
 distribution.
 
-It is long because is pretty detailed! Most likely, upgrading
+This documentation is lengthy because it is quite detailed! Most likely, upgrading
 JupyterHub is painless, quick and with minimal user interruption.
 
 Read the Changelog
@@ -19,21 +19,20 @@ Read the Changelog
 The `changelog <../changelog.html>`_ contains information on what has
 changed with the new JupyterHub release, and any deprecation warnings.
 Read these notes to familiarize yourself with the coming changes. There
-might be new releases of authenticators & spawners you are using, so
+might be new releases for the authenticators & spawners you use, so
 read the changelogs for those too!
 
 Notify your users
 =================
 
-If you are using the default configuration where ``configurable-http-proxy``
+If you use the default configuration where ``configurable-http-proxy``
 is managed by JupyterHub, your users will see service disruption during
 the upgrade process. You should notify them, and pick a time to do the
 upgrade where they will be least disrupted.
 
-If you are using a different proxy, or running ``configurable-http-proxy``
+If you use a different proxy, or running ``configurable-http-proxy``
 independent of JupyterHub, your users will be able to continue using notebook
-servers they had already launched, but will not be able to launch new servers
-nor sign in.
+servers they had already launched, but will not be able to launch new servers or sign in.
 
 
 Backup database & config
@@ -41,11 +40,11 @@ Backup database & config
 
 Before doing an upgrade, it is critical to back up:
 
-#. Your JupyterHub database (sqlite by default, or MySQL / Postgres
-   if you used those). If you are using sqlite (the default), you
+#. Your JupyterHub database (SQLite by default, or MySQL / Postgres
+   if you used those). If you use SQLite (the default), you
    should backup the ``jupyterhub.sqlite`` file.
 #. Your ``jupyterhub_config.py`` file.
-#. Your user's home directories. This is unlikely to be affected directly by
+#. Your users' home directories. This is unlikely to be affected directly by
    a JupyterHub upgrade, but we recommend a backup since user data is very
    critical.
 
@@ -54,7 +53,7 @@ Shutdown JupyterHub
 ===================
 
 Shutdown the JupyterHub process. This would vary depending on how you
-have set up JupyterHub to run. Most likely, it is using a process
+have set up JupyterHub to run. It is likely using a process
 supervisor of some sort (``systemd`` or ``supervisord`` or even ``docker``).
 Use the supervisor specific command to stop the JupyterHub process.
 
@@ -118,7 +117,7 @@ SQLite database disadvantages
 SQLite has some disadvantages when it comes to upgrading JupyterHub. These
 are:
 
--  ``upgrade-db`` may not work, and you may need delete your database
+-  ``upgrade-db`` may not work, and you may need to delete your database
    and start with a fresh one.
 -  ``downgrade-db`` **will not** work if you want to rollback to an
    earlier version, so backup the ``jupyterhub.sqlite`` file before
