@@ -1,10 +1,9 @@
 # Starting servers with the JupyterHub API
 
-JupyterHub's [REST API][] allows launching servers on behalf of users
-without ever interacting with the JupyterHub UI.
-This allows you to build services launching Jupyter-based services for users
-without relying on the JupyterHub UI at all,
-enabling a variety of user/launch/lifecycle patterns not natively supported by JupyterHub,
+JupyterHub's [REST API][] allows servers to be launched on behalf of users
+without having to interact with the JupyterHub UI.
+This allows you to build services that launch Jupyter-based services for users
+without relying on the JupyterHub UI at all. Through the JupyterHub API, you can enable a variety of user/launch/lifecycle patterns not natively supported by JupyterHub,
 without needing to develop all the server management features of JupyterHub Spawners and/or Authenticators.
 [BinderHub][] is an example of such an application.
 
@@ -15,18 +14,18 @@ This document provides an example of working with the JupyterHub API to
 manage servers for users.
 In particular, we will cover how to:
 
-1. [check status of servers](checking)
-2. [start servers](starting)
-3. [wait for servers to be ready](waiting)
-4. [communicate with servers](communicating)
-5. [stop servers](stopping)
+1. [Check the status of servers](checking)
+2. [Start servers](starting)
+3. [Wait for servers to be ready](waiting)
+4. [Communicate with servers](communicating)
+5. [Stop servers](stopping)
 
 (checking)=
 
 ## Checking server status
 
-Requesting information about a user includes a `servers` field,
-which is a dictionary.
+Requested information about a user includes a `servers` field,
+which is a dictionary (or dict).
 
 ```
 GET /hub/api/users/:username
@@ -75,7 +74,7 @@ This is the servers dict when the user's default server is fully running and rea
 Key properties of a server:
 
 name
-: the server's name. Always the same as the key in `servers`
+: string. This is the server's name. Always the same as the key in `servers`
 
 ready
 : boolean. If true, the server can be expected to respond to requests at `url`.
@@ -122,7 +121,7 @@ while the server is not ready yet:
 Note that `ready` is false and `pending` is `spawn`.
 This means that the server is not ready
 (attempting to access it may not work)
-because it isn't finished spawning yet.
+because it hasn't finished spawning yet.
 We'll get more into that below in [waiting for a server][].
 
 [waiting for a server]: waiting
@@ -161,8 +160,8 @@ _Aside: how quickly JupyterHub responds with `202 Accepted` is governed by the `
 ## Waiting for a server
 
 If you are starting a server via the API,
-there's a good change you want to know when it's ready.
-There are two ways to do with:
+there's a good chance you want to know when it's ready.
+There are two ways to do this:
 
 1. {ref}`Polling the server model <polling>`
 2. the {ref}`progress API <progress>`
