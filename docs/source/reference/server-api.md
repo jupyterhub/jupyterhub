@@ -24,7 +24,7 @@ In particular, we will cover how to:
 
 ## Checking server status
 
-Requested information about a user includes a `servers` field,
+The requested information about a user includes a `servers` field,
 which is a dictionary (or dict).
 
 ```
@@ -48,11 +48,11 @@ GET /hub/api/users/:username
 }
 ```
 
-If the `servers` dict is empty, the user has no running servers.
-The keys of the `servers` dict are server names as strings.
+If the `servers` dict is empty, it means the user has no running servers.
+The key in the `servers` dict is the server name stored as a string.
 Many JupyterHub deployments only use the 'default' server,
-which has the empty string `''` for a name.
-In this case, the servers dict will always have either zero or one elements.
+which has the empty string `""` for a name.
+In this case, the servers dict will always have either zero or one element.
 
 This is the servers dict when the user's default server is fully running and ready:
 
