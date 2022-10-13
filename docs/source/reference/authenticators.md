@@ -158,9 +158,9 @@ setup(
   ...
   entry_points={
     'jupyterhub.authenticators': [
-        'myservice = mypackage:MyAuthenticator',
-    ],
-  },
+        'myservice = mypackage:MyAuthenticator'
+    ]
+  }
 )
 ```
 
@@ -192,7 +192,7 @@ If such state should be persisted, `.authenticate()` should return a dictionary 
 {
   'name': username,
   'auth_state': {
-    'key': 'value',
+    'key': 'value'
   }
 }
 ```
@@ -234,8 +234,8 @@ class MyAuthenticator(Authenticator):
         return {
             'name': username,
             'auth_state': {
-                'upstream_token': upstream_token,
-            },
+                'upstream_token': 'upstream_token'
+            }
         }
 
     async def pre_spawn_start(self, user, spawner):
