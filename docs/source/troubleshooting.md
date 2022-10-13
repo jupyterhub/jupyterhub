@@ -63,7 +63,7 @@ to the config file, `jupyterhub_config.py`.
 When nothing is given for these lists, there will be no admins, and all users
 who can authenticate on the system (i.e. all the unix users on the server with
 a password) will be allowed to start a server. The allowed username set lets you limit
-this to a particular set of users, and admin,_users lets you specify who
+this to a particular set of users, and admin,\_users lets you specify who
 among them may use the admin interface (not necessary, unless you need to do
 things like inspect other users' servers, or modify the user list at runtime).
 
