@@ -20,7 +20,7 @@ This starts the announcements service up at `/services/announcement/` when
 JupyterHub launches. By default the announcement text is empty.
 
 The `announcement` module has a configurable port (default 8888) and an API
-prefix setting. By default the API prefix is `JUPYTERHUB_SERVICE_PREFIX` if
+[prefix](https://docs.workato.com/api-mgmt/api-prefix.html) setting. By default the API prefix is `JUPYTERHUB_SERVICE_PREFIX` if
 that environment variable is set or `/` if it is not.
 
 ## Managing the Announcement
@@ -67,9 +67,12 @@ This has the same permission requirement.
 To be able to render the announcement, include the provide `page.html` template
 that extends the base `page.html` template. Set `c.JupyterHub.template_paths`
 in JupyterHub's configuration to include the path to the extending template.
-The template changes the `announcement` element and does a JQuery `$.get()` call
+The template changes the `announcement` element and does a jQuery `$.get()` call
 to retrieve the announcement text.
 
 JupyterHub's configurable announcement template variables can be set for various
-pages like login, logout, spawn, and home. Including the template provided in
-this example overrides all of those.
+pages like 
+
+ - login, logout, spawn, and home.
+
+ Including the template provided in this example overrides all of those.
