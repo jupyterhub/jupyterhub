@@ -63,7 +63,7 @@ Upgrade JupyterHub packages
 
 There are two environments where the ``jupyterhub`` package is installed:
 
-#. The *hub environment*: which is where the JupyterHub server process
+#. The *hub environment*: Which is where the JupyterHub server process
    runs. This is started with the ``jupyterhub`` command, and is what
    people generally think of as JupyterHub.
 
