@@ -30,20 +30,18 @@ or the server itself (`/user/:name`) if the server is running.
 
 This default url behavior can be customized in two ways:
 
-To redirect users to the JupyterHub home page (`/hub/home`)
-instead of spawning their server,
-set `redirect_to_server` to False:
-
-```python
-c.JupyterHub.redirect_to_server = False
-```
-
-This might be useful if you have a Hub where you expect
-users to be managing multiple server configurations
-and automatic spawning is not desirable.
-
-Second, you can customise the landing page to any page you like,
-such as a custom service you have deployed e.g. with course information:
+ - [ ] To redirect users to the JupyterHub home page (`/hub/home`)
+       instead of spawning their server, set `redirect_to_server` to
+       False:
+       
+       ```python c.JupyterHub.redirect_to_server = False ```
+       
+       This might be useful if you have a Hub where you expect users to
+       be managing multiple server configurations and automatic spawning
+       is not desirable.
+ - [ ] Second, you can customize the landing page to any page you like,
+       such as a custom service you have deployed e.g. with course
+       information:
 
 ```python
 c.JupyterHub.default_url = '/services/my-landing-service'
@@ -207,7 +205,7 @@ and a POST request will trigger the actual spawn and redirect.
 
 _Version added: 1.0_
 
-1.0 adds the ability to specify username and servername.
+1.0 adds the ability to specify username and server-name.
 Prior to 1.0, only `/hub/spawn` was recognized for the default server.
 
 _Version changed: 1.0_
@@ -237,7 +235,7 @@ and the page will show a link back to `/hub/spawn/...`.
 
 ![The token management page](../images/token-page.png)
 
-On this page, users can manage their JupyterHub API tokens.
+On this page, users can manage their JupyterHub [API tokens.](https://nordicapis.com/everything-you-need-to-know-about-api-tokens/)
 They can revoke access and request new tokens for writing scripts
 against the [JupyterHub REST API](./rest.md).
 
@@ -251,3 +249,4 @@ Administrators can take various administrative actions from this page:
 2. grant admin privileges
 3. start/stop user servers
 4. shutdown JupyterHub itself
+
