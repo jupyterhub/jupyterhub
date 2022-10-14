@@ -71,8 +71,8 @@ The template changes the `announcement` element and does a jQuery `$.get()` call
 to retrieve the announcement text.
 
 JupyterHub's configurable announcement template variables can be set for various
-pages like 
+pages like
 
- - login, logout, spawn, and home.
+- login, logout, spawn, and home.
 
- Including the template provided in this example overrides all of those.
+Including the template provided in this example overrides all of those.
