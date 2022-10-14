@@ -1,4 +1,6 @@
 
+(api-only)=
+
 # Deploying JupyterHub In "API Only Mode"
 
 Jupyterhub, as a service for deploying and managing jupiter servers for users, exposes its functionality, _primarily_ through a [REST API](rest).
@@ -14,13 +16,13 @@ Previously, one could only achieve some admin UI functionalities through admin p
 ## Why Rest API Only?
 
 ### Limited UI customization via templates
-The JupiterHub UI can be customized through extensivle HTML [templates](templates), but the scope at which it can be customized, is limited. It supports adding of content and messages to existing pages, but the page flow and available pages, cannot be customized.
+The JupyterHub UI can be customized through extensivle HTML [templates](templates), but the scope at which it can be customized, is limited. It supports adding of content and messages to existing pages, but the page flow and available pages, cannot be customized.
 
 
 ### Rich UI Customization with REST API based Apps
-JuptiterHub is primarily used as an API for managing Jupiter servers for other Jupiter-based appicatons that might want to present a different User Experience. Additionally, With an option of a fully customized experience available, you can now disable the hub UI and easily use your own pages, together with the JupiterHub Rest API, to build your own web applications to serve your users; relying on the hub only as an API for managing Users and Servers.
+JuptiterHub is primarily used as an API for managing Jupyter servers for other Jupyter-based applicatons that might want to present a different User Experience. Additionally, With an option of a fully customized experience available, you can now disable the hub UI and easily use your own pages, together with the JupyterHub Rest API, to build your own web applications to serve your users; relying on the hub only as an API for managing Users and Servers.
 
-An Example of such application is the BinderHub, which powers https://mybinder.org,
+An Example of such application is the BinderHub, which powers https://mybinder.org, 
 and motivates many of these changes.
 
 BinderHub is distinct from a traditional JupyterHub deployment
@@ -30,10 +32,11 @@ users are presented with a form to specify what environment they would like to l
 
 ![Binder launch form](../images/binderhub-form.png)
 
+
 **When a launch is requested:**
 
 1. An image is built, if necessary
-2. A temporary user is created,
+2. A temporary user is created
 3. A server is launched for that user, and
 4. When running, users are redirected to an already running server with an auth token in the URL
 5. After the session is over, the user is deleted
@@ -46,11 +49,10 @@ users are presented with a form to specify what environment they would like to l
 - Users do not have any access to any Hub functionality, so presenting pages for those features would be confusing.
 
 
-BinderHub is one of the motivating use cases for JupyterHub supporting being used _only_ via its API.
+BinderHub is one of the motivating use cases for JupyterHub that supports being used _only_ via its API.
 We'll use BinderHub here as an example of various configuration options.
 
 [binderhub]: https://binderhub.readthedocs.io
-
 
 
 ## Disabling Hub UI
@@ -60,31 +62,24 @@ The default is `/` which means that the Hub will receive all requests not alread
 
 There are three values that are most logical for `hub_routespec`:
 
-- `/` - This is the default, and used in most deployments.
-  It is also the only option prior to JupyterHub 1.4.
+- `/` - This is the default, and used in most deployments. It is also the only option prior to JupyterHub 1.4.
 - `/hub/` - This serves only Hub pages, both UI and API
-- `/hub/api` - This serves _only the Hub API_, so all Hub UI is disabled,
-  aside from the OAuth confirmation page, if used.
+- `/hub/api` - This serves _only the Hub API_, so all Hub UI is disabled. Aside from the OAuth confirmation page, if used.
 
-If you choose a hub routespec other than `/`,
-the main JupyterHub feature you will lose is the automatic handling of requests for `/user/:username`
-when the requested server is not running.
+If you choose a hub routespec other than `/`, the main JupyterHub feature you will lose is the automatic handling of requests for `/user/:username` when the requested server is not running.
 
-JupyterHub's handling of this request shows this page,
-telling you that the server is not running,
-with a button to launch it again:
+JupyterHub's handling of this request shows this page, telling you that the server is not running, with a button to launch it again:
 
 ![screenshot of hub page for server not running](../images/server-not-running.png)
 
-If you set `hub_routespec` to something other than `/`,
-it is likely that you also want to register another destination for `/` to handle requests to not-running servers.
+If you set `hub_routespec` to something other than `/`, it is likely that you also want to register another destination for `/` to handle requests to not-running servers.
+
 If you don't, you will see a default 404 page from the proxy:
 
 ![screenshot of CHP default 404](../images/chp-404.png)
 
 For mybinder.org, the default "start my server" page doesn't make sense,
-because when a server is gone, there is no restart action.
-Instead, we provide hints about how to get back to a link to start a _new_ server:
+because when a server is gone, there is no restart action. Instead, we provide hints about how to get back to a link to start a _new_ server:
 
 ![screenshot of mybinder.org 404](../images/binder-404.png)
 
@@ -99,21 +94,14 @@ c.Proxy.extra_routes = {
 }
 ```
 
-You may want to use an alternate behavior, such as redirecting to a landing page,
-or taking some other action based on the requested page.
+You may want to use an alternate behavior, such as redirecting to a landing page, or taking some other action based on the requested page.
 
-If you use `c.JupyterHub.hub_routespec = "/hub/"`,
-then all the Hub pages will be available,
-and only this default-page-404 issue will come up.
+If you use `c.JupyterHub.hub_routespec = "/hub/"`, then all the Hub pages will be available, and only this default-page-404 issue will come up.
 
-If you use `c.JupyterHub.hub_routespec = "/hub/api/"`,
-then only the Hub _API_ will be available,
-and all UI will be up to you.
-mybinder.org takes this last option,
-because none of the Hub UI pages really make sense.
-Binder users don't have any reason to know or care that JupyterHub happens
-to be an implementation detail of how their environment is managed.
-Seeing Hub error pages and messages in that situation is more likely to be confusing than helpful.
+If you use `c.JupyterHub.hub_routespec = "/hub/api/"`, then only the Hub _API_ will be available, and all UI will be up to you.
+
+mybinder.org takes this last option, because none of the Hub UI pages really make sense.
+Binder users don't have any reason to know or care that JupyterHub happens to be an implementation detail of how their environment is managed. Seeing Hub error pages and messages in that situation is more likely to be confusing than helpful.
 
 :::{versionadded} 1.4
 
