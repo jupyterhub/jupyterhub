@@ -10,13 +10,13 @@ The **Security Overview** section helps you learn about:
 This overview also helps you obtain a deeper understanding of how JupyterHub
 works.
 
-## Semi-trusted and Untrusted Users
+## Semi-trusted and untrusted users
 
 JupyterHub is designed to be a _simple multi-user server for modestly sized
 groups_ of **semi-trusted** users. While the design reflects serving semi-trusted
 users, JupyterHub is not necessarily unsuitable for serving **untrusted** users.
 
-Using JupyterHub with **untrusted** users entails more work by the
+Using JupyterHub with **untrusted** users does mean more work by the
 administrator. Much care is required to secure a Hub, with extra caution on
 protecting users from each other as the Hub is serving untrusted users.
 
@@ -41,7 +41,7 @@ To protect all users from each other, JupyterHub administrators must
 ensure that:
 
 - A user **does not have permission** to modify their single-user notebook server,
-  as well as:
+  including:
   - A user **may not** install new packages in the Python environment that runs
     their single-user server.
   - If the `PATH` is used to resolve the single-user executable (instead of
