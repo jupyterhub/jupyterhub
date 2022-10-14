@@ -1,7 +1,7 @@
 # Configuring user environments
 
-Deploying JupyterHub means you are providing Jupyter notebook environments for
-multiple users. Often, this includes a desire to configure the user
+Deploying JupyterHub means you are providing **Jupyter notebook environments for
+multiple users.** Often, this includes a desire to configure the user
 environment in some way.
 
 Since the `jupyterhub-singleuser` server extends the standard Jupyter notebook
@@ -67,7 +67,7 @@ The typical locations for these config files are:
 
 ### Example: Enable an extension system-wide
 
-For example, to enable the `cython` IPython extension for all of your users,
+For example, to enable the `cython` **IPython** extension for all of your users,
 create the file `/etc/ipython/ipython_config.py`:
 
 ```python
@@ -80,7 +80,7 @@ c.InteractiveShellApp.extensions.append("cython")
 These examples configure the Jupyter ServerApp,
 which is used by JupyterLab, the default in JupyterHub 2.0.
 
-If you are using the classing Jupyter Notebook server,
+If you are using the `classing Jupyter Notebook server,`
 the same things should work,
 with the following substitutions:
 
@@ -242,3 +242,4 @@ export JUPYTERHUB_SINGLEUSER_APP='jupyter_server.serverapp.ServerApp'
 ```
 
 :::
+
