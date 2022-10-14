@@ -242,4 +242,3 @@ export JUPYTERHUB_SINGLEUSER_APP='jupyter_server.serverapp.ServerApp'
 ```
 
 :::
-
