@@ -44,7 +44,7 @@ If you have tried to start the JupyterHub proxy and it fails to start:
 recent version of node. Some versions of Ubuntu/Debian come with a version
 of node that is very old, and it is necessary to update node.
 
-### sudospawner fails to run
+### Sudospawner fails to run
 
 If the sudospawner script is not found in the path, sudospawner will not run.
 To avoid this, specify sudospawner's absolute path. For example, start
@@ -201,7 +201,7 @@ your server again.
 
 ##### Proxy settings (403 GET)
 
-When your whole JupyterHub sits behind a organization proxy (_not_ a reverse proxy like NGINX as part of your setup and _not_ the configurable-http-proxy) the environment variables `HTTP_PROXY`, `HTTPS_PROXY`, `http_proxy` and `https_proxy` might be set. This confuses the jupyterhub-singleuser servers: When connecting to the Hub for authorization they connect via the proxy instead of directly connecting to the Hub on localhost. The proxy might deny the request (403 GET). This results in the singleuser server thinking it has a wrong auth token. To circumvent this you should add `<hub_url>,<hub_ip>,localhost,127.0.0.1` to the environment variables `NO_PROXY` and `no_proxy`.
+When your whole JupyterHub sits behind an organization proxy (_not_ a reverse proxy like NGINX as part of your setup and _not_ the configurable-http-proxy) the environment variables `HTTP_PROXY`, `HTTPS_PROXY`, `http_proxy` and `https_proxy` might be set. This confuses the jupyterhub-singleuser servers: When connecting to the Hub for authorization they connect via the proxy instead of directly connecting to the Hub on localhost. The proxy might deny the request (403 GET). This results in the single-user server thinking it has a wrong auth token. To circumvent this you should add `<hub_url>,<hub_ip>,localhost,127.0.0.1` to the environment variables `NO_PROXY` and `no_proxy`.
 
 ### Launching Jupyter Notebooks to run as an externally managed JupyterHub service with the `jupyterhub-singleuser` command returns a `JUPYTERHUB_API_TOKEN` error
 
@@ -388,7 +388,7 @@ jupyterhub --debug
 
 ### Toree integration with HDFS rack awareness script
 
-The Apache Toree kernel will an issue, when running with JupyterHub, if the standard HDFS
+The Apache Toree kernel will raise an issue when running with JupyterHub, if the standard HDFS
 rack awareness script is used. This will materialize in the logs as a repeated WARN:
 
 ```bash
@@ -412,8 +412,8 @@ In order to resolve this issue, there are two potential options.
 
 Docker images can be found at the [JupyterHub organization on DockerHub](https://hub.docker.com/u/jupyterhub/).
 The Docker image [jupyterhub/singleuser](https://hub.docker.com/r/jupyterhub/singleuser/)
-provides an example single user notebook server for use with DockerSpawner.
+provides an example single-user notebook server for use with DockerSpawner.
 
-Additional single user notebook server images can be found at the [Jupyter
+Additional single-user notebook server images can be found at the [Jupyter
 organization on DockerHub](https://hub.docker.com/r/jupyter/) and information
 about each image at the [jupyter/docker-stacks repo](https://github.com/jupyter/docker-stacks).
