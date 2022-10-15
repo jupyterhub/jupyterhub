@@ -1,12 +1,12 @@
 # Upgrading JupyterHub with RBAC framework
 
-RBAC framework requires different database setup than any previous JupyterHub versions due to eliminating the distinction between OAuth and API tokens (see {ref}`oauth-vs-api-tokens-target` for more details). This requires merging the previously two different database tables into one. By doing so, all existing tokens created before the upgrade no longer comply with the new database version and must be replaced.
+[RBAC](https://www.wallarm.com/what/what-exactly-is-role-based-access-control-rbac) framework requires different database setup than any previous JupyterHub versions due to eliminating the distinction between OAuth and API tokens (see {ref}`oauth-vs-api-tokens-target` for more details). This requires merging the previously two different database tables into one. By doing so, all existing tokens created before the upgrade no longer comply with the new database version and must be replaced.
 
 This is achieved by the Hub deleting all existing tokens during the database upgrade and recreating the tokens loaded via the `jupyterhub_config.py` file with updated structure. However, any manually issued or stored tokens are not recreated automatically and must be manually re-issued after the upgrade.
 
 No other database records are affected.
 
-(rbac-upgrade-steps-target)=
+**(rbac-upgrade-steps-target)=**
 
 ## Upgrade steps
 
@@ -33,13 +33,13 @@ We recommended the following procedure to start with RBAC:
 3. Define new roles that you would like to start using with appropriate scopes and assign them to these entities in `jupyterhub_config.py`.
 4. Restart the JupyterHub for the new roles to take effect.
 
-(oauth-vs-api-tokens-target)=
+**(oauth-vs-api-tokens-target)=**
 
 ## OAuth vs API tokens
 
 ### Before RBAC
 
-Previous JupyterHub versions utilize two types of tokens, OAuth token and API token.
+Previous JupyterHub versions utilize two types of tokens, **OAuth token and API token.**
 
 OAuth token is issued by the Hub to a single-user server when the user logs in. The token is stored in the browser cookie and is used to identify the user who owns the server during the OAuth flow. This token by default expires when the cookie reaches its expiry time of 2 weeks (or after 1 hour in JupyterHub versions < 1.3.0).
 
