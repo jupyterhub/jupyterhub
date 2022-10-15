@@ -28,7 +28,7 @@ Roles can be assigned to the following entities:
 - Services
 - Groups
 
-An entity can have zero, one, or multiple roles, and there are no restrictions on which roles can be assigned to which entity. Roles can be added to or removed from entities at any time.
+An entity can have zero, one, or multiple roles, and there are no restrictions on which roles can be assigned to which entity. Roles can be added or removed from entities at any time.
 
 **Users** \
 When a new user gets created, they are assigned their default role, `user`. Additionally, if the user is created with admin privileges (via `c.Authenticator.admin_users` in `jupyterhub_config.py` or `admin: true` via API), they will be also granted `admin` role. If existing user's admin status changes via API or `jupyterhub_config.py`, their default role will be updated accordingly (after next startup for the latter).
@@ -37,10 +37,10 @@ When a new user gets created, they are assigned their default role, `user`. Addi
 Services do not have a default role. Services without roles have no access to the guarded API end-points. So, most services will require assignment of a role in order to function.
 
 **Groups** \
-A group does not require any role, and has no roles by default. If a user is a member of a group, they automatically inherit any of the group's permissions (see {ref}`resolving-roles-scopes-target` for more details). This is useful for assigning a set of common permissions to several users.
+A group does not require any role, and have no role by default. If a user is a member of a group, they automatically inherit any of the group's permissions (see {ref}`resolving-roles-scopes-target` for more details). This is useful for assigning a set of common permissions to several users.
 
 **Tokens** \
-A token’s permissions are evaluated based on their owning entity. Since a token is always issued for a user or service, it can never have more permissions than its owner. If no specific scopes are requested for a new token, the token is assigned the scopes of the `token` role.
+A token’s permissions are evaluated based on their owning entity. Since a token is always issued for a user or service, it can not have more permissions than its owner. If no specific scopes are requested for a new token, the token is assigned the scopes of the `token` role.
 
 (define-role-target)=
 
@@ -92,7 +92,7 @@ c.JupyterHub.load_roles = [
 ]
 ```
 
-The role `reader` allows users `maria` and `joe` and service `external` to read (but not modify) any user’s model.
+The role `reader` allow users `maria` and `joe` and service `external` to read (but not modify) any users model.
 
 ```{admonition} Requirements
 :class: warning
