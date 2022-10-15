@@ -30,11 +30,10 @@ Within the RBAC framework, this is achieved by assigning a role to the administr
 
     ```{toctree}
     :maxdepth: 2
-    
+
     roles
     scopes
     use-cases
     tech-implementation
     upgrade
     ```
-
