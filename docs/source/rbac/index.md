@@ -2,7 +2,7 @@
 
 # JupyterHub RBAC
 
-Role Based Access Control (RBAC) in JupyterHub serves to provide fine grained control of access to Jupyterhub's API resources.
+**Role Based Access Control (RBAC)** in JupyterHub serves to provide fine grained control of access to Jupyterhub's API resources.
 
 RBAC is new in JupyterHub 2.0.
 
@@ -28,12 +28,13 @@ Within the RBAC framework, this is achieved by assigning a role to the administr
 
 ## Technical Overview
 
-```{toctree}
-:maxdepth: 2
+    ```{toctree}
+    :maxdepth: 2
+    
+    roles
+    scopes
+    use-cases
+    tech-implementation
+    upgrade
+    ```
 
-roles
-scopes
-use-cases
-tech-implementation
-upgrade
-```
