@@ -1,21 +1,21 @@
-.. _contributing/tests:
+    .. _contributing/tests:
 
 ===================================
-Testing JupyterHub and linting code
+#Testing JupyterHub and linting code
 ===================================
 
-Unit test help validate that JupyterHub works the way we think it does,
+**Unit test** help validate that JupyterHub works the way we think it does,
 and continues to do so when changes occur. They also help communicate
 precisely what we expect our code to do. 
 
 JupyterHub uses `pytest <https://pytest.org>`_ for all our tests. You
 can find them under ``jupyterhub/tests`` directory in the git repository.
 
-Running the tests
+#Running the tests
 ==================
 
 #. Make sure you have completed :ref:`contributing/setup`. You should be able
-   to start ``jupyterhub`` from the commandline & access it from your
+   to start ``jupyterhub`` from the command-line & access it from your
    web browser. This ensures that the dev environment is properly set
    up for tests to run.
 
@@ -59,7 +59,7 @@ Running the tests
 
    See the `pytest usage documentation <https://pytest.readthedocs.io/en/latest/usage.html>`_ for more details.
 
-Test organisation
+Test organization
 =================
 
 The tests live in ``jupyterhub/tests`` and are organized roughly into:
@@ -86,7 +86,7 @@ fixtures that can be used for JupyterHub components, such as:
   - ``cleanup_after``: allows cleanup of single user servers between tests
 - mocked service
   - ``MockServiceSpawner``: a spawner that mocks services for testing with a short poll interval
-  - ``mockservice```: mocked service with no external service url
+  - ``mockservice```: mocked service with no external service URL
   - ``mockservice_url``: mocked service with a url to test external services
 
 And fixtures to add functionality or spawning behavior:
