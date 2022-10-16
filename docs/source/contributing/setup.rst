@@ -1,10 +1,10 @@
-.. _contributing/setup:
+**.. _contributing/setup:**
 
 ================================
-Setting up a development install
+#Setting up a development install
 ================================
 
-System requirements
+#System requirements
 ===================
 
 JupyterHub can only run on macOS or Linux operating systems. If you are
@@ -37,7 +37,7 @@ for development & collaboration. You need to `install git
 <https://git-scm.com/book/en/v2/Getting-Started-Installing-Git>`_ to work on
 JupyterHub. We also recommend getting a free account on GitHub.com.
 
-Setting up a development install
+#Setting up a development install
 ================================
 
 When developing JupyterHub, you would need to make changes and be able to instantly view the results of the changes. To achieve that, a developer install is required.
@@ -127,12 +127,12 @@ When developing JupyterHub, you would need to make changes and be able to instan
 
 Happy developing!
 
-Using DummyAuthenticator & SimpleLocalProcessSpawner
+Using Dummy Authenticator & Simple Local Process Spawner
 ====================================================
 
 To simplify testing of JupyterHub, it’s helpful to use
 :class:`~jupyterhub.auth.DummyAuthenticator` instead of the default JupyterHub
-authenticator and SimpleLocalProcessSpawner instead of the default spawner.
+authenticator and Simple Local Process Spawner instead of the default spawner.
 
 There is a sample configuration file that does this in
 ``testing/jupyterhub_config.py``. To launch JupyterHub with this
@@ -149,12 +149,12 @@ The default JupyterHub `authenticator
 require your system to have user accounts for each user you want to log in to
 JupyterHub as.
 
-DummyAuthenticator allows you to log in with any username & password,
-while SimpleLocalProcessSpawner allows you to start servers without having to
+Dummy Authenticator allows you to log in with any username & password,
+while Simple Local Process Spawner allows you to start servers without having to
 create a Unix user for each JupyterHub user. Together, these make it
 much easier to test JupyterHub.
 
-Tip: If you are working on parts of JupyterHub that are common to all
+**Tip:** If you are working on parts of JupyterHub that are common to all
 authenticators & spawners, we recommend using both DummyAuthenticator &
 SimpleLocalProcessSpawner. If you are working on just authenticator-related
 parts, use only SimpleLocalProcessSpawner. Similarly, if you are working on
@@ -176,7 +176,7 @@ additional JavaScript dependencies:
 
 .. code:: bash
 
-   npm install
+   npm install [How to Install npm](https://radixweb.com/blog/installing-npm-and-nodejs-on-windows-and-mac)
 
 This will fetch client-side JavaScript dependencies necessary to compile
 CSS.
@@ -188,4 +188,4 @@ development updates, with:
 
    python3 setup.py js    # fetch updated client-side js
    python3 setup.py css   # recompile CSS from LESS sources
-   python3 setup.py jsx   # build React admin app
+   python3 setup.py js   # build React admin app
