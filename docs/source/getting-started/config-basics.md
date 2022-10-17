@@ -1,7 +1,7 @@
 # Configuration Basics
 
-The section contains basic information about configuring settings for a JupyterHub
-deployment. The [Technical Reference](../reference/index)
+The section contains basic information about configuring settings for a [JupyterHub
+deployment.](https://www.techrepublic.com/article/how-to-deploy-a-jupyter-notebook-for-interactive-python-development/) The [Technical Reference](../reference/index)
 documentation provides additional details.
 
 This section will help you learn how to:
