@@ -4,7 +4,6 @@ While troubleshooting, you may see unexpected behaviors or receive an error
 message. This section provides links for identifying the cause of the
 problem and how to resolve it.
 
-
 ## Behavior
 
 ### JupyterHub proxy fails to start
@@ -195,7 +194,7 @@ With a docker container, pass in the environment variable with the run command:
       -e JUPYTERHUB_API_TOKEN=my_secret_token \
       jupyter/datascience-notebook:latest
 
-[This example](https://github.com/jupyterhub/jupyterhub/tree/HEAD/examples/service-notebook/external) demonstrates how to combine the use of the         `jupyterhub-singleuser` environment variables when launching a Notebook as an externally managed service.
+[This example](https://github.com/jupyterhub/jupyterhub/tree/HEAD/examples/service-notebook/external) demonstrates how to combine the use of the `jupyterhub-singleuser` environment variables when launching a Notebook as an externally managed service.
 
 ## How do I...?
 
