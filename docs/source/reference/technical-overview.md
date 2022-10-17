@@ -2,7 +2,7 @@
 
 The **Technical Overview** section gives you a high-level view of:
 
-- JupyterHub's Subsystems: Hub, Proxy, Single-User Notebook Server
+- JupyterHub's major Subsystems: Hub, Proxy, Single-User Notebook Server
 - how the subsystems interact
 - the process from JupyterHub access to user login
 - JupyterHub's default behavior
@@ -11,16 +11,16 @@ The **Technical Overview** section gives you a high-level view of:
 The goal of this section is to share a deeper technical understanding of
 JupyterHub and how it works.
 
-## The Subsystems: Hub, Proxy, Single-User Notebook Server
+## The Major Subsystems: Hub, Proxy, Single-User Notebook Server
 
-JupyterHub is a set of processes that together provide a single user Jupyter
-Notebook server for each person in a group. Three major subsystems are started
+JupyterHub is a set of processes that together, provide a single-user Jupyter
+Notebook server for each person in a group. Three subsystems are started
 by the `jupyterhub` command line program:
 
 - **Hub** (Python/Tornado): manages user accounts, authentication, and
-  coordinates Single User Notebook Servers using a Spawner.
+  coordinates Single User Notebook Servers using a [Spawner](./spawners.md).
 
-- **Proxy**: the public facing part of JupyterHub that uses a dynamic proxy
+- **Proxy**: the public-facing part of JupyterHub that uses a dynamic proxy
   to route HTTP requests to the Hub and Single User Notebook Servers.
   [configurable http proxy](https://github.com/jupyterhub/configurable-http-proxy)
   (node-http-proxy) is the default proxy.
@@ -28,7 +28,7 @@ by the `jupyterhub` command line program:
 - **Single-User Notebook Server** (Python/Tornado): a dedicated,
   single-user, Jupyter Notebook server is started for each user on the system
   when the user logs in. The object that starts the single-user notebook
-  servers is called a **Spawner**.
+  servers is called a **[Spawner](./spawners.md)**.
 
 ![JupyterHub subsystems](../images/jhub-parts.png)
 
@@ -41,8 +41,8 @@ The basic principles of operation are:
 
 - The Hub spawns the proxy (in the default JupyterHub configuration)
 - The proxy forwards all requests to the Hub by default
-- The Hub handles login, and spawns single-user notebook servers on demand
-- The Hub configures the proxy to forward url prefixes to single-user notebook
+- The Hub handles login and spawns single-user notebook servers on demand
+- The Hub configures the proxy to forward URL prefixes to single-user notebook
   servers
 
 The proxy is the only process that listens on a public interface. The Hub sits
@@ -50,17 +50,16 @@ behind the proxy at `/hub`. Single-user servers sit behind the proxy at
 `/user/[username]`.
 
 Different **[authenticators](./authenticators.md)** control access
-to JupyterHub. The default one (PAM) uses the user accounts on the server where
+to JupyterHub. The default one [(PAM)](https://en.wikipedia.org/wiki/Pluggable_authentication_module) uses the user accounts on the server where
 JupyterHub is running. If you use this, you will need to create a user account
-on the system for each user on your team. Using other authenticators, you can
+on the system for each user on your team. However, using other authenticators you can
 allow users to sign in with e.g. a GitHub account, or with any single-sign-on
 system your organization has.
 
 Next, **[spawners](./spawners.md)** control how JupyterHub starts
 the individual notebook server for each user. The default spawner will
 start a notebook server on the same machine running under their system username.
-The other main option is to start each server in a separate container, often
-using Docker.
+The other main option is to start each server in a separate container, often using [Docker](https://jupyterhub-dockerspawner.readthedocs.io/en/latest/).
 
 ## The Process from JupyterHub Access to User Login
 
@@ -72,20 +71,20 @@ When a user accesses JupyterHub, the following events take place:
 - A single-user notebook server instance is [spawned](./spawners.md) for the
   logged-in user
 - When the single-user notebook server starts, the proxy is notified to forward
-  requests to `/user/[username]/*` to the single-user notebook server.
-- A cookie is set on `/hub/`, containing an encrypted token. (Prior to version
+  requests made to `/user/[username]/*`, to the single-user notebook server.
+- A [cookie](https://en.wikipedia.org/wiki/HTTP_cookie) is set on `/hub/`, containing an encrypted token. (Prior to version
   0.8, a cookie for `/user/[username]` was used too.)
 - The browser is redirected to `/user/[username]`, and the request is handled by
   the single-user notebook server.
 
-The single-user server identifies the user with the Hub via OAuth:
+How does the single-user server identify the user with the Hub via OAuth?
 
-- on request, the single-user server checks a cookie
-- if no cookie is set, redirect to the Hub for verification via OAuth
-- after verification at the Hub, the browser is redirected back to the
+- On request, the single-user server checks a cookie
+- If no cookie is set, the single-user server redirects to the Hub for verification via OAuth
+- After verification at the Hub, the browser is redirected back to the
   single-user server
-- the token is verified and stored in a cookie
-- if no user is identified, the browser is redirected back to `/hub/login`
+- The token is verified and stored in a cookie
+- If no user is identified, the browser is redirected back to `/hub/login`
 
 ## Default Behavior
 
@@ -111,7 +110,7 @@ working directory:
   This file needs to persist so that a **Hub** server restart will avoid
   invalidating cookies. Conversely, deleting this file and restarting the server
   effectively invalidates all login cookies. The cookie secret file is discussed
-  in the [Cookie Secret section of the Security Settings document](../getting-started/security-basics.md).
+  in the [Cookie Secret section of the Security Settings document](../getting-started/security-basics.rst).
 
 The location of these files can be specified via configuration settings. It is
 recommended that these files be stored in standard UNIX filesystem locations,

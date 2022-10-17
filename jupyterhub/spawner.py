@@ -378,8 +378,8 @@ class Spawner(LoggingConfigurable):
                     raise ValueError(f"No such role(s): {', '.join(missing_roles)}")
                 scopes.extend(roles_to_scopes(roles))
 
-        # always add access scopes
-        scopes.extend(self.oauth_access_scopes)
+        # always add access scope
+        scopes.append(f"access:servers!server={self.user.name}/{self.name}")
         return sorted(set(scopes))
 
     will_resume = Bool(

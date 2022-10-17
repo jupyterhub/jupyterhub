@@ -9,7 +9,13 @@ from tornado.log import app_log
 
 from .. import orm
 from ..roles import roles_to_scopes
-from ..scopes import _check_scopes_exist, access_scopes, identify_scopes
+from ..scopes import (
+    _check_scopes_exist,
+    _resolve_requested_scopes,
+    access_scopes,
+    expand_scopes,
+    identify_scopes,
+)
 from ..utils import compare_token, hash_token
 
 # patch absolute-uri check
@@ -551,7 +557,6 @@ class JupyterHubRequestValidator(RequestValidator):
             - Resource Owner Password Credentials Grant
             - Client Credentials Grant
         """
-
         orm_client = (
             self.db.query(orm.OAuthClient).filter_by(identifier=client_id).one_or_none()
         )
@@ -591,19 +596,23 @@ class JupyterHubRequestValidator(RequestValidator):
 
         client_allowed_scopes = set(orm_client.allowed_scopes)
 
+        # scope resolution only works if we have a user defined
+        user = request.user or getattr(self, "_current_user")
+
         # always grant reading the token-owner's name
         # and accessing the service itself
         required_scopes = {*identify_scopes(), *access_scopes(orm_client)}
         requested_scopes.update(required_scopes)
         client_allowed_scopes.update(required_scopes)
 
-        # TODO: handle expanded_scopes intersection here?
-        # e.g. client allowed to request admin:users,
-        # but requests admin:users!name=x will not be allowed
-        # This can probably be dealt with in config by listing expected requests
-        # as explcitly allowed
+        allowed_scopes, disallowed_scopes = _resolve_requested_scopes(
+            requested_scopes,
+            client_allowed_scopes,
+            user=user.orm_user,
+            client=orm_client,
+            db=self.db,
+        )
 
-        disallowed_scopes = requested_scopes.difference(client_allowed_scopes)
         if disallowed_scopes:
             app_log.error(
                 f"Scope(s) not allowed for {client_id}: {', '.join(disallowed_scopes)}"
