@@ -1,6 +1,6 @@
 # Technical Implementation
 
-[Roles](https://jupyterhub.readthedocs.io/en/stable/rbac/roles.html#roles) are stored in the database, where they are associated with users, services, groups and tokens. Roles can be added or modified as explained in the {ref}`define-role-target` section. Users, services, groups, and tokens can gain, change, and lose roles. This is currently achieved via `jupyterhub_config.py` (see {ref}`define-role-target`) and will be made available via API in the future. The latter will allow for changing a token's role, and thereby its permissions, without the need to issue a new token.
+[Roles](roles) are stored in the database, where they are associated with users, services, and groups. Roles can be added or modified as explained in the {ref}`define-role-target` section. Users, services, groups, and tokens can gain, change, and lose roles. This is currently achieved via `jupyterhub_config.py` (see {ref}`define-role-target`) and will be made available via API in the future. The latter will allow for changing a user's role, and thereby its permissions, without the need to restart JupyterHub.
 
 Roles and scopes utilities can be found in `roles.py` and `scopes.py` modules. Scope variables take on five different formats that are reflected throughout the utilities via specific nomenclature:
 
