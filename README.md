@@ -98,6 +98,7 @@ conda install notebook
 
 #### Using `pip`
 
+Using python3 doesn't work on most windows python installations even when having dual installation but instead using just python works all the time:
 JupyterHub can be installed with `pip`, and the proxy with `npm`:
 
 ```bash
