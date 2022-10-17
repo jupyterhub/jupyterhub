@@ -30,7 +30,7 @@ system-wide or in a shared environment.
 This installation location should always be in the same environment that
 `jupyterhub-singleuser` itself is installed in, and must be _readable and
 executable_ by your users. If you want users to be able to install additional
-packages, they must also be _writable_ by your users.
+packages, the installation location must also be _writable_ by your users.
 
 If you are using a standard system Python install, you would use:
 
