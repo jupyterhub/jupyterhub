@@ -29,7 +29,7 @@ c.JupyterHub.ip = '192.168.1.2'
 c.JupyterHub.port = 443
 ```
 
-Port 443 is used in the examples since 443 is the default port for SSL/HTTPS.
+**Port 443** is used in the examples since 443 is the default port for SSL/HTTPS.
 
 Configuring only the main IP and port of JupyterHub should be sufficient for
 most deployments of JupyterHub. However, more customized scenarios may need
@@ -41,7 +41,7 @@ port.
 
 ## Set the Proxy's REST API communication URL (optional)
 
-By default, this REST API listens on port 8001 of `localhost` only.
+By default, this [REST API](https://www.redhat.com/en/topics/api/what-is-a-rest-api) listens on port 8001 of `localhost` only.
 The Hub service talks to the proxy via a REST API on a secondary port. The
 API URL can be configured separately to override the default settings.
 
