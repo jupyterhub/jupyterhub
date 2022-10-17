@@ -4,37 +4,6 @@ When troubleshooting, you may see unexpected behaviors or receive an error
 message. This section provides links for identifying the cause of the
 problem and how to resolve it.
 
-[_Behavior_](#behavior)
-
-- JupyterHub proxy fails to start
-- sudospawner fails to run]
-- What is the default behavior when none of the lists (admin, allowed,
-  allowed groups) are set?
-- JupyterHub Docker container not accessible at localhost
-- How can I kill ports from JupyterHub-managed services that have been orphaned?
-- Why am I getting a Spawn failed error message?
-- How can I run JupyterHub with sudo but use my current env vars and virtualenv location?
-
-[_Errors_](#errors)
-
-- Error 500 after spawning my single-user server
-- Launching Jupyter Notebooks to run as an externally managed JupyterHub service with the `jupyterhub-singleuser` command returns a `JUPYTERHUB_API_TOKEN` error
-
-[_How do I...?_](#how-do-i)
-
-- Use a chained SSL certificate
-- Install JupyterHub without a network connection
-- I want access to the whole filesystem and still default users to their home directory
-- How do I increase the number of pySpark executors on YARN?
-- How do I use JupyterLab's prerelease version with JupyterHub?
-- How do I set up JupyterHub for a workshop (when users are not known ahead of time)?
-- How do I set up rotating daily logs?
-- Toree integration with HDFS rack awareness script
-- Where do I find Docker images and Dockerfiles related to JupyterHub?
-- How can I view the logs for JupyterHub or the user's Notebook servers when using the DockerSpawner?
-
-[_Troubleshooting commands_](#troubleshooting-commands)
-
 ## Behavior
 
 ### JupyterHub proxy fails to start
