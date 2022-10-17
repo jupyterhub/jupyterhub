@@ -13,7 +13,7 @@ Running the tests
 ==================
 
 #. Make sure you have completed :ref:`contributing/setup`. Once completed, you should be able
-   to run ``jupyterhub`` on your command line and access JupyterHub from your browser at http://localhost:8000. By doing this, it is ensured that the dev environment is properly set
+   to run ``jupyterhub`` on your command line and access JupyterHub from your browser at http://localhost:8000. Being able to run and access `jupyterhub` should mean that the dev environment is properly set
    up for tests to run.
 
 #. You can run all tests in JupyterHub 
