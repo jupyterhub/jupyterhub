@@ -61,7 +61,7 @@ The API request is resolved without additional errors using the scope _intersect
 the Hub logs a warning in this case (see {ref}`Figure 2 <api-request-chart>`).
 
 Resolving a token's scope (yellow box in {ref}`Figure 1 <token-request-chart>`) corresponds to resolving all the roles of the token's owner (including the roles associated with their groups) and the token's own scopes into a set of scopes. The two sets are compared (Resolve the scopes box in orange in {ref}`Figure 1 <token-request-chart>`), taking into account the scope hierarchy.
-If the token's scopes are a subset of the token owner's scopes, the token is issued with the requested scopes; if not, JupyterHub will throw an error.
+If the token's scopes are a subset of the token owner's scopes, the token is issued with the requested scopes; if not, JupyterHub will raise an error.
 
 {ref}`Figure 1 <token-request-chart>` below illustrates the steps involved. The orange rectangles highlight where in the process the roles and scopes are resolved.
 
