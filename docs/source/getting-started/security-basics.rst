@@ -1,4 +1,4 @@
-Security settings
+#Security settings
 =================
 
 .. important::
@@ -15,12 +15,11 @@ configuration settings are the main aspects of security configuration:
 
 The Hub hashes all secrets (e.g., auth tokens) before storing them in its
 database. A loss of control over read-access to the database should have
-minimal impact on your deployment; if your database has been compromised, it
-is still a good idea to revoke existing tokens.
+minimal impact on your deployment; if your database has been compromised, it is still a good idea to revoke existing tokens.
 
 .. _ssl-encryption:
 
-Enabling SSL encryption
+##Enabling SSL encryption
 -----------------------
 
 Since JupyterHub includes authentication and allows arbitrary code execution,
@@ -82,7 +81,7 @@ To achieve this, simply omit the configuration settings
 
 .. _authentication-token:
 
-Proxy authentication token
+##Proxy authentication token
 --------------------------
 
 The Hub authenticates its requests to the Proxy using a secret token that
@@ -125,7 +124,7 @@ automatically (this is the default configuration).
 
 .. _cookie-secret:
 
-Cookie secret
+##Cookie secret
 -------------
 
 The cookie secret is an encryption key, used to encrypt the browser cookies
@@ -185,7 +184,7 @@ itself, ``jupyterhub_config.py``, as a binary string:
 
 .. _cookies:
 
-Cookies used by JupyterHub authentication
+##Cookies used by JupyterHub authentication
 -----------------------------------------
 
 The following cookies are used by the Hub for handling user authentication.
