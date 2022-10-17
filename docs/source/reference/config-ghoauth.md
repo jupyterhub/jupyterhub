@@ -5,7 +5,7 @@ deployment with the following assumptions:
 
 - Running JupyterHub on a single cloud server
 - Using SSL on the standard HTTPS port 443
-- Using GitHub OAuth (using OAuthenticator) for login
+- Using GitHub OAuth (using [OAuthenticator](https://oauthenticator.readthedocs.io/en/latest)) for login
 - Using the default spawner (to configure other spawners, uncomment and edit
   `spawner_class` as well as follow the instructions for your desired spawner)
 - Users exist locally on the server
