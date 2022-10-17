@@ -1,22 +1,23 @@
 # Troubleshooting
 
-When troubleshooting, you may see unexpected behaviors or receive an error
+While troubleshooting, you may see unexpected behaviors or receive an error
 message. This section provides links for identifying the cause of the
 problem and how to resolve it.
+
 
 ## Behavior
 
 ### JupyterHub proxy fails to start
 
-If you have tried to start the JupyterHub proxy and it fails to start:
+If you have tried to start the JupyterHub proxy and it fails to run:
 
 - check if the JupyterHub IP configuration setting is
   `c.JupyterHub.ip = '*'`; if it is, try `c.JupyterHub.ip = ''`
 - Try starting with `jupyterhub --ip=0.0.0.0`
 
 **Note**: If this occurs on Ubuntu/Debian, check that you are using a
-recent version of [Node](https://nodejs.org). Some versions of Ubuntu/Debian come with a version
-of Node that is very old, and it is necessary to update Node.
+recent version of [Node](https://nodejs.org). Some versions of Ubuntu/Debian come with an older version
+of Node and it is necessary to update Node.
 
 ### sudospawner fails to run
 
@@ -37,11 +38,11 @@ to the config file, `jupyterhub_config.py`.
 When nothing is given for these lists, there will be no admins, and all users
 who can authenticate on the system (i.e. all the Unix users on the server with
 a password) will be allowed to start a server. The allowed username set lets you limit
-this to a particular set of users, and admin_users lets you specify who
+this to a particular set of users, and admin_users let you specify who
 among them may use the admin interface (not necessary, unless you need to do
 things like inspect other users' servers or modify the user list at runtime).
 
-### JupyterHub Docker container not accessible at localhost
+### What to do when JupyterHub Docker container is not accessible at localhost?
 
 Even though the command to start your Docker container exposes port 8000
 (`docker run -p 8000:8000 -d --name jupyterhub jupyterhub/jupyterhub jupyterhub`),
@@ -71,7 +72,7 @@ After successfully logging in to JupyterHub with a compatible authenticator, I g
 This issue occurs when the authenticator requires a local system user to exist. In these cases, you need to use a spawner
 that does not require an existing system user account, such as `DockerSpawner` or `KubeSpawner`.
 
-### How can I run JupyterHub with sudo but use my current env vars and virtualenv location?
+### How can I run JupyterHub with sudo but use my current environment variables and virtualenv location?
 
 When launching JupyterHub with `sudo jupyterhub` I get import errors and my environment variables don't work.
 
@@ -87,7 +88,7 @@ sudo MY_ENV=abc123 \
 
 ### Error 500 after spawning my single-user server
 
-You receive a 500 error when accessing the URL `/user/<your_name>/...`.
+You receive an Error 500 while accessing the URL `/user/<your_name>/...`.
 This is often seen when your single-user server cannot verify your user cookie
 with the Hub.
 
@@ -100,7 +101,7 @@ There are two likely reasons for this:
 #### Symptoms
 
 The main symptom is a failure to load _any_ page served by the single-user
-server, met with a 500 error. This is typically the first page at `/user/<your_name>`
+server, met with an Error 500. This is typically the first page at `/user/<your_name>`
 after logging in or clicking "Start my server". When a single-user notebook server
 receives a request, the notebook server makes an API request to the Hub to
 check if the cookie corresponds to the right user. This request is logged.
@@ -167,7 +168,7 @@ When your whole JupyterHub sits behind an organization proxy (_not_ a reverse pr
 
 [JupyterHub services](https://jupyterhub.readthedocs.io/en/stable/reference/services.html) allow processes to interact with JupyterHub's REST API. Example use-cases include:
 
-- **Secure Testing**: provide a canonical Jupyter Notebook for testing production data to reduce the number of entry points into production systems.
+- **Secure Testing**: provides a canonical Jupyter Notebook for testing production data to reduce the number of entry points into production systems.
 - **Grading Assignments**: provide access to shared Jupyter Notebooks that may be used for management tasks such as grading assignments.
 - **Private Dashboards**: share dashboards with certain group members.
 
@@ -194,7 +195,7 @@ With a docker container, pass in the environment variable with the run command:
       -e JUPYTERHUB_API_TOKEN=my_secret_token \
       jupyter/datascience-notebook:latest
 
-[This example](https://github.com/jupyterhub/jupyterhub/tree/HEAD/examples/service-notebook/external) demonstrates how to combine the use of the `jupyterhub-singleuser` environment variables when launching a Notebook as an externally managed service.
+[This example](https://github.com/jupyterhub/jupyterhub/tree/HEAD/examples/service-notebook/external) demonstrates how to combine the use of the         `jupyterhub-singleuser` environment variables when launching a Notebook as an externally managed service.
 
 ## How do I...?
 
@@ -268,7 +269,7 @@ similar to this one:
 provides additional information. The [pySpark configuration documentation](https://spark.apache.org/docs/0.9.0/configuration.html)
 is also helpful for programmatic configuration examples.
 
-### How do I use JupyterLab's prerelease version with JupyterHub?
+### How do I use JupyterLab's pre-release version with JupyterHub?
 
 While JupyterLab is still under active development, we have had users
 ask about how to try out JupyterLab with JupyterHub.
@@ -294,7 +295,7 @@ notebook servers to default to JupyterLab:
 ### How do I set up JupyterHub for a workshop (when users are not known ahead of time)?
 
 1. Set up JupyterHub using OAuthenticator for GitHub authentication
-2. Configure the admin list to have workshop leaders be listed with administrator privileges.
+2. Configure the admin list to have workshop leaders listed with administrator privileges.
 
 Users will need a GitHub account to log in and be authenticated by the Hub.
 
@@ -324,7 +325,7 @@ Or use syslog:
 
 ### Toree integration with HDFS rack awareness script
 
-The Apache Toree kernel will have an issue when running with JupyterHub if the standard HDFS
+The Apache Toree kernel will have an issue while running with JupyterHub if the standard HDFS
 rack awareness script is used. This will materialize in the logs as a repeated WARN:
 
 ```bash
@@ -371,7 +372,7 @@ You can also tail logs to view them in real-time using the `-f` option:
 ## Troubleshooting commands
 
 The following commands provide additional detail about installed packages,
-versions, and system information that may be helpful when troubleshooting
+versions, and system information that may be helpful while troubleshooting
 a JupyterHub deployment. The commands are:
 
 - System and deployment information
