@@ -5,12 +5,12 @@ Upgrading JupyterHub
 JupyterHub offers easy upgrade pathways between minor versions. This
 document describes how to do these upgrades.
 
-If you are using `distributions <https://github.com/ToobaJamal/jupyterhub/blob/main/docs/source/index.rst#distributions>`__, you
+If you are using :ref:`a JupyterHub distribution <index/distributions>`, you
 should consult the distribution's documentation on how to upgrade. This
 document is useful if you have set up your own JupyterHub without using a
 distribution.
 
-The steps are discussed in detail. Most likely, 
+The steps are discussed in detail, so if you get stuck at any step you can always refer to this guide. Most likely, 
 upgrading JupyterHub is painless, quick and with minimal user interruption.
 
 Read the Changelog
@@ -27,7 +27,7 @@ Notify your users
 
 If you are using the default configuration where ``configurable-http-proxy``
 is managed by JupyterHub, your users will see service disruption during
-the upgrade process. You will need to notify them, and pick a time to do the
+the upgrade process. You should notify them, and pick a time to do the
 upgrade where they will be least disrupted.
 
 If you are using a different proxy or running ``configurable-http-proxy``
@@ -50,7 +50,7 @@ Before doing an upgrade, it is critical to back up:
 
 
 Shut down JupyterHub
-===================
+====================
 
 Shut down the JupyterHub process. This would vary depending on how you
 have set up JupyterHub to run. Most likely, it is using a process
@@ -64,7 +64,7 @@ There are two environments where the ``jupyterhub`` package is installed:
 
 #. The *hub environment*, which is where the JupyterHub server process
    runs. This is started with the ``jupyterhub`` command and is what
-   people generally think of it as JupyterHub.
+   people generally think of as JupyterHub.
 
 #. The *notebook user environments*. This is where the user's notebook
    servers are launched from and are probably custom to your own
@@ -94,7 +94,7 @@ with:
 Where ``<version>`` is the version of JupyterHub you are upgrading to.
 
 You should also check for new releases of the authenticator & spawner you
-are using. You might wish to upgrade those packages too along with JupyterHub
+are using. You might wish to upgrade those packages, too, along with JupyterHub
 or upgrade them separately.
 
 Upgrade JupyterHub database
