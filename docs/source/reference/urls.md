@@ -120,9 +120,9 @@ if the specified server were running).
 Handling this URL is the most complicated condition in JupyterHub,
 because there can be many states:
 
-1. server is not active
-   a. user matches
-   b. user doesn't match
+1. server is not active:
+   User A matches,
+   User B doesn't match
 2. server is ready
 3. server is pending, but not ready
 
@@ -149,7 +149,7 @@ _Version changed: 1.0_
 Prior to 1.0, this URL itself was responsible for spawning servers,
 and served the progress page if it was pending,
 redirected to running servers, and
-This was useful because it made sure that requested servers were restarted after they stopped,
+this was useful because it made sure that requested servers were restarted after they stopped,
 but could also be harmful because unused servers would continuously be restarted if e.g.
 an idle JupyterLab frontend were open pointed at it,
 which constantly makes polling requests.
