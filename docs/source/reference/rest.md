@@ -4,15 +4,20 @@
 
 This section will give you information on:
 
-- what you can do with the API
-- create an API token
-- add API tokens to the config files
-- make an API request programmatically using the requests library
-- learn more about JupyterHub's API
+- [what you can do with the API](#what-you-can-do-with-the-api)
+- [how to create an API token](#create-an-api-token)
+- [how to add API tokens to the config files](#)
+- [how to make an API request programmatically using the requests library](#make-an-api-request)
+- [where to learn more about JupyterHub's API](#learn-more-about-the-api)
+
+
+Before we discuss about JupyterHub's REST API, you can learn about [REST APIs here](https://en.wikipedia.org/wiki/Representational_state_transfer). A REST
+API provides a standard way for users to get and send information to the
+Hub.
 
 ## What you can do with the API
 
-Using the [JupyterHub REST API][], you can perform actions on the Hub,
+Using the [JupyterHub REST API](https://jupyterhub.readthedocs.io/en/stable/reference/rest-api.html#/default/delete_groups__name_), you can perform actions on the Hub,
 such as:
 
 - checking which users are active
@@ -21,16 +26,14 @@ such as:
 - authenticating services
 - communicating with an individual Jupyter server's REST API
 
-A [REST](https://en.wikipedia.org/wiki/Representational_state_transfer)
-API provides a standard way for users to get and send information to the
-Hub.
+
 
 ## Create an API token
 
 To send requests using JupyterHub API, you must pass an API token with
-the request.
+the request. 
 
-The preferred way of generating an API token is:
+The preferred way of generating an API token is by running:
 
 ```bash
 openssl rand -hex 32
@@ -41,7 +44,7 @@ added to JupyterHub using `.api_tokens` configuration setting in
 `jupyterhub_config.py`.
 
 Alternatively, use the `jupyterhub token` command to generate a token
-for a specific hub user by passing the 'username':
+for a specific hub user by passing the " **username**":
 
 ```bash
 jupyterhub token <username>
@@ -123,9 +126,9 @@ c.JupyterHub.load_roles = [
 ```
 
 The token will have the permissions listed in the role
-(see [scopes][] for a list of available permissions),
+(see [scopes](https://jupyterhub.readthedocs.io/en/stable/rbac/scopes.html#scopes-in-jupyterhub) for a list of available permissions),
 but there will no longer be a user account created to house it.
-The main noticeable difference is that there will be no notebook server associated with the account
+The main noticeable difference between a configuration and a service is that there will be no notebook server associated with the account
 and the service will not show up in the various user list pages and APIs.
 
 ## Make an API request
@@ -136,8 +139,8 @@ Authorization header.
 ### Use requests
 
 Using the popular Python [requests](https://docs.python-requests.org)
-library, here's example code to make an API request for the users of a JupyterHub
-deployment. An API GET request is made, and the request sends an API token for
+library, (here's example code to make an API request for the users of a JupyterHub
+deployment) an API GET request is made, and the request sends an API token for
 authorization. The response contains information about the users:
 
 ```python
@@ -175,10 +178,11 @@ r.raise_for_status()
 r.json()
 ```
 
-The same API token can also authorize access to the [Jupyter Notebook REST API][]
-provided by notebook servers managed by JupyterHub if it has the necessary `access:users:servers` scope:
+The same API token can also authorize access to the [Jupyter Notebook REST API](https://jupyterhub.readthedocs.io/en/stable/reference/rest-api.html#/)
+provided by notebook servers managed by JupyterHub if it has the necessary `access:users:servers` scope.  
+<p>&nbsp;</p>
 
-(api-pagination)=
+
 
 ## Paginating API requests
 
@@ -275,7 +279,7 @@ First you must enable named-servers by including the following setting in the `j
 
 `c.JupyterHub.allow_named_servers = True`
 
-If using the [zero-to-jupyterhub-k8s](https://github.com/jupyterhub/zero-to-jupyterhub-k8s) set-up to run JupyterHub,
+If you are using the [zero-to-jupyterhub-k8s](https://github.com/jupyterhub/zero-to-jupyterhub-k8s) set-up to run JupyterHub,
 then instead of editing the `jupyterhub_config.py` file directly, you could pass
 the following as part of the `config.yaml` file, as per the [tutorial](https://zero-to-jupyterhub.readthedocs.io/en/latest/):
 
@@ -303,7 +307,7 @@ or kubernetes pods.
 
 ## Learn more about the API
 
-You can see the full [JupyterHub REST API][] for details.
+You can see the full [JupyterHub REST API](https://jupyterhub.readthedocs.io/en/stable/reference/rest-api.html#/) for details.
 
 [openapi initiative]: https://www.openapis.org/
 [jupyterhub rest api]: ./rest-api
