@@ -3,6 +3,10 @@
 The pages of the JupyterHub application are generated from
 [Jinja](http://jinja.pocoo.org/) templates. This allows the header to be defined once and incorporated into all pages. By providing your templates, you can have complete control over JupyterHub's
 appearance.
+This document will provide information on how to:
+- [add custom templates](#custom-templates)
+- [extend templates](#extending-templates)
+- [add announcements to a page](#page-announcements)
 
 ## Custom Templates
 
