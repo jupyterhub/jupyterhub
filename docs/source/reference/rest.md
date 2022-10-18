@@ -10,7 +10,6 @@ This section will give you information on:
 - [how to make an API request programmatically using the requests library](#make-an-api-request)
 - [where to learn more about JupyterHub's API](#learn-more-about-the-api)
 
-
 Before we discuss about JupyterHub's REST API, you can learn about [REST APIs here](https://en.wikipedia.org/wiki/Representational_state_transfer). A REST
 API provides a standard way for users to get and send information to the
 Hub.
@@ -26,12 +25,10 @@ such as:
 - authenticating services
 - communicating with an individual Jupyter server's REST API
 
-
-
 ## Create an API token
 
 To send requests using JupyterHub API, you must pass an API token with
-the request. 
+the request.
 
 The preferred way of generating an API token is by running:
 
@@ -179,10 +176,9 @@ r.json()
 ```
 
 The same API token can also authorize access to the [Jupyter Notebook REST API](https://jupyterhub.readthedocs.io/en/stable/reference/rest-api.html#/)
-provided by notebook servers managed by JupyterHub if it has the necessary `access:users:servers` scope.  
+provided by notebook servers managed by JupyterHub if it has the necessary `access:users:servers` scope.
+
 <p>&nbsp;</p>
-
-
 
 ## Paginating API requests
 
