@@ -11,7 +11,7 @@ Roles and scopes utilities can be found in `roles.py` and `scopes.py` modules. S
 - _expanded scopes_ \
   Set of fully expanded scopes without abbreviations (i.e., resolved metascopes, filters, and subscopes). E.g., `{"users:activity!user=charlie", "read:users:activity!user=charlie"}`.
 - _parsed scopes_ \
-  Dictionary represenation of expanded scopes. E.g., `{"users:activity": {"user": ["charlie"]}, "read:users:activity": {"users": ["charlie"]}}`.
+  Dictionary representation of expanded scopes. E.g., `{"users:activity": {"user": ["charlie"]}, "read:users:activity": {"users": ["charlie"]}}`.
 - _intersection_ \
   Set of expanded scopes as intersection of 2 expanded scope sets.
 - _identify scopes_ \
