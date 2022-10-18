@@ -16,7 +16,7 @@ In particular, we will cover how to:
 
 - [check the status of servers](#checking-server-status)
 - [start servers](#starting-servers)
- 
+
 - [wait for servers to be ready](#waiting-for-a-server)
   - [Poll the server model](#polling-the-server-model)
   - [Progress API](#progress-api)
@@ -74,32 +74,32 @@ This is the servers dict when the user's default server is fully running and rea
   }
 ```
 
-__Key properties of a server__:
+**Key properties of a server**:
 
-__name__
+**name**
 : the server's name. Always the same as the key in `servers`
 
-__ready__
+**ready**
 : boolean. If true, the server can be expected to respond to requests at `url`.
 
-__pending__
+**pending**
 : `null` or a string indicating a transitional state (such as `start` or `stop`).
 Will always be `null` if `ready` is true,
 and will always be a string if `ready` is false.
 
-__url__
+**url**
 : The server's url (just the path, e.g. `/users/:name/:servername/`)
 where the server can be accessed if `ready` is true.
 
-__progress_url__
+**progress_url**
 : The API url path (starting with `/hub/api`)
 where the progress API can be used to wait for the server to be ready.
 See below for more details on the progress API.
 
-__last_activity__
+**last_activity**
 : ISO8601 timestamp indicating when activity was last observed on the server
 
-__started__
+**started**
 : ISO801 timestamp indicating when the server was last started
 
 We've seen the `servers` model with no servers and with one `ready` server.
@@ -121,7 +121,7 @@ while the server is not ready yet:
   }
 ```
 
-*Note that `ready` is false and `pending` is `spawn`.*  
+_Note that `ready` is false and `pending` is `spawn`._  
 This means that the server is not ready
 (attempting to access it may not work)
 because it isn't finished spawning yet.
@@ -146,18 +146,17 @@ POST /hub/api/users/:username/servers/[:servername]
 Assuming the request was valid,
 there are two possible responses:
 
-__201 Created__
+**201 Created**
 : This status code means the launch was completed and the server is ready.
 It should be available at the server's URL immediately.
 
-__202 Accepted__
+**202 Accepted**
 : This is the more likely response,
 and means that the server has begun launching,
 but isn't immediately ready.
 The server has `pending: 'spawn'` at this point.
 
 _Aside: how quickly JupyterHub responds with `202 Accepted` is governed by the `slow_spawn_timeout` tornado setting._
-
 
 ## Waiting for a server
 
@@ -168,8 +167,6 @@ There are two ways to do with:
 1. {ref} `Polling the server model <polling>`
 2. the {ref} `progress API <progress>`
 
-
-
 ### Polling the server model
 
 The simplest way to check if a server is ready
@@ -179,7 +176,7 @@ If:
 
 1. the server name is in the user's `servers` model, and
 2. `servers['servername']['ready']` is true
-then the server is ready.
+   then the server is ready.
 
 A Python example, to check if a server is ready:
 
@@ -205,8 +202,6 @@ def server_ready(hub_url, user, server_name="", token):
 ```
 
 You can keep making this check until `ready` is true.
-
-
 
 ### Progress API
 
@@ -246,13 +241,13 @@ progress events have the form:
 }
 ```
 
-__progress:__ integer, 0-100.
+**progress:** integer, 0-100.
 
-__message:__ string message describing progress stages.
+**message:** string message describing progress stages.
 
-__ready:__ present and true only for the last event when the server is ready.
+**ready:** present and true only for the last event when the server is ready.
 
-__url:__ only present if `ready` is true; it will be the server's url.
+**url:** only present if `ready` is true; it will be the server's url.
 
 The progress API can be used even with fully ready servers.
 If the server is ready,
@@ -288,7 +283,6 @@ Here is a Python example for consuming an event stream:
 :pyobject: event_stream
 ```
 
-
 ## Stopping servers
 
 Servers can be stopped with a DELETE request:
@@ -302,10 +296,10 @@ DELETE /hub/api/users/:user/servers/[:servername]
 Like start, delete may not complete immediately.
 The DELETE request has two possible response codes:
 
-__204 Deleted:__ This status code means the delete is completed and the server is fully stopped.
+**204 Deleted:** This status code means the delete is completed and the server is fully stopped.
 It will now be absent from the user `servers` model.
 
-__202 Accepted:__ Like start, `202` means your request was accepted but is not yet complete.
+**202 Accepted:** Like start, `202` means your request was accepted but is not yet complete.
 The server has `pending: 'stop'` at this point.
 
 Unlike start, there is no progress API for stop.
@@ -316,8 +310,6 @@ and wait for the server to disappear from the user `servers` model.
 :language: python
 :pyobject: stop_server
 ```
-
-
 
 ## Communicating with servers
 
