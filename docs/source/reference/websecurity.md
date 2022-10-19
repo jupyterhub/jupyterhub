@@ -1,7 +1,7 @@
 # Security Overview
 
 The **Security Overview** section helps you learn about: the semi-trusted user;
-the available mitigations to protect untrusted users from each other; 
+the available mitigations to protect untrusted users from each other;
 the value of periodic security audits.
 
 This overview also helps you obtain a deeper understanding of how JupyterHub
@@ -42,11 +42,11 @@ ensure that:
     their single-user server;
   - the creation of new files in any `PATH` directory that precedes the
     directory containing `jupyterhub-singleuser` (if the `PATH` is used
-    to resolve the single-user executable instead of using an absolute path); 
+    to resolve the single-user executable instead of using an absolute path);
   - the modification of environment variables (e.g. PATH, PYTHONPATH) for
     their single-user server;
   - the modification of the configuration of the notebook server
-  (the `~/.jupyter` or `JUPYTER_CONFIG_DIR` directory).
+    (the `~/.jupyter` or `JUPYTER_CONFIG_DIR` directory).
 
 If any additional services are run on the same domain as the Hub, the services
 **must never** display user-authored HTML that is neither _sanitized_ nor _sandboxed_
