@@ -20,8 +20,5 @@ Issues related to a specific authenticator or spawner should be opened in the ap
 
 If you cannot find a repository to open your issue in, do not worry! Open the issue in the [main JupyterHub repository](https://github.com/jupyterhub/jupyterhub/) and our community will help you figure it out.
 
-## Mailing List
-
-A [mailing list](https://groups.google.com/forum/#!forum/jupyter) for all of Project Jupyter exists, along with one for [teaching with Jupyter Notebooks](https://groups.google.com/forum/#!forum/jupyter-education).
 
 **NOTE**: Our community is distributed across the world in various timezones, so please be patient if you do not get a response immediately!
