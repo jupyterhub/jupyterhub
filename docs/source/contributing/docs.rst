@@ -1,13 +1,13 @@
 .. _contributing/docs:
 
 ==========================
-Contributing Documentation
+#Contributing Documentation
 ==========================
 
 Documentation is often more important than code. This page helps
 you get set up on how to contribute documentation to JupyterHub.
 
-Building documentation locally
+##Building documentation locally
 ==============================
 
 We use `sphinx <http://sphinx-doc.org>`_ to build our documentation. It takes
@@ -51,7 +51,7 @@ change renders correctly, it is good practice to test it locally.
 
 .. _contributing/docs/conventions:
 
-Documentation conventions
+##Documentation conventions
 =========================
 
 This section lists various conventions we use in our documentation. This is a
