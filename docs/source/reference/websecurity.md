@@ -126,7 +126,8 @@ versions](https://github.com/nodejs/Release) up to date.
 We recommend that you do periodic reviews of your deployment's security. It is
 good practice to keep JupyterHub, configurable-http-proxy, and nodejs
 versions up to date.
->>>>>>> main
+
+> > > > > > > main
 
 A handy website for testing your deployment is
 [Qualsys' SSL analyzer tool](https://www.ssllabs.com/ssltest/analyze.html).
