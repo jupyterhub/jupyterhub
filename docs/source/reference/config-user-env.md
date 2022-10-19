@@ -4,23 +4,31 @@ To deploy JupyterHub means you are providing Jupyter notebook environments for
 multiple users. Often, this includes a desire to configure the user
 environment in a custom way.
 
-Since the `jupyterhub-singleuser` server extends the standard Jupyter notebook server, most configuration and documentation that applies to Jupyter Notebook applies to the single-user environments. 
-Configuration of user environments typically does not occur through JupyterHub itself, but rather through system-wide Jupyter's configuration, which is inherited by `jupyterhub-singleuser`.
+Since the `jupyterhub-singleuser` server extends the standard Jupyter notebook
+server, most configuration and documentation that applies to Jupyter Notebook
+applies to the single-user environments. Configuration of user environments
+typically does not occur through JupyterHub itself, but rather through the system-wide
+configuration of Jupyter, which is inherited by `jupyterhub-singleuser`.
 
 **Tip:** When searching for configuration tips for JupyterHub user environments, you might want to remove JupyterHub from your search because there are a lot more people out there configuring Jupyter than JupyterHub and the configuration is the same.
 
 This section will focus on user environments, which includes the following:
 
-- Installing packages
-- Configuring Jupyter and IPython
-- Installing kernelspecs
-- Using containers vs. multi-user hosts
+- [Installing packages](#installing-packages)
+- [Configuring Jupyter and IPython](#configuring-jupyter-and-ipython)
+- [Installing kernelspecs](#installing-kernelspecs)
+- [Using containers vs. multi-user hosts](#multi-user-hosts-vs-containers)
 
 ## Installing packages
 
 To make packages available to users, you will typically install packages system-wide or in a shared environment.
 
-This installation location should always be in the same environment where `jupyterhub-singleuser` itself is installed, and must be _readable and executable_ by your users. If you want users to be able to install additional packages, it must also be _writable_ by your users.
+
+This installation location should always be in the same environment where
+`jupyterhub-singleuser` itself is installed in, and must be _readable and
+executable_ by your users. If you want your users to be able to install additional
+packages, the installation location must also be _writable_ by your users.
+
 
 If you are using a standard Python installation on your system, use the following command:
 
@@ -84,7 +92,11 @@ c.MappingKernelManager.cull_interval = 2 * 60
 You may have multiple Jupyter kernels installed and want to make sure that they are available to all of your users. This means installing kernelspecs either system-wide (e.g. in /usr/local/) or in the `sys.prefix` of JupyterHub
 itself.
 
-Jupyter kernelspec installation is system wide by default, but some kernels may default to installing kernelspecs in your home directory. These will need to be moved system-wide to ensure that they are accessible.
+
+Jupyter kernelspec installation is system-wide by default, but some kernels
+may default to installing kernelspecs in your home directory. These will need
+to be moved system-wide to ensure that they are accessible.
+
 
 To see where your kernelspecs are, you can use the following command:
 
@@ -115,18 +127,21 @@ depending on what Spawner you are using.
 The first category is a **shared system (multi-user host)** where
 each user has a JupyterHub account, a home directory as well as being
 a real system user. In this example, shared configuration and installation
-must be in a 'system-wide' location, such as `/etc/` or `/usr/local`
+must be in a 'system-wide' location, such as `/etc/`, or `/usr/local`
 or a custom prefix such as `/opt/conda`.
 
 When JupyterHub uses **container-based** Spawners (e.g. KubeSpawner or
 DockerSpawner), the 'system-wide' environment is really the container image used for users.
+
 
 In both cases, you want to _avoid putting configuration in user home
 directories_ because users can change those configuration settings. Also, home directories typically persist once they are created, thereby making it difficult for admins to update later.
 
 ## Named servers
 
+
 By default, in a JupyterHub deployment, each user has one server only.
+
 
 JupyterHub can, however, have multiple servers per user.
 This is mostly useful in deployments where users can configure the environment in which their server will start (e.g. resource requests on an HPC cluster), so that a given user can have multiple configurations running at the same time, without having to stop and restart their own server.
@@ -146,7 +161,10 @@ as well as the admin page:
 
 ![named servers on the admin page](../images/named-servers-admin.png)
 
-Named servers can be accessed, created, started, stopped, and deleted from these pages. Activity tracking is now per-server as well.
+
+Named servers can be accessed, created, started, stopped, and deleted
+from these pages. Activity tracking is now per server as well.
+
 
 To limit the number of **named server** per user by setting a constant value, use this:
 
@@ -172,9 +190,12 @@ If `named_server_limit_per_user` is set to `0`, no limit is enforced.
 
 (classic-notebook-ui)=
 
-## Switching back to classic notebook
+## Switching back to the classic notebook
 
-By default, the single-user server launches JupyterLab, which is based on [Jupyter Server][].
+
+By default, the single-user server launches JupyterLab,
+which is based on [Jupyter Server][].
+
 This is the default server when running JupyterHub ≥ 2.0.
 To switch to using the legacy Jupyter Notebook server, you can set the `JUPYTERHUB_SINGLEUSER_APP` environment variable
 (in the single-user environment) to:
@@ -187,8 +208,13 @@ export JUPYTERHUB_SINGLEUSER_APP='notebook.notebookapp.NotebookApp'
 [jupyter notebook]: https://jupyter-notebook.readthedocs.io
 
 :::{versionchanged} 2.0
-JupyterLab is now the default singleuser UI, if available,
-which is based on the [Jupyter Server][], no longer the legacy [Jupyter Notebook][] server.JupyterHub prior to 2.0 launched the legacy notebook server (`jupyter notebook`),and Jupyter server could be selected by specifying the following:
+
+JupyterLab is now the default single-user UI, if available,
+which is based on the [Jupyter Server][],
+no longer the legacy [Jupyter Notebook][] server.
+JupyterHub prior to 2.0 launched the legacy notebook server (`jupyter notebook`),
+and the Jupyter server could be selected by specifying the following:
+
 
 ```python
 # jupyterhub_config.py
