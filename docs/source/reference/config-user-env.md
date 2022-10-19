@@ -18,8 +18,7 @@ This section will focus on user environments, which includes the following:
 
 ## Installing packages
 
-To make packages available to users, you will typically install packages
-system-wide or in a shared environment.
+To make packages available to users, you will typically install packages system-wide or in a shared environment.
 
 This installation location should always be in the same environment where `jupyterhub-singleuser` itself is installed, and must be _readable and executable_ by your users. If you want users to be able to install additional packages, it must also be _writable_ by your users.
 
@@ -40,8 +39,7 @@ Alternatively, You may also use conda to install packages. To do this, ensure th
 and [IPython](https://ipython.readthedocs.io/en/stable/development/config.html)
 have their own configuration systems.
 
-As a JupyterHub administrator, you will typically want to install and configure environments for all JupyterHub users. For example, let's say you wish for each student in
-a class to have the same user environment configuration.
+As a JupyterHub administrator, you will typically want to install and configure environments for all JupyterHub users. For example, let's say you wish for each student in a class to have the same user environment configuration.
 
 Jupyter and IPython support **"system-wide"** locations for configuration, which is the logical place to put global configuration that you want to affect all users. It's generally more efficient to configure user environments "system-wide",and it's a good practice to avoid creating files in the users' home directories.
 The typical locations for these config files are:
