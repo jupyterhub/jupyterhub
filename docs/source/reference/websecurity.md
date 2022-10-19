@@ -1,24 +1,21 @@
 # Security Overview
 
-The **Security Overview** section helps you learn about:
-
-- the design of JupyterHub with respect to web security
-- the semi-trusted user
-- the available mitigations to protect untrusted users from each other
-- the value of periodic security audits
+The **Security Overview** section helps you learn about: the semi-trusted user;
+the available mitigations to protect untrusted users from each other; 
+the value of periodic security audits.
 
 This overview also helps you obtain a deeper understanding of how JupyterHub
-works.
+works, as well as its design with respect to web security.
 
 ## Semi-trusted and untrusted users
 
 JupyterHub is designed to be a _simple multi-user server for modestly sized
-groups_ of **semi-trusted** users. While the design reflects serving semi-trusted
-users, JupyterHub is not necessarily unsuitable for serving **untrusted** users.
+groups_ of **semi-trusted** users. Its design reflects serving semi-trusted
+users, however, JupyterHub is not necessarily unsuitable for serving **untrusted** users.
 
-Using JupyterHub with **untrusted** users does mean more work by the
-administrator. Much care is required to secure a Hub, with extra caution on
-protecting users from each other as the Hub is serving untrusted users.
+That way, using JupyterHub with **untrusted** users means more work by the
+administrator, since much care is required to secure a Hub, with extra caution on
+protecting users from each other.
 
 One aspect of JupyterHub's _design simplicity_ for **semi-trusted** users is that
 the Hub and single-user servers are placed in a _single domain_, behind a
@@ -31,9 +28,8 @@ servers) as a single website (i.e. single domain).
 ## Protect users from each other
 
 To protect users from each other, a user must **never** be able to write arbitrary
-HTML and serve it to another user on the Hub's domain. JupyterHub's
-authentication setup prevents a user from writing arbitrary HTML and serving it to
-another user because only the owner of a given single-user notebook server is
+HTML and serve it to another user on the Hub's domain. This is prevented by JupyterHub's
+authentication setup because only the owner of a given single-user notebook server is
 allowed to view user-authored pages served by the given single-user notebook
 server.
 
@@ -42,14 +38,14 @@ ensure that:
 
 - A user **does not have permission** to modify their single-user notebook server,
   including:
-  - A user **may not** install new packages in the Python environment that runs
-    their single-user server.
-  - If the `PATH` is used to resolve the single-user executable (instead of
-    using an absolute path), a user **may not** create new files in any `PATH`
-    directory that precedes the directory containing `jupyterhub-singleuser`.
-  - A user may not modify environment variables (e.g. PATH, PYTHONPATH) for
-    their single-user server.
-- A user **may not** modify the configuration of the notebook server
+  - the installation of new packages in the Python environment that runs
+    their single-user server;
+  - the creation of new files in any `PATH` directory that precedes the
+    directory containing `jupyterhub-singleuser` (if the `PATH` is used
+    to resolve the single-user executable instead of using an absolute path); 
+  - the modification of environment variables (e.g. PATH, PYTHONPATH) for
+    their single-user server;
+  - the modification of the configuration of the notebook server
   (the `~/.jupyter` or `JUPYTER_CONFIG_DIR` directory).
 
 If any additional services are run on the same domain as the Hub, the services
@@ -69,14 +65,14 @@ desired effect, and user servers and the Hub are protected from each other. A
 user's single-user server will be at `username.jupyter.mydomain.com`. This also
 requires all user subdomains to point to the same address, which is most easily
 accomplished with wildcard DNS. Since this spreads the service across multiple
-domains, you will need wildcard SSL, as well. Unfortunately, for many
+domains, you will need wildcard SSL as well. Unfortunately, for many
 institutional domains, wildcard DNS and SSL are not available. **If you do plan
 to serve untrusted users, enabling subdomains is highly encouraged**, as it
 resolves the cross-site issues.
 
 ### Disable user config
 
-If subdomains are not available or not desirable, JupyterHub provides a
+If subdomains are not available or not desirable, JupyterHub provides the
 configuration option `Spawner.disable_user_config`, which can be set to prevent
 the user-owned configuration files from being loaded. After implementing this
 option, PATHs and package installation and PATHs are the other things that the
@@ -84,9 +80,8 @@ admin must enforce.
 
 ### Prevent spawners from evaluating shell configuration files
 
-For most Spawners, `PATH` is not something users can influence, but care should
-be taken to ensure that the Spawner does _not_ evaluate shell configuration
-files prior to launching the server.
+For most Spawners, `PATH` is not something users can influence, but it's important that
+the Spawner should _not_ evaluate shell configuration files prior to launching the server.
 
 ### Isolate packages using virtualenv
 
@@ -107,8 +102,8 @@ By default, all communications on the server, between the proxy, hub, and single
 feature on does require that the enabled `Spawner` can use the certificates
 generated by the `Hub` (the default `LocalProcessSpawner` can, for instance).
 
-It is also important to note that this encryption **does not** (yet) cover the
-`zmq tcp` sockets between the Notebook client and kernel. While users cannot
+It is also important to note that this encryption **does not** cover the
+`zmq tcp` sockets between the Notebook client and kernel yet. While users cannot
 submit arbitrary commands to another user's kernel, they can bind to these
 sockets and listen. When serving untrusted users, this eavesdropping can be
 mitigated by setting `KernelManager.transport` to `ipc`. This applies standard
