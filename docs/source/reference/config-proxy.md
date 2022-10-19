@@ -51,7 +51,7 @@ server {
     listen 80;
     server_name HUB.DOMAIN.TLD;
 
-    # Send a redirect request using the $request_uri that was requested but via HTTPS
+    # Redirect the request to HTTPS
     return 302 https://$host$request_uri;
 }
 
@@ -112,7 +112,7 @@ server {
     listen 80;
     server_name NO_HUB.DOMAIN.TLD;
 
-    # Send a redirect request using the $request_uri that was requested but via HTTPS
+    # Redirect the request to HTTPS
     return 302 https://$host$request_uri;
 }
 
