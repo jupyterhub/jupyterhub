@@ -16,9 +16,9 @@ JupyterHub is designed to be a _simple multi-user server for modestly sized
 groups_ of **semi-trusted** users. While the design reflects serving semi-trusted
 users, JupyterHub is not necessarily unsuitable for serving **untrusted** users.
 
-Using JupyterHub with **untrusted** users does mean more work by the
+Using JupyterHub with **untrusted** users does mean more work for the
 administrator. Much care is required to secure a Hub, with extra caution on
-protecting users from each other as the Hub is serving untrusted users.
+protecting users from each other, since the Hub serves untrusted users.
 
 One aspect of JupyterHub's _design simplicity_ for **semi-trusted** users is that
 the Hub and single-user servers are placed in a _single domain_, behind a
@@ -47,7 +47,7 @@ ensure that:
   - If the `PATH` is used to resolve the single-user executable (instead of
     using an absolute path), a user **may not** create new files in any `PATH`
     directory that precedes the directory containing `jupyterhub-singleuser`.
-  - A user may not modify environment variables (e.g. PATH, PYTHONPATH) for
+  - A user may not modify environment variables (e.g. `PATH`, `PYTHONPATH`) for
     their single-user server.
 - A user **may not** modify the configuration of the notebook server
   (the `~/.jupyter` or `JUPYTER_CONFIG_DIR` directory).
@@ -58,7 +58,7 @@ If any additional services are run on the same domain as the Hub, the services
 
 ## Mitigate security issues
 
-Several approaches to mitigating these issues with configuration
+The several approaches to mitigating security issues with configuration
 options provided by JupyterHub include:
 
 ### Enable subdomains
@@ -76,10 +76,10 @@ resolves the cross-site issues.
 
 ### Disable user config
 
-If subdomains are not available or not desirable, JupyterHub provides a
+If subdomains are unavailable or undesirable, JupyterHub provides a
 configuration option `Spawner.disable_user_config`, which can be set to prevent
 the user-owned configuration files from being loaded. After implementing this
-option, PATHs and package installation and PATHs are the other things that the
+option, `PATH`s and package installation are the other things that the
 admin must enforce.
 
 ### Prevent spawners from evaluating shell configuration files
@@ -119,13 +119,11 @@ extend to securing the `tcp` sockets as well.
 ## Security audits
 
 We recommend that you do periodic reviews of your deployment's security. It's
-good practice to keep JupyterHub, configurable-http-proxy, and nodejs
-versions up to date.
+good practice to keep [JupyterHub](https://readthedocs.org/projects/jupyterhub/), [configurable-http-proxy](https://github.com/jupyterhub/configurable-http-proxy), and [nodejs
+versions](https://github.com/nodejs/Release) up to date.
 
 A handy website for testing your deployment is
 [Qualsys' SSL analyzer tool](https://www.ssllabs.com/ssltest/analyze.html).
-
-[configurable-http-proxy]: https://github.com/jupyterhub/configurable-http-proxy
 
 ## Vulnerability reporting
 
