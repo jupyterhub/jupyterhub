@@ -41,7 +41,7 @@ this to a particular set of users, and admin_users lets you specify who
 among them may use the admin interface (not necessary, unless you need to do
 things like inspect other users' servers or modify the user list at runtime).
 
-### What to do when JupyterHub Docker container is not accessible at localhost?
+### JupyterHub Docker container is not accessible at localhost
 
 Even though the command to start your Docker container exposes port 8000
 (`docker run -p 8000:8000 -d --name jupyterhub jupyterhub/jupyterhub jupyterhub`),
