@@ -18,7 +18,7 @@ If you have tried to start the JupyterHub proxy and it fails to start:
 recent version of [Node](https://nodejs.org). Some versions of Ubuntu/Debian come with a version
 of Node that is very old, and it is necessary to update Node.
 
-### Sudospawner fails to run
+### sudospawner fails to run
 
 If the sudospawner script is not found in the path, sudospawner will not run.
 To avoid this, specify sudospawner's absolute path. For example, start
