@@ -1,11 +1,18 @@
 ==========
 JupyterHub
 ==========
-`JupyterHub`_ is the best way to serve `Jupyter notebook`_ for multiple users.
-It is a multi-user **Hub** that spawns, manages, and proxies multiple instances 
-of the single-user `Jupyter notebook`_ server. Therefore, with JupyterHub, 
-users can log in to the server, and write Python code in a web browser, 
-without having to install software on their local machine. 
+`JupyterHub`_ is the best way to serve `Jupyter notebook`_ for multiple users. 
+Because JupyterHub manages a separate Jupyter environment for each user,
+it can be used in a class of students, a corporate data science group, or a scientific
+research group. It is a multi-user **Hub** that spawns, manages, and proxies multiple
+instances of the single-user `Jupyter notebook`_ server.
+
+JupyterHub offers distributions for different use cases. Be sure to
+take a look at them before continuing with the configuration of the broad
+original system of `JupyterHub`_. As of now, you can find two main cases:
+
+1. `The Littlest JupyterHub <https://github.com/jupyterhub/the-littlest-jupyterhub>`__ distribution is suitable if you need a small number of users (1-100) and a single server with a simple environment.
+2. `Zero to JupyterHub with Kubernetes <https://github.com/jupyterhub/zero-to-jupyterhub-k8s>`__ allows you to deploy dynamic servers on the cloud if you need even more users.
 
 JupyterHub supports web browsers, tablets and smartphones and can be used by 
 multiple users at the same time such as; a class of students, a corporate data 
@@ -69,7 +76,6 @@ Today, you can find two main use cases:
 *It is important to evaluate these distributions before you can continue with the 
 configuration of the broad original system of* **JupyterHub**.
 
-
 Installation Guide
 ------------------
 
@@ -121,8 +127,8 @@ RBAC Reference
 Contributing
 ------------
 
-We want you to contribute to JupyterHub in ways that are most exciting
-& useful to you. We value documentation, testing, bug reporting & code equally,
+We welcome you to contribute to JupyterHub in ways that are most exciting
+& useful to you. We value documentation, testing, bug reporting & code equally
 and are glad to have your contributions in whatever form you wish :)
 
 Our `Code of Conduct <https://github.com/jupyter/governance/blob/HEAD/conduct/code_of_conduct.md>`_ and `reporting guidelines <https://github.com/jupyter/governance/blob/HEAD/conduct/reporting_online.md>`_
