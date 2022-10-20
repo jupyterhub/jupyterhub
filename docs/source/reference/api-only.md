@@ -1,12 +1,8 @@
-<<<<<<< HEAD
-
 (api-only)=
 
-=======
->>>>>>> 1d1d31981ebd217858ca89c37c29ce7db8138dae
 # Deploying JupyterHub In "API Only Mode"
 
-Jupyterhub, as a service for deploying and managing jupiter servers for users, exposes its functionality, _primarily_ through a [REST API](rest).
+Jupyterhub, as a service for deploying and managing Jupyter servers for users, exposes its functionality, _primarily_ through a [REST API](rest).
 
 For convenience, Jupyterhub also ships a basic web UI, built on the REST API. The basic web UI enables users to easily interact with their servers. E.g by clicking on the button to quickly start or stop their servers. It also enable admins to perform basic user and server mananagement tasks.
 
@@ -17,61 +13,42 @@ Previously, one could only achieve some admin UI functionalities through admin p
 ## Why Rest API Only?
 
 ### Limited UI customization via templates
-<<<<<<< HEAD
-The JupyterHub UI can be customized through extensivle HTML [templates](templates), but the scope at which it can be customized, is limited. It supports adding of content and messages to existing pages, but the page flow and available pages, cannot be customized.
-=======
 
-The JupiterHub UI can be customized through extensivle HTML [templates](templates), but the scope at which it can be customized, is limited. It supports adding of content and messages to existing pages, but the page flow and available pages, cannot be customized.
->>>>>>> 1d1d31981ebd217858ca89c37c29ce7db8138dae
+The JupyterHub UI can be customized through extensive HTML [templates](templates), but the scope at which it can be customized, is limited. It supports adding of content and messages to existing pages, but the page flow and available pages, cannot be customized.
 
 ### Rich UI Customization with REST API based Apps
-<<<<<<< HEAD
-JuptiterHub is primarily used as an API for managing Jupyter servers for other Jupyter-based applicatons that might want to present a different User Experience. Additionally, With an option of a fully customized experience available, you can now disable the hub UI and easily use your own pages, together with the JupyterHub Rest API, to build your own web applications to serve your users; relying on the hub only as an API for managing Users and Servers.
-=======
 
-JuptiterHub is primarily used as an API for managing Jupiter servers for other Jupiter-based appicatons that might want to present a different User Experience. Additionally, With an option of a fully customized experience available, you can now disable the hub UI and easily use your own pages, together with the JupiterHub Rest API, to build your own web applications to serve your users; relying on the hub only as an API for managing Users and Servers.
->>>>>>> 1d1d31981ebd217858ca89c37c29ce7db8138dae
+JupyterHub is primarily used as an API for managing Jupyter servers for other Jupyter-based applicatons that might want to present a different User Experience. However, With an option of a fully customized experience available, you can now disable the hub UI and easily use your own pages, together with the JupyterHub Rest API, to build your own web applications to serve your users; relying on the hub only as an API for managing Users and Servers.
 
-An Example of such application is the BinderHub, which powers https://mybinder.org, 
-and motivates many of these changes.
+An Example of such application is the BinderHub, which powers https://mybinder.org, and motivates many of these changes.
 
-BinderHub is distinct from a traditional JupyterHub deployment
-because it uses temporary users created for each launch.
-Instead of presenting a login page,
-users are presented with a form to specify what environment they would like to launch:
+BinderHub is distinct from a traditional JupyterHub deployment because it uses temporary users created for each launch.
+
+Instead of presenting a login page, users are presented with a form to specify what environment they would like to launch:
 
 ![Binder launch form](../images/binderhub-form.png)
 
 
 **When a launch is requested:**
 
-1. An image is built, if necessary
-2. A temporary user is created
+1. An image is built, if necessary.
+2. A temporary user is created.
 3. A server is launched for that user, and
-4. When running, users are redirected to an already running server with an auth token in the URL
-5. After the session is over, the user is deleted
+4. When running, users are redirected to an already running server with an auth token in the URL.
+5. After the session is over, the user is deleted.
 
 **This means that a lot of JupyterHub's UI flow doesn't make sense:**
 
-- There is no way for users to login
-- The human user doesn't map onto a JupyterHub `User` in a meaningful way
-- When a server isn't running, there isn't a 'restart your server' action available because the user has been deleted
+- There is no way for users to login.
+- The human user doesn't map onto a JupyterHub `User` in a meaningful way.
+- When a server isn't running, there isn't a 'restart your server' action available because the user has been deleted.
 - Users do not have any access to any Hub functionality, so presenting pages for those features would be confusing.
 
-<<<<<<< HEAD
-
-BinderHub is one of the motivating use cases for JupyterHub that supports being used _only_ via its API.
-=======
 BinderHub is one of the motivating use cases for JupyterHub supporting being used _only_ via its API.
->>>>>>> 1d1d31981ebd217858ca89c37c29ce7db8138dae
 We'll use BinderHub here as an example of various configuration options.
 
 [binderhub]: https://binderhub.readthedocs.io
 
-<<<<<<< HEAD
-
-=======
->>>>>>> 1d1d31981ebd217858ca89c37c29ce7db8138dae
 ## Disabling Hub UI
 
 `c.JupyterHub.hub_routespec` is a configuration option to specify which URL prefix should be routed to the Hub.
@@ -100,8 +77,7 @@ because when a server is gone, there is no restart action. Instead, we provide h
 
 ![screenshot of mybinder.org 404](../images/binder-404.png)
 
-To achieve this, mybinder.org registers a route for `/` that goes to a custom endpoint
-that runs nginx and only serves this static HTML error page.
+To achieve this, mybinder.org registers a route for `/` that goes to a custom endpoint that runs nginx and only serves this static HTML error page.
 
 This is set with
 
