@@ -14,7 +14,7 @@ expanded to the user's home directory.
 c.Spawner.notebook_dir = '~/notebooks'
 ```
 
-You can also specify extra command line arguments to the notebook server with:
+You can also specify extra command line arguments to the notebook server with the following:
 
 ```python
 c.Spawner.args = ['--debug', '--profile=PHYS131']
