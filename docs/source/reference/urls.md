@@ -119,6 +119,7 @@ if the specified server were running).
 
 Handling this URL is the most complicated condition in JupyterHub,
 because there can be many states:
+
 1. the server is not active/
    a. user matches/
    b. user doesn't match
