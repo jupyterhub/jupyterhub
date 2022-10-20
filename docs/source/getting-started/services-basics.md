@@ -1,7 +1,7 @@
 # External services
 
 When working with JupyterHub, a **Service** is defined as a process
-that interacts with the Hub's REST API. A Service may perform a specific
+that interacts with the Hub's [REST API](https://www.redhat.com/en/topics/api/what-is-a-rest-api). A Service may perform a specific
 action or task. For example, shutting down individuals' single user
 notebook servers that have been idle for some time is a good example of
 a task that could be automated by a Service. Let's look at how the
