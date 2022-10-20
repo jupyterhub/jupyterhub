@@ -160,6 +160,7 @@ new container. If this was the underlying cause of the issue, you should see
 your server again.
 
 ##### Proxy settings (403 GET)
+
 When your whole JupyterHub sits behind an organization proxy (_not_ a reverse proxy like NGINX as part of your setup and _not_ the configurable-http-proxy) the environment variables `HTTP_PROXY`, `HTTPS_PROXY`, `http_proxy` and `https_proxy` might be set. This confuses the jupyterhub single-user servers: When connecting to the Hub for authorization they connect via the proxy instead of directly connecting to the Hub on localhost. The proxy might deny the request (403 GET). This results in the single-user server thinking it has a wrong auth token. To circumvent this you should add `<hub_url>,<hub_ip>,localhost,127.0.0.1` to the environment variables `NO_PROXY` and `no_proxy`.
 
 ### Launching Jupyter Notebooks to run as an externally managed JupyterHub service with the `jupyterhub-singleuser` command returns a `JUPYTERHUB_API_TOKEN` error
@@ -322,6 +323,7 @@ Or use syslog:
     jupyterhub | logger -t jupyterhub
 
 ### Toree integration with HDFS rack awareness script
+
 The Apache Toree kernel will have an issue when running with JupyterHub if the standard HDFS rack awareness script is used. This will materialize in the logs as a repeated WARN:
 
 ```bash
