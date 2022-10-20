@@ -1,6 +1,6 @@
 # Troubleshooting
 
-While troubleshooting, you may see unexpected behaviors or receive an error
+When troubleshooting, you may see unexpected behaviors or receive an error
 message. This section provides links for identifying the cause of the
 problem and how to resolve it.
 
@@ -8,14 +8,14 @@ problem and how to resolve it.
 
 ### JupyterHub proxy fails to start
 
-If you have tried to start the JupyterHub proxy and it fails to run:
+If you have tried to start the JupyterHub proxy and it fails to start:
 
 - check if the JupyterHub IP configuration setting is
   `c.JupyterHub.ip = '*'`; if it is, try `c.JupyterHub.ip = ''`
 - Try starting with `jupyterhub --ip=0.0.0.0`
 
 **Note**: If this occurs on Ubuntu/Debian, check that you are using a
-recent version of [Node](https://nodejs.org). Some versions of Ubuntu/Debian come with an older version
+recent version of [Node](https://nodejs.org). Some versions of Ubuntu/Debian come with a very old  version
 of Node and it is necessary to update Node.
 
 ### sudospawner fails to run
@@ -37,7 +37,7 @@ to the config file, `jupyterhub_config.py`.
 When nothing is given for these lists, there will be no admins, and all users
 who can authenticate on the system (i.e. all the Unix users on the server with
 a password) will be allowed to start a server. The allowed username set lets you limit
-this to a particular set of users, and admin_users let you specify who
+this to a particular set of users, and admin_users lets you specify who
 among them may use the admin interface (not necessary, unless you need to do
 things like inspect other users' servers or modify the user list at runtime).
 
@@ -87,7 +87,7 @@ sudo MY_ENV=abc123 \
 
 ### Error 500 after spawning my single-user server
 
-You receive an Error 500 while accessing the URL `/user/<your_name>/...`.
+You receive a 500 error while accessing the URL `/user/<your_name>/...`.
 This is often seen when your single-user server cannot verify your user cookie
 with the Hub.
 
@@ -100,7 +100,7 @@ There are two likely reasons for this:
 #### Symptoms
 
 The main symptom is a failure to load _any_ page served by the single-user
-server, met with an Error 500. This is typically the first page at `/user/<your_name>`
+server, met with a 500 error. This is typically the first page at `/user/<your_name>`
 after logging in or clicking "Start my server". When a single-user notebook server
 receives a request, the notebook server makes an API request to the Hub to
 check if the cookie corresponds to the right user. This request is logged.
@@ -167,7 +167,7 @@ When your whole JupyterHub sits behind an organization proxy (_not_ a reverse pr
 
 [JupyterHub services](https://jupyterhub.readthedocs.io/en/stable/reference/services.html) allow processes to interact with JupyterHub's REST API. Example use-cases include:
 
-- **Secure Testing**: provides a canonical Jupyter Notebook for testing production data to reduce the number of entry points into production systems.
+- **Secure Testing**: provide a canonical Jupyter Notebook for testing production data to reduce the number of entry points into production systems.
 - **Grading Assignments**: provide access to shared Jupyter Notebooks that may be used for management tasks such as grading assignments.
 - **Private Dashboards**: share dashboards with certain group members.
 
@@ -324,7 +324,7 @@ Or use syslog:
 
 ### Toree integration with HDFS rack awareness script
 
-The Apache Toree kernel will have an issue while running with JupyterHub if the standard HDFS
+The Apache Toree kernel will have an issue when running with JupyterHub if the standard HDFS
 rack awareness script is used. This will materialize in the logs as a repeated WARN:
 
 ```bash
@@ -371,7 +371,7 @@ You can also tail logs to view them in real-time using the `-f` option:
 ## Troubleshooting commands
 
 The following commands provide additional detail about installed packages,
-versions, and system information that may be helpful while troubleshooting
+versions, and system information that may be helpful when troubleshooting
 a JupyterHub deployment. The commands are:
 
 - System and deployment information
