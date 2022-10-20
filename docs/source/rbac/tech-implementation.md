@@ -43,9 +43,7 @@ Prior to 3.0, tokens stored _roles_,
 which meant their scopes were resolved on each request.
 :::
 
-
 API tokens grant access to JupyterHub's APIs. The [RBAC framework](https://auth0.com/docs/manage-users/access-control/rbac) allows for requesting tokens with specific permissions.
-
 
 RBAC is involved in several stages of the OAuth token flow.
 
@@ -78,10 +76,8 @@ Figure 1. Resolving roles and scopes during API token request
 
 With the RBAC framework, each authenticated JupyterHub API request is guarded by a scope decorator that specifies which scopes are required in order to gain the access to the API.
 
-
 When an API request is made, the requesting API token's scopes are again intersected with its owner's (yellow box in {ref}`Figure 2 <api-request-chart>`) to ensure that the token does not grant more permissions than its owner has at the request time (e.g., due to changing/losing roles).
 If the owner's roles do not include some scopes of the token, only the _intersection_ of the token's and owner's scopes will be used. For example, using a token with scope `users` whose owner's role scope is `read:users:name` will result in only the `read:users:name` scope being passed on. In the case of no _intersection_, an empty set of scopes will be used.
-
 
 The parsed scopes are compared to the scopes required to access the API as follows:
 
@@ -89,9 +85,7 @@ The parsed scopes are compared to the scopes required to access the API as follo
 
 - if that is not the case, another check is utilized to determine if subscopes of the required API scopes can be found in the parsed scope set:
 
-
   - if found, the RBAC framework employs the {ref}`filtering <vertical-filtering-target>` procedures to refine the API response to access only resource attributes corresponding to the passed scopes. For example, providing a scope `read:users:activity!group=class-C` for the `GET /users` API will return a list of user models from group `class-C` containing only the `last_activity` attribute for each user model
-
 
   - if not found, the access to API is denied
 
