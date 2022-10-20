@@ -47,7 +47,7 @@ have their own configuration systems.
 
 As a JupyterHub administrator, you will typically want to install and configure environments for all JupyterHub users. For example, let's say you wish for each student in a class to have the same user environment configuration.
 
-Jupyter and IPython support **"system-wide"** locations for configuration, which is the logical place to put global configuration that you want to affect all users. It's generally more efficient to configure user environments "system-wide",and it's a good practice to avoid creating files in the users' home directories.
+Jupyter and IPython support **"system-wide"** locations for configuration, which is the logical place to put global configuration that you want to affect all users. It's generally more efficient to configure user environments "system-wide", and it's a good practice to avoid creating files in the users' home directories.
 The typical locations for these config files are:
 
 - **system-wide** in `/etc/{jupyter|ipython}`
@@ -140,7 +140,7 @@ By default, in a JupyterHub deployment, each user has one server only.
 JupyterHub can, however, have multiple servers per user.
 This is mostly useful in deployments where users can configure the environment in which their server will start (e.g. resource requests on an HPC cluster), so that a given user can have multiple configurations running at the same time, without having to stop and restart their own server.
 
-To allow named servers, use this:
+To allow named servers, include this code snippet in your config file:
 
 ```python
 c.JupyterHub.allow_named_servers = True
@@ -158,13 +158,13 @@ as well as the admin page:
 Named servers can be accessed, created, started, stopped, and deleted
 from these pages. Activity tracking is now per server as well.
 
-To limit the number of **named server** per user by setting a constant value, use this:
+To limit the number of **named server** per user by setting a constant value, include this code snippet in your config file:
 
 ```python
 c.JupyterHub.named_server_limit_per_user = 5
 ```
 
-Alternatively, to use a callable/awaitable based on the handler object, use this:
+Alternatively, to use a callable/awaitable based on the handler object, include this code snippet in your config file:
 
 ```python
 def named_server_limit_per_user_fn(handler):
