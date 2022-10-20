@@ -1,8 +1,10 @@
 # Security Overview
 
-The **Security Overview** section helps you learn about: the semi-trusted user;
-the available mitigations to protect untrusted users from each other;
-the value of periodic security audits.
+The **Security Overview** section helps you learn about:
+
+- the semi-trusted user
+- the available mitigations to protect untrusted users from each other
+- the value of periodic security audits
 
 This overview also helps you obtain a deeper understanding of how JupyterHub
 works, as well as its design with respect to web security.
@@ -10,8 +12,8 @@ works, as well as its design with respect to web security.
 ## Semi-trusted and untrusted users
 
 JupyterHub is designed to be a _simple multi-user server for modestly sized
-groups_ of **semi-trusted** users. Its design reflects serving semi-trusted
-users, however, JupyterHub is not necessarily unsuitable for serving **untrusted** users.
+groups_ of **semi-trusted** users. While the design reflects serving
+semi-trusted users, JupyterHub can also be suitable for serving **untrusted** users.
 
 That way, using JupyterHub with **untrusted** users means more work by the
 administrator, since much care is required to secure a Hub, with extra caution on
