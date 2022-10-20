@@ -267,8 +267,8 @@ Spawners mainly do one thing: launch a command in an environment.
 
 The command-line is constructed from user configuration:
 
-- Spawner.cmd (default: `['jupterhub-singleuser']`)
-- Spawner.args (cli args to pass to the cmd, default: empty)
+- Spawner.cmd (default: `['jupyterhub-singleuser']`)
+- Spawner.args (CLI args to pass to the cmd, default: empty)
 
 where the configuration:
 
@@ -319,12 +319,12 @@ Optional environment variables, depending on configuration:
 - JUPYTERHUB_ROOT_DIR - the root directory of the server (notebook directory), when Spawner.notebook_dir is defined (new in 2.0)
 - JUPYTERHUB_DEFAULT_URL - the default URL for the server (for redirects from /user/:name/),
   if Spawner.default_url is defined
-  (new in 2.0, previously passed via cli)
+  (new in 2.0, previously passed via CLI)
 - JUPYTERHUB_DEBUG=1 - generic debug flag, sets maximum log level when Spawner.debug is True
-  (new in 2.0, previously passed via cli)
+  (new in 2.0, previously passed via CLI)
 - JUPYTERHUB_DISABLE_USER_CONFIG=1 - disable loading user config,
   sets maximum log level when Spawner.debug is True (new in 2.0,
-  previously passed via cli)
+  previously passed via CLI)
 
 - JUPYTERHUB*[MEM|CPU]*[LIMIT_GUARANTEE] - the values of cpu and memory limits and guarantees.
   These are not expected to be enforced by the process,
