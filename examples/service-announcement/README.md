@@ -6,12 +6,28 @@ that appear when JupyterHub renders pages.
 To run the service as a hub-managed service simply include in your JupyterHub
 configuration file something like:
 
+:notebook:**Info**: You can run the announcement service example from the `examples`
+directory, using one of the several services provided by JupyterHub.
+
 ```python
+
+import sys
+
+from pathlib import Path
+# absolute path to announcement.py
+announcement_py = str(Path(__file__).parent.joinpath("announcement.py").resolve())
+
+#ensure get_config() is added in
+ c = get_config()
+
+...
+..
+
 c.JupyterHub.services = [
         {
             'name': 'announcement',
             'url': 'http://127.0.0.1:8888',
-            'command': [sys.executable, "-m", "announcement", "--port", "8888"],
+            'command': [sys.executable, announcement_py, "--port", "8888"],
         }
 ]
 ```
