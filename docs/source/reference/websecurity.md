@@ -118,16 +118,9 @@ extend to securing the `tcp` sockets as well.
 
 ## Security audits
 
-<<<<<<< HEAD
 We recommend that you do periodic reviews of your deployment's security. It's
 good practice to keep [JupyterHub](https://readthedocs.org/projects/jupyterhub/), [configurable-http-proxy](https://github.com/jupyterhub/configurable-http-proxy), and [nodejs
 versions](https://github.com/nodejs/Release) up to date.
-=======
-We recommend that you do periodic reviews of your deployment's security. It is
-good practice to keep JupyterHub, configurable-http-proxy, and nodejs
-versions up to date.
-
-> > > > > > > main
 
 A handy website for testing your deployment is
 [Qualsys' SSL analyzer tool](https://www.ssllabs.com/ssltest/analyze.html).
