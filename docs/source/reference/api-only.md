@@ -28,7 +28,6 @@ Instead of presenting a login page, users are presented with a form to specify w
 
 ![Binder launch form](../images/binderhub-form.png)
 
-
 **When a launch is requested:**
 
 1. An image is built, if necessary.
