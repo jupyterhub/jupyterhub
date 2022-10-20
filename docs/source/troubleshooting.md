@@ -15,7 +15,7 @@ If you have tried to start the JupyterHub proxy and it fails to start:
 - Try starting with `jupyterhub --ip=0.0.0.0`
 
 **Note**: If this occurs on Ubuntu/Debian, check that you are using a
-recent version of [Node](https://nodejs.org). Some versions of Ubuntu/Debian come with a very old  version
+recent version of [Node](https://nodejs.org). Some versions of Ubuntu/Debian come with a very old version
 of Node and it is necessary to update Node.
 
 ### sudospawner fails to run
