@@ -5,15 +5,15 @@ deployment with the following assumptions:
 
 - Running JupyterHub on a single cloud server
 - Using SSL on the standard HTTPS port 443
-- Using GitHub OAuth (using oauthenticator) for login
+- Using GitHub OAuth (using [OAuthenticator](https://oauthenticator.readthedocs.io/en/latest)) for login
 - Using the default spawner (to configure other spawners, uncomment and edit
   `spawner_class` as well as follow the instructions for your desired spawner)
 - Users exist locally on the server
 - Users' notebooks to be served from `~/assignments` to allow users to browse
   for notebooks within other users' home directories
 - You want the landing page for each user to be a `Welcome.ipynb` notebook in
-  their assignments directory.
-- All runtime files are put into `/srv/jupyterhub` and log files in `/var/log`.
+  their assignments directory
+- All runtime files are put into `/srv/jupyterhub` and log files in `/var/log`
 
 The `jupyterhub_config.py` file would have these settings:
 
@@ -69,7 +69,7 @@ c.Spawner.args = ['--NotebookApp.default_url=/notebooks/Welcome.ipynb']
 ```
 
 Using the GitHub Authenticator requires a few additional
-environment variable to be set prior to launching JupyterHub:
+environment variables to be set prior to launching JupyterHub:
 
 ```bash
 export GITHUB_CLIENT_ID=github_id
@@ -79,3 +79,5 @@ export CONFIGPROXY_AUTH_TOKEN=super-secret
 # append log output to log file /var/log/jupyterhub.log
 jupyterhub -f /etc/jupyterhub/jupyterhub_config.py &>> /var/log/jupyterhub.log
 ```
+
+Visit the [Github OAuthenticator reference](https://oauthenticator.readthedocs.io/en/latest/api/gen/oauthenticator.github.html) to see the full list of options for configuring Github OAuth with JupyterHub.
