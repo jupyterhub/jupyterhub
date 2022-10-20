@@ -4,19 +4,16 @@
 Testing JupyterHub and linting code
 ===================================
 
-Unit test help validate that JupyterHub works the way we think it does,
-and continues to do so when changes occur. They also help communicate
-precisely what we expect our code to do. 
+Unit tests help confirm that JupyterHub works as intended, including after modifications are made. Additionally, they help in clarifying our expectations for our code.
 
-JupyterHub uses `pytest <https://pytest.org>`_ for all our tests. You
-can find them under ``jupyterhub/tests`` directory in the git repository.
+JupyterHub uses `pytest <https://pytest.org>`_ for all the tests. You
+can find them under the `jupyterhub/tests <https://github.com/jupyterhub/jupyterhub/tree/main/jupyterhub/tests>`_ directory in the git repository.
 
 Running the tests
 ==================
 
-#. Make sure you have completed :ref:`contributing/setup`. You should be able
-   to start ``jupyterhub`` from the commandline & access it from your
-   web browser. This ensures that the dev environment is properly set
+#. Make sure you have completed :ref:`contributing/setup`. Once completed, you should be able
+   to run ``jupyterhub`` on your command line and access JupyterHub from your browser at http://localhost:8000. Being able to run and access `jupyterhub` should mean that the dev environment is properly set
    up for tests to run.
 
 #. You can run all tests in JupyterHub 
@@ -57,7 +54,7 @@ Running the tests
       
       pytest -v jupyterhub/tests/test_api.py::test_shutdown
 
-   See the `pytest usage documentation <https://pytest.readthedocs.io/en/latest/usage.html>`_ for more details.
+   For more information, refer to the `pytest usage documentation <https://pytest.readthedocs.io/en/latest/usage.html>`_.
 
 Test organisation
 =================
@@ -98,8 +95,7 @@ And fixtures to add functionality or spawning behavior:
 - ``bad_spawn``: enables the BadSpawner (a spawner that fails immediately)
 - ``slow_bad_spawn``: enables the SlowBadSpawner (a spawner that fails after a short delay)
 
-See the `pytest fixtures documentation <https://pytest.readthedocs.io/en/latest/fixture.html>`_
-for how to use the existing fixtures, and how to create new ones.
+For information on using the existing fixtures and creating new ones, refer to the `pytest fixtures documentation <https://pytest.readthedocs.io/en/latest/fixture.html>`_
 
 
 Troubleshooting Test Failures
@@ -108,8 +104,7 @@ Troubleshooting Test Failures
 All the tests are failing
 -------------------------
 
-Make sure you have completed all the steps in :ref:`contributing/setup` successfully, and
-can launch ``jupyterhub`` from the terminal.
+Make sure you have completed all the steps in :ref:`contributing/setup` successfully, and are able to access JupyterHub from your browser at http://localhost:8000 after starting ``jupyterhub`` in your command line.
 
 
 Code formatting and linting
@@ -117,13 +112,13 @@ Code formatting and linting
 
 JupyterHub has adopted automatic code formatting and linting.
 As long as your code is valid, the pre-commit hook should take care of how it should look.
-You can invoke the pre-commit hook by hand at any time with:
+You can invoke the pre-commit hook manually at any time with:
 
 .. code:: bash
 
    pre-commit run
 
-which should run any autoformatting on your code and tell you about any errors it couldn't fix automatically.
+This should run any auto formatting on your code and tell you about any errors it couldn't fix automatically.
 You may also install `black integration <https://github.com/psf/black#editor-integration>`_
 into your text editor to format code automatically.
 

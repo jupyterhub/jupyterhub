@@ -1,5 +1,6 @@
+patch-1
 Event Logging and Telemetry
-==========================
+main
 
 JupyterHub can be configured to record structured events from a running server using Jupyter's `Telemetry System`_. The types of events that JupyterHub emits are defined by `JSON schemas`_ listed at the bottom of this page_.
 
@@ -15,8 +16,10 @@ Event logging is handled by its ``Eventlog`` object. This leverages Python's sta
 
 To begin recording events, you'll need to set two configurations:
 
+patch-1
     1. ``handlers``: tells the EventLog *where* to route your events. This trait is a list of Python logging handlers that route events to the event log file.  
     2. ``allows_schemas``: tells the EventLog *which* events should be recorded. No events are emitted by default; all recorded events must be listed here.
+ main
 
 Here's a basic example:
 
