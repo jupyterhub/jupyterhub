@@ -3,22 +3,21 @@ Upgrading JupyterHub
 ====================
 
 JupyterHub offers easy upgrade pathways between minor versions. This
-document describes how to do these upgrades.
+document describes how to make these upgrades.
 
 If you are using :ref:`a JupyterHub distribution <index/distributions>`, you
 should consult the distribution's documentation on how to upgrade. This
 document is useful if you have set up your own JupyterHub without using a
 distribution.
 
-The steps are discussed in detail, so if you get stuck at any step you can always refer to this guide. Most likely, 
-upgrading JupyterHub is painless, quick and with minimal user interruption.
+The steps are discussed in detail, so if you get stuck at any step you can always refer to this guide. Upgrading JupyterHub is usually painless, quick and with minimal user interruption.
 
 Read the Changelog
 ==================
 
 The `changelog <../changelog.md>`_ contains information on what has
-changed with the new JupyterHub release and any deprecation warnings.
-Read these notes to familiarize yourself with the upcoming changes. There
+changed in the new JupyterHub release and any deprecation warnings.
+Read the logs to familiarize yourself with upcoming changes. There
 might be new releases of authenticators & spawners you are using, so
 read the changelogs for those too!
 
@@ -26,7 +25,7 @@ Notify your users
 =================
 
 If you are using the default configuration where ``configurable-http-proxy``
-is managed by JupyterHub, your users will see service disruption during
+is managed by JupyterHub, your users will experience service disruption during
 the upgrade process. You should notify them, and pick a time to do the
 upgrade where they will be least disrupted.
 
