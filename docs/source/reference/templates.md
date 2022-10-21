@@ -84,5 +84,5 @@ template (for example, `login.html`) with:
 ```
 
 Extending `page.html` puts the message on all pages, but note that
-extending `page.html` take precedence over an extension of a specific
+extending `page.html` takes precedence over an extension of a specific
 page (unlike the variable-based approach above).

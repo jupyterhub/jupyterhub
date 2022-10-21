@@ -30,19 +30,19 @@ Some relevant points:
 Here are some key definitions to keep in mind when we are talking about OAuth.
 You can also read more detail [here](https://www.oauth.com/oauth2-servers/definitions/).
 
-- **provider** the entity responsible for managing identity and authorization,
+- **provider**: The entity responsible for managing identity and authorization,
   always a web server.
   JupyterHub is _always_ an oauth provider for JupyterHub's components.
   When OAuthenticator is used, an external service, such as GitHub or KeyCloak, is also an oauth provider.
-- **client** An entity that requests OAuth **tokens** on a user's behalf,
+- **client**: An entity that requests OAuth **tokens** on a user's behalf,
   generally a web server of some kind.
   OAuth **clients** are services that _delegate_ authentication and/or authorization
   to an OAuth **provider**.
   JupyterHub _services_ or single-user _servers_ are OAuth **clients** of the JupyterHub **provider**.
   When OAuthenticator is used, JupyterHub is itself _also_ an OAuth **client** for the external oauth **provider**, e.g. GitHub.
-- **browser** A user's web browser, which makes requests and stores things like cookies
-- **token** The secret value used to represent a user's authorization. This is the final product of the OAuth process.
-- **code** A short-lived temporary secret that the **client** exchanges
+- **browser**: A user's web browser, which makes requests and stores things like cookies.
+- **token**: The secret value used to represent a user's authorization. This is the final product of the OAuth process.
+- **code**: A short-lived temporary secret that the **client** exchanges
   for a **token** at the conclusion of oauth,
   in what's generally called the "oauth callback handler."
 
@@ -56,8 +56,8 @@ A single oauth flow generally goes like this:
 
 1. A **browser** makes an HTTP request to an oauth **client**.
 2. There are no credentials, so the client _redirects_ the browser to an "authorize" page on the oauth **provider** with some extra information:
-   - the oauth **client id** of the client itself
-   - the **redirect uri** to be redirected back to after completion
+   - the oauth **client id** of the client itself.
+   - the **redirect uri** to be redirected back to after completion.
    - the **scopes** requested, which the user should be presented with to confirm.
      This is the "X would like to be able to Y on your behalf. Allow this?" page you see on all the "Login with ..." pages around the Internet.
 3. During this authorize step,
@@ -77,8 +77,8 @@ That's the end of the requests made between the **browser** and the **provider**
 
 At this point:
 
-- The browser is authenticated with the _provider_
-- The user's authorized permissions are recorded in an _oauth code_
+- The browser is authenticated with the _provider_.
+- The user's authorized permissions are recorded in an _oauth code_.
 - The _provider_ knows that the given oauth client's requested permissions have been granted, but the client doesn't know this yet.
 - All requests so far have been made directly by the browser.
   No requests have originated at the client or provider.
@@ -86,8 +86,8 @@ At this point:
 ### OAuth Client Handles Callback Request
 
 Now we get to finish the OAuth process.
-Let's dig into what the oauth client does when it handles
-the oauth callback request with the
+Let's dig into what the OAuth client does when it handles
+the OAuth callback request.
 
 - The OAuth client receives the _code_ and makes an API request to the _provider_ to exchange the code for a real _token_.
   This is the first direct request between the OAuth _client_ and the _provider_.
@@ -113,24 +113,24 @@ So that's _one_ OAuth process.
 
 ## Full sequence of OAuth in JupyterHub
 
-Let's go through the above oauth process in JupyterHub,
+Let's go through the above OAuth process in JupyterHub,
 with specific examples of each HTTP request and what information is contained.
-For bonus points, we are using the double-oauth example of JupyterHub configured with GitHubOAuthenticator.
+For bonus points, we are using the double-OAuth example of JupyterHub configured with GitHubOAuthenticator.
 
-To disambiguate, we will call the OAuth process where JupyterHub is the **provider** "internal oauth,"
-and the one with JupyterHub as a **client** "external oauth."
+To disambiguate, we will call the OAuth process where JupyterHub is the **provider** "internal OAuth,"
+and the one with JupyterHub as a **client** "external OAuth."
 
 Our starting point:
 
 - a user's single-user server is running. Let's call them `danez`
-- jupyterhub is running with GitHub as an oauth provider (this means two full instances of oauth),
-- Danez has a fresh browser session with no cookies yet
+- Jupyterhub is running with GitHub as an OAuth provider (this means two full instances of OAuth),
+- Danez has a fresh browser session with no cookies yet.
 
 First request:
 
 - browser->single-user server running JupyterLab or Jupyter Classic
 - `GET /user/danez/notebooks/mynotebook.ipynb`
-- no credentials, so single-user server (as an oauth **client**) starts internal oauth process with JupyterHub (the **provider**)
+- no credentials, so single-user server (as an OAuth **client**) starts internal OAuth process with JupyterHub (the **provider**)
 - response: 302 redirect -> `/hub/api/oauth2/authorize`
   with:
   - client-id=`jupyterhub-user-danez`
@@ -138,9 +138,9 @@ First request:
 
 Second request, following redirect:
 
-- browser->jupyterhub
+- browser->JupyterHub
 - `GET /hub/api/oauth2/authorize`
-- no credentials, so jupyterhub starts external oauth process _with GitHub_
+- no credentials, so JupyterHub starts external OAuth process _with GitHub_
 - response: 302 redirect -> `https://github.com/login/oauth/authorize`
   with:
   - client-id=`jupyterhub-client-uuid`
@@ -154,8 +154,8 @@ c.JupyterHub.authenticator_class = 'github'
 ```
 
 That means authenticating a request to the Hub itself starts
-a _second_, external oauth process with GitHub as a provider.
-This external oauth process is optional, though.
+a _second_, external OAuth process with GitHub as a provider.
+This external OAuth process is optional, though.
 If you were using the default username+password PAMAuthenticator,
 this redirect would have been to `/hub/login` instead, to present the user
 with a login form.
@@ -171,7 +171,7 @@ Here, GitHub prompts for login and asks for confirmation of authorization
 After successful authorization
 (either by looking up a pre-existing authorization,
 or recording it via form submission)
-GitHub issues an **oauth code** and redirects to `/hub/oauth_callback?code=github-code`
+GitHub issues an **OAuth code** and redirects to `/hub/oauth_callback?code=github-code`
 
 Next request:
 
@@ -194,9 +194,9 @@ The second:
 - request made with access **token** in the `Authorization` header
 - response is the user model, including username, email, etc.
 
-Now the external oauth callback request completes with:
+Now the external OAuth callback request completes with:
 
-- set cookie on `/hub/` path, recording jupyterhub authentication so we don't need to do external oauth with GitHub again for a while
+- set cookie on `/hub/` path, recording jupyterhub authentication so we don't need to do external OAuth with GitHub again for a while
 - redirect -> `/hub/api/oauth2/authorize`
 
 🎉 At this point, we have completed our first OAuth flow! 🎉
@@ -211,14 +211,14 @@ Now, we get our first repeated request:
   2. automatically accepts authorization (shortcut taken when a user is visiting their own server)
 - redirect -> `/user/danez/oauth_callback?code=jupyterhub-code`
 
-Here, we start the same oauth callback process as before, but at Danez's single-user server for the _internal_ oauth
+Here, we start the same OAuth callback process as before, but at Danez's single-user server for the _internal_ OAuth.
 
 - browser->single-user server
 - `GET /user/danez/oauth_callback`
 
 (in handler)
 
-Inside the internal oauth callback handler,
+Inside the internal OAuth callback handler,
 Danez's server makes two API requests to JupyterHub:
 
 The first:
