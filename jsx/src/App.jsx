@@ -1,7 +1,7 @@
 import React from "react";
-import ReactDOM from "react-dom";
+import ReactDOM from 'react-dom/client';
 import { Provider } from "react-redux";
-import { createStore } from "redux";
+import { legacy_createStore as createStore } from 'redux'
 import { compose } from "recompose";
 import { initialState, reducers } from "./Store";
 import withAPI from "./util/withAPI";
@@ -57,4 +57,9 @@ const App = () => {
   );
 };
 
-ReactDOM.render(<App />, document.getElementById("react-admin-hook"));
+const root = ReactDOM.createRoot(
+  document.getElementById('root') as HTMLElement
+);
+root.render( 
+  <App />
+)
