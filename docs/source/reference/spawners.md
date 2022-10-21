@@ -72,7 +72,7 @@ via relaxing the `Spawner.start_timeout` config value.
 `Spawner.ip` and `Spawner.port` attributes set the _bind_ URL,
 which the single-user server should listen on
 (passed to the single-user process via the `JUPYTERHUB_SERVICE_URL` environment variable).
-The _return_ value is the `ip` and `port` (or full URL) the Hub should _connect to_.
+The _return_ value is the IP and port (or full URL) the Hub should _connect to_.
 These are not necessarily the same, and usually won't be in any Spawner that works with remote resources or containers.
 
 The default for `Spawner.ip`, and `Spawner.port` is `127.0.0.1:{random}`,
