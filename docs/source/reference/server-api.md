@@ -1,6 +1,6 @@
 # Starting servers with the JupyterHub API
 
-Sometimes, when working with applications such as [BinderHub](https://binderhub.readthedocs.io), it may be necessary to launch Jupyter-based services on behalf of your users. Doing so can be achieved through JupyterHub's [REST API](../reference/rest.md), which allows one to launch and manage servers on behalf of users through API calls instead of through the JupyterHub UI. In doing so, you can take advantage of other user/launch/lifecycle patterns that are not natively supported by JupyterHub, all without the need to develop the server management features of JupyterHub Spawners and/or Authenticators.
+Sometimes, when working with applications such as [BinderHub](https://binderhub.readthedocs.io), it may be necessary to launch Jupyter-based services on behalf of your users. Doing so can be achieved through JupyterHub's [REST API](../reference/rest.md), which allows one to launch and manage servers on behalf of users through API calls instead of the JupyterHub UI. In doing so, you can take advantage of other user/launch/lifecycle patterns that are not natively supported by the JupyterHub UI, all without the need to develop the server management features of JupyterHub Spawners and/or Authenticators.
 
 This tutorial goes through the processes involved while working with the JupyterHub API to manage servers for users. In particular, it covers how to:
 
@@ -10,7 +10,7 @@ This tutorial goes through the processes involved while working with the Jupyter
 4. [Communicate with servers](communicating)
 5. [Stop servers](stopping)
 
-In the end, we also provide sample Python code that can be used to implement these steps.
+At the end, we also provide sample Python code that can be used to implement these steps.
 
 (checking)=
 
