@@ -272,7 +272,7 @@ It will now be absent from the user `servers` model.
 : This code means your request was accepted, but is not yet completely processed.
 The server has `pending: 'stop'` at this point.
 
-There is no progress API for checking when a server actually stops. 
+There is no progress API for checking when a server actually stops.
 Thus, the only available alternative is to poll the server and wait for it to disappear from the user `servers` model.
 
 This Python code snippet can be used to check if a server stops:
