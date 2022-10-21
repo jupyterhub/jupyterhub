@@ -28,6 +28,7 @@ should not be required.
 Instead, you can assign **roles** to users or groups
 with only the scopes they require.
 ```
+
 **[roles](https://jupyterhub.readthedocs.io/en/stable/rbac/roles.html#define-role-target)**
 
 Admin users of JupyterHub, `admin_users`, can add and remove users from
@@ -128,5 +129,5 @@ To set a global password, add this to the config file:
 c.DummyAuthenticator.password = "some_password"
 ```
 
-[PAM]: https://en.wikipedia.org/wiki/Pluggable_authentication_module
+[pam]: https://en.wikipedia.org/wiki/Pluggable_authentication_module
 [oauthenticator]: https://github.com/jupyterhub/oauthenticator
