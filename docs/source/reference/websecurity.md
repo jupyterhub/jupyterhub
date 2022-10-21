@@ -2,12 +2,13 @@
 
 The **Security Overview** section helps you learn about:
 
+- the design of JupyterHub with respect to web security
 - the semi-trusted user
 - the available mitigations to protect untrusted users from each other
 - the value of periodic security audits
 
 This overview also helps you obtain a deeper understanding of how JupyterHub
-works, as well as its design with respect to web security.
+works.
 
 ## Semi-trusted and untrusted users
 
