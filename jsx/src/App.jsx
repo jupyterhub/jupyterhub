@@ -57,4 +57,10 @@ const App = () => {
   );
 };
 
-ReactDOM.render(<App />, document.getElementById("react-admin-hook"));
+const root = ReactDOM.createRoot(
+  document.getElementById('react-admin-hook') as HTMLElement
+);
+root.render(
+  <App />
+);
+
