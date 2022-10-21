@@ -1,6 +1,6 @@
 # JupyterHub and OAuth
 
-JupyterHub uses OAuth 2 as an internal mechanism for authenticating users.
+JupyterHub uses [OAuth 2](https://oauth.net/2/) as an internal mechanism for authenticating users.
 As such, JupyterHub itself always functions as an OAuth **provider**.
 You can find out more about what that means [below](oauth-terms).
 
