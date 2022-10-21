@@ -6,7 +6,7 @@ We use different channels of communication for different purposes. Whichever one
 
 We use [Discourse](https://discourse.jupyter.org) for online discussions and support questions. Everyone in the Jupyter community is welcome to bring ideas and questions there.
 
-All our past and current discussions on Discourse are archived and searchable. This is why we recommend you first go to Discourse, so that discussions remain useful and accessible to the whole community.
+We recommend that you first use our Discourse as all our past and current discussions on it are archived and searchable. Thus, all discussions remain useful and accessible to the whole community.
 
 ## Gitter
 
@@ -14,10 +14,12 @@ We use [our Gitter channel](https://gitter.im/jupyterhub/jupyterhub) for online,
 
 ## Github Issues
 
-Github issues are used for most long-form project discussions, bug reports and feature requests.
+[Github issues](https://docs.github.com/en/issues/tracking-your-work-with-issues/about-issues) are used for most long-form project discussions, bug reports and feature requests.
 
-Issues related to a specific authenticator or spawner should be opened in the appropriate repository for the authenticator or spawner. If you are using a specific JupyterHub distribution (such as [Zero to JupyterHub on Kubernetes](http://github.com/jupyterhub/zero-to-jupyterhub-k8s) or [The Littlest JupyterHub](http://github.com/jupyterhub/the-littlest-jupyterhub/)), you should open issues directly in their repository.
+- Issues related to a specific authenticator or spawner should be opened in the appropriate repository for the authenticator or spawner. 
+- If you are using a specific JupyterHub distribution (such as [Zero to JupyterHub on Kubernetes](http://github.com/jupyterhub/zero-to-jupyterhub-k8s) or [The Littlest JupyterHub](http://github.com/jupyterhub/the-littlest-jupyterhub/)), you should open issues directly in their repository.
+- If you cannot find a repository to open your issue in, do not worry! Open the issue in the [main JupyterHub repository](https://github.com/jupyterhub/jupyterhub/) and our community will help you figure it out.
 
-If you cannot find a repository to open your issue in, do not worry! Open the issue in the [main JupyterHub repository](https://github.com/jupyterhub/jupyterhub/) and our community will help you figure it out.
-
-**NOTE**: Our community is distributed across the world in various timezones, so please be patient if you do not get a response immediately!
+```{note}
+Our community is distributed across the world in various timezones, so please be patient if you do not get a response immediately!
+```
