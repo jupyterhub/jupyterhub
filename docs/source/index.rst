@@ -15,7 +15,7 @@ original system of `JupyterHub`_. As of now, you can find two main cases:
 2. `Zero to JupyterHub with Kubernetes <https://github.com/jupyterhub/zero-to-jupyterhub-k8s>`__ allows you to deploy dynamic servers on the cloud if you need even more users.
 
 JupyterHub supports web browsers, tablets and smartphones and can be used by 
-multiple users at the same time such as; a class of students, a corporate data 
+multiple users at the same time such as a class of students, corporate data 
 science group or scientific research group. 
 JupyterHub makes life easier by enabling collaboration between both small (0-100 users) and 
 large teams (more than 100 users). It has distributions which are developed to serve the needs
