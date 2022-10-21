@@ -25,7 +25,7 @@ If this configuration value is not set, then **all authenticated users will be a
 ```{note}
 As of JupyterHub 2.0, the full permissions of `admin_users`
 should not be required.
-Instead, you can assign **roles** to users or groups
+Instead, you can assign [roles](define-role-target) to users or groups
 with only the scopes they require.
 ```
 
