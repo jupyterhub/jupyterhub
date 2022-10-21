@@ -7,9 +7,7 @@ it can be used in a class of students, a corporate data science group, or a scie
 research group. It is a multi-user **Hub** that spawns, manages, and proxies multiple
 instances of the single-user `Jupyter notebook`_ server.
 
-JupyterHub offers distributions for different use cases. Be sure to
-take a look at them before continuing with the configuration of the broad
-original system of `JupyterHub`_. As of now, you can find two main cases:
+JupyterHub offers distributions for different use cases. As of now, you can find two main cases:
 
 1. `The Littlest JupyterHub <https://github.com/jupyterhub/the-littlest-jupyterhub>`__ distribution is suitable if you need a small number of users (1-100) and a single server with a simple environment.
 2. `Zero to JupyterHub with Kubernetes <https://github.com/jupyterhub/zero-to-jupyterhub-k8s>`__ allows you to deploy dynamic servers on the cloud if you need even more users.
@@ -17,16 +15,16 @@ original system of `JupyterHub`_. As of now, you can find two main cases:
 JupyterHub supports web browsers, tablets and smartphones and can be used by 
 multiple users at the same time such as a class of students, corporate data 
 science group or scientific research group. 
-JupyterHub makes life easier by enabling collaboration between both small (0-100 users) and 
+JupyterHub can be used in a collaborative environment by both both small (0-100 users) and 
 large teams (more than 100 users). It has distributions which are developed to serve the needs
 of each of these teams respectively. 
 
 JupyterHub is made up of four subsystems:
 
-* A **Hub** (tornado process) that is the heart of JupyterHub
-* A **configurable http proxy** (node-http-proxy) that receives the requests from the client's browser
-* Multiple **single-user Jupyter notebook servers** (Python/IPython/tornado) that are monitored by Spawners
-* An **authentication class** that manages how users can access the system
+* a **Hub** (tornado process) that is the heart of JupyterHub
+* a **configurable http proxy** (node-http-proxy) that receives the requests from the client's browser
+* multiple **single-user Jupyter notebook servers** (Python/IPython/tornado) that are monitored by Spawners
+* an **authentication class** that manages how users can access the system
 
 Additionally, optional configurations can be added through a `config.py` file and manage users 
 kernels on an admin panel. A simplification of the whole system is displayed in the figure below:
@@ -156,7 +154,7 @@ Indices and tables
 
 Questions? Suggestions?
 =======================
-All questions and suggestions are welcome. Please feel free to use our `Jupyter mailing list <https://groups.google.com/forum/#!forum/jupyter>`_ and `Jupyter website <https://jupyter.org>`_ to contact our team.
+All questions and suggestions are welcome. Please feel free to use our `Jupyter Discourse Forum <https://discourse.jupyter.org/>`_ to contact our team.
 
 Looking forward to hearing from you!
 
