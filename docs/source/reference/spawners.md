@@ -34,7 +34,7 @@ Some examples include:
 
 ### Spawner.start
 
-`Spawner.start` starts a single-user server for a single user.
+`Spawner.start` should start a single-user server for a single user.
 Information about the user can be retrieved from `self.user`,
 an object encapsulating the user's name, authentication, and server info.
 
@@ -283,7 +283,7 @@ would result in spawning the command:
 my-singleuser-wrapper --debug --flag
 ```
 
-The `Spawner.get_args()` method is how Spawner.args is accessed,
+The `Spawner.get_args()` method is how `Spawner.args` is accessed,
 and can be used by Spawners to customize/extend user-provided arguments.
 
 Prior to 2.0, JupyterHub unconditionally added certain options _if specified_ to the command-line,
@@ -297,14 +297,14 @@ Additional variables can be specified via the `Spawner.environment` configuratio
 
 The process environment is returned by `Spawner.get_env`, which specifies the following environment variables:
 
-- JUPYTERHUB*SERVICE_URL - the \_bind* URL where the server should launch its http server (`http://127.0.0.1:12345`).
-  This includes Spawner.ip and Spawner.port; _new in 2.0, prior to 2.0 ip,port were on the command-line and only if specified_
+- JUPYTERHUB*SERVICE_URL - the \_bind* URL where the server should launch its HTTP server (`http://127.0.0.1:12345`).
+  This includes `Spawner.ip` and `Spawner.port`; _new in 2.0, prior to 2.0 `ip`, `port` were on the command-line and only if specified_
 - JUPYTERHUB_SERVICE_PREFIX - the URL prefix the service will run on (e.g. `/user/name/`)
 - JUPYTERHUB_USER - the JupyterHub user's username
 - JUPYTERHUB_SERVER_NAME - the server's name, if using named servers (default server has an empty name)
 - JUPYTERHUB_API_URL - the full URL for the JupyterHub API (http://17.0.0.1:8001/hub/api)
 - JUPYTERHUB_BASE_URL - the base URL of the whole jupyterhub deployment, i.e. the bit before `hub/` or `user/`,
-  as set by c.JupyterHub.base_url (default: `/`)
+  as set by `c.JupyterHub.base_url` (default: `/`)
 - JUPYTERHUB_API_TOKEN - the API token the server can use to make requests to the Hub.
   This is also the OAuth client secret.
 - JUPYTERHUB_CLIENT_ID - the OAuth client ID for authenticating visitors.
@@ -315,15 +315,15 @@ The process environment is returned by `Spawner.get_env`, which specifies the fo
 
 Optional environment variables, depending on configuration:
 
-- JUPYTERHUB*SSL*[KEYFILE|CERTFILE|CLIENT_CI] - SSL configuration, when internal_ssl is enabled
-- JUPYTERHUB_ROOT_DIR - the root directory of the server (notebook directory), when Spawner.notebook_dir is defined (new in 2.0)
-- JUPYTERHUB_DEFAULT_URL - the default URL for the server (for redirects from /user/:name/),
-  if Spawner.default_url is defined
+- JUPYTERHUB*SSL*[KEYFILE|CERTFILE|CLIENT_CI] - SSL configuration, when `internal_ssl` is enabled
+- JUPYTERHUB_ROOT_DIR - the root directory of the server (notebook directory), when `Spawner.notebook_dir` is defined (new in 2.0)
+- JUPYTERHUB_DEFAULT_URL - the default URL for the server (for redirects from `/user/:name/`),
+  if `Spawner.default_url` is defined
   (new in 2.0, previously passed via CLI)
-- JUPYTERHUB_DEBUG=1 - generic debug flag, sets maximum log level when Spawner.debug is True
+- JUPYTERHUB_DEBUG=1 - generic debug flag, sets maximum log level when `Spawner.debug` is True
   (new in 2.0, previously passed via CLI)
 - JUPYTERHUB_DISABLE_USER_CONFIG=1 - disable loading user config,
-  sets maximum log level when Spawner.debug is True (new in 2.0,
+  sets maximum log level when `Spawner.debug` is True (new in 2.0,
   previously passed via CLI)
 
 - JUPYTERHUB*[MEM|CPU]*[LIMIT_GUARANTEE] - the values of CPU and memory limits and guarantees.
@@ -338,7 +338,7 @@ guarantees on resources, such as CPU and memory. To provide a consistent
 experience for sysadmins and users, we provide a standard way to set and
 discover these resource limits and guarantees, such as for memory and CPU.
 For the limits and guarantees to be useful, **the spawner must implement
-support for them**. For example, LocalProcessSpawner, the default
+support for them**. For example, `LocalProcessSpawner`, the default
 spawner, does not support limits and guarantees. One of the spawners
 that supports limits and guarantees is the `systemdspawner`.
 
@@ -367,7 +367,7 @@ limits or guarantees are provided, and no environment values are set.
 `c.Spawner.cpu_limit`: In supported spawners, you can set
 `c.Spawner.cpu_limit` to limit the total number of cpu-cores that a
 single-user notebook server can use. These can be fractional - `0.5` means 50%
-of one CPU core, `4.0` is 4 cpu-cores, etc. This value is also set in the
+of one CPU core, `4.0` is 4 CPU-cores, etc. This value is also set in the
 single-user notebook server's environment variable `CPU_LIMIT`. The limit does
 not claim that you will be able to use all the CPU up to your limit as other
 higher priority applications might be taking up CPU.
