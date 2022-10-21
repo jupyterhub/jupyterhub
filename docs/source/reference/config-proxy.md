@@ -14,7 +14,7 @@ satisfy the following:
 - After testing, the server in question should be able to score at least an A on the
   Qualys SSL Labs [SSL Server Test](https://www.ssllabs.com/ssltest/)
 
-Let's start out with needed JupyterHub configuration in `jupyterhub_config.py`:
+Let's start out with the needed JupyterHub configuration in `jupyterhub_config.py`:
 
 ```python
 # Force the proxy to only listen to connections to 127.0.0.1 (on port 8000)
@@ -30,15 +30,15 @@ This can take a few minutes:
 openssl dhparam -out /etc/ssl/certs/dhparam.pem 4096
 ```
 
-## nginx
+## Nginx
 
 This **`nginx` config file** is fairly standard fare except for the two
 `location` blocks within the main section for HUB.DOMAIN.tld.
-To create a new site for jupyterhub in your nginx config, make a new file
+To create a new site for jupyterhub in your Nginx config, make a new file
 in `sites.enabled`, e.g. `/etc/nginx/sites.enabled/jupyterhub.conf`:
 
 ```bash
-# top-level http config for websocket headers
+# Top-level HTTP config for WebSocket headers
 # If Upgrade is defined, Connection = upgrade
 # If Upgrade is empty, Connection = close
 map $http_upgrade $connection_upgrade {
@@ -51,7 +51,7 @@ server {
     listen 80;
     server_name HUB.DOMAIN.TLD;
 
-    # Tell all requests to port 80 to be 302 redirected to HTTPS
+    # Redirect the request to HTTPS
     return 302 https://$host$request_uri;
 }
 
@@ -75,7 +75,7 @@ server {
     ssl_stapling_verify on;
     add_header Strict-Transport-Security max-age=15768000;
 
-    # Managing literal requests to the JupyterHub front end
+    # Managing literal requests to the JupyterHub frontend
     location / {
         proxy_pass http://127.0.0.1:8000;
         proxy_set_header X-Real-IP $remote_addr;
@@ -101,10 +101,10 @@ server {
 If `nginx` is not running on port 443, substitute `$http_host` for `$host` on
 the lines setting the `Host` header.
 
-`nginx` will now be the front facing element of JupyterHub on `443` which means
+`nginx` will now be the front-facing element of JupyterHub on `443` which means
 it is also free to bind other servers, like `NO_HUB.DOMAIN.TLD` to the same port
 on the same machine and network interface. In fact, one can simply use the same
-server blocks as above for `NO_HUB` and simply add line for the root directory
+server blocks as above for `NO_HUB` and simply add a line for the root directory
 of the site as well as the applicable location call:
 
 ```bash
@@ -112,7 +112,7 @@ server {
     listen 80;
     server_name NO_HUB.DOMAIN.TLD;
 
-    # Tell all requests to port 80 to be 302 redirected to HTTPS
+    # Redirect the request to HTTPS
     return 302 https://$host$request_uri;
 }
 
@@ -143,12 +143,12 @@ Now restart `nginx`, restart the JupyterHub, and enjoy accessing
 `https://HUB.DOMAIN.TLD` while serving other content securely on
 `https://NO_HUB.DOMAIN.TLD`.
 
-### SELinux permissions for nginx
+### SELinux permissions for Nginx
 
 On distributions with SELinux enabled (e.g. Fedora), one may encounter permission errors
-when the nginx service is started.
+when the Nginx service is started.
 
-We need to allow nginx to perform network relay and connect to the jupyterhub port. The
+We need to allow Nginx to perform network relay and connect to the JupyterHub port. The
 following commands do that:
 
 ```bash
@@ -157,26 +157,26 @@ setsebool -P httpd_can_network_relay 1
 setsebool -P httpd_can_network_connect 1
 ```
 
-Replace 8000 with the port the jupyterhub server is running from.
+Replace 8000 with the port the JupyterHub server is running from.
 
 ## Apache
 
-As with nginx above, you can use [Apache](https://httpd.apache.org) as the reverse proxy.
-First, we will need to enable the apache modules that we are going to need:
+As with Nginx above, you can use [Apache](https://httpd.apache.org) as the reverse proxy.
+First, we will need to enable the Apache modules that we are going to need:
 
 ```bash
 a2enmod ssl rewrite proxy headers proxy_http proxy_wstunnel
 ```
 
-Our Apache configuration is equivalent to the nginx configuration above:
+Our Apache configuration is equivalent to the Nginx configuration above:
 
 - Redirect HTTP to HTTPS
 - Good SSL Configuration
-- Support for websockets on any proxied URL
+- Support for WebSocket on any proxied URL
 - JupyterHub is running locally at http://127.0.0.1:8000
 
 ```bash
-# redirect HTTP to HTTPS
+# Redirect HTTP to HTTPS
 Listen 80
 <VirtualHost HUB.DOMAIN.TLD:80>
   ServerName HUB.DOMAIN.TLD
@@ -188,26 +188,26 @@ Listen 443
 
   ServerName HUB.DOMAIN.TLD
 
-  # enable HTTP/2, if available
+  # Enable HTTP/2, if available
   Protocols h2 http/1.1
 
   # HTTP Strict Transport Security (mod_headers is required) (63072000 seconds)
   Header always set Strict-Transport-Security "max-age=63072000"
 
-  # configure SSL
+  # Configure SSL
   SSLEngine on
   SSLCertificateFile /etc/letsencrypt/live/HUB.DOMAIN.TLD/fullchain.pem
   SSLCertificateKeyFile /etc/letsencrypt/live/HUB.DOMAIN.TLD/privkey.pem
   SSLOpenSSLConfCmd DHParameters /etc/ssl/certs/dhparam.pem
 
-  # intermediate configuration from ssl-config.mozilla.org (2022-03-03)
-  # Please note, that this configuration might be out-dated - please update it accordingly using https://ssl-config.mozilla.org/
+  # Intermediate configuration from SSL-config.mozilla.org (2022-03-03)
+  # Please note, that this configuration might be outdated - please update it accordingly using https://ssl-config.mozilla.org/
   SSLProtocol             all -SSLv3 -TLSv1 -TLSv1.1
   SSLCipherSuite          ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384
   SSLHonorCipherOrder     off
   SSLSessionTickets       off
 
-  # Use RewriteEngine to handle websocket connection upgrades
+  # Use RewriteEngine to handle WebSocket connection upgrades
   RewriteEngine On
   RewriteCond %{HTTP:Connection} Upgrade [NC]
   RewriteCond %{HTTP:Upgrade} websocket [NC]
@@ -224,7 +224,7 @@ Listen 443
 </VirtualHost>
 ```
 
-In case of the need to run the jupyterhub under /jhub/ or other location please use the below configurations:
+In case of the need to run JupyterHub under /jhub/ or another location please use the below configurations:
 
 - JupyterHub running locally at http://127.0.0.1:8000/jhub/ or other location
 
@@ -241,7 +241,7 @@ httpd.conf amendments:
 jupyterhub_config.py amendments:
 
 ```bash
- --The public facing URL of the whole JupyterHub application.
- --This is the address on which the proxy will bind. Sets protocol, ip, base_url
+ --The public-facing URL of the whole JupyterHub application.
+ --This is the address on which the proxy will bind. Sets protocol, IP, base_url
  c.JupyterHub.bind_url = 'http://127.0.0.1:8000/jhub/'
 ```

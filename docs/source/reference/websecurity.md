@@ -56,7 +56,7 @@ If any additional services are run on the same domain as the Hub, the services
 
 ## Mitigate security issues
 
-Several approaches to mitigating these issues with configuration
+The several approaches to mitigating security issues with configuration
 options provided by JupyterHub include:
 
 ### Enable subdomains
@@ -74,10 +74,10 @@ resolves the cross-site issues.
 
 ### Disable user config
 
-If subdomains are not available or not desirable, JupyterHub provides the
+If subdomains are unavailable or undesirable, JupyterHub provides a
 configuration option `Spawner.disable_user_config`, which can be set to prevent
 the user-owned configuration files from being loaded. After implementing this
-option, PATHs and package installation and PATHs are the other things that the
+option, `PATH`s and package installation are the other things that the
 admin must enforce.
 
 ### Prevent spawners from evaluating shell configuration files
@@ -115,9 +115,9 @@ extend to securing the `tcp` sockets as well.
 
 ## Security audits
 
-We recommend that you do periodic reviews of your deployment's security. It is
-good practice to keep JupyterHub, configurable-http-proxy, and nodejs
-versions up to date.
+We recommend that you do periodic reviews of your deployment's security. It's
+good practice to keep [JupyterHub](https://readthedocs.org/projects/jupyterhub/), [configurable-http-proxy][], and [nodejs
+versions](https://github.com/nodejs/Release) up to date.
 
 A handy website for testing your deployment is
 [Qualsys' SSL analyzer tool](https://www.ssllabs.com/ssltest/analyze.html).
