@@ -130,7 +130,7 @@ but is not immediately ready. As a result, the server shows `pending: 'spawn'` a
 
 ## Waiting for a server to start
 
-After receiving a `202 Accepted` response, you have to wait for the server to start. 
+After receiving a `202 Accepted` response, you have to wait for the server to start.
 Two approaches can be applied to establish when the server is ready:
 
 1. {ref}`Polling the server model <polling>`
@@ -141,6 +141,7 @@ Two approaches can be applied to establish when the server is ready:
 ### Polling the server model
 
 The simplest way to check if a server is ready is to programmatically query the server model until two conditions are true:
+
 1. The server name is contained in the `servers` response, and
 2. `servers['servername']['ready']` is true.
 
@@ -282,7 +283,7 @@ This Python code snippet can be used to check if a server stops:
 
 ## Communicating with servers
 
-JupyterHub tokens with the `access:servers` scope can be used to communicate with servers themselves. 
+JupyterHub tokens with the `access:servers` scope can be used to communicate with servers themselves.
 The tokens can be the same as those you used to launch your service.
 
 ```{note}
