@@ -1,6 +1,6 @@
 # Authentication and User Basics
 
-The default Authenticator uses [PAM][] to authenticate system users with
+The default Authenticator uses [PAM][] (Pluggable Authentication Module) to authenticate system users with
 their username and password. With the default Authenticator, any user
 with an account and password on the system will be allowed to login.
 
@@ -25,9 +25,10 @@ If this configuration value is not set, then **all authenticated users will be a
 ```{note}
 As of JupyterHub 2.0, the full permissions of `admin_users`
 should not be required.
-Instead, you can assign [roles](https://jupyterhub.readthedocs.io/en/stable/rbac/roles.html#define-role-target) to users or groups
+Instead, you can assign **roles** to users or groups
 with only the scopes they require.
 ```
+**[roles](https://jupyterhub.readthedocs.io/en/stable/rbac/roles.html#define-role-target)**
 
 Admin users of JupyterHub, `admin_users`, can add and remove users from
 the user `allowed_users` set. `admin_users` can take actions on other users'
@@ -42,7 +43,7 @@ c.Authenticator.admin_users = {'mal', 'zoe'}
 Users in the admin set are automatically added to the user `allowed_users` set,
 if they are not already present.
 
-Each authenticator may have different ways of determining whether a user is an
+Each Authenticator may have different ways of determining whether a user is an
 administrator. By default, JupyterHub uses the PAMAuthenticator which provides the
 `admin_groups` option and can set administrator status based on a user
 group. For example, we can let any user in the `wheel` group be an admin:
@@ -72,11 +73,11 @@ After starting the Hub once, it is not sufficient to **remove** a user
 from the allowed users set in your config file. You must also remove the user
 from the Hub's database, either by deleting the user from JupyterHub's
 admin page, or you can clear the `jupyterhub.sqlite` database and start
-fresh.
+afresh.
 
 ## Use LocalAuthenticator to create system users
 
-The `LocalAuthenticator` is a special kind of authenticator that has
+The `LocalAuthenticator` is a special kind of Authenticator that has
 the ability to manage users on the local system. When you try to add a
 new user to the Hub, a `LocalAuthenticator` will check if the user
 already exists. If you set the configuration value, `create_system_users`,
@@ -118,8 +119,8 @@ with any provider, is also available.
 
 ## Use DummyAuthenticator for testing
 
-The `DummyAuthenticator` is a simple authenticator that
-allows for any username/password unless a global password has been set. If
+The `DummyAuthenticator` is a simple Authenticator that
+allows for any username or password unless a global password has been set. If
 set, it will allow for any username as long as the correct password is provided.
 To set a global password, add this to the config file:
 
@@ -127,5 +128,5 @@ To set a global password, add this to the config file:
 c.DummyAuthenticator.password = "some_password"
 ```
 
-[pam]: https://en.wikipedia.org/wiki/Pluggable_authentication_module
+[PAM]: https://en.wikipedia.org/wiki/Pluggable_authentication_module
 [oauthenticator]: https://github.com/jupyterhub/oauthenticator
