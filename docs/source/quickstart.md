@@ -4,7 +4,7 @@
 
 Before installing JupyterHub, you will need:
 
-- a Linux/Unix based system
+- a Linux/Unix-based system
 - [Python](https://www.python.org/downloads/) 3.6 or greater. An understanding
   of using [`pip`](https://pip.pypa.io) or
   [`conda`](https://conda.io/docs/get-started.html) for
@@ -80,7 +80,7 @@ To start the Hub server, run the command:
 jupyterhub
 ```
 
-Visit `http://localhost:8000` in your browser, and sign in with your unix
+Visit `http://localhost:8000` in your browser, and sign in with your Unix
 credentials.
 
 To **allow multiple users to sign in** to the Hub server, you must start
