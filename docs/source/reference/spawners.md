@@ -298,7 +298,7 @@ Additional variables can be specified via the `Spawner.environment` configuratio
 The process environment is returned by `Spawner.get_env`, which specifies the following environment variables:
 
 - JUPYTERHUB*SERVICE_URL - the \_bind* URL where the server should launch its HTTP server (`http://127.0.0.1:12345`).
-  This includes `Spawner.ip` and `Spawner.port`; _new in 2.0, prior to 2.0 `ip`, `port` were on the command-line and only if specified_
+  This includes `Spawner.ip` and `Spawner.port`; _new in 2.0, prior to 2.0 IP, port were on the command-line and only if specified_
 - JUPYTERHUB_SERVICE_PREFIX - the URL prefix the service will run on (e.g. `/user/name/`)
 - JUPYTERHUB_USER - the JupyterHub user's username
 - JUPYTERHUB_SERVER_NAME - the server's name, if using named servers (default server has an empty name)
