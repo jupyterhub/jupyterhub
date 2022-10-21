@@ -38,7 +38,7 @@ the upgrade process. You should notify them, and pick a time to do the
 upgrade where they will be least disrupted.
 
 patch-2
-If you use a different proxy, or running ``configurable-http-proxy``
+If you use a different proxy, or run ``configurable-http-proxy``
 independent of JupyterHub, your users will be able to continue using notebook
 servers they had already launched, but will not be able to launch new servers or sign in.
 main
@@ -55,7 +55,7 @@ patch-2
    should backup the ``jupyterhub.sqlite`` file.
 #. Your ``jupyterhub_config.py`` file.
 #. Your users' home directories. This is unlikely to be affected directly by
-   a JupyterHub upgrade, but we recommend a backup since user data is significant.
+   a JupyterHub upgrade, but we recommend a backup since user data is critical.
 main
 
 
