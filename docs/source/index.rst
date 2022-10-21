@@ -74,7 +74,7 @@ Today, you can find two main use cases:
    This distribution runs JupyterHub on top of  `Kubernetes <https://k8s.io>`_.
 
 *It is important to evaluate these distributions before you can continue with the 
-configuration of the broad original system of* **JupyterHub**.
+configuration of JupyterHub*.
 
 Installation Guide
 ------------------
