@@ -6,7 +6,7 @@ We use different channels of communication for different purposes. Whichever one
 
 We use [Discourse](https://discourse.jupyter.org) for online discussions and support questions. Everyone in the Jupyter community is welcome to bring ideas and questions there.
 
-We recommend that you first use our Discourse as all our past and current discussions on it are archived and searchable. Thus, all discussions remain useful and accessible to the whole community.
+We recommend that you first use our Discourse as all past and current discussions on it are archived and searchable. Thus, all discussions remain useful and accessible to the whole community.
 
 ## Gitter
 
