@@ -15,8 +15,8 @@ If you have tried to start the JupyterHub proxy and it fails to start:
 - Try starting with `jupyterhub --ip=0.0.0.0`
 
 **Note**: If this occurs on Ubuntu/Debian, check that you are using a
-recent version of [Node](https://nodejs.org). Some versions of Ubuntu/Debian come with a version
-of Node that is very old, and it is necessary to update Node.
+recent version of [Node](https://nodejs.org). Some versions of Ubuntu/Debian come with a very old version
+of Node and it is necessary to update Node.
 
 ### sudospawner fails to run
 
@@ -41,7 +41,7 @@ this to a particular set of users, and admin_users lets you specify who
 among them may use the admin interface (not necessary, unless you need to do
 things like inspect other users' servers or modify the user list at runtime).
 
-### JupyterHub Docker container not accessible at localhost
+### JupyterHub Docker container is not accessible at localhost
 
 Even though the command to start your Docker container exposes port 8000
 (`docker run -p 8000:8000 -d --name jupyterhub jupyterhub/jupyterhub jupyterhub`),
@@ -71,7 +71,7 @@ After successfully logging in to JupyterHub with a compatible authenticator, I g
 This issue occurs when the authenticator requires a local system user to exist. In these cases, you need to use a spawner
 that does not require an existing system user account, such as `DockerSpawner` or `KubeSpawner`.
 
-### How can I run JupyterHub with sudo but use my current env vars and virtualenv location?
+### How can I run JupyterHub with sudo but use my current environment variables and virtualenv location?
 
 When launching JupyterHub with `sudo jupyterhub` I get import errors and my environment variables don't work.
 
@@ -87,7 +87,7 @@ sudo MY_ENV=abc123 \
 
 ### Error 500 after spawning my single-user server
 
-You receive a 500 error when accessing the URL `/user/<your_name>/...`.
+You receive a 500 error while accessing the URL `/user/<your_name>/...`.
 This is often seen when your single-user server cannot verify your user cookie
 with the Hub.
 
@@ -268,7 +268,7 @@ similar to this one:
 provides additional information. The [pySpark configuration documentation](https://spark.apache.org/docs/0.9.0/configuration.html)
 is also helpful for programmatic configuration examples.
 
-### How do I use JupyterLab's prerelease version with JupyterHub?
+### How do I use JupyterLab's pre-release version with JupyterHub?
 
 While JupyterLab is still under active development, we have had users
 ask about how to try out JupyterLab with JupyterHub.
@@ -294,7 +294,7 @@ notebook servers to default to JupyterLab:
 ### How do I set up JupyterHub for a workshop (when users are not known ahead of time)?
 
 1. Set up JupyterHub using OAuthenticator for GitHub authentication
-2. Configure the admin list to have workshop leaders be listed with administrator privileges.
+2. Configure the admin list to have workshop leaders listed with administrator privileges.
 
 Users will need a GitHub account to log in and be authenticated by the Hub.
 
