@@ -59,7 +59,7 @@ Contents
 Distributions
 -------------
 
-As earlier mentioned, a JupyterHub **distribution** is tailored 
+A JupyterHub **distribution** is tailored 
 towards a particular set of use cases. These are generally easier 
 to set up than setting up JupyterHub from scratch, assuming they fit your use case.
 
