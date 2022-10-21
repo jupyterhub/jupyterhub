@@ -4,9 +4,9 @@ A [Spawner][] starts each single-user notebook server.
 The Spawner represents an abstract interface to a process,
 and a custom Spawner needs to be able to take three actions:
 
-- start the process
-- poll whether the process is still running
-- stop the process
+- start a process
+- poll whether a process is still running
+- stop a process
 
 ## Examples
 
@@ -15,9 +15,9 @@ Some examples include:
 
 - [DockerSpawner](https://github.com/jupyterhub/dockerspawner) for spawning user servers in Docker containers
   - `dockerspawner.DockerSpawner` for spawning identical Docker containers for
-    each users
+    each user
   - `dockerspawner.SystemUserSpawner` for spawning Docker containers with an
-    environment and home directory for each users
+    environment and home directory for each user
   - both `DockerSpawner` and `SystemUserSpawner` also work with Docker Swarm for
     launching containers on remote machines
 - [SudoSpawner](https://github.com/jupyterhub/sudospawner) enables JupyterHub to
@@ -34,7 +34,7 @@ Some examples include:
 
 ### Spawner.start
 
-`Spawner.start` should start the single-user server for a single user.
+`Spawner.start` starts a single-user server for a single user.
 Information about the user can be retrieved from `self.user`,
 an object encapsulating the user's name, authentication, and server info.
 
@@ -69,13 +69,13 @@ via relaxing the `Spawner.start_timeout` config value.
 
 #### Note on IPs and ports
 
-`Spawner.ip` and `Spawner.port` attributes set the _bind_ url,
+`Spawner.ip` and `Spawner.port` attributes set the _bind_ URL,
 which the single-user server should listen on
 (passed to the single-user process via the `JUPYTERHUB_SERVICE_URL` environment variable).
-The _return_ value is the ip and port (or full url) the Hub should _connect to_.
+The _return_ value is the `ip` and `port` (or full URL) the Hub should _connect to_.
 These are not necessarily the same, and usually won't be in any Spawner that works with remote resources or containers.
 
-The default for Spawner.ip, and Spawner.port is `127.0.0.1:{random}`,
+The default for `Spawner.ip`, and `Spawner.port` is `127.0.0.1:{random}`,
 which is appropriate for Spawners that launch local processes,
 where everything is on localhost and each server needs its own port.
 For remote or container Spawners, it will often make sense to use a different value,
@@ -111,7 +111,7 @@ class MySpawner(Spawner):
 
 #### Exception handling
 
-When `Spawner.start` raises an Exception, a message can be passed on to the user via the exception via a `.jupyterhub_html_message` or `.jupyterhub_message` attribute.
+When `Spawner.start` raises an Exception, a message can be passed on to the user via the exception using a `.jupyterhub_html_message` or `.jupyterhub_message` attribute.
 
 When the Exception has a `.jupyterhub_html_message` attribute, it will be rendered as HTML to the user.
 
@@ -121,11 +121,11 @@ If both attributes are not present, the Exception will be shown to the user as u
 
 ### Spawner.poll
 
-`Spawner.poll` should check if the spawner is still running.
+`Spawner.poll` checks if the spawner is still running.
 It should return `None` if it is still running,
 and an integer exit status, otherwise.
 
-For the local process case, `Spawner.poll` uses `os.kill(PID, 0)`
+In the case of local processes, `Spawner.poll` uses `os.kill(PID, 0)`
 to check if the local process is still running. On Windows, it uses `psutil.pid_exists`.
 
 ### Spawner.stop
@@ -141,7 +141,7 @@ A JSON-able dictionary of state can be used to store persisted information.
 
 Unlike start, stop, and poll methods, the state methods must not be coroutines.
 
-For the single-process case, the Spawner state is only the process ID of the server:
+In the case of single processes, the Spawner state is only the process ID of the server:
 
 ```python
 def get_state(self):
@@ -297,18 +297,18 @@ Additional variables can be specified via the `Spawner.environment` configuratio
 
 The process environment is returned by `Spawner.get_env`, which specifies the following environment variables:
 
-- JUPYTERHUB*SERVICE_URL - the \_bind* url where the server should launch its http server (`http://127.0.0.1:12345`).
+- JUPYTERHUB*SERVICE_URL - the \_bind* URL where the server should launch its http server (`http://127.0.0.1:12345`).
   This includes Spawner.ip and Spawner.port; _new in 2.0, prior to 2.0 ip,port were on the command-line and only if specified_
 - JUPYTERHUB_SERVICE_PREFIX - the URL prefix the service will run on (e.g. `/user/name/`)
 - JUPYTERHUB_USER - the JupyterHub user's username
 - JUPYTERHUB_SERVER_NAME - the server's name, if using named servers (default server has an empty name)
-- JUPYTERHUB_API_URL - the full url for the JupyterHub API (http://17.0.0.1:8001/hub/api)
-- JUPYTERHUB_BASE_URL - the base url of the whole jupyterhub deployment, i.e. the bit before `hub/` or `user/`,
+- JUPYTERHUB_API_URL - the full URL for the JupyterHub API (http://17.0.0.1:8001/hub/api)
+- JUPYTERHUB_BASE_URL - the base URL of the whole jupyterhub deployment, i.e. the bit before `hub/` or `user/`,
   as set by c.JupyterHub.base_url (default: `/`)
 - JUPYTERHUB_API_TOKEN - the API token the server can use to make requests to the Hub.
   This is also the OAuth client secret.
 - JUPYTERHUB_CLIENT_ID - the OAuth client ID for authenticating visitors.
-- JUPYTERHUB_OAUTH_CALLBACK_URL - the callback URL to use in oauth, typically `/user/:name/oauth_callback`
+- JUPYTERHUB_OAUTH_CALLBACK_URL - the callback URL to use in OAuth, typically `/user/:name/oauth_callback`
 - JUPYTERHUB_OAUTH_ACCESS_SCOPES - the scopes required to access the server (called JUPYTERHUB_OAUTH_SCOPES prior to 3.0)
 - JUPYTERHUB_OAUTH_CLIENT_ALLOWED_SCOPES - the scopes the service is allowed to request.
   If no scopes are requested explicitly, these scopes will be requested.
@@ -326,7 +326,7 @@ Optional environment variables, depending on configuration:
   sets maximum log level when Spawner.debug is True (new in 2.0,
   previously passed via CLI)
 
-- JUPYTERHUB*[MEM|CPU]*[LIMIT_GUARANTEE] - the values of cpu and memory limits and guarantees.
+- JUPYTERHUB*[MEM|CPU]*[LIMIT_GUARANTEE] - the values of CPU and memory limits and guarantees.
   These are not expected to be enforced by the process,
   but are made available as a hint,
   e.g. for resource monitoring extensions.
