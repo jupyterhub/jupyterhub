@@ -27,7 +27,97 @@ jsx/
     This directory contains javascript sources for the JupyterHub Admin Dashboard.
 
 JupyterHub/
-    This directory contains the core code files for the JupyterHub project.
+    This directory contains the core code files for the JupyterHub project. For developers contributing to the codebase, here is a layout of the directory:
+
+    alembic/
+        This is the alembic configuration for JupyterHub database migrations.
+
+    apihandlers/
+        This sub-directory contains all API handler modules. This includes the authorization handlers, group handlers, API handlers for JupyterHub adminstration, proxy handlers, services handlers and user handlers.
+
+    event-schemas/server-actions/
+        This sub-directory contains the schema used by JupyterHub in recording operations performed by JupyterHub on user servers.
+
+    handlers/
+        This sub-directory contains the HTTP handlers for the hub servers. It contains other handlers: basic HTML-rendering handlers, handlers for serving prometheus metrics, and static files handlers.
+
+    oauth/
+        This sub-directory contains the utilities for hooking up `oauth2` with the JupyterHub's database.
+
+    services/
+        This sub-directory contains the modules for authenticating and managing services.
+
+    singleuser/
+        This sub-directory contains the entrypoints for JupyterHub single-user server. It also contains default notebook-app subclass and mixins.
+
+    tests/
+        This sub-directory contains the tests for all modules in the JupyterHub directory.
+
+    _init_.py
+        A python package indicator.
+
+    _main_.py
+        The main entrypoint for the execution of python modules.
+
+    _data.py   
+        The module file for getting JupyterHub data and static files.
+
+    _memoize.py 
+        The utility module file for memoization.
+
+    _version.py
+        The module file for obtaining information on JupyterHub version.
+
+    alembic.ini
+        A generic, single database configuration file.
+
+    app.py  
+        The multi-user notebook application module.
+        
+    auth.py
+        This module contains the authenticator classes: base Authenticator class, the (default) PAM Authenticator, Local Authenticator, Null Authenticator, and Dummy Authenticator.
+
+    crypto.py
+        The module on cryptography and encryption configuration.
+
+    dbutil.py
+        The database utility module for JupyterHub.
+
+    emptyclass.py
+        This module contains an empty class.
+
+    log.py
+        The logging utility module file for JupyterHub.
+
+    metrics.py  
+        The module used by JupyterHub for exporting Prometheus metrics.
+
+    objects.py  
+        This module contains generic objects(Server & Hub) used by JupyterHub.
+        
+    orm.py  
+        The module on the constellation of the state of JupyterHub processes using SQLalchemy ORM tools.
+
+    proxy.py
+        This module contains the API for JupyterHub's proxy.
+
+    roles.py
+        The roles (users, admins, server, & token) utility module for JupyterHub.
+
+    scopes.py
+        This module contains scope definitions and utilities.
+
+    spawner.py
+        This modules contains the base spawner class and its default implementation.
+
+    traitlets.py
+        This module contains traitlets used by JupyterHub.
+
+    user.py
+        The User object module.
+
+    utils.py
+        This module contains miscellaneous utilities.        
 
 onbuild/
     This directory contains the Dockerfile for building a JupyterHub image. Specifically, it would include the configuration file(`JupyterHub_config.py`) in the image build.
