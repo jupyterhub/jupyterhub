@@ -234,7 +234,7 @@ shared by the Hub and single-user servers.
 
 Its sole purpose is to coordinate logout of the multiple OAuth cookies.
 
-This cookie is set to ``/`` so all endpoints can receive or clear it, etc.
+This cookie is set to ``/`` so all endpoints can receive it, clear it, etc.
 
 jupyterhub-user-<username>-oauth-state
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
