@@ -12,12 +12,11 @@ JupyterHub offers distributions for different use cases. As of now, you can find
 1. `The Littlest JupyterHub <https://github.com/jupyterhub/the-littlest-jupyterhub>`__ distribution is suitable if you need a small number of users (1-100) and a single server with a simple environment.
 2. `Zero to JupyterHub with Kubernetes <https://github.com/jupyterhub/zero-to-jupyterhub-k8s>`__ allows you to deploy dynamic servers on the cloud if you need even more users.
 
-JupyterHub supports web browsers, tablets and smartphones and can be used by 
-multiple users at the same time such as a class of students, corporate data 
-science group or scientific research group. 
+
 JupyterHub can be used in a collaborative environment by both both small (0-100 users) and 
-large teams (more than 100 users). It has distributions which are developed to serve the needs
-of each of these teams respectively. 
+large teams (more than 100 users) such as a class of students, corporate data science group 
+or scientific research group. It has distributions which are developed to serve the needs of 
+each of these teams respectively. 
 
 JupyterHub is made up of four subsystems:
 
