@@ -155,7 +155,7 @@ The location of the ``jupyterhub_cookie_secret`` file can be specified in the
 
 If the cookie secret file doesn't exist when the Hub starts, a new cookie
 secret is generated and stored in the file. The file must not be readable by
-``group`` or ``other`` otherwise, the server won't start. The recommended permissions
+``group`` or ``other``, otherwise the server won't start. The recommended permissions
 for the cookie secret file are ``600`` (owner-only rw).
 
 Generating and storing as an environment variable
