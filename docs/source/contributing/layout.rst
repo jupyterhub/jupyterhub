@@ -96,7 +96,7 @@ JupyterHub/
         This module contains generic objects(Server & Hub) used by JupyterHub.
         
     orm.py  
-        The module on the constellation of the state of JupyterHub processes using SQLalchemy ORM tools.
+        This module contains the JupyterHub database-related code.
 
     proxy.py
         This module contains the API for JupyterHub's proxy.
