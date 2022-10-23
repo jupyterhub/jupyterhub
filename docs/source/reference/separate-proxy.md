@@ -40,9 +40,8 @@ set to the URL which the hub uses to connect _to the proxy's API_.
 
 You need to configure a service to start the proxy. An example
 command line argument for this is:
-
 ```bash
-$ configurable-http-proxy --ip=127.0.0.1 --port=8000 --api-ip=127.0.0.1 --api-port=8001 --default-target=http://localhost:8081 --error-target=http://localhost:8081/hub/error`
+$ configurable-http-proxy --ip=127.0.0.1 --port=8000 --api-ip=127.0.0.1 --api-port=8001 --default-target=http://localhost:8081 --error-target=http://localhost:8081/hub/error
 ```
 (Details on how to do this is out of the scope of this tutorial. For example, it might be a
 systemd service configured within another docker container). The proxy has no
