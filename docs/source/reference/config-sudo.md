@@ -9,7 +9,7 @@ Only do this if you are very sure you must.
 There are many [Authenticators](./authenticators-users-basics) and [Spawners](./spawners-basics) available for JupyterHub. Some, such
 as [DockerSpawner](https://github.com/jupyterhub/dockerspawner) or [OAuthenticator](https://github.com/jupyterhub/oauthenticator), do not need any elevated permissions. This
 document describes how to get the full default behavior of JupyterHub while
-running notebook servers as real system users on a shared system without
+running notebook servers as real system users on a shared system, without
 running the Hub itself as root.
 
 Since JupyterHub needs to spawn processes as other users, the simplest way
@@ -90,7 +90,7 @@ $ adduser -G jupyterhub newuser
 Test that the new user doesn't need to enter a password to run the sudospawner
 command.
 
-This should prompt for your password to switch to rhea, but _not_ prompt for
+This should prompt for your password to switch to `rhea`, but _not_ prompt for
 any password for the second switch. It should show some help output about
 logging options:
 
@@ -119,7 +119,7 @@ the shadow password database.
 
 ### Shadow group (Linux)
 
-**Note:** On Fedora based distributions there is no clear way to configure
+**Note:** On [Fedora based distributions](https://fedoraproject.org/wiki/List_of_Fedora_remixes) there is no clear way to configure
 the PAM database to allow sufficient access for authenticating with the target user's password
 from JupyterHub. As a workaround we recommend use an
 [alternative authentication method](https://github.com/jupyterhub/jupyterhub/wiki/Authenticators).
@@ -226,7 +226,7 @@ And try logging in.
 ## Troubleshooting: SELinux
 
 If you still get a generic `Permission denied` `PermissionError`, it's possible SELinux is blocking you.  
-Here's how you can make a module to allow this.
+Here's how you can make a module to resolve this.
 First, put this in a file named `sudo_exec_selinux.te`:
 
 ```bash
@@ -253,6 +253,6 @@ $ semodule -i sudo_exec_selinux.pp
 ## Troubleshooting: PAM session errors
 
 If the PAM authentication doesn't work and you see errors for
-`login:session-auth`, or similar, considering updating to a more recent version
-of jupyterhub and disabling the opening of PAM sessions with
+`login:session-auth`, or similar, consider updating to a more recent [version
+of jupyterhub](https://readthedocs.org/projects/jupyterhub/) and disabling the opening of PAM sessions with
 `c.PAMAuthenticator.open_sessions=False`.
