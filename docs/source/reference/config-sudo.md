@@ -6,8 +6,8 @@ Only do this if you are very sure you must.
 
 ## Overview
 
-There are many Authenticators and Spawners available for JupyterHub. Some, such
-as DockerSpawner or OAuthenticator, do not need any elevated permissions. This
+There are many [Authenticators](./authenticators-users-basics) and [Spawners](./spawners-basics) available for JupyterHub. Some, such
+as [DockerSpawner](https://github.com/jupyterhub/dockerspawner) or [OAuthenticator](https://github.com/jupyterhub/oauthenticator), do not need any elevated permissions. This
 document describes how to get the full default behavior of JupyterHub while
 running notebook servers as real system users on a shared system without
 running the Hub itself as root.
@@ -46,7 +46,7 @@ We want to confine these permissions to only what we really need.
 
 ## Edit `/etc/sudoers`
 
-To do this we add to `/etc/sudoers` (use `visudo` for safe editing of sudoers):
+To do this we write to `/etc/sudoers` (use `visudo` for safe editing of sudoers):
 
 - specify the list of users `JUPYTER_USERS` for whom `rhea` can spawn servers
 - set the command `JUPYTER_CMD` that `rhea` can execute on behalf of users
@@ -150,7 +150,7 @@ We want our new user to be able to read the shadow passwords, so add it to the s
     $ sudo usermod -a -G shadow rhea
 ```
 
-If you want jupyterhub to serve pages on a restricted port (such as port 80 for http),
+If you want jupyterhub to serve pages on a restricted port (such as port 80 for HTTP),
 then you will need to give `node` permission to do so:
 
 ```bash
