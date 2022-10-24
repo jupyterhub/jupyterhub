@@ -62,12 +62,12 @@ Upgrade JupyterHub packages
 
 There are two environments where the ``jupyterhub`` package is installed:
 
-#. The *hub environment*, which is where the JupyterHub server process
-   runs. This is started with the ``jupyterhub`` command and is what
+#. The *hub environment*: where the JupyterHub server process
+   runs. This is started with the ``jupyterhub`` command, and is what
    people generally think of as JupyterHub.
 
-#. The *notebook user environments*. This is where the user's notebook
-   servers are launched from and are probably custom to your own
+#. The *notebook user environments*: where the user notebook
+   servers are launched from, and is probably custom to your own
    installation. This could be just one environment (different from the
    hub environment) that is shared by all users, one environment
    per user, or the same environment as the hub environment. The hub
@@ -90,8 +90,6 @@ with:
 .. code-block:: bash
 
    conda install -c conda-forge jupyterhub==<version>
-
-Where ``<version>`` is the version of JupyterHub you are upgrading to.
 
 You should also check for new releases of the authenticator & spawner you
 are using. You might wish to upgrade those packages, too, along with JupyterHub
