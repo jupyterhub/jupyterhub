@@ -9,7 +9,7 @@ To determine which scopes a role should have, one can follow these steps:
 5. Customize the scopes with filters if needed
 6. Define the role with required scopes and assign to users/services/groups/tokens
 
-Below, different use cases are presented on how to use the [RBAC framework](https://jupyterhub.readthedocs.io/en/stable/rbac/index.html).
+Below, different use cases are presented on how to use the [RBAC framework](./index.md)
 
 ## Service to cull idle servers
 
