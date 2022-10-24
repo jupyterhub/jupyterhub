@@ -67,7 +67,7 @@ generating an API token is available from the JupyterHub user interface:
 JupyterHub's API token page
 :::
 
-:::{figure-md} 
+:::{figure-md}
 ![token-request-success](../images/token-request-success.png)
 
 JupyterHub's token page after successfully requesting a token.
