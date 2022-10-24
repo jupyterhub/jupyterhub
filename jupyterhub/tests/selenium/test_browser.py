@@ -709,7 +709,7 @@ async def test_request_token_duration(
     """verify request token with the different options"""
     await open_token_page(app, browser, user, pass_w)
     is_displayed(browser, TokenPageLocators.LIST_EXP_TOKEN_FIELD)
-    # await webdriver_wait(browser, EC.visibility_of_element_located(TokenPageLocators.LIST_EXP_TOKEN_FIELD))
+
     # select the token duration
     select_element = browser.find_element(*TokenPageLocators.LIST_EXP_TOKEN_FIELD)
     while token_opt != "Never":
