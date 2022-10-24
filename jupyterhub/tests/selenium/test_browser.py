@@ -25,6 +25,9 @@ pytestmark = pytest.mark.selenium
 
 
 async def webdriver_wait(driver, condition, timeout=30):
+    """an async wrapper for selenium's wait function,
+    a condition is something from selenium's expected_conditions"""
+
     return await exponential_backoff(
         partial(condition, driver),
         timeout=timeout,
@@ -43,20 +46,25 @@ def in_thread(f, *args, **kwargs):
     return asyncio.get_event_loop().run_in_executor(None, partial(f, *args, **kwargs))
 
 
-async def open_url(app, browser):
+async def open_url(app, browser, url="login"):
     """initiating open the login page in the browser"""
-    url = url_path_join(public_host(app), app.hub.base_url, "login")
+
+    url = url_path_join(public_host(app), app.hub.base_url, url)
     await in_thread(browser.get, url)
     return url
 
 
 def click(browser, by_locator):
+    """wait for element to be visible, then click on it"""
+
     WebDriverWait(browser, 10).until(
         EC.visibility_of_element_located(by_locator)
     ).click()
 
 
 def is_displayed(browser, by_locator):
+    """Whether the element is visible or not"""
+
     return (
         WebDriverWait(browser, 10)
         .until(EC.visibility_of_element_located(by_locator))
@@ -65,6 +73,8 @@ def is_displayed(browser, by_locator):
 
 
 def send_text(browser, by_locator, text):
+    """wait for element to be presented, then put the text in it"""
+
     return (
         WebDriverWait(browser, 10)
         .until(EC.presence_of_element_located(by_locator))
@@ -73,15 +83,13 @@ def send_text(browser, by_locator, text):
 
 
 def clear(browser, by_locator):
+    """wait for element to be presented, then clear the text in it"""
+
     return (
         WebDriverWait(browser, 10)
         .until(EC.presence_of_element_located(by_locator))
         .clear()
     )
-
-
-def element(browser, by_locator):
-    WebDriverWait(browser, 10).until(EC.visibility_of_element_located(by_locator))
 
 
 # LOGIN PAGE
@@ -106,12 +114,12 @@ async def test_submit_login_form(app, browser):
     user = "test_user"
     pass_w = "test_user"
 
-    await open_url(app, browser)
+    await open_url(app, browser, url="login")
     redirected_url = ujoin(public_url(app), f"/user/{user}/")
     await login(browser, user, pass_w)
     # verify url contains username
     if f"/user/{user}/" not in browser.current_url:
-        webdriver_wait(browser, EC.url_to_be(redirected_url))
+        await webdriver_wait(browser, EC.url_to_be(redirected_url))
     else:
         pass
     assert browser.current_url == redirected_url
@@ -155,7 +163,16 @@ async def test_submit_login_form(app, browser):
         ),
     ],
 )
-async def test_open_url_login(app, browser, url, params, redirected_url, form_action):
+async def test_open_url_login(
+    app,
+    browser,
+    url,
+    params,
+    redirected_url,
+    form_action,
+    user='test_user',
+    pass_w='test_user',
+):
     url = url_path_join(public_host(app), app.hub.base_url, url)
     url_new = url_concat(url, params)
     await in_thread(browser.get, url_new)
@@ -167,9 +184,8 @@ async def test_open_url_login(app, browser, url, params, redirected_url, form_ac
     assert browser.title == LoginPageLocators.PAGE_TITLE
     assert form.endswith(form_action)
     # login in with params
-    await login(browser, user='test_user', pass_w='test_user')
+    await login(browser, user, pass_w)
     # verify next url + params
-    user = 'test_user'
     next_url = browser.current_url
     if url_escape(app.base_url) in form_action:
         assert next_url.endswith("param=value")
@@ -178,7 +194,7 @@ async def test_open_url_login(app, browser, url, params, redirected_url, form_ac
         assert f"user/{user}/" not in next_url
     else:
         if next_url.endswith(f"/user/{user}/") == False:
-            webdriver_wait(
+            await webdriver_wait(
                 browser, EC.url_to_be(ujoin(public_url(app), f"/user/{user}/"))
             )
         assert next_url.endswith(f"/user/{user}/")
