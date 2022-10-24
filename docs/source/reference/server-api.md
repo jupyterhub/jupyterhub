@@ -1,8 +1,11 @@
 # Starting servers with the JupyterHub API
 
-Sometimes, when working with applications such as [BinderHub](https://binderhub.readthedocs.io), it may be necessary to launch Jupyter-based services on behalf of your users. Doing so can be achieved through JupyterHub's [REST API](../reference/rest.md), which allows one to launch and manage servers on behalf of users through API calls instead of the JupyterHub UI. In doing so, you can take advantage of other user/launch/lifecycle patterns that are not natively supported by the JupyterHub UI, all without the need to develop the server management features of JupyterHub Spawners and/or Authenticators.
+Sometimes, when working with applications such as [BinderHub](https://binderhub.readthedocs.io), it may be necessary to launch Jupyter-based services on behalf of your users. 
+Doing so can be achieved through JupyterHub's [REST API](../reference/rest.md), which allows one to launch and manage servers on behalf of users through API calls instead of the JupyterHub UI. 
+This way, you can take advantage of other user/launch/lifecycle patterns that are not natively supported by the JupyterHub UI, all without the need to develop the server management features of JupyterHub Spawners and/or Authenticators.
 
-This tutorial goes through the processes involved while working with the JupyterHub API to manage servers for users. In particular, it covers how to:
+This tutorial goes through working with the JupyterHub API to manage servers for users. 
+In particular, it covers how to:
 
 1. [Check the status of servers](checking)
 2. [Start servers](starting)
@@ -174,7 +177,8 @@ You can keep making this check until `ready` is true.
 
 ### Using the progress API
 
-The most _efficient_ way to wait for a server to start is by using the progress API. The progress URL is available in the server model under `progress_url` and has the form `/hub/api/users/:user/servers/:servername/progress`.
+The most _efficient_ way to wait for a server to start is by using the progress API. 
+The progress URL is available in the server model under `progress_url` and has the form `/hub/api/users/:user/servers/:servername/progress`.
 
 The default server progress can be accessed at `:user/servers//progress` or `:user/server/progress` as demonstrated in the following GET request:
 
@@ -184,7 +188,8 @@ GET /hub/api/users/:user/servers/:servername/progress
 
 **Required scope: `read:servers`**
 
-The progress API is an example of an [EventStream][] API. Therefore, messages are _streamed_ and delivered in the form:
+The progress API is an example of an [EventStream][] API. 
+Messages are _streamed_ and delivered in the form:
 
 ```
 data: {"progress": 10, "message": "...", ...}
@@ -218,7 +223,8 @@ ready
 url
 : only present if `ready` is true; will be the server's URL
 
-The progress API can be used even with fully ready servers. In such a situation, there will only be one event response of the form:
+The progress API can be used even with fully ready servers. 
+If the server is ready, there will only be one event, which will look like:
 
 ```json
 {
@@ -230,9 +236,10 @@ The progress API can be used even with fully ready servers. In such a situation,
 }
 ```
 
-In this case, `ready` and `url` are the same as in the server model, and `ready` will always be true.
+where `ready` and `url` are the same as in the server model, and `ready` will always be true.
 
-A significant advantage of the progress API is that it shows the status of the server through a stream of messages. Below is an example of a typical complete stream from the API:
+A significant advantage of the progress API is that it shows the status of the server through a stream of messages. 
+Below is an example of a typical complete stream from the API:
 
 ```
 
@@ -262,20 +269,21 @@ DELETE /hub/api/users/:user/servers/[:servername]
 
 **Required scope: `servers`**
 
-Similar to when starting a server, issuing the DELETE request above might not stop the server immediately. Instead, the DELETE request has two possible response codes:
+Similar to when starting a server, issuing the DELETE request above might not stop the server immediately. 
+Instead, the DELETE request has two possible response codes:
 
 204 Deleted
 : This status code means the delete completed and the server is fully stopped.
 It will now be absent from the user `servers` model.
 
 202 Accepted
-: This code means your request was accepted, but is not yet completely processed.
+: This code means your request was accepted but is not yet completely processed.
 The server has `pending: 'stop'` at this point.
 
 There is no progress API for checking when a server actually stops.
-Thus, the only available alternative is to poll the server and wait for it to disappear from the user `servers` model.
+The only way to wait for a server to stop is to poll it and wait for the server to disappear from the user `servers` model.
 
-This Python code snippet can be used to check if a server stops:
+This Python code snippet can be used to stop a server and the wait for the process to complete:
 
 ```{literalinclude} ../../../examples/server-api/start-stop-server.py
 :language: python
@@ -298,17 +306,16 @@ a token must be owned by the same user as the server,
 
 The URL returned from a server model is the URL path suffix,
 e.g. `/user/:name/` to append to the jupyterhub base URL.
-
-For instance, `{hub_url}{server_url}`,
-where `hub_url` would be such as `http://127.0.0.1:8000` by default,
-and `server_url` is `/user/myname.` When combined, the two give a full URL of `http://127.0.0.1:8000/user/myname`.
+The returned URL is of the form `{hub_url}{server_url}`,
+where `hub_url` would be `http://127.0.0.1:8000` by default and `server_url` is `/user/myname`. 
+When combined, the two give a full URL of `http://127.0.0.1:8000/user/myname`.
 
 ## Python example
 
 The JupyterHub repo includes a complete example in {file}`examples/server-api`
-tying all the above mentioned steps together.
+that ties all theses steps together.
 
-In summary, the steps involved while managing servers on behalf of users are:
+In summary, the processes involved in managing servers on behalf of users are:
 
 1. Get user information from `/user/:name`.
 2. The server model includes a `ready` state to tell you if it's ready.
