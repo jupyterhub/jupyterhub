@@ -46,7 +46,7 @@ We want to confine these permissions to only what we really need.
 
 ## Edit `/etc/sudoers`
 
-To do this we write to `/etc/sudoers` (use `visudo` for safe editing of sudoers):
+To do this we add to `/etc/sudoers` (use `visudo` for safe editing of sudoers):
 
 - specify the list of users `JUPYTER_USERS` for whom `rhea` can spawn servers
 - set the command `JUPYTER_CMD` that `rhea` can execute on behalf of users
