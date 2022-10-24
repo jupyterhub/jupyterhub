@@ -4,7 +4,7 @@ This roadmap collects "next steps" for JupyterHub. It is about creating a
 shared understanding of the project's vision and direction amongst
 the community of users, contributors, and maintainers.
 The goal is to communicate priorities and upcoming release plans.
-It is not a aimed at limiting contributions to what is listed here.
+It is not aimed at limiting contributions to what is listed here.
 
 ## Using the roadmap
 
