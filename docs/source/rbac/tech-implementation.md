@@ -43,7 +43,7 @@ Prior to 3.0, tokens stored _roles_,
 which meant their scopes were resolved on each request.
 :::
 
-API tokens grant access to JupyterHub's APIs. The [RBAC framework](https://jupyterhub.readthedocs.io/en/stable/rbac/index.html) allows for requesting tokens with specific permissions.
+API tokens grant access to JupyterHub's APIs. The [RBAC framework](https://jupyterhub.readthedocs.io/en/stable/rbac/upgrade.html) allows for requesting tokens with specific permissions.
 
 RBAC is involved in several stages of the OAuth token flow.
 
