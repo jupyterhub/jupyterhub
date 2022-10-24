@@ -1,10 +1,10 @@
 # Starting servers with the JupyterHub API
 
-Sometimes, when working with applications such as [BinderHub](https://binderhub.readthedocs.io), it may be necessary to launch Jupyter-based services on behalf of your users. 
-Doing so can be achieved through JupyterHub's [REST API](../reference/rest.md), which allows one to launch and manage servers on behalf of users through API calls instead of the JupyterHub UI. 
+Sometimes, when working with applications such as [BinderHub](https://binderhub.readthedocs.io), it may be necessary to launch Jupyter-based services on behalf of your users.
+Doing so can be achieved through JupyterHub's [REST API](../reference/rest.md), which allows one to launch and manage servers on behalf of users through API calls instead of the JupyterHub UI.
 This way, you can take advantage of other user/launch/lifecycle patterns that are not natively supported by the JupyterHub UI, all without the need to develop the server management features of JupyterHub Spawners and/or Authenticators.
 
-This tutorial goes through working with the JupyterHub API to manage servers for users. 
+This tutorial goes through working with the JupyterHub API to manage servers for users.
 In particular, it covers how to:
 
 1. [Check the status of servers](checking)
@@ -177,7 +177,7 @@ You can keep making this check until `ready` is true.
 
 ### Using the progress API
 
-The most _efficient_ way to wait for a server to start is by using the progress API. 
+The most _efficient_ way to wait for a server to start is by using the progress API.
 The progress URL is available in the server model under `progress_url` and has the form `/hub/api/users/:user/servers/:servername/progress`.
 
 The default server progress can be accessed at `:user/servers//progress` or `:user/server/progress` as demonstrated in the following GET request:
@@ -188,7 +188,7 @@ GET /hub/api/users/:user/servers/:servername/progress
 
 **Required scope: `read:servers`**
 
-The progress API is an example of an [EventStream][] API. 
+The progress API is an example of an [EventStream][] API.
 Messages are _streamed_ and delivered in the form:
 
 ```
@@ -223,7 +223,7 @@ ready
 url
 : only present if `ready` is true; will be the server's URL
 
-The progress API can be used even with fully ready servers. 
+The progress API can be used even with fully ready servers.
 If the server is ready, there will only be one event, which will look like:
 
 ```json
@@ -238,7 +238,7 @@ If the server is ready, there will only be one event, which will look like:
 
 where `ready` and `url` are the same as in the server model, and `ready` will always be true.
 
-A significant advantage of the progress API is that it shows the status of the server through a stream of messages. 
+A significant advantage of the progress API is that it shows the status of the server through a stream of messages.
 Below is an example of a typical complete stream from the API:
 
 ```
@@ -269,7 +269,7 @@ DELETE /hub/api/users/:user/servers/[:servername]
 
 **Required scope: `servers`**
 
-Similar to when starting a server, issuing the DELETE request above might not stop the server immediately. 
+Similar to when starting a server, issuing the DELETE request above might not stop the server immediately.
 Instead, the DELETE request has two possible response codes:
 
 204 Deleted
@@ -307,7 +307,7 @@ a token must be owned by the same user as the server,
 The URL returned from a server model is the URL path suffix,
 e.g. `/user/:name/` to append to the jupyterhub base URL.
 The returned URL is of the form `{hub_url}{server_url}`,
-where `hub_url` would be `http://127.0.0.1:8000` by default and `server_url` is `/user/myname`. 
+where `hub_url` would be `http://127.0.0.1:8000` by default and `server_url` is `/user/myname`.
 When combined, the two give a full URL of `http://127.0.0.1:8000/user/myname`.
 
 ## Python example
