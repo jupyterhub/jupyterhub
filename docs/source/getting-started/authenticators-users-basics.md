@@ -29,7 +29,7 @@ Instead, you can assign [roles](define-role-target) to users or groups
 with only the scopes they require.
 ```
 
-**[roles](https://jupyterhub.readthedocs.io/en/stable/rbac/roles.html#define-role-target)**
+roles
 
 Admin users of JupyterHub, `admin_users`, can add and remove users from
 the user `allowed_users` set. `admin_users` can take actions on other users'
