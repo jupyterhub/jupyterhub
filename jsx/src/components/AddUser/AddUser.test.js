@@ -131,7 +131,7 @@ test("Shows a more specific UI error dialogue when user creation returns an impr
   });
 
   let errorDialog = screen.getByText(
-    "Failed to create user. User already exists."
+    "Failed to create user. User already exists.",
   );
 
   expect(errorDialog).toBeVisible();

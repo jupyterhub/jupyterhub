@@ -7,11 +7,11 @@ const withAPI = withProps(() => ({
       `/users?include_stopped_servers&offset=${offset}&limit=${limit}&name_filter=${
         name_filter || ""
       }`,
-      "GET"
+      "GET",
     ).then((data) => data.json()),
   updateGroups: (offset, limit) =>
     jhapiRequest(`/groups?offset=${offset}&limit=${limit}`, "GET").then(
-      (data) => data.json()
+      (data) => data.json(),
     ),
   shutdownHub: () => jhapiRequest("/shutdown", "POST"),
   startServer: (name, serverName = "") =>

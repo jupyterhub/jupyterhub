@@ -94,10 +94,10 @@ const GroupEdit = (props) => {
               }
 
               let new_users = selected.filter(
-                (e) => !group_data.users.includes(e)
+                (e) => !group_data.users.includes(e),
               );
               let removed_users = group_data.users.filter(
-                (e) => !selected.includes(e)
+                (e) => !selected.includes(e),
               );
 
               let promiseQueue = [];
@@ -105,7 +105,7 @@ const GroupEdit = (props) => {
                 promiseQueue.push(addToGroup(new_users, group_data.name));
               if (removed_users.length > 0)
                 promiseQueue.push(
-                  removeFromGroup(removed_users, group_data.name)
+                  removeFromGroup(removed_users, group_data.name),
                 );
 
               Promise.all(promiseQueue)

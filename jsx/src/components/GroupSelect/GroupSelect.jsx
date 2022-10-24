@@ -90,7 +90,7 @@ const GroupSelect = (props) => {
                 >
                   {e}
                 </div>
-              )
+              ),
             )}
           </div>
         </div>
