@@ -253,6 +253,6 @@ $ semodule -i sudo_exec_selinux.pp
 ## Troubleshooting: PAM session errors
 
 If the PAM authentication doesn't work and you see errors for
-`login:session-auth`, or similar, consider updating to a more recent [version
-of jupyterhub](https://readthedocs.org/projects/jupyterhub/) and disabling the opening of PAM sessions with
+`login:session-auth`, or similar, consider updating to a more recent version
+of jupyterhub and disabling the opening of PAM sessions with
 `c.PAMAuthenticator.open_sessions=False`.
