@@ -74,7 +74,7 @@ After starting the Hub once, it is not sufficient to **remove** a user
 from the allowed users set in your config file. You must also remove the user
 from the Hub's database, either by deleting the user from JupyterHub's
 admin page, or you can clear the `jupyterhub.sqlite` database and start
-afresh.
+fresh.
 
 ## Use LocalAuthenticator to create system users
 
