@@ -4,14 +4,14 @@
 
 This section will give you information on:
 
-- [What you can do with the API](#what-you-can-do-with-the-api)
-- [How to create an API token](#create-an-api-token)
-- [Assigning permissions to a token](#assigning-permissions-to-a-token)
-- [Updating to admin services](#updating-to-admin-services)
-- [Making an API request programmatically using the requests library](#make-an-api-request)
-- [Paginating API requests](#paginating-api-requests)
-- [Enabling users to spawn multiple named-servers via the API](#enabling-users-to-spawn-multiple-named-servers-via-the-api)
-- [Learn more about JupyterHub's API](#learn-more-about-the-api)
+- What you can do with the API
+- How to create an API token
+- Assigning permissions to a token
+- Updating to admin services
+- Making an API request programmatically using the requests library
+- Paginating API requests
+- Enabling users to spawn multiple named-servers via the API
+- Learn more about JupyterHub's API
 
 ## What you can do with the API
 
@@ -39,7 +39,7 @@ The preferred way of generating an API token is by running:
 openssl rand -hex 32
 ```
 
-The `openssl` command generates a potential token that can then be
+This `openssl` command generates a potential token that can then be
 added to JupyterHub using `.api_tokens` configuration setting in
 `jupyterhub_config.py`.
 
@@ -48,7 +48,7 @@ The api_tokens configuration has been softly deprecated since the introduction o
 ```
 
 Alternatively, you can use the `jupyterhub token` command to generate a token
-for a specific hub user by passing the **_username_**:
+for a specific hub user by passing the **username**:
 
 ```bash
 jupyterhub token <username>
@@ -60,19 +60,19 @@ it for the given user with the Hub's database.
 In [version 0.8.0](../changelog.md), a token request page for
 generating an API token is available from the JupyterHub user interface:
 
-```{figure} ../images/token-request.png
----
-name: token-request
----
-JupyterHub's API token page
-```
+:::{figure-md}
 
-```{figure} ../images/token-request-success.png
----
-name: token-request-success
----
-JupyterHub's API token success page
-```
+![token request page](../images/token-request.png)
+
+JupyterHub's API token page
+:::
+
+:::{figure-md} 
+![token-request-success](../images/token-request-success.png)
+
+JupyterHub's token page after successfully requesting a token.
+
+:::
 
 ## Assigning permissions to a token
 
@@ -324,5 +324,5 @@ You can see the full [JupyterHub REST API][] for more details.
 
 [openapi initiative]: https://www.openapis.org/
 [jupyterhub rest api]: ./rest-api
-[scopes]: https://jupyterhub.readthedocs.io/en/stable/rbac/scopes.html
+[scopes]: ../rbac/scopes.md
 [jupyter notebook rest api]: https://petstore3.swagger.io/?url=https://raw.githubusercontent.com/jupyter/notebook/HEAD/notebook/services/api/api.yaml
