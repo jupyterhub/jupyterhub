@@ -1,36 +1,31 @@
 # Starting servers with the JupyterHub API
 
-JupyterHub's [REST API][] allows launching servers on behalf of users
-without ever interacting with the JupyterHub UI.
-This allows you to build services launching Jupyter-based services for users
-without relying on the JupyterHub UI at all,
-enabling a variety of user/launch/lifecycle patterns not natively supported by JupyterHub,
-without needing to develop all the server management features of JupyterHub Spawners and/or Authenticators.
-[BinderHub][] is an example of such an application.
+Sometimes, when working with applications such as [BinderHub](https://binderhub.readthedocs.io), it may be necessary to launch Jupyter-based services on behalf of your users.
+Doing so can be achieved through JupyterHub's [REST API](../reference/rest.md), which allows one to launch and manage servers on behalf of users through API calls instead of the JupyterHub UI.
+This way, you can take advantage of other user/launch/lifecycle patterns that are not natively supported by the JupyterHub UI, all without the need to develop the server management features of JupyterHub Spawners and/or Authenticators.
 
-[binderhub]: https://binderhub.readthedocs.io
-[rest api]: ../reference/rest.md
+This tutorial goes through working with the JupyterHub API to manage servers for users.
+In particular, it covers how to:
 
-This document provides an example of working with the JupyterHub API to
-manage servers for users.
-In particular, we will cover how to:
+1. [Check the status of servers](checking)
+2. [Start servers](starting)
+3. [Wait for servers to be ready](waiting)
+4. [Communicate with servers](communicating)
+5. [Stop servers](stopping)
 
-1. [check status of servers](checking)
-2. [start servers](starting)
-3. [wait for servers to be ready](waiting)
-4. [communicate with servers](communicating)
-5. [stop servers](stopping)
+At the end, we also provide sample Python code that can be used to implement these steps.
 
 (checking)=
 
 ## Checking server status
 
-Requesting information about a user includes a `servers` field,
-which is a dictionary.
+First, request information about a particular user using a GET request:
 
 ```
 GET /hub/api/users/:username
 ```
+
+The response you get will include a `servers` field, which is a dictionary, as shown in this JSON-formatted response:
 
 **Required scope: `read:servers`**
 
@@ -49,13 +44,9 @@ GET /hub/api/users/:username
 }
 ```
 
-If the `servers` dict is empty, the user has no running servers.
-The keys of the `servers` dict are server names as strings.
-Many JupyterHub deployments only use the 'default' server,
-which has the empty string `''` for a name.
-In this case, the servers dict will always have either zero or one elements.
+Many JupyterHub deployments only use a 'default' server, represented as an empty string `''` for a name. An investigation of the `servers` field can yield one of two results. First, it can be empty as in the sample JSON response above. In such a case, the user has no running servers.
 
-This is the servers dict when the user's default server is fully running and ready:
+However, should the user have running servers, then the returned dict should contain various information, as shown in this response:
 
 ```json
   "servers": {
@@ -75,34 +66,28 @@ This is the servers dict when the user's default server is fully running and rea
 Key properties of a server:
 
 name
-: the server's name. Always the same as the key in `servers`
+: the server's name. Always the same as the key in `servers`.
 
 ready
 : boolean. If true, the server can be expected to respond to requests at `url`.
 
 pending
 : `null` or a string indicating a transitional state (such as `start` or `stop`).
-Will always be `null` if `ready` is true,
-and will always be a string if `ready` is false.
+Will always be `null` if `ready` is true or a string if false.
 
 url
-: The server's url (just the path, e.g. `/users/:name/:servername/`)
-where the server can be accessed if `ready` is true.
+: The server's url path (e.g. `/users/:name/:servername/`) where the server can be accessed if `ready` is true.
 
 progress_url
-: The API url path (starting with `/hub/api`)
-where the progress API can be used to wait for the server to be ready.
-See below for more details on the progress API.
+: The API URL path (starting with `/hub/api`) where the progress API can be used to wait for the server to be ready.
 
 last_activity
-: ISO8601 timestamp indicating when activity was last observed on the server
+: ISO8601 timestamp indicating when activity was last observed on the server.
 
 started
-: ISO801 timestamp indicating when the server was last started
+: ISO801 timestamp indicating when the server was last started.
 
-We've seen the `servers` model with no servers and with one `ready` server.
-Here is what it looks like immediately after requesting a server launch,
-while the server is not ready yet:
+The two responses above are from a user with no servers and another with one `ready` server. The sample below is a response likely to be received when one requests a server launch while the server is not yet ready:
 
 ```json
   "servers": {
@@ -119,11 +104,7 @@ while the server is not ready yet:
   }
 ```
 
-Note that `ready` is false and `pending` is `spawn`.
-This means that the server is not ready
-(attempting to access it may not work)
-because it isn't finished spawning yet.
-We'll get more into that below in [waiting for a server][].
+Note that `ready` is `false` and `pending` has the value `spawn`, meaning that the server is not ready and attempting to access it may not work as it is still in the process of spawning. We'll get more into this below in [waiting for a server][].
 
 [waiting for a server]: waiting
 
@@ -131,7 +112,7 @@ We'll get more into that below in [waiting for a server][].
 
 ## Starting servers
 
-To start a server, make the request
+To start a server, make this API request:
 
 ```
 POST /hub/api/users/:username/servers/[:servername]
@@ -139,47 +120,35 @@ POST /hub/api/users/:username/servers/[:servername]
 
 **Required scope: `servers`**
 
-(omit servername for the default server)
-
-Assuming the request was valid,
-there are two possible responses:
+Assuming the request was valid, there are two possible responses:
 
 201 Created
-: This status code means the launch completed and the server is ready.
-It should be available at the server's URL immediately.
+: This status code means the launch completed and the server is ready and is available at the server's URL immediately.
 
 202 Accepted
-: This is the more likely response,
-and means that the server has begun launching,
-but isn't immediately ready.
-The server has `pending: 'spawn'` at this point.
-
-_Aside: how quickly JupyterHub responds with `202 Accepted` is governed by the `slow_spawn_timeout` tornado setting._
+: This is the more likely response, and means that the server has begun launching,
+but is not immediately ready. As a result, the server shows `pending: 'spawn'` at this point and you should wait for it to start.
 
 (waiting)=
 
-## Waiting for a server
+## Waiting for a server to start
 
-If you are starting a server via the API,
-there's a good change you want to know when it's ready.
-There are two ways to do with:
+After receiving a `202 Accepted` response, you have to wait for the server to start.
+Two approaches can be applied to establish when the server is ready:
 
 1. {ref}`Polling the server model <polling>`
-2. the {ref}`progress API <progress>`
+2. {ref}`Using the progress API <progress>`
 
 (polling)=
 
 ### Polling the server model
 
-The simplest way to check if a server is ready
-is to request the user model.
+The simplest way to check if a server is ready is to programmatically query the server model until two conditions are true:
 
-If:
+1. The server name is contained in the `servers` response, and
+2. `servers['servername']['ready']` is true.
 
-1. the server name is in the user's `servers` model, and
-2. `servers['servername']['ready']` is true
-
-A Python example, checking if a server is ready:
+The Python code snippet below can be used to check if a server is ready:
 
 ```python
 def server_ready(hub_url, user, server_name="", token):
@@ -206,14 +175,12 @@ You can keep making this check until `ready` is true.
 
 (progress)=
 
-### Progress API
+### Using the progress API
 
-The most _efficient_ way to wait for a server to start is the progress API.
+The most _efficient_ way to wait for a server to start is by using the progress API.
+The progress URL is available in the server model under `progress_url` and has the form `/hub/api/users/:user/servers/:servername/progress`.
 
-The progress URL is available in the server model under `progress_url`,
-and has the form `/hub/api/users/:user/servers/:servername/progress`.
-
-_the default server progress can be accessed at `:user/servers//progress` or `:user/server/progress`_
+The default server progress can be accessed at `:user/servers//progress` or `:user/server/progress` as demonstrated in the following GET request:
 
 ```
 GET /hub/api/users/:user/servers/:servername/progress
@@ -221,8 +188,8 @@ GET /hub/api/users/:user/servers/:servername/progress
 
 **Required scope: `read:servers`**
 
-This is an [EventStream][] API.
-In an event stream, messages are _streamed_ and delivered on lines of the form:
+The progress API is an example of an [EventStream][] API.
+Messages are _streamed_ and delivered in the form:
 
 ```
 data: {"progress": 10, "message": "...", ...}
@@ -233,7 +200,7 @@ Lines that do not start with `data:` should be ignored.
 
 [eventstream]: https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events#examples
 
-progress events have the form:
+Progress events have the form:
 
 ```python
 {
@@ -254,11 +221,10 @@ ready
 : present and true only for the last event when the server is ready
 
 url
-: only present if `ready` is true; will be the server's url
+: only present if `ready` is true; will be the server's URL
 
-the progress API can be used even with fully ready servers.
-If the server is ready,
-there will only be one event that looks like:
+The progress API can be used even with fully ready servers.
+If the server is ready, there will only be one event, which will look like:
 
 ```json
 {
@@ -270,9 +236,10 @@ there will only be one event that looks like:
 }
 ```
 
-where `ready` and `url` are the same as in the server model (`ready` will always be true).
+where `ready` and `url` are the same as in the server model, and `ready` will always be true.
 
-A typical complete stream from the event-stream API:
+A significant advantage of the progress API is that it shows the status of the server through a stream of messages.
+Below is an example of a typical complete stream from the API:
 
 ```
 
@@ -302,21 +269,21 @@ DELETE /hub/api/users/:user/servers/[:servername]
 
 **Required scope: `servers`**
 
-Like start, delete may not complete immediately.
-The DELETE request has two possible response codes:
+Similar to when starting a server, issuing the DELETE request above might not stop the server immediately.
+Instead, the DELETE request has two possible response codes:
 
 204 Deleted
 : This status code means the delete completed and the server is fully stopped.
 It will now be absent from the user `servers` model.
 
 202 Accepted
-: Like start, `202` means your request was accepted,
-but is not yet complete.
+: This code means your request was accepted but is not yet completely processed.
 The server has `pending: 'stop'` at this point.
 
-Unlike start, there is no progress API for stop.
-To wait for stop to finish, you must poll the user model
-and wait for the server to disappear from the user `servers` model.
+There is no progress API for checking when a server actually stops.
+The only way to wait for a server to stop is to poll it and wait for the server to disappear from the user `servers` model.
+
+This Python code snippet can be used to stop a server and the wait for the process to complete:
 
 ```{literalinclude} ../../../examples/server-api/start-stop-server.py
 :language: python
@@ -327,9 +294,8 @@ and wait for the server to disappear from the user `servers` model.
 
 ## Communicating with servers
 
-JupyterHub tokens with the the `access:servers` scope
-can be used to communicate with servers themselves.
-This can be the same token you used to launch your service.
+JupyterHub tokens with the `access:servers` scope can be used to communicate with servers themselves.
+The tokens can be the same as those you used to launch your service.
 
 ```{note}
 Access scopes are new in JupyterHub 2.0.
@@ -338,29 +304,26 @@ a token must be owned by the same user as the server,
 *or* be an admin token if admin_access is enabled.
 ```
 
-The URL returned from a server model is the url path suffix,
+The URL returned from a server model is the URL path suffix,
 e.g. `/user/:name/` to append to the jupyterhub base URL.
-
-For instance, `{hub_url}{server_url}`,
-where `hub_url` would be e.g. `http://127.0.0.1:8000` by default,
-and `server_url` `/user/myname`,
-for a full url of `http://127.0.0.1:8000/user/myname`.
+The returned URL is of the form `{hub_url}{server_url}`,
+where `hub_url` would be `http://127.0.0.1:8000` by default and `server_url` is `/user/myname`.
+When combined, the two give a full URL of `http://127.0.0.1:8000/user/myname`.
 
 ## Python example
 
 The JupyterHub repo includes a complete example in {file}`examples/server-api`
-tying all this together.
+that ties all theses steps together.
 
-To summarize the steps:
+In summary, the processes involved in managing servers on behalf of users are:
 
-1. get user info from `/user/:name`
-2. the server model includes a `ready` state to tell you if it's ready
-3. if it's not ready, you can follow up with `progress_url` to wait for it
-4. if it is ready, you can use the `url` field to link directly to the running server
+1. Get user information from `/user/:name`.
+2. The server model includes a `ready` state to tell you if it's ready.
+3. If it's not ready, you can follow up with `progress_url` to wait for it.
+4. If it is ready, you can use the `url` field to link directly to the running server.
 
-The example demonstrates starting and stopping servers via the JupyterHub API,
-including waiting for them to start via the progress API,
-as well as waiting for them to stop via polling the user model.
+The example below demonstrates starting and stopping servers via the JupyterHub API,
+including waiting for them to start via the progress API and waiting for them to stop by polling the user model.
 
 ```{literalinclude} ../../../examples/server-api/start-stop-server.py
 :language: python
