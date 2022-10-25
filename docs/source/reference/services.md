@@ -146,8 +146,8 @@ See the GitHub repo for additional information about the [jupyterhub_idle_culler
 
 ## Externally-Managed Services
 
-You may prefer to use your service management tools, such as `Docker` or
-`systemd`, to manage a JupyterHub Service. These **Externally-Managed
+You may prefer to use your own service management tools, such as Docker or
+systemd, to manage a JupyterHub Service. These **Externally-Managed
 Services**, unlike Hub-Managed Services, are not subprocesses of the Hub. You
 must tell JupyterHub which API token the Externally-Managed Service is using
 to perform its API requests. Each Externally-Managed Service will need a
@@ -186,7 +186,7 @@ information to the Service via the environment variables described above. A
 flexible Service, whether managed by the Hub or not, can make use of these
 same environment variables.
 
-When you run a service that has a `url`, it will be accessible under a
+When you run a service that has a URL, it will be accessible under a
 `/services/` prefix, such as `https://myhub.horse/services/my-service/`. For
 your service to route proxied requests properly, it must take
 `JUPYTERHUB_SERVICE_PREFIX` into account when routing requests. For example, a
@@ -257,7 +257,7 @@ which makes a request of the Hub, and returns:
 You are then free to use the returned user information to take appropriate
 action.
 
-HubAuth also caches the Hub's response for some seconds,
+HubAuth also caches the Hub's response for a number of seconds,
 configurable by the `cookie_cache_max_age` setting (default: five minutes).
 
 If your service would like to make further requests _on behalf of users_,
