@@ -37,7 +37,7 @@ const Groups = (props) => {
 
   useEffect(() => {
     updateGroups(offset, limit).then((data) =>
-      dispatchPageUpdate(data.items, data._pagination)
+      dispatchPageUpdate(data.items, data._pagination),
     );
   }, [offset, limit]);
 

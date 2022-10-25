@@ -5,7 +5,7 @@ require(["jquery", "moment", "jhapi", "utils"], function (
   $,
   moment,
   JHAPI,
-  utils
+  utils,
 ) {
   "use strict";
 
@@ -113,7 +113,7 @@ require(["jquery", "moment", "jhapi", "utils"], function (
     var serverName = row.data("server-name");
     el.attr(
       "href",
-      utils.url_path_join(prefix, "user", user, serverName) + "/"
+      utils.url_path_join(prefix, "user", user, serverName) + "/",
     );
   });
 
@@ -127,7 +127,7 @@ require(["jquery", "moment", "jhapi", "utils"], function (
       var serverName = row.data("server-name");
       el.attr(
         "href",
-        utils.url_path_join(prefix, "hub/spawn", user, serverName)
+        utils.url_path_join(prefix, "hub/spawn", user, serverName),
       );
     });
     // cannot start all servers in this case
@@ -187,7 +187,7 @@ require(["jquery", "moment", "jhapi", "utils"], function (
           success: function () {
             window.location.reload();
           },
-        }
+        },
       );
     });
 
@@ -241,7 +241,7 @@ require(["jquery", "moment", "jhapi", "utils"], function (
           success: function () {
             window.location.reload();
           },
-        }
+        },
       );
     });
 

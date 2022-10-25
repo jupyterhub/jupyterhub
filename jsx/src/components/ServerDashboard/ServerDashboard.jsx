@@ -38,11 +38,11 @@ const ServerDashboard = (props) => {
     adminAsc = (e) => e.sort((a) => (a.admin ? 1 : -1)),
     dateDesc = (e) =>
       e.sort((a, b) =>
-        new Date(a.last_activity) - new Date(b.last_activity) > 0 ? -1 : 1
+        new Date(a.last_activity) - new Date(b.last_activity) > 0 ? -1 : 1,
       ),
     dateAsc = (e) =>
       e.sort((a, b) =>
-        new Date(a.last_activity) - new Date(b.last_activity) > 0 ? 1 : -1
+        new Date(a.last_activity) - new Date(b.last_activity) > 0 ? 1 : -1,
       ),
     runningAsc = (e) => e.sort((a) => (a.server == null ? -1 : 1)),
     runningDesc = (e) => e.sort((a) => (a.server == null ? 1 : -1));
@@ -136,7 +136,7 @@ const ServerDashboard = (props) => {
                     dispatchPageUpdate(
                       data.items,
                       data._pagination,
-                      name_filter
+                      name_filter,
                     );
                   })
                   .catch(() => {
@@ -176,7 +176,7 @@ const ServerDashboard = (props) => {
                     dispatchPageUpdate(
                       data.items,
                       data._pagination,
-                      name_filter
+                      name_filter,
                     );
                   })
                   .catch(() => {
@@ -471,7 +471,7 @@ const ServerDashboard = (props) => {
                               failedServers.length > 1 ? "servers" : "server"
                             }. ${
                               failedServers.length > 1 ? "Are they " : "Is it "
-                            } already running?`
+                            } already running?`,
                           );
                         }
                         return res;
@@ -482,11 +482,11 @@ const ServerDashboard = (props) => {
                             dispatchPageUpdate(
                               data.items,
                               data._pagination,
-                              name_filter
+                              name_filter,
                             );
                           })
                           .catch(() =>
-                            setErrorAlert(`Failed to update users list.`)
+                            setErrorAlert(`Failed to update users list.`),
                           );
                         return res;
                       })
@@ -511,7 +511,7 @@ const ServerDashboard = (props) => {
                               failedServers.length > 1 ? "servers" : "server"
                             }. ${
                               failedServers.length > 1 ? "Are they " : "Is it "
-                            } already stopped?`
+                            } already stopped?`,
                           );
                         }
                         return res;
@@ -522,11 +522,11 @@ const ServerDashboard = (props) => {
                             dispatchPageUpdate(
                               data.items,
                               data._pagination,
-                              name_filter
+                              name_filter,
                             );
                           })
                           .catch(() =>
-                            setErrorAlert(`Failed to update users list.`)
+                            setErrorAlert(`Failed to update users list.`),
                           );
                         return res;
                       })
