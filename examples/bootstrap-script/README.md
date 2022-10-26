@@ -9,7 +9,7 @@ _Providing writeable storage for LDAP users_
 
 Your Jupyterhub is configured to use the LDAPAuthenticator and DockerSpawer.
 
-- The user has no file directory on the host since your are using LDAP.
+- The user has no file directory on the host since you are using LDAP.
 - When a user has no directory and DockerSpawner wants to mount a volume,
   the spawner will use docker to create a directory.
   Since the docker daemon is running as root, the generated directory for the volume
@@ -23,7 +23,7 @@ Another use would be to copy initial content, such as tutorial files or referenc
 material, into the user's space when a notebook server is newly spawned.
 
 You can define your own bootstrap process by implementing a `pre_spawn_hook` on any spawner.
-The Spawner itself is passed as parameter to your hook and you can easily get the contextual information out of the spawning process.
+The Spawner itself is passed as a parameter to your hook and you can easily get the contextual information out of the spawning process.
 
 Similarly, there may be cases where you would like to clean up after a spawner stops.
 You may implement a `post_stop_hook` that is always executed after the spawner stops.
