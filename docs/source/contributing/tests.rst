@@ -56,7 +56,7 @@ Running the tests
 
    For more information, refer to the `pytest usage documentation <https://pytest.readthedocs.io/en/latest/usage.html>`_.
 
-Test organisation
+**Test organisation**
 =================
 
 The tests live in ``jupyterhub/tests`` and are organized roughly into:
