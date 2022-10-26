@@ -7,9 +7,10 @@ Hub manages by default as a subprocess (it can be run externally, as well, and
 typically is in production deployments).
 
 The upside to CHP, and why we use it by default, is that it's easy to install
-and run (if you have nodejs, you are set!). The downsides are that 
-- it's a single process and 
-- does not support any persistence of the routing table.  
+and run (if you have nodejs, you are set!). The downsides are that
+
+- it's a single process and
+- does not support any persistence of the routing table.
 
 So if the proxy process dies, your whole JupyterHub instance is inaccessible
 until the Hub notices, restarts the proxy, and restores the routing table. For
