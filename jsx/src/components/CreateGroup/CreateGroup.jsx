@@ -81,14 +81,14 @@ const CreateGroup = (props) => {
                               .then((data) => dispatchPageUpdate(data, 0))
                               .then(() => history.push("/groups"))
                               .catch(() =>
-                                setErrorAlert(`Could not update groups list.`)
+                                setErrorAlert(`Could not update groups list.`),
                               )
                           : setErrorAlert(
                               `Failed to create group. ${
                                 data.status == 409
                                   ? "Group already exists."
                                   : ""
-                              }`
+                              }`,
                             );
                       })
                       .catch(() => setErrorAlert(`Failed to create group.`));

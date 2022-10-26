@@ -369,7 +369,7 @@ test("Shows a UI error dialogue when start all servers fails", async () => {
             />
           </Switch>
         </HashRouter>
-      </Provider>
+      </Provider>,
     );
   });
 
@@ -403,7 +403,7 @@ test("Shows a UI error dialogue when stop all servers fails", async () => {
             />
           </Switch>
         </HashRouter>
-      </Provider>
+      </Provider>,
     );
   });
 
@@ -437,7 +437,7 @@ test("Shows a UI error dialogue when start user server fails", async () => {
             />
           </Switch>
         </HashRouter>
-      </Provider>
+      </Provider>,
     );
   });
 
@@ -471,7 +471,7 @@ test("Shows a UI error dialogue when start user server returns an improper statu
             />
           </Switch>
         </HashRouter>
-      </Provider>
+      </Provider>,
     );
   });
 
@@ -505,7 +505,7 @@ test("Shows a UI error dialogue when stop user servers fails", async () => {
             />
           </Switch>
         </HashRouter>
-      </Provider>
+      </Provider>,
     );
   });
 
@@ -539,7 +539,7 @@ test("Shows a UI error dialogue when stop user server returns an improper status
             />
           </Switch>
         </HashRouter>
-      </Provider>
+      </Provider>,
     );
   });
 
@@ -585,7 +585,7 @@ test("Search for user calls updateUsers with name filter", async () => {
             />
           </Switch>
         </HashRouter>
-      </Provider>
+      </Provider>,
     );
   });
 

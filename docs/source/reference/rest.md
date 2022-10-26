@@ -4,30 +4,34 @@
 
 This section will give you information on:
 
-- [what you can do with the API](#what-you-can-do-with-the-api)
-- [how to create an API token](#create-an-api-token)
-- [how to add API tokens to the config files](#)
-- [how to make an API request programmatically using the requests library](#make-an-api-request)
-- [where to learn more about JupyterHub's API](#learn-more-about-the-api)
+
+- What you can do with the API
+- How to create an API token
+- Assigning permissions to a token
+- Updating to admin services
+- Making an API request programmatically using the requests library
+- Paginating API requests
+- Enabling users to spawn multiple named-servers via the API
+- Learn more about JupyterHub's API
 
 Before we discuss about JupyterHub's REST API, you can learn about [REST APIs here](https://en.wikipedia.org/wiki/Representational_state_transfer). A REST
 API provides a standard way for users to get and send information to the
-Hub.
+Hub.  
 
 ## What you can do with the API
 
 Using the [JupyterHub REST API](https://jupyterhub.readthedocs.io/en/stable/reference/rest-api.html#/default/delete_groups__name_), you can perform actions on the Hub,
 such as:
 
-- checking which users are active
-- adding or removing users
-- stopping or starting single user notebook servers
-- authenticating services
-- communicating with an individual Jupyter server's REST API
+- Checking which users are active
+- Adding or removing users
+- Stopping or starting single user notebook servers
+- Authenticating services
+- Communicating with an individual Jupyter server's REST API
 
 ## Create an API token
 
-To send requests using JupyterHub API, you must pass an API token with
+To send requests using the JupyterHub API, you must pass an API token with
 the request.
 
 The preferred way of generating an API token is by running:
@@ -40,8 +44,12 @@ This `openssl` command generates a potential token that can then be
 added to JupyterHub using `.api_tokens` configuration setting in
 `jupyterhub_config.py`.
 
-Alternatively, use the `jupyterhub token` command to generate a token
-for a specific hub user by passing the " **username**":
+```{note}
+The api_tokens configuration has been softly deprecated since the introduction of services.
+```
+
+Alternatively, you can use the `jupyterhub token` command to generate a token
+for a specific hub user by passing the **username**:
 
 ```bash
 jupyterhub token <username>
@@ -53,9 +61,19 @@ it for the given user with the Hub's database.
 In [version 0.8.0](../changelog.md), a token request page for
 generating an API token is available from the JupyterHub user interface:
 
-![Request API token page](../images/token-request.png)
+:::{figure-md}
 
-![API token success page](../images/token-request-success.png)
+![token request page](../images/token-request.png)
+
+JupyterHub's API token page
+:::
+
+:::{figure-md}
+![token-request-success](../images/token-request-success.png)
+
+JupyterHub's token page after successfully requesting a token.
+
+:::
 
 ## Assigning permissions to a token
 
@@ -67,25 +85,26 @@ Prior to JupyterHub 2.0, there were two levels of permissions:
 where a token would always have full permissions to do whatever its owner could do.
 
 In JupyterHub 2.0,
-specific permissions are now defined as 'scopes',
+specific permissions are now defined as '**scopes**',
 and can be assigned both at the user/service level,
 and at the individual token level.
 
 This allows e.g. a user with full admin permissions to request a token with limited permissions.
 
-### Updating to admin services
+## Updating to admin services
 
+```{note}
 The `api_tokens` configuration has been softly deprecated since the introduction of services.
 We have no plans to remove it,
 but deployments are encouraged to use service configuration instead.
+```
 
 If you have been using `api_tokens` to create an admin user
-and a token for that user to perform some automations,
-the services mechanism may be a better fit.
-If you have the following configuration:
+and the token for that user to perform some automations, then
+the services' mechanism may be a better fit if you have the following configuration:
 
 ```python
-c.JupyterHub.admin_users = {"service-admin",}
+c.JupyterHub.admin_users = {"service-admin"}
 c.JupyterHub.api_tokens = {
     "secret-token": "service-admin",
 }
@@ -103,9 +122,8 @@ c.JupyterHub.services = [
     },
 ]
 
-# roles are new in JupyterHub 2.0
-# prior to 2.0, only 'admin': True or False
-# was available
+# roles were introduced in JupyterHub 2.0
+# prior to 2.0, only "admin": True or False was available
 
 c.JupyterHub.load_roles = [
     {
@@ -175,10 +193,10 @@ r.raise_for_status()
 r.json()
 ```
 
-The same API token can also authorize access to the [Jupyter Notebook REST API](https://jupyterhub.readthedocs.io/en/stable/reference/rest-api.html#/)
+The same API token can also authorize access to the [Jupyter Notebook REST API][]
+
 provided by notebook servers managed by JupyterHub if it has the necessary `access:users:servers` scope.
 
-<p>&nbsp;</p>
 
 ## Paginating API requests
 
@@ -245,7 +263,7 @@ with your request, in which case a response will look like:
 
 where the list results (same as pre-2.0) will be in `items`,
 and pagination info will be in `_pagination`.
-The `next` field will include the offset, limit, and URL for requesting the next page.
+The `next` field will include the `offset`, `limit`, and `url` for requesting the next page.
 `next` will be `null` if there is no next page.
 
 Pagination is governed by two configuration options:
@@ -259,7 +277,7 @@ Pagination is enabled on the `GET /users`, `GET /groups`, and `GET /proxy` REST 
 
 ## Enabling users to spawn multiple named-servers via the API
 
-With JupyterHub version 0.8, support for multiple servers per user has landed.
+Support for multiple servers per user was introduced in JupyterHub [version 0.8.](../changelog.md)
 Prior to that, each user could only launch a single default server via the API
 like this:
 
@@ -303,8 +321,10 @@ or kubernetes pods.
 
 ## Learn more about the API
 
-You can see the full [JupyterHub REST API](https://jupyterhub.readthedocs.io/en/stable/reference/rest-api.html#/) for details.
+You can see the full [JupyterHub REST API][] for more details.
+
 
 [openapi initiative]: https://www.openapis.org/
 [jupyterhub rest api]: ./rest-api
+[scopes]: ../rbac/scopes.md
 [jupyter notebook rest api]: https://petstore3.swagger.io/?url=https://raw.githubusercontent.com/jupyter/notebook/HEAD/notebook/services/api/api.yaml
