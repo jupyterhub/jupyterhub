@@ -4,7 +4,6 @@
 
 This section will give you information on:
 
-
 - What you can do with the API
 - How to create an API token
 - Assigning permissions to a token
@@ -16,7 +15,7 @@ This section will give you information on:
 
 Before we discuss about JupyterHub's REST API, you can learn about [REST APIs here](https://en.wikipedia.org/wiki/Representational_state_transfer). A REST
 API provides a standard way for users to get and send information to the
-Hub.  
+Hub.
 
 ## What you can do with the API
 
@@ -197,7 +196,6 @@ The same API token can also authorize access to the [Jupyter Notebook REST API][
 
 provided by notebook servers managed by JupyterHub if it has the necessary `access:users:servers` scope.
 
-
 ## Paginating API requests
 
 ```{versionadded} 2.0
@@ -322,7 +320,6 @@ or kubernetes pods.
 ## Learn more about the API
 
 You can see the full [JupyterHub REST API][] for more details.
-
 
 [openapi initiative]: https://www.openapis.org/
 [jupyterhub rest api]: ./rest-api
