@@ -3,10 +3,7 @@
 The pages of the JupyterHub application are generated from
 [Jinja](http://jinja.pocoo.org/) templates. This allows the header to be defined once and incorporated into all pages. By providing your templates, you can have complete control over JupyterHub's
 appearance.
-This document will provide information on how to:
-- [add custom templates](#custom-templates)
-- [extend templates](#extending-templates)
-- [add announcements to a page](#page-announcements)
+
 
 ## Custom Templates
 
@@ -32,7 +29,7 @@ In general, a child template can extend a base template, `page.html`, by beginni
 {% extends "page.html" %}
 ```
 
-This works if you are trying to extend the default template for the same
+This works, unless you are trying to extend the default template for the same
 file name. Starting in version 0.9, you may refer to the base file with a
 `templates/` prefix. Thus, if you are writing a custom `page.html`, start the
 file with this block:
