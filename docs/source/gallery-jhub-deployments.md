@@ -97,7 +97,7 @@ easy to do with RStudio too.
 
 ### University of Illinois
 
-- https://datascience.business.illinois.edu (currently down; checked 04/26/19)
+- https://datascience.business.illinois.edu (currently down; checked 10/26/22)
 
 ### IllustrisTNG Simulation Project
 
@@ -126,7 +126,7 @@ easy to do with RStudio too.
 
 ### Penn State University
 
-- [Press release](https://news.psu.edu/story/523093/2018/05/24/new-open-source-web-apps-available-students-and-faculty): "New open-source web apps available for students and faculty" (but Hub is currently down; checked 04/26/19)
+- [Press release](https://news.psu.edu/story/523093/2018/05/24/new-open-source-web-apps-available-students-and-faculty): "New open-source web apps available for students and faculty"
 
 ### University of Rochester CIRC
 
@@ -156,13 +156,13 @@ easy to do with RStudio too.
 ### Elucidata
 
 - What's new in Jupyter Notebooks @[Elucidata](https://elucidata.io/):
-  - Using Jupyter Notebooks with Jupyterhub on GCP, managed by GKE - https://medium.com/elucidata/why-you-should-be-using-a-jupyter-notebook-8385a4ccd93d
+  - [Using Jupyter Notebooks with Jupyterhub on GCP, managed by GKE](https://medium.com/elucidata/why-you-should-be-using-a-jupyter-notebook-8385a4ccd93d)
 
 ## Service Providers
 
 ### AWS
 
-- [running-jupyter-notebook-and-jupyterhub-on-amazon-emr](https://aws.amazon.com/blogs/big-data/running-jupyter-notebook-and-jupyterhub-on-amazon-emr/)
+- [Run Jupyter Notebook and JupyterHub on Amazon EMR](https://aws.amazon.com/blogs/big-data/running-jupyter-notebook-and-jupyterhub-on-amazon-emr/)
 
 ### Google Cloud Platform
 
@@ -175,12 +175,12 @@ easy to do with RStudio too.
 
 ### Microsoft Azure
 
-- https://docs.microsoft.com/en-us/azure/machine-learning/machine-learning-data-science-linux-dsvm-intro
+- [Azure Data Science Virtual Machine release notes](https://docs.microsoft.com/en-us/azure/machine-learning/machine-learning-data-science-linux-dsvm-intro)
 
 ### Rackspace Carina
 
 - https://getcarina.com/blog/learning-how-to-whale/
-- http://carolynvanslyck.com/talk/carina/jupyterhub/#/
+- http://carolynvanslyck.com/talk/carina/jupyterhub/#/ (but carolynvanslyck is currently down; checked 10/26/22)
 
 ### Hadoop
 
@@ -189,13 +189,14 @@ easy to do with RStudio too.
 ## Miscellaneous
 
 - https://medium.com/@ybarraud/setting-up-jupyterhub-with-sudospawner-and-anaconda-844628c0dbee#.rm3yt87e1
-- https://groups.google.com/forum/#!topic/jupyter/nkPSEeMr8c0 Mailing list UT deployment
-- JupyterHub setup on Centos https://gist.github.com/johnrc/604971f7d41ebf12370bf5729bf3e0a4
-- Deploy JupyterHub to Docker Swarm https://jupyterhub.surge.sh/#/welcome
+- [Mailing list UT deployment](https://groups.google.com/forum/#!topic/jupyter/nkPSEeMr8c0)
+- [JupyterHub setup on Centos](https://gist.github.com/johnrc/604971f7d41ebf12370bf5729bf3e0a4)
+- [Deploy JupyterHub to Docker Swarm](https://jupyterhub.surge.sh/#/welcome)
 - http://www.laketide.com/building-your-lab-part-3/
 - http://estrellita.hatenablog.com/entry/2015/07/31/083202
 - http://www.walkingrandomly.com/?p=5734
 - https://wrdrd.com/docs/consulting/education-technology
 - https://bitbucket.org/jackhale/fenics-jupyter
 - [LinuxCluster blog](https://linuxcluster.wordpress.com/category/application/jupyterhub/)
-- [Network Technology](https://arnesund.com/tag/jupyterhub/) [Spark Cluster on OpenStack with Multi-User Jupyter Notebook](https://arnesund.com/2015/09/21/spark-cluster-on-openstack-with-multi-user-jupyter-notebook/)
+- [Network Technology](https://arnesund.com/tag/jupyterhub/) 
+- [Spark Cluster on OpenStack with Multi-User Jupyter Notebook](https://arnesund.com/2015/09/21/spark-cluster-on-openstack-with-multi-user-jupyter-notebook/)
