@@ -19,7 +19,7 @@ Hub.
 
 ## What you can do with the API
 
-Using the [JupyterHub REST API](https://jupyterhub.readthedocs.io/en/stable/reference/rest-api.html#/default/delete_groups__name_), you can perform actions on the Hub,
+Using the [JupyterHub REST API][], you can perform actions on the Hub,
 such as:
 
 - Checking which users are active
@@ -140,9 +140,9 @@ c.JupyterHub.load_roles = [
 ```
 
 The token will have the permissions listed in the role
-(see [scopes](https://jupyterhub.readthedocs.io/en/stable/rbac/scopes.html#scopes-in-jupyterhub) for a list of available permissions),
+(see [scopes][] for a list of available permissions),
 but there will no longer be a user account created to house it.
-The main noticeable difference between a configuration and a service is that there will be no notebook server associated with the account
+The main noticeable difference between a user and a service is that there will be no notebook server associated with the account
 and the service will not show up in the various user list pages and APIs.
 
 ## Make an API request
@@ -153,9 +153,8 @@ Authorization header.
 ### Use requests
 
 Using the popular Python [requests](https://docs.python-requests.org)
-library, (here's example code to make an API request for the users of a JupyterHub
-deployment) an API GET request is made, and the request sends an API token for
-authorization. The response contains information about the users:
+library, an API GET request is made, and the request sends an API token for
+authorization. The response contains information about the users, here's example code to make an API request for the users of a JupyterHub deployment
 
 ```python
 import requests
@@ -195,6 +194,8 @@ r.json()
 The same API token can also authorize access to the [Jupyter Notebook REST API][]
 
 provided by notebook servers managed by JupyterHub if it has the necessary `access:users:servers` scope.
+
+(api-pagination)=
 
 ## Paginating API requests
 
