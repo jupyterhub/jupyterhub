@@ -13,6 +13,10 @@ This section will give you information on:
 - Enabling users to spawn multiple named-servers via the API
 - Learn more about JupyterHub's API
 
+Before we discuss about JupyterHub's REST API, you can learn about [REST APIs here](https://en.wikipedia.org/wiki/Representational_state_transfer). A REST
+API provides a standard way for users to get and send information to the
+Hub.
+
 ## What you can do with the API
 
 Using the [JupyterHub REST API][], you can perform actions on the Hub,
@@ -23,10 +27,6 @@ such as:
 - Stopping or starting single user notebook servers
 - Authenticating services
 - Communicating with an individual Jupyter server's REST API
-
-A [REST](https://en.wikipedia.org/wiki/Representational_state_transfer)
-API provides a standard way for users to get and send information to the
-Hub.
 
 ## Create an API token
 
@@ -142,7 +142,7 @@ c.JupyterHub.load_roles = [
 The token will have the permissions listed in the role
 (see [scopes][] for a list of available permissions),
 but there will no longer be a user account created to house it.
-The main noticeable difference is that there will be no notebook server associated with the account
+The main noticeable difference between a user and a service is that there will be no notebook server associated with the account
 and the service will not show up in the various user list pages and APIs.
 
 ## Make an API request
@@ -153,9 +153,8 @@ Authorization header.
 ### Use requests
 
 Using the popular Python [requests](https://docs.python-requests.org)
-library, here's example code to make an API request for the users of a JupyterHub
-deployment. An API GET request is made, and the request sends an API token for
-authorization. The response contains information about the users:
+library, an API GET request is made, and the request sends an API token for
+authorization. The response contains information about the users, here's example code to make an API request for the users of a JupyterHub deployment
 
 ```python
 import requests
@@ -193,6 +192,7 @@ r.json()
 ```
 
 The same API token can also authorize access to the [Jupyter Notebook REST API][]
+
 provided by notebook servers managed by JupyterHub if it has the necessary `access:users:servers` scope.
 
 (api-pagination)=
