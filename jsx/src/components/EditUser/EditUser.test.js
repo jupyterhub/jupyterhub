@@ -3,7 +3,7 @@ import "@testing-library/jest-dom";
 import { act } from "react-dom/test-utils";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { Provider, useDispatch, useSelector } from "react-redux";
-import { createStore } from "redux";
+import { configureStore } from "redux";
 import { HashRouter } from "react-router-dom";
 // eslint-disable-next-line
 import regeneratorRuntime from "regenerator-runtime";
@@ -23,7 +23,7 @@ var mockAsyncRejection = () =>
   jest.fn().mockImplementation(() => Promise.reject());
 
 var editUserJsx = (callbackSpy, empty) => (
-  <Provider store={createStore(() => {}, {})}>
+  <Provider store={configureStore(() => {}, {})}>
     <HashRouter>
       <EditUser
         location={empty ? {} : { state: { username: "foo", has_admin: false } }}
