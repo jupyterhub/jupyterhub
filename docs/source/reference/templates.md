@@ -1,7 +1,9 @@
 # Working with templates and UI
 
 The pages of the JupyterHub application are generated from
-[Jinja](http://jinja.pocoo.org/) templates. This allows the header to be defined once and incorporated into all pages. By providing your templates, you can have complete control over JupyterHub's
+[Jinja](http://jinja.pocoo.org/) templates.
+This allows the header to be defined once and incorporated into all pages.
+By providing your own templates, you can have complete control over JupyterHub's
 appearance.
 
 ## Custom Templates
