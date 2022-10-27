@@ -42,9 +42,9 @@ const withAPI = withProps(() => ({
       .then((data) => data.status)
       .then((data) => (data > 200 ? false : true)),
   // Temporarily Unused
-  failRegexEvent: () => {
-    return null;
-  },
+//   failRegexEvent: () => {
+//     return null;
+//   },
   noChangeEvent: () => {
     return null;
   },
