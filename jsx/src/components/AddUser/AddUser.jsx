@@ -21,7 +21,7 @@ const AddUser = (props) => {
     });
   };
 
-  var { addUsers, failRegexEvent, updateUsers, history } = props;
+  var { addUsers, updateUsers, history } = props;
 
   return (
     <>
@@ -122,7 +122,6 @@ const AddUser = (props) => {
 
 AddUser.propTypes = {
   addUsers: PropTypes.func,
-  failRegexEvent: PropTypes.func,
   updateUsers: PropTypes.func,
   history: PropTypes.shape({
     push: PropTypes.func,
