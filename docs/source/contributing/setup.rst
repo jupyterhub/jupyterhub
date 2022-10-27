@@ -1,10 +1,10 @@
 .. _contributing/setup:
 
 ================================
- #Setting up a development install
+Setting up a development install
 ================================
 
- #System requirements
+System requirements
 ===================
 
 JupyterHub can only run on macOS or Linux operating systems. If you are
@@ -12,7 +12,7 @@ using Windows, we recommend using `VirtualBox <https://virtualbox.org>`_
 or a similar system to run `Ubuntu Linux <https://ubuntu.com>`_ for
 development.
 
- #Install Python 
+Install Python
 --------------
 
 JupyterHub is written in the `Python <https://python.org>`_ programming language and
@@ -21,7 +21,7 @@ installed Python before, the recommended way to install it is to use
 `Miniconda <https://conda.io/miniconda.html>`_. Remember to get the ‘Python 3’ version,
 and **not** the ‘Python 2’ version!
 
- #Install nodejs
+Install nodejs
 --------------
 
 `NodeJS 12+ <https://nodejs.org/en/>`_ is required for building some JavaScript components.
@@ -37,7 +37,7 @@ for development & collaboration. You need to `install git
 <https://git-scm.com/book/en/v2/Getting-Started-Installing-Git>`_ to work on
 JupyterHub. We also recommend getting a free account on GitHub.com.
 
- #Setting up a development install
+Setting up a development install
 ================================
 
 When developing JupyterHub, you would need to make changes and be able to instantly view the results of the changes. To achieve that, a developer install is required.
@@ -127,7 +127,7 @@ When developing JupyterHub, you would need to make changes and be able to instan
 
 Happy developing!
 
- #Using DummyAuthenticator & SimpleLocalProcessSpawner
+Using DummyAuthenticator & SimpleLocalProcessSpawner
 ====================================================
 
 To simplify testing of JupyterHub, it’s helpful to use
@@ -160,7 +160,7 @@ SimpleLocalProcessSpawner. If you are working on just authenticator-related
 parts, use only SimpleLocalProcessSpawner. Similarly, if you are working on
 just spawner-related parts, use only DummyAuthenticator.
 
- #Troubleshooting
+Troubleshooting
 ===============
 
 This section lists common ways setting up your development environment may
