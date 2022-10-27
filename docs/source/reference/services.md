@@ -186,7 +186,7 @@ information to the Service via the environment variables described above. A
 flexible Service, whether managed by the Hub or not, can make use of these
 same environment variables.
 
-When you run a service that has a url, it will be accessible under a
+When you run a service that has a URL, it will be accessible under a
 `/services/` prefix, such as `https://myhub.horse/services/my-service/`. For
 your service to route proxied requests properly, it must take
 `JUPYTERHUB_SERVICE_PREFIX` into account when routing requests. For example, a
@@ -268,7 +268,7 @@ you can access the token authenticating the current request with {meth}`.HubAuth
 :::{versionchanged} 2.2
 
 {meth}`.HubAuth.get_token` adds support for retrieving
-tokens stored in tornado cookies after completion of OAuth.
+tokens stored in tornado cookies after the completion of OAuth.
 Previously, it only retrieved tokens from URL parameters or the Authorization header.
 Passing `get_token(handler, in_cookie=False)` preserves this behavior.
 :::
