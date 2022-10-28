@@ -18,10 +18,10 @@ The steps are discussed in detail, so if you get stuck at any step you can alway
 Read the Changelog
 ==================
 
-The `changelog <../changelog.html>`_ contains information on what has
-changed with the new JupyterHub release, and any deprecation warnings.
+The `changelog <../changelog.md>`_ contains information on what has
+changed with the new JupyterHub release and any deprecation warnings.
 Read these notes to familiarize yourself with the coming changes. There
-might be new releases for the authenticators & spawners you use, so
+might be new releases of the authenticators & spawners you use, so
 read the changelogs for those too!
 
 Notify your users
@@ -32,7 +32,7 @@ is managed by JupyterHub, your users will see service disruption during
 the upgrade process. You should notify them, and pick a time to do the
 upgrade where they will be least disrupted.
 
-If you use a different proxy, or run ``configurable-http-proxy``
+If you use a different proxy or run ``configurable-http-proxy``
 independent of JupyterHub, your users will be able to continue using notebook
 servers they had already launched, but will not be able to launch new servers or sign in.
 
@@ -43,8 +43,7 @@ Backup database & config
 Before doing an upgrade, it is critical to back up:
 
 #. Your JupyterHub database (SQLite by default, or MySQL / Postgres if you used those). 
-If you use SQLite (the default), you
-   should backup the ``jupyterhub.sqlite`` file.
+If you use SQLite (the default), you should backup the ``jupyterhub.sqlite`` file.
 #. Your ``jupyterhub_config.py`` file.
 #. Your users' home directories. This is unlikely to be affected directly by
    a JupyterHub upgrade, but we recommend a backup since user data is critical.
