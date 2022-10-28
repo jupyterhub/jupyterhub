@@ -8,13 +8,14 @@ broken down by their roles within organizations.
 ### Is it appropriate for adoption within a larger institutional context?
 
 Yes! JupyterHub has been used at-scale for large pools of users, as well
-as complex and high-performance computing. 
-For example, 
+as complex and high-performance computing.
+For example,
+
 - UC Berkeley uses
-JupyterHub for its Data Science Education Program courses (serving over
-3,000 students). 
+  JupyterHub for its Data Science Education Program courses (serving over
+  3,000 students).
 - The Pangeo project uses JupyterHub to provide access
-to scalable cloud computing with Dask.   
+  to scalable cloud computing with Dask.
 
 JupyterHub is stable and customizable
 to the use-cases of large organizations.
@@ -123,7 +124,7 @@ as more resources are needed - allowing you to utilize the benefits of a flexibl
 
 ### Is JupyterHub secure?
 
-The short answer: yes.   
+The short answer: yes.  
 JupyterHub as a standalone application has been battle-tested at an institutional
 level for several years, and makes a number of "default" security decisions that are reasonable for most
 users.
