@@ -8,10 +8,15 @@ broken down by their roles within organizations.
 ### Is it appropriate for adoption within a larger institutional context?
 
 Yes! JupyterHub has been used at-scale for large pools of users, as well
-as complex and high-performance computing. For example, UC Berkeley uses
+as complex and high-performance computing. 
+For example, 
+- UC Berkeley uses
 JupyterHub for its Data Science Education Program courses (serving over
-3,000 students). The Pangeo project uses JupyterHub to provide access
-to scalable cloud computing with Dask. JupyterHub is stable and customizable
+3,000 students). 
+- The Pangeo project uses JupyterHub to provide access
+to scalable cloud computing with Dask.   
+
+JupyterHub is stable and customizable
 to the use-cases of large organizations.
 
 ### I keep hearing about Jupyter Notebook, JupyterLab, and now JupyterHub. What’s the difference?
@@ -26,7 +31,7 @@ Here is a quick breakdown of these three tools:
   has several extensions that are tailored for using Jupyter Notebooks, as well as extensions
   for other parts of the data science stack.
 - **JupyterHub** is an application that manages interactive computing sessions for **multiple users**.
-  It also connects them with infrastructure those users wish to access. It can provide
+  It also connects them(sessions) with infrastructure those users wish to access. It can provide
   remote access to Jupyter Notebooks and JupyterLab for many people.
 
 ## For management
@@ -35,7 +40,7 @@ Here is a quick breakdown of these three tools:
 
 JupyterHub provides a shared platform for data science and collaboration.
 It allows users to utilize familiar data science workflows (such as the scientific Python stack,
-the R tidyverse, and Jupyter Notebooks) on institutional infrastructure. It also allows administrators
+the R tidyverse, and Jupyter Notebooks) on institutional infrastructure. It also gives administrators
 some control over access to resources, security, environments, and authentication.
 
 ### Is JupyterHub mature? Why should we trust it?
@@ -99,12 +104,12 @@ that we currently suggest are:
   guide that runs on Kubernetes. Better for larger or dynamic user groups (50-10,000) or more complex
   compute/data needs.
 - [The Littlest JupyterHub](https://tljh.jupyter.org) is a lightweight JupyterHub that runs on a single
-  single machine (in the cloud or under your desk). Better for smaller user groups (4-80) or more
+  machine (in the cloud or under your desk). Better for smaller user groups (4-80) or more
   lightweight computational resources.
 
 ### Does JupyterHub run well in the cloud?
 
-Yes - most deployments of JupyterHub are run via cloud infrastructure and on a variety of cloud providers.
+**Yes** - most deployments of JupyterHub are run via cloud infrastructure and on a variety of cloud providers.
 Depending on the distribution of JupyterHub that you'd like to use, you can also connect your JupyterHub
 deployment with a number of other cloud-native services so that users have access to other resources from
 their interactive computing sessions.
@@ -118,7 +123,8 @@ as more resources are needed - allowing you to utilize the benefits of a flexibl
 
 ### Is JupyterHub secure?
 
-The short answer: yes. JupyterHub as a standalone application has been battle-tested at an institutional
+The short answer: yes.   
+JupyterHub as a standalone application has been battle-tested at an institutional
 level for several years, and makes a number of "default" security decisions that are reasonable for most
 users.
 
@@ -134,11 +140,11 @@ in these cases, and the security of your JupyterHub deployment will often depend
 
 If you are worried about security, don't hesitate to reach out to the JupyterHub community in the
 [Jupyter Community Forum](https://discourse.jupyter.org/c/jupyterhub). This community of practice has many
-individuals with experience running secure JupyterHub deployments.
+individuals with experience running secure JupyterHub deployments and will be very glad to help you out.
 
 ### Does JupyterHub provide computing or data infrastructure?
 
-No - JupyterHub manages user sessions and can _control_ computing infrastructure, but it does not provide these
+**No** - JupyterHub manages user sessions and can _control_ computing infrastructure, but it does not provide these
 things itself. You are expected to run JupyterHub on your own infrastructure (local or in the cloud). Moreover,
 JupyterHub has no internal concept of "data", but is designed to be able to communicate with data repositories
 (again, either locally or remotely) for use within interactive computing sessions.
@@ -191,7 +197,7 @@ complex computing infrastructures from the interactive sessions of a JupyterHub.
 This is highly configurable by the administrator. If you wish for your users to have simple
 data analytics environments for prototyping and light data exploring, you can restrict their
 memory and CPU based on the resources that you have available. If you'd like your JupyterHub
-to serve as a gateway to high-performance compute or data resources, you may increase the
+to serve as a gateway to high-performance computing or data resources, you may increase the
 resources available on user machines, or connect them with computing infrastructures elsewhere.
 
 ### Can I customize the look and feel of a JupyterHub?
