@@ -234,9 +234,7 @@ jobs:
         run: |
           pytest --maxfail=2 --cov=jupyterhub jupyterhub/tests
 
-      - name: Submit codecov report
-        run: |
-          codecov
+      - uses: codecov/codecov-action@v3
 
   docker-build:
     runs-on: ubuntu-20.04
