@@ -4,8 +4,7 @@ import { jhapiRequest } from "./jhapiUtil";
 const withAPI = withProps(() => ({
   updateUsers: (offset, limit, name_filter) =>
     jhapiRequest(
-      `/users?include_stopped_servers&offset=${offset}&limit=${limit}&name_filter=${
-        name_filter || ""
+      `/users?include_stopped_servers&offset=${offset}&limit=${limit}&name_filter=${name_filter || ""
       }`,
       "GET"
     ).then((data) => data.json()),
@@ -41,10 +40,7 @@ const withAPI = withProps(() => ({
     jhapiRequest("/users/" + username, "GET")
       .then((data) => data.status)
       .then((data) => (data > 200 ? false : true)),
-  // Temporarily Unused
-  failRegexEvent: () => {
-    return null;
-  },
+
   noChangeEvent: () => {
     return null;
   },

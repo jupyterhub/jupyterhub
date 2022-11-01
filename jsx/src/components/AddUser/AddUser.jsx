@@ -21,7 +21,7 @@ const AddUser = (props) => {
     });
   };
 
-  var { addUsers, failRegexEvent, updateUsers, history } = props;
+  var { addUsers, updateUsers, history } = props;
 
   return (
     <>
@@ -95,16 +95,15 @@ const AddUser = (props) => {
                       .then((data) =>
                         data.status < 300
                           ? updateUsers(0, limit)
-                              .then((data) => dispatchPageChange(data, 0))
-                              .then(() => history.push("/"))
-                              .catch(() =>
-                                setErrorAlert(`Failed to update users.`)
-                              )
-                          : setErrorAlert(
-                              `Failed to create user. ${
-                                data.status == 409 ? "User already exists." : ""
-                              }`
+                            .then((data) => dispatchPageChange(data, 0))
+                            .then(() => history.push("/"))
+                            .catch(() =>
+                              setErrorAlert(`Failed to update users.`)
                             )
+                          : setErrorAlert(
+                            `Failed to create user. ${data.status == 409 ? "User already exists." : ""
+                            }`
+                          )
                       )
                       .catch(() => setErrorAlert(`Failed to create user.`));
                   }}
@@ -122,7 +121,6 @@ const AddUser = (props) => {
 
 AddUser.propTypes = {
   addUsers: PropTypes.func,
-  failRegexEvent: PropTypes.func,
   updateUsers: PropTypes.func,
   history: PropTypes.shape({
     push: PropTypes.func,

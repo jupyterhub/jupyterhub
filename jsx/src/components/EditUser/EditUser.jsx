@@ -92,13 +92,13 @@ const EditUser = (props) => {
                           .then((data) => {
                             data.status < 300
                               ? updateUsers(0, limit)
-                                  .then((data) => dispatchPageChange(data, 0))
-                                  .then(() => history.push("/"))
-                                  .catch(() =>
-                                    setErrorAlert(
-                                      `Could not update users list.`
-                                    )
+                                .then((data) => dispatchPageChange(data, 0))
+                                .then(() => history.push("/"))
+                                .catch(() =>
+                                  setErrorAlert(
+                                    `Could not update users list.`
                                   )
+                                )
                               : setErrorAlert(`Failed to edit user.`);
                           })
                           .catch(() => {
@@ -134,11 +134,11 @@ const EditUser = (props) => {
                         .then((data) => {
                           data.status < 300
                             ? updateUsers(0, limit)
-                                .then((data) => dispatchPageChange(data, 0))
-                                .then(() => history.push("/"))
-                                .catch(() =>
-                                  setErrorAlert(`Could not update users list.`)
-                                )
+                              .then((data) => dispatchPageChange(data, 0))
+                              .then(() => history.push("/"))
+                              .catch(() =>
+                                setErrorAlert(`Could not update users list.`)
+                              )
                             : setErrorAlert(`Failed to edit user.`);
                         })
                         .catch(() => {
@@ -170,7 +170,6 @@ EditUser.propTypes = {
   }),
   editUser: PropTypes.func,
   deleteUser: PropTypes.func,
-  failRegexEvent: PropTypes.func,
   noChangeEvent: PropTypes.func,
   updateUsers: PropTypes.func,
 };

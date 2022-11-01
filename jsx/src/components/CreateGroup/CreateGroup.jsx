@@ -78,18 +78,17 @@ const CreateGroup = (props) => {
                       .then((data) => {
                         return data.status < 300
                           ? updateGroups(0, limit)
-                              .then((data) => dispatchPageUpdate(data, 0))
-                              .then(() => history.push("/groups"))
-                              .catch(() =>
-                                setErrorAlert(`Could not update groups list.`)
-                              )
+                            .then((data) => dispatchPageUpdate(data, 0))
+                            .then(() => history.push("/groups"))
+                            .catch(() =>
+                              setErrorAlert(`Could not update groups list.`)
+                            )
                           : setErrorAlert(
-                              `Failed to create group. ${
-                                data.status == 409
-                                  ? "Group already exists."
-                                  : ""
-                              }`
-                            );
+                            `Failed to create group. ${data.status == 409
+                              ? "Group already exists."
+                              : ""
+                            }`
+                          );
                       })
                       .catch(() => setErrorAlert(`Failed to create group.`));
                   }}
@@ -108,7 +107,6 @@ const CreateGroup = (props) => {
 CreateGroup.propTypes = {
   createGroup: PropTypes.func,
   updateGroups: PropTypes.func,
-  failRegexEvent: PropTypes.func,
   history: PropTypes.shape({
     push: PropTypes.func,
   }),

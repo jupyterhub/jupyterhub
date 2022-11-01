@@ -20,9 +20,11 @@
   },
   "dependencies": {
     "bootstrap": "^3.4.1",
+    "configurable-http-proxy": "^4.5.3",
     "font-awesome": "^4.7.0",
     "jquery": "^3.5.1",
     "moment": "^2.29.4",
-    "requirejs": "^2.3.6"
+    "requirejs": "^2.3.6",
+    "yarn": "^1.22.19"
   }
 }

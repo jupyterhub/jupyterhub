@@ -23,15 +23,14 @@ var mockAsyncRejection = () =>
   jest.fn().mockImplementation(() => Promise.reject());
 
 var editUserJsx = (callbackSpy, empty) => (
-  <Provider store={createStore(() => {}, {})}>
+  <Provider store={createStore(() => { }, {})}>
     <HashRouter>
       <EditUser
         location={empty ? {} : { state: { username: "foo", has_admin: false } }}
         deleteUser={callbackSpy}
         editUser={callbackSpy}
         updateUsers={callbackSpy}
-        history={{ push: () => {} }}
-        failRegexEvent={callbackSpy}
+        history={{ push: () => { } }}
         noChangeEvent={callbackSpy}
       />
     </HashRouter>
@@ -44,7 +43,7 @@ var mockAppState = () => ({
 
 beforeEach(() => {
   useDispatch.mockImplementation(() => {
-    return () => {};
+    return () => { };
   });
   useSelector.mockImplementation((callback) => {
     return callback(mockAppState());

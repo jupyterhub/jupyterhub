@@ -24,13 +24,12 @@ var mockAsyncRejection = () =>
   jest.fn().mockImplementation(() => Promise.reject());
 
 var addUserJsx = (spy, spy2, spy3) => (
-  <Provider store={createStore(() => {}, {})}>
+  <Provider store={createStore(() => { }, {})}>
     <HashRouter>
       <AddUser
         addUsers={spy}
-        failRegexEvent={spy2 || spy}
         updateUsers={spy3 || spy2 || spy}
-        history={{ push: () => {} }}
+        history={{ push: () => { } }}
       />
     </HashRouter>
   </Provider>
@@ -42,7 +41,7 @@ var mockAppState = () => ({
 
 beforeEach(() => {
   useDispatch.mockImplementation(() => {
-    return () => {};
+    return () => { };
   });
   useSelector.mockImplementation((callback) => {
     return callback(mockAppState());
