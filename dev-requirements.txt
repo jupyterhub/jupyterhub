@@ -3,7 +3,6 @@
 # seems to be a pip bug
 attrs>=17.4.0
 beautifulsoup4
-codecov
 coverage
 cryptography
 html5lib  # needed for beautifulsoup
