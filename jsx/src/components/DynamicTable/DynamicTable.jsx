@@ -12,7 +12,7 @@ const DynamicTable = (props) => {
   if (current_propobject) {
     var [propkeys, setOwnKeys] = useState(Object.keys(current_propobject));
     var [propvalues, setOwnValues] = useState(
-      Object.values(current_propobject)
+      Object.values(current_propobject),
     );
   }
 
@@ -125,7 +125,7 @@ const DynamicTable = (props) => {
                   propkeys.splice(i, 1);
                   var propobject = {};
                   propkeys.forEach(
-                    (key, i) => (propobject[key] = propvalues[i])
+                    (key, i) => (propobject[key] = propvalues[i]),
                   );
                   props.setProp(propobject);
                   props.setPropKeys(propkeys);

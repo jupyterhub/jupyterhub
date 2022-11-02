@@ -145,7 +145,7 @@ const GroupEdit = (props) => {
 
                   allPassed
                     ? updateGroups(0, limit).then((data) =>
-                        dispatchPageUpdate(data, 0)
+                        dispatchPageUpdate(data, 0),
                       )
                     : setErrorAlert(`Failed to edit group.`);
                 })
