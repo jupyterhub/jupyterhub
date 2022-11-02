@@ -3,4 +3,4 @@ tasks:
       npm install  -g configurable-http-proxy yarn && python3 -m pip install -r dev-requirements.txt && python3 -m pip install -r requirements.txt && python3 -m pip install --editable .
       gp sync-done installation
   - init: gp sync-await installation
-    command: jupyterhub
+  - command: jupyterhub
