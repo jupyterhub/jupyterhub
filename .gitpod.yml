@@ -3,6 +3,6 @@
 tasks:
   - name: setup and build
     before: npm install -g configurable-http-proxy yarn && python3 -m pip install -r dev-requirements.txt && python3 -m pip install -r requirements.txt && python3 -m pip install --editable . 
-    init: jupyterhub
+  - init: jupyterhub
   
       
