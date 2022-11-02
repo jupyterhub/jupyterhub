@@ -1,10 +1,10 @@
 # Authentication and User Basics
 
-The default Authenticator uses [PAM][] to authenticate system users with
+The default Authenticator uses [PAM][] (Pluggable Authentication Module) to authenticate system users with
 their username and password. With the default Authenticator, any user
 with an account and password on the system will be allowed to login.
 
-## Create a set of allowed users
+## Create a set of allowed users (`allowed_users`)
 
 You can restrict which users are allowed to login with a set,
 `Authenticator.allowed_users`:
@@ -25,7 +25,7 @@ If this configuration value is not set, then **all authenticated users will be a
 ```{note}
 As of JupyterHub 2.0, the full permissions of `admin_users`
 should not be required.
-Instead, you can assign [roles][] to users or groups
+Instead, you can assign [roles](define-role-target) to users or groups
 with only the scopes they require.
 ```
 
@@ -42,10 +42,10 @@ c.Authenticator.admin_users = {'mal', 'zoe'}
 Users in the admin set are automatically added to the user `allowed_users` set,
 if they are not already present.
 
-Each authenticator may have different ways of determining whether a user is an
-administrator. By default JupyterHub uses the PAMAuthenticator which provides the
+Each Authenticator may have different ways of determining whether a user is an
+administrator. By default, JupyterHub uses the PAMAuthenticator which provides the
 `admin_groups` option and can set administrator status based on a user
-group. For example we can let any user in the `wheel` group be admin:
+group. For example, we can let any user in the `wheel` group be an admin:
 
 ```python
 c.PAMAuthenticator.admin_groups = {'wheel'}
@@ -57,12 +57,12 @@ Since the default `JupyterHub.admin_access` setting is `False`, the admins
 do not have permission to log in to the single user notebook servers
 owned by _other users_. If `JupyterHub.admin_access` is set to `True`,
 then admins have permission to log in _as other users_ on their
-respective machines, for debugging. **As a courtesy, you should make
+respective machines for debugging. **As a courtesy, you should make
 sure your users know if admin_access is enabled.**
 
 ## Add or remove users from the Hub
 
-Users can be added to and removed from the Hub via either the admin
+Users can be added to and removed from the Hub via the admin
 panel or the REST API. When a user is **added**, the user will be
 automatically added to the `allowed_users` set and database. Restarting the Hub
 will not require manually updating the `allowed_users` set in your config file,
@@ -76,12 +76,12 @@ fresh.
 
 ## Use LocalAuthenticator to create system users
 
-The `LocalAuthenticator` is a special kind of authenticator that has
+The `LocalAuthenticator` is a special kind of Authenticator that has
 the ability to manage users on the local system. When you try to add a
 new user to the Hub, a `LocalAuthenticator` will check if the user
 already exists. If you set the configuration value, `create_system_users`,
 to `True` in the configuration file, the `LocalAuthenticator` has
-the privileges to add users to the system. The setting in the config
+the ability to add users to the system. The setting in the config
 file is:
 
 ```python
@@ -91,7 +91,7 @@ c.LocalAuthenticator.create_system_users = True
 Adding a user to the Hub that doesn't already exist on the system will
 result in the Hub creating that user via the system `adduser` command
 line tool. This option is typically used on hosted deployments of
-JupyterHub, to avoid the need to manually create all your users before
+JupyterHub to avoid the need to manually create all your users before
 launching the service. This approach is not recommended when running
 JupyterHub in situations where JupyterHub users map directly onto the
 system's UNIX users.
@@ -101,25 +101,25 @@ system's UNIX users.
 JupyterHub's [OAuthenticator][] currently supports the following
 popular services:
 
-- Auth0
-- Azure AD
-- Bitbucket
-- CILogon
-- GitHub
-- GitLab
-- Globus
-- Google
-- MediaWiki
-- Okpy
-- OpenShift
+- [Auth0](https://oauthenticator.readthedocs.io/en/latest/api/gen/oauthenticator.auth0.html#module-oauthenticator.auth0)
+- [Azure AD](https://oauthenticator.readthedocs.io/en/latest/api/gen/oauthenticator.azuread.html#module-oauthenticator.azuread)
+- [Bitbucket](https://oauthenticator.readthedocs.io/en/latest/api/gen/oauthenticator.bitbucket.html#module-oauthenticator.bitbucket)
+- [CILogon](https://oauthenticator.readthedocs.io/en/latest/api/gen/oauthenticator.cilogon.html#module-oauthenticator.cilogon)
+- [GitHub](https://oauthenticator.readthedocs.io/en/latest/api/gen/oauthenticator.github.html#module-oauthenticator.github)
+- [GitLab](https://oauthenticator.readthedocs.io/en/latest/api/gen/oauthenticator.gitlab.html#module-oauthenticator.gitlab)
+- [Globus](https://oauthenticator.readthedocs.io/en/latest/api/gen/oauthenticator.globus.html#module-oauthenticator.globus)
+- [Google](https://oauthenticator.readthedocs.io/en/latest/api/gen/oauthenticator.google.html#module-oauthenticator.google)
+- [MediaWiki](https://oauthenticator.readthedocs.io/en/latest/api/gen/oauthenticator.mediawiki.html#module-oauthenticator.mediawiki)
+- [Okpy](https://oauthenticator.readthedocs.io/en/latest/api/gen/oauthenticator.okpy.html#module-oauthenticator.okpy)
+- [OpenShift](https://oauthenticator.readthedocs.io/en/latest/api/gen/oauthenticator.openshift.html#module-oauthenticator.openshift)
 
-A generic implementation, which you can use for OAuth authentication
+A [generic implementation](https://oauthenticator.readthedocs.io/en/latest/api/gen/oauthenticator.generic.html#module-oauthenticator.generic), which you can use for OAuth authentication
 with any provider, is also available.
 
 ## Use DummyAuthenticator for testing
 
-The `DummyAuthenticator` is a simple authenticator that
-allows for any username/password unless a global password has been set. If
+The `DummyAuthenticator` is a simple Authenticator that
+allows for any username or password unless a global password has been set. If
 set, it will allow for any username as long as the correct password is provided.
 To set a global password, add this to the config file:
 

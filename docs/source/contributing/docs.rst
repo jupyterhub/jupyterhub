@@ -18,7 +18,7 @@ stored under the ``docs/source`` directory) and converts it into various
 formats for people to read. To make sure the documentation you write or
 change renders correctly, it is good practice to test it locally.
 
-#. Make sure you have successfuly completed :ref:`contributing/setup`.
+#. Make sure you have successfully completed :ref:`contributing/setup`.
 
 #. Install the packages required to build the docs.
 
@@ -44,7 +44,8 @@ change renders correctly, it is good practice to test it locally.
 
    .. tip::
 
-      On macOS, you can open a file from the terminal with ``open <path-to-file>``.
+      On Windows, you can open a file from the terminal with ``start <path-to-file>``.
+      On macOS, you can do the same with ``open <path-to-file>``.
       On Linux, you can do the same with ``xdg-open <path-to-file>``.
 
 

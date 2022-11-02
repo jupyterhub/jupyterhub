@@ -107,7 +107,7 @@ test("Shows a more specific UI error dialogue when user creation returns an impr
   });
 
   let errorDialog = screen.getByText(
-    "Failed to create group. Group already exists."
+    "Failed to create group. Group already exists.",
   );
 
   expect(errorDialog).toBeVisible();

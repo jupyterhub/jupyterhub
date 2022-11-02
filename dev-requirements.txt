@@ -3,7 +3,6 @@
 # seems to be a pip bug
 attrs>=17.4.0
 beautifulsoup4
-codecov
 coverage
 cryptography
 html5lib  # needed for beautifulsoup
@@ -18,6 +17,7 @@ pytest>=3.3
 pytest-asyncio>=0.17
 pytest-cov
 requests-mock
+selenium
 tbump
 # blacklist urllib3 releases affected by https://github.com/urllib3/urllib3/issues/1683
 # I *think* this should only affect testing, not production

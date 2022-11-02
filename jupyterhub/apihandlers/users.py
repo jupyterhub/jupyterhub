@@ -502,17 +502,19 @@ class UserServerAPIHandler(APIHandler):
         if server_name:
             if not self.allow_named_servers:
                 raise web.HTTPError(400, "Named servers are not enabled.")
-            if (
-                self.named_server_limit_per_user > 0
-                and server_name not in user.orm_spawners
-            ):
+
+            named_server_limit_per_user = (
+                await self.get_current_user_named_server_limit()
+            )
+
+            if named_server_limit_per_user > 0 and server_name not in user.orm_spawners:
                 named_spawners = list(user.all_spawners(include_default=False))
-                if self.named_server_limit_per_user <= len(named_spawners):
+                if named_server_limit_per_user <= len(named_spawners):
                     raise web.HTTPError(
                         400,
                         "User {} already has the maximum of {} named servers."
                         "  One must be deleted before a new server can be created".format(
-                            user_name, self.named_server_limit_per_user
+                            user_name, named_server_limit_per_user
                         ),
                     )
         spawner = user.get_spawner(server_name, replace_failed=True)

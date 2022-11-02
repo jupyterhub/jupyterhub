@@ -1,5 +1,7 @@
 import sys
 
+c = get_config()
+
 # To run the announcement service managed by the hub, add this.
 
 port = 9999

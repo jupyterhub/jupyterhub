@@ -461,16 +461,13 @@ def _expand_scope(scope):
     # reapply !filter
     if filter_:
         expanded_scopes = {
-            f"{scope_name}!{filter_}" for scope_name in expanded_scope_names
+            f"{scope_name}!{filter_}"
+            for scope_name in expanded_scope_names
+            # server scopes have some cross-resource subscopes
+            # where the !server filter doesn't make sense,
+            # e.g. read:servers -> read:users:name
+            if not (filter_.startswith("server") and scope_name.startswith("read:user"))
         }
-        # special handling of server filter
-        # any read access via server filter includes permission to read the user's name
-        resource, _, value = filter_.partition('=')
-        if resource == 'server' and any(
-            scope_name.startswith("read:") for scope_name in expanded_scope_names
-        ):
-            username, _, server = value.partition('/')
-            expanded_scopes.add(f'read:users:name!user={username}')
     else:
         expanded_scopes = expanded_scope_names
 
@@ -567,6 +564,76 @@ def expand_scopes(scopes, owner=None, oauth_client=None):
     # reduce to discard overlapping scopes
     # return immutable frozenset because the result is cached
     return frozenset(reduce_scopes(expanded_scopes))
+
+
+def _resolve_requested_scopes(requested_scopes, have_scopes, user, client, db):
+    """Resolve requested scopes for an OAuth token
+
+    Intersects requested scopes with user scopes.
+
+    First, at the raw scope level,
+    then if some scopes remain, intersect expanded scopes.
+
+    Args:
+        requested_scopes (set):
+            raw scopes being requested.
+        have_scopes (set):
+            raw scopes currently held, against which requested_scopes will be checked.
+        user (orm.User):
+            user for whom the scopes will be issued
+        client (orm.OAuthClient):
+            oauth client which will own the token
+        db:
+            database session, required to resolve user|group intersections
+
+    Returns:
+        (allowed_scopes, disallowed_scopes):
+            sets of allowed and disallowed scopes from the request
+    """
+
+    allowed_scopes = requested_scopes.intersection(have_scopes)
+    disallowed_scopes = requested_scopes.difference(have_scopes)
+
+    if not disallowed_scopes:
+        # simple intersection worked, all scopes granted
+        return (allowed_scopes, disallowed_scopes)
+
+    # if we got here, some scopes were disallowed.
+    # resolve fully expanded scopes to make sure scope intersections are properly allowed.
+    expanded_allowed = expand_scopes(allowed_scopes, user, client)
+    expanded_have = expand_scopes(have_scopes, user, client)
+    # compute one at a time so we can keep the abbreviated scopes
+    # if they are a subset of user scopes (e.g. requested !server, have !user)
+    for scope in list(disallowed_scopes):
+        expanded_disallowed = expand_scopes({scope}, user, client)
+        # don't check already-allowed scopes
+        expanded_disallowed -= expanded_allowed
+        if expanded_disallowed:
+            allowed_intersection = _intersect_expanded_scopes(
+                expanded_disallowed, expanded_have, db=db
+            )
+        else:
+            allowed_intersection = set()
+
+        if allowed_intersection == expanded_disallowed:
+            # full scope allowed (requested scope is subset of user scopes)
+            allowed_scopes.add(scope)
+            disallowed_scopes.remove(scope)
+            expanded_allowed = expand_scopes(allowed_scopes, user, client)
+
+        elif allowed_intersection:
+            # some scopes get through, but not all,
+            # allow the subset
+            allowed_scopes |= allowed_intersection
+            expanded_allowed = expand_scopes(allowed_scopes, user, client)
+            # choice: report that the requested scope wasn't _fully_ granted (current behavior)
+            # or report the exact (likely too detailed) set of not granted scopes (below)
+            # disallowed_scopes.remove(scope)
+            # disallowed_scopes |= expanded_disallowed.difference(allowed_intersection)
+        else:
+            # no new scopes granted, original check was right
+            pass
+    return (allowed_scopes, disallowed_scopes)
 
 
 def _needs_scope_expansion(filter_, filter_value, sub_scope):
