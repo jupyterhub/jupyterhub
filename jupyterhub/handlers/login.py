@@ -45,6 +45,14 @@ class LogoutHandler(BaseHandler):
         self.clear_login_cookie()
         self.statsd.incr('logout')
 
+    async def prehandle_logout(self):
+        """Custom user action before starting logout
+
+        By default a no-op, this function should be overriden in subclasses
+        to have JupyterHub take a custom action before starting logout
+        """
+        return
+
     async def default_handle_logout(self):
         """The default logout action
 
@@ -82,6 +90,7 @@ class LogoutHandler(BaseHandler):
         """Log the user out, call the custom action, forward the user
         to the logout page
         """
+        await self.prehandle_logout()
         await self.default_handle_logout()
         await self.handle_logout()
         await self.render_logout_page()
