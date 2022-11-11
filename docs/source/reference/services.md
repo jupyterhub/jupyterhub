@@ -249,7 +249,7 @@ which makes a request of the Hub, and returns:
     "name": "username",
     "groups": ["list", "of", "groups"],
     "scopes": [
-        "access:users:servers!server=username/",
+        "access:servers!server=username/",
     ],
   }
   ```
