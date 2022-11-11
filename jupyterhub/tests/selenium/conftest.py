@@ -8,6 +8,7 @@ def browser():
     options = webdriver.FirefoxOptions()
     options.headless = True
     driver = webdriver.Firefox(options=options)
+    driver = webdriver.Firefox()
     yield driver
     driver.close()
     driver.quit()
