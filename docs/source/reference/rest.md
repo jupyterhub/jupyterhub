@@ -193,7 +193,7 @@ r.json()
 
 The same API token can also authorize access to the [Jupyter Notebook REST API][]
 
-provided by notebook servers managed by JupyterHub if it has the necessary `access:users:servers` scope.
+provided by notebook servers managed by JupyterHub if it has the necessary `access:servers` scope.
 
 (api-pagination)=
 
