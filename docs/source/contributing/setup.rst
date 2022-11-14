@@ -130,7 +130,7 @@ Happy developing!
 Using DummyAuthenticator & SimpleLocalProcessSpawner
 ====================================================
 
-To simplify testing of JupyterHub, it’s helpful to use
+To simplify testing of JupyterHub, it is helpful to use
 :class:`~jupyterhub.auth.DummyAuthenticator` instead of the default JupyterHub
 authenticator and SimpleLocalProcessSpawner instead of the default spawner.
 
