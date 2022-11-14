@@ -13,7 +13,7 @@ Three (3) configuration settings are the main aspects of security configuration:
 3. Proxy :ref:`authentication token <authentication-token>` (used for the Hub and
    other services to authenticate to the Proxy)
 
-The Hub hashes all secrets (e.g., auth tokens) before storing them in its
+The Hub hashes all secrets (e.g. auth tokens) before storing them in its
 database. A loss of control over read-access to the database should have
 minimal impact on your deployment. If your database has been compromised, it
 is still a good idea to revoke existing tokens.
@@ -118,7 +118,7 @@ This environment variable needs to be visible to the Hub and Proxy.
 Default if token is not set
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-If you don't set the Proxy authentication token, the Hub will generate a random
+If you do not set the Proxy authentication token, the Hub will generate a random
 key itself. This means that any time you restart the Hub, you **must also
 restart the Proxy**. If the proxy is a subprocess of the Hub, this should happen
 automatically (this is the default configuration).
