@@ -19,9 +19,15 @@ them manually here.
 
     added ``jupyterhub_`` prefix to metric names.
 """
+from datetime import datetime, timedelta
 from enum import Enum
 
 from prometheus_client import Gauge, Histogram
+from tornado.ioloop import IOLoop, PeriodicCallback
+from traitlets import Any, Bool, Integer
+from traitlets.config import LoggingConfigurable
+
+from . import orm
 
 REQUEST_DURATION_SECONDS = Histogram(
     'jupyterhub_request_duration_seconds',
@@ -43,6 +49,14 @@ RUNNING_SERVERS = Gauge(
 )
 
 TOTAL_USERS = Gauge('jupyterhub_total_users', 'total number of users')
+
+DAILY_ACTIVE_USERS = Gauge(
+    'jupyterhub_daily_active_users', 'number of users who were active in the last 24h'
+)
+
+MONTHLY_ACTIVE_USERS = Gauge(
+    'jupyterhub_monthly_active_users', 'number of users who were active in the last 30d'
+)
 
 CHECK_ROUTES_DURATION_SECONDS = Histogram(
     'jupyterhub_check_routes_duration_seconds',
@@ -200,3 +214,74 @@ def prometheus_log_method(handler):
         handler=f'{handler.__class__.__module__}.{type(handler).__name__}',
         code=handler.get_status(),
     ).observe(handler.request.request_time())
+
+
+class PeriodicMetricsCollector(LoggingConfigurable):
+    """
+    Collect metrics to be calculated periodically
+    """
+
+    active_users_enabled = Bool(
+        True,
+        help="""
+        Enable daily_active_users and monthly_active_users prometheus metric.
+
+        daily_active_users reports number of users who have registered *some* kind of activity
+        in the last 24h. monthly_active_users reports it for the last 30 days.
+        """,
+        config=True,
+    )
+
+    active_users_update_period = Integer(
+        60 * 60,
+        help="""
+        Number of seconds between updating daily_active_users and monthly_active_users metric.
+
+        To avoid extra load on the database, this is only calculated periodically rather than
+        at per-minute intervals. Defaults to once an hour.
+
+        Both the metrics are updated at the same time so they provide a consistent snapshot of
+        stats at that point in time.
+        """,
+        config=True,
+    )
+
+    db = Any(help="SQLAlchemy db to use for performing queries")
+
+    def update(self):
+        """
+        Update all these metrics!
+        """
+        # daily cutoff
+        daily_cutoff = datetime.now() - timedelta(days=1)
+        monthly_cutoff = datetime.now() - timedelta(days=30)
+
+        daily_active_users = (
+            self.db.query(orm.User)
+            .filter(orm.User.last_activity >= daily_cutoff)
+            .count()
+        )
+        monthly_active_users = (
+            self.db.query(orm.User)
+            .filter(orm.User.last_activity >= monthly_cutoff)
+            .count()
+        )
+
+        DAILY_ACTIVE_USERS.set(daily_active_users)
+        MONTHLY_ACTIVE_USERS.set(monthly_active_users)
+        self.log.info(f'Found {daily_active_users} active users in the last 24h')
+        self.log.info(f'Found {monthly_active_users} active users in the last 30d')
+
+    def start(self):
+        """
+        Start the periodic update process
+        """
+        if self.active_users_metric_enabled:
+            # Setup periodic refresh of the metric
+            pc = PeriodicCallback(
+                self.update, self.active_users_update_period * 1000, jitter=0.01
+            )
+            pc.start()
+
+            # Update the metrics once on startup too
+            self.update()

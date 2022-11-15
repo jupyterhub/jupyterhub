@@ -70,10 +70,13 @@ from .emptyclass import EmptyClass
 from .handlers.static import CacheControlStaticFilesHandler, LogoHandler
 from .log import CoroutineLogFormatter, log_request
 from .metrics import (
+    DAILY_ACTIVE_USERS,
     HUB_STARTUP_DURATION_SECONDS,
     INIT_SPAWNERS_DURATION_SECONDS,
+    MONTHLY_ACTIVE_USERS,
     RUNNING_SERVERS,
     TOTAL_USERS,
+    PeriodicMetricsCollector,
 )
 from .oauth.provider import make_provider
 from .objects import Hub, Server
@@ -1159,7 +1162,7 @@ class JupyterHub(Application):
         Setting this can limit the total resources a user can consume.
 
         If set to 0, no limit is enforced.
-        
+
         Can be an integer or a callable/awaitable based on the handler object:
 
         ::
@@ -2894,6 +2897,8 @@ class JupyterHub(Application):
                 await self.proxy.check_routes(self.users, self._service_map)
 
             asyncio.ensure_future(finish_init_spawners())
+        metrics_updater = PeriodicMetricsCollector(parent=self, db=self.db)
+        metrics_updater.start()
 
     async def cleanup(self):
         """Shutdown managed services and various subprocesses. Cleanup runtime files."""
