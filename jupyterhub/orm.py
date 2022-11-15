@@ -266,7 +266,7 @@ class User(Base):
 
     admin = Column(Boolean(create_constraint=False), default=False)
     created = Column(DateTime, default=datetime.utcnow)
-    last_activity = Column(DateTime, nullable=True)
+    last_activity = Column(DateTime, nullable=True, index=True)
 
     api_tokens = relationship("APIToken", backref="user", cascade="all, delete-orphan")
     oauth_codes = relationship(
