@@ -323,7 +323,7 @@ class Spawner(Base):
     name = Column(Unicode(255))
 
     started = Column(DateTime)
-    last_activity = Column(DateTime, nullable=True)
+    last_activity = Column(DateTime, nullable=True, index=True)
     user_options = Column(JSONDict)
 
     # added in 2.0
