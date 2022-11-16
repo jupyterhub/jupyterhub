@@ -1,3 +1,14 @@
+# autoflake is used for autoformatting Python code
+#
+# ref: https://github.com/PyCQA/autoflake#readme
+#
+[tool.autoflake]
+ignore-init-module-imports = true
+remove-all-unused-imports = true
+remove-duplicate-keys = true
+#remove-unused-variables = true
+
+
 [tool.isort]
 profile = "black"
 
