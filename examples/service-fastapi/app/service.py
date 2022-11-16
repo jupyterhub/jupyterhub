@@ -51,7 +51,7 @@ async def me(user: User = Depends(get_current_user)):
 
 
 @router.get("/debug")
-async def index(request: Request, user: User = Depends(get_current_user)):
+async def debug(request: Request, user: User = Depends(get_current_user)):
     """
     Authenticated function that returns a few pieces of debug
      * Environ of the service process
