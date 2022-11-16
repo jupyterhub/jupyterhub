@@ -45,7 +45,7 @@ from ..auth import PAMAuthenticator
 from ..singleuser import SingleUserNotebookApp
 from ..spawner import SimpleLocalProcessSpawner
 from ..utils import random_port, utcnow
-from .utils import async_requests, public_host, public_url, ssl_setup
+from .utils import async_requests, public_url, ssl_setup
 
 
 def mock_authenticate(username, password, service, encoding):
