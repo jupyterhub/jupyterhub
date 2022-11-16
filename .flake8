@@ -3,11 +3,12 @@
 # E: style errors
 # W: style warnings
 # C: complexity
+# D: docstring warnings (unused pydocstyle extension)
 # F401: module imported but unused
 # F403: import *
 # F811: redefinition of unused `name` from line `N`
 # F841: local variable assigned but never used
-ignore = E, C, W, F401, F403, F811, F841
+ignore = E, C, W, D, F401, F403, F811, F841
 builtins = c, get_config
 exclude =
     .cache,
