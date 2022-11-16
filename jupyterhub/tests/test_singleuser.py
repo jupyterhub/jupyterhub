@@ -1,7 +1,7 @@
 """Tests for jupyterhub.singleuser"""
 import os
 import sys
-from contextlib import contextmanager, nullcontext
+from contextlib import nullcontext
 from subprocess import CalledProcessError, check_output
 from unittest import mock
 from urllib.parse import urlencode, urlparse

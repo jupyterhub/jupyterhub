@@ -36,7 +36,6 @@ from unittest import mock
 from urllib.parse import urlparse
 
 from pamela import PAMError
-from tornado.ioloop import IOLoop
 from traitlets import Bool, Dict, default
 
 from .. import metrics, orm, roles
