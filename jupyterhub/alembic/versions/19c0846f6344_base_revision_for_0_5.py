@@ -14,7 +14,6 @@ depends_on = None
 import sqlalchemy as sa
 from alembic import op
 
-
 def upgrade():
     pass
 

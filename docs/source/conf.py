@@ -250,7 +250,7 @@ if on_rtd:
 # -- Spell checking -------------------------------------------------------
 
 try:
-    import sphinxcontrib.spelling
+    import sphinxcontrib.spelling  # noqa
 except ImportError:
     pass
 else:
