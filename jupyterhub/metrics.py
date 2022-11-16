@@ -221,7 +221,7 @@ class PeriodicMetricsCollector(LoggingConfigurable):
     Collect metrics to be calculated periodically
     """
 
-    active_users_enabled = Bool(
+    active_users_metrics_enabled = Bool(
         True,
         help="""
         Enable daily_active_users and monthly_active_users prometheus metric.
@@ -232,7 +232,7 @@ class PeriodicMetricsCollector(LoggingConfigurable):
         config=True,
     )
 
-    active_users_update_period = Integer(
+    active_users_metrics_update_period = Integer(
         60 * 60,
         help="""
         Number of seconds between updating daily_active_users and monthly_active_users metric.
@@ -276,10 +276,10 @@ class PeriodicMetricsCollector(LoggingConfigurable):
         """
         Start the periodic update process
         """
-        if self.active_users_metric_enabled:
+        if self.active_users_metrics_enabled:
             # Setup periodic refresh of the metric
             pc = PeriodicCallback(
-                self.update, self.active_users_update_period * 1000, jitter=0.01
+                self.update, self.active_users_metrics_update_period * 1000, jitter=0.01
             )
             pc.start()
 
