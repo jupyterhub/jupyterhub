@@ -7,9 +7,6 @@ sys.path.insert(0, os.path.abspath('.'))
 
 # -- General configuration ------------------------------------------------
 
-# Minimal Sphinx version
-needs_sphinx = '1.4'
-
 # Sphinx extension modules
 extensions = [
     'sphinx.ext.autodoc',
@@ -27,7 +24,7 @@ myst_enable_extensions = [
     'deflist',
 ]
 # The master toctree document.
-master_doc = 'index'
+root_doc = master_doc = 'index'
 
 # General information about the project.
 project = 'JupyterHub'
@@ -118,11 +115,10 @@ def setup(app):
 
 
 source_suffix = ['.rst', '.md']
-# source_encoding = 'utf-8-sig'
 
 # -- Options for HTML output ----------------------------------------------
 
-# The theme to use for HTML and HTML Help pages.
+# The theme to use for HTML
 html_theme = 'pydata_sphinx_theme'
 
 html_logo = '_static/images/logo/logo.png'
@@ -130,8 +126,6 @@ html_favicon = '_static/images/logo/favicon.ico'
 
 # Paths that contain custom static files (such as style sheets)
 html_static_path = ['_static']
-
-htmlhelp_basename = 'JupyterHubdoc'
 
 html_theme_options = {
     "icon_links": [
@@ -156,79 +150,6 @@ html_context = {
     "github_version": "main",
     "doc_path": "docs",
 }
-
-# -- Options for LaTeX output ---------------------------------------------
-
-latex_elements = {
-    # 'papersize': 'letterpaper',
-    # 'pointsize': '10pt',
-    # 'preamble': '',
-    # 'figure_align': 'htbp',
-}
-
-# Grouping the document tree into LaTeX files. List of tuples
-# (source start file, target name, title,
-#  author, documentclass [howto, manual, or own class]).
-latex_documents = [
-    (
-        master_doc,
-        'JupyterHub.tex',
-        'JupyterHub Documentation',
-        'Project Jupyter team',
-        'manual',
-    )
-]
-
-# latex_logo = None
-# latex_use_parts = False
-# latex_show_pagerefs = False
-# latex_show_urls = False
-# latex_appendices = []
-# latex_domain_indices = True
-
-
-# -- manual page output -------------------------------------------------
-
-# One entry per manual page. List of tuples
-# (source start file, name, description, authors, manual section).
-man_pages = [(master_doc, 'jupyterhub', 'JupyterHub Documentation', [author], 1)]
-
-# man_show_urls = False
-
-
-# -- Texinfo output -----------------------------------------------------
-
-# Grouping the document tree into Texinfo files. List of tuples
-# (source start file, target name, title, author,
-#  dir menu entry, description, category)
-texinfo_documents = [
-    (
-        master_doc,
-        'JupyterHub',
-        'JupyterHub Documentation',
-        author,
-        'JupyterHub',
-        'One line description of project.',
-        'Miscellaneous',
-    )
-]
-
-# texinfo_appendices = []
-# texinfo_domain_indices = True
-# texinfo_show_urls = 'footnote'
-# texinfo_no_detailmenu = False
-
-
-# -- Epub output --------------------------------------------------------
-
-# Bibliographic Dublin Core info.
-epub_title = project
-epub_author = author
-epub_publisher = author
-epub_copyright = copyright
-
-# A list of files that should not be packed into the epub file.
-epub_exclude_files = ['search.html']
 
 # -- Intersphinx ----------------------------------------------------------
 

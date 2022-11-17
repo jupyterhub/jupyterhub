@@ -1,3 +1,7 @@
+# Configuration on how ReadTheDocs (RTD) builds our documentation
+# ref: https://readthedocs.org/projects/jupyterhub/
+# ref: https://docs.readthedocs.io/en/stable/config-file/v2.html
+#
 version: 2
 
 sphinx:
@@ -16,5 +20,8 @@ python:
     - requirements: docs/requirements.txt
 
 formats:
+  # Adding htmlzip enables a Downloads section in the rendered website's RTD
+  # menu where the html build can be downloaded. This doesn't require any
+  # additional configuration in docs/source/conf.py.
+  #
   - htmlzip
-  - epub
