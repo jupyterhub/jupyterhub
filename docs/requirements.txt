@@ -1,6 +1,5 @@
 -r ../requirements.txt
 
-alabaster_jupyterhub
 autodoc-traits
 myst-parser
 pre-commit
