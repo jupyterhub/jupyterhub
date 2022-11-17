@@ -77,8 +77,8 @@ jupyterhub --Spawner.notebook_dir='~/assignments'
 ## Configure for various deployment environments
 
 The default authentication and process spawning mechanisms can be replaced, and
-specific [authenticators](./authenticators-users-basics) and
-[spawners](./spawners-basics) can be set in the configuration file.
+specific [authenticators](authenticators-users-basics) and
+[spawners](spawners-basics) can be set in the configuration file.
 This enables JupyterHub to be used with a variety of authentication methods or
 process control and deployment environments. [Some examples](../reference/config-examples),
 meant as illustrations, are:

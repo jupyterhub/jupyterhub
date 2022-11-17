@@ -43,8 +43,10 @@ Backup database & config
 Before doing an upgrade, it is critical to back up:
 
 #. Your JupyterHub database (SQLite by default, or MySQL / Postgres if you used those). 
-If you use SQLite (the default), you should backup the ``jupyterhub.sqlite`` file.
+   If you use SQLite (the default), you should backup the ``jupyterhub.sqlite`` file.
+
 #. Your ``jupyterhub_config.py`` file.
+
 #. Your users' home directories. This is unlikely to be affected directly by
    a JupyterHub upgrade, but we recommend a backup since user data is critical.
 
