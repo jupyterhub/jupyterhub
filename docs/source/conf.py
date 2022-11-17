@@ -151,17 +151,6 @@ html_context = {
     "doc_path": "docs",
 }
 
-# -- Epub output --------------------------------------------------------
-
-# Bibliographic Dublin Core info.
-epub_title = project
-epub_author = author
-epub_publisher = author
-epub_copyright = copyright
-
-# A list of files that should not be packed into the epub file.
-epub_exclude_files = ['search.html']
-
 # -- Intersphinx ----------------------------------------------------------
 
 intersphinx_mapping = {
