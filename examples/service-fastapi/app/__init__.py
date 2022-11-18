@@ -1,1 +1,3 @@
-from .app import app  # noqa
+from .app import app
+
+__all__ = ["app"]
