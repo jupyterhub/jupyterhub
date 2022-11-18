@@ -16,7 +16,4 @@ pytest-cov
 requests-mock
 selenium
 tbump
-# blacklist urllib3 releases affected by https://github.com/urllib3/urllib3/issues/1683
-# I *think* this should only affect testing, not production
-urllib3!=1.25.4,!=1.25.5
 virtualenv
