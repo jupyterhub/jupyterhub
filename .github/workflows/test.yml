@@ -83,14 +83,13 @@ jobs:
             db: mysql
           - python: "3.10"
             db: postgres
-          - python: "3.10"
+          - python: "3.11"
             subdomain: subdomain
-          - python: "3.10"
+          - python: "3.11"
             ssl: ssl
-          - python: "3.10"
+          - python: "3.11"
             selenium: selenium
-          - python: "3.11.0-rc.1"
-          - python: "3.10"
+          - python: "3.11"
             main_dependencies: main_dependencies
 
     steps:
