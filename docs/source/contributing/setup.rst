@@ -94,12 +94,13 @@ When developing JupyterHub, you would need to make changes and be able to instan
 
       conda install configurable-http-proxy yarn
 
-4. Install the python packages required for JupyterHub development.
+4. Install an editable version of JupyterHub and its requirements for
+   development and testing. This lets you edit JupyterHub code in a text editor
+   & restart the JupyterHub process to see your code changes immediately.
 
    .. code:: bash
 
-      python3 -m pip install -r dev-requirements.txt
-      python3 -m pip install -r requirements.txt
+      python3 -m pip install --editable ".[test]"
 
 5. Set up a database.
 
@@ -108,21 +109,13 @@ When developing JupyterHub, you would need to make changes and be able to instan
    available via `Python <https://docs.python.org/3.5/library/sqlite3.html>`__.
    See :doc:`/reference/database` for details on other supported databases.
 
-6. Install the development version of JupyterHub. This lets you edit
-   JupyterHub code in a text editor & restart the JupyterHub process to
-   see your code changes immediately.
-
-   .. code:: bash
-
-      python3 -m pip install --editable .
-
-7. You are now ready to start JupyterHub!
+6. You are now ready to start JupyterHub!
 
    .. code:: bash
 
       jupyterhub
 
-8. You can access JupyterHub from your browser at
+7. You can access JupyterHub from your browser at
    ``http://localhost:8000`` now.
 
 Happy developing!

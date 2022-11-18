@@ -1,39 +1,42 @@
 # How to make a release
 
-`jupyterhub` is a package [available on
-PyPI](https://pypi.org/project/jupyterhub/) and
-[conda-forge](https://conda-forge.org/).
-These are instructions on how to make a release on PyPI.
-The PyPI release is done automatically by CI when a tag is pushed.
+`jupyterhub` is a package available on [PyPI][] and [conda-forge][].
+These are instructions on how to make a release.
 
-For you to follow along according to these instructions, you need:
+## Pre-requisites
 
-- To have push rights to the [jupyterhub GitHub
-  repository](https://github.com/jupyterhub/jupyterhub).
+- Push rights to [jupyterhub/jupyterhub][]
+- Push rights to [conda-forge/jupyterhub-feedstock][]
 
 ## Steps to make a release
+
+1. Create a PR updating `docs/source/changelog.md` with [github-activity][] and
+   continue only when its merged.
+
+   ```shell
+   pip install github-activity
+
+   github-activity --heading-level=3 jupyterhub/jupyterhub
+   ```
 
 1. Checkout main and make sure it is up to date.
 
    ```shell
-   ORIGIN=${ORIGIN:-origin} # set to the canonical remote, e.g. 'upstream' if 'origin' is not the official repo
    git checkout main
-   git fetch $ORIGIN main
-   git reset --hard $ORIGIN/main
+   git fetch origin main
+   git reset --hard origin/main
    ```
 
-1. Make sure `docs/source/changelog.md` is up-to-date.
-   [github-activity][] can help with this.
-
-1. Update the version with `tbump`.
-   You can see what will happen without making any changes with `tbump --dry-run ${VERSION}`
+1. Update the version, make commits, and push a git tag with `tbump`.
 
    ```shell
+   pip install tbump
+   tbump --dry-run ${VERSION}
+
    tbump ${VERSION}
    ```
 
-   This will tag and publish a release,
-   which will be finished on CI.
+   Following this, the [CI system][] will build and publish a release.
 
 1. Reset the version back to dev, e.g. `2.1.0.dev` after releasing `2.0.0`
 
@@ -42,9 +45,11 @@ For you to follow along according to these instructions, you need:
    ```
 
 1. Following the release to PyPI, an automated PR should arrive to
-   [conda-forge/jupyterhub-feedstock][],
-   check for the tests to succeed on this PR and then merge it to successfully
-   update the package for `conda` on the conda-forge channel.
+   [conda-forge/jupyterhub-feedstock][] with instructions.
 
-[github-activity]: https://github.com/choldgraf/github-activity
+[pypi]: https://pypi.org/project/jupyterhub/
+[conda-forge]: https://anaconda.org/conda-forge/jupyterhub
+[jupyterhub/jupyterhub]: https://github.com/jupyterhub/jupyterhub
 [conda-forge/jupyterhub-feedstock]: https://github.com/conda-forge/jupyterhub-feedstock
+[github-activity]: https://github.com/executablebooks/github-activity
+[ci system]: https://github.com/jupyterhub/jupyterhub/actions/workflows/release.yml

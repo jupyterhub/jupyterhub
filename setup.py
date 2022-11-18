@@ -121,6 +121,27 @@ setup_args = dict(
         'Source': 'https://github.com/jupyterhub/jupyterhub/',
         'Tracker': 'https://github.com/jupyterhub/jupyterhub/issues',
     },
+    extras_require={
+        "test": [
+            "beautifulsoup4[html5lib]",
+            "coverage",
+            # cryptography is an optional dependency for jupyterhub that we test
+            # against by default
+            "cryptography",
+            "jsonschema",
+            "jupyterlab>=3",
+            "mock",
+            # nbclassic provides the '/tree/' handler that we tests against in
+            # the test test_nbclassic_control_panel.
+            "nbclassic",
+            "pytest>=3.3",
+            "pytest-asyncio>=0.17",
+            "pytest-cov",
+            "requests-mock",
+            "selenium",
+            "virtualenv",
+        ],
+    }
 )
 
 

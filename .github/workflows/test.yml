@@ -140,7 +140,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           pip install --upgrade pip
-          pip install --upgrade . -r dev-requirements.txt
+          pip install ".[test]"
 
           if [ "${{ matrix.oldest_dependencies }}" != "" ]; then
             # take any dependencies in requirements.txt such as tornado>=5.0

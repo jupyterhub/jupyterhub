@@ -110,22 +110,28 @@ Make sure you have completed all the steps in :ref:`contributing/setup` successf
 Code formatting and linting
 ===========================
 
-JupyterHub has adopted automatic code formatting and linting.
-As long as your code is valid, the pre-commit hook should take care of how it should look.
-You can invoke the pre-commit hook manually at any time with:
+JupyterHub automatically enforces code formatting. This means that pull requests
+with changes breaking this formatting will receive a commit from pre-commit.ci
+automatically.
+
+To automatically format code locally, you can install pre-commit and register a
+_git hook_ to automatically check with pre-commit before you make a commit if
+the formatting is okay.
 
 .. code:: bash
 
+   pip install pre-commit
+   pre-commit install --install-hooks
+
+To run pre-commit manually you would do:
+
+.. code:: bash
+
+   # check for changes to code not yet committed
    pre-commit run
 
-This should run any auto formatting on your code and tell you about any errors it couldn't fix automatically.
-You may also install `black integration <https://github.com/psf/black#editor-integration>`_
-into your text editor to format code automatically.
-
-If you have already committed files before running pre-commit you can fix everything using:
-
-.. code:: bash
-
+   # check for changes also in already committed code
    pre-commit run --all-files
 
-And committing the changes.
+You may also install `black integration <https://github.com/psf/black#editor-integration>`_
+into your text editor to format code automatically.
