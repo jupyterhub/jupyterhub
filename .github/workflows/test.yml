@@ -140,15 +140,6 @@ jobs:
       - name: Install Python dependencies
         run: |
           pip install --upgrade pip
-
-          if [[ "${{ matrix.python }}" == "3.11"* ]]; then
-            # greenlet is not actually required,
-            # but is an install dependency of sqlalchemy.
-            # It does not yet install on 3.11
-            # see: see https://github.com/gevent/gevent/issues/1867
-            pip install ./ci/mock-greenlet
-          fi
-
           pip install --upgrade . -r dev-requirements.txt
 
           if [ "${{ matrix.oldest_dependencies }}" != "" ]; then
