@@ -1,12 +1,9 @@
--r requirements.txt
-# temporary pin of attrs for jsonschema 0.3.0a1
-# seems to be a pip bug
-attrs>=17.4.0
 beautifulsoup4
 coverage
 cryptography
 html5lib  # needed for beautifulsoup
-jupyterlab >=3
+jsonschema
+jupyterlab>=3
 mock
 # nbclassic provides the '/tree/' handler, which we use in tests
 # it is a transitive dependency via jupyterlab,
