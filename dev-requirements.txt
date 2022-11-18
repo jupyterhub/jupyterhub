@@ -1,7 +1,6 @@
-beautifulsoup4
+beautifulsoup4[html5lib]
 coverage
 cryptography
-html5lib  # needed for beautifulsoup
 jsonschema
 jupyterlab>=3
 mock
