@@ -5,7 +5,6 @@ import json
 import sys
 
 from tornado import web
-from tornado.ioloop import IOLoop
 
 from .._version import __version__
 from ..scopes import needs_scope

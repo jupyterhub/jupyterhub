@@ -36,7 +36,6 @@ from unittest import mock
 from urllib.parse import urlparse
 
 from pamela import PAMError
-from tornado.ioloop import IOLoop
 from traitlets import Bool, Dict, default
 
 from .. import metrics, orm, roles
@@ -45,7 +44,7 @@ from ..auth import PAMAuthenticator
 from ..singleuser import SingleUserNotebookApp
 from ..spawner import SimpleLocalProcessSpawner
 from ..utils import random_port, utcnow
-from .utils import async_requests, public_host, public_url, ssl_setup
+from .utils import async_requests, public_url, ssl_setup
 
 
 def mock_authenticate(username, password, service, encoding):

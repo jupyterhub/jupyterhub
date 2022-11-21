@@ -1,21 +1,14 @@
 import asyncio
-import time
 from functools import partial
 
 import pytest
-from selenium import webdriver
-from selenium.common.exceptions import NoSuchElementException, TimeoutException
-from selenium.webdriver.common.by import By
+from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from tornado.escape import url_escape
 from tornado.httputil import url_concat
 
-from jupyterhub.tests.selenium.locators import (
-    HomePageLocators,
-    LoginPageLocators,
-    TokenPageLocators,
-)
+from jupyterhub.tests.selenium.locators import LoginPageLocators
 from jupyterhub.utils import exponential_backoff
 
 from ...utils import url_path_join
