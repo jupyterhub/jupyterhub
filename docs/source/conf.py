@@ -1,9 +1,5 @@
 #
 import os
-import sys
-
-# Set paths
-sys.path.insert(0, os.path.abspath('.'))
 
 # -- General configuration ------------------------------------------------
 
@@ -32,12 +28,6 @@ copyright = '2016, Project Jupyter team'
 author = 'Project Jupyter team'
 
 # Autopopulate version
-from os.path import dirname
-
-docs = dirname(dirname(__file__))
-root = dirname(docs)
-sys.path.insert(0, root)
-
 import jupyterhub
 
 # The short X.Y version.
@@ -164,8 +154,10 @@ on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 if on_rtd:
     # readthedocs.org uses their theme by default, so no need to specify it
     # build both metrics and rest-api, since RTD doesn't run make
+    from os.path import dirname
     from subprocess import check_call as sh
 
+    docs = dirname(dirname(__file__))
     sh(['make', 'metrics', 'scopes'], cwd=docs)
 
 # -- Spell checking -------------------------------------------------------
