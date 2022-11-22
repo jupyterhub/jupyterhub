@@ -14,6 +14,6 @@ pre-commit
 pydata-sphinx-theme
 pytablewriter>=0.56
 ruamel.yaml
-sphinx>=1.7
+sphinx>=4
 sphinx-copybutton
 sphinx-jsonschema
