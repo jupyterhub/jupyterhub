@@ -34,6 +34,7 @@ extensions = [
     "autodoc_traits",
     "sphinx_copybutton",
     "sphinx-jsonschema",
+    "sphinxext.opengraph",
     "myst_parser",
 ]
 root_doc = "index"
@@ -192,3 +193,9 @@ intersphinx_mapping = {
     "python": ("https://docs.python.org/3/", None),
     "tornado": ("https://www.tornadoweb.org/en/stable/", None),
 }
+# -- Options for the opengraph extension -------------------------------------
+# ref: https://github.com/wpilibsuite/sphinxext-opengraph#options
+#
+# ogp_site_url is set automatically by RTD
+ogp_image = "_static/logo.png"
+ogp_use_first_image = True
