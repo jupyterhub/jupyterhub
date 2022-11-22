@@ -141,7 +141,7 @@ setup_args = dict(
             "selenium",
             "virtualenv",
         ],
-    }
+    },
 )
 
 
