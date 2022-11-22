@@ -115,7 +115,7 @@ with changes breaking this formatting will receive a commit from pre-commit.ci
 automatically.
 
 To automatically format code locally, you can install pre-commit and register a
-_git hook_ to automatically check with pre-commit before you make a commit if
+*git hook* to automatically check with pre-commit before you make a commit if
 the formatting is okay.
 
 .. code:: bash
