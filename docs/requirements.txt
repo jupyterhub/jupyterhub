@@ -18,3 +18,4 @@ sphinx>=4
 sphinx-copybutton
 sphinx-jsonschema
 sphinxext-opengraph
+sphinxext-rediraffe

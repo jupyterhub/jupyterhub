@@ -35,6 +35,7 @@ extensions = [
     "sphinx_copybutton",
     "sphinx-jsonschema",
     "sphinxext.opengraph",
+    "sphinxext.rediraffe",
     "myst_parser",
 ]
 root_doc = "index"
@@ -199,3 +200,16 @@ intersphinx_mapping = {
 # ogp_site_url is set automatically by RTD
 ogp_image = "_static/logo.png"
 ogp_use_first_image = True
+
+
+# -- Options for the rediraffe extension -------------------------------------
+# ref: https://github.com/wpilibsuite/sphinxext-rediraffe#readme
+#
+# This extensions help us relocated content without breaking links. If a
+# document is moved internally, a redirect like should be configured below to
+# help us not break links.
+#
+rediraffe_branch = "main"
+rediraffe_redirects = {
+    # "old-file": "new-folder/new-file-name",
+}
