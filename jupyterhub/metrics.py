@@ -50,8 +50,10 @@ RUNNING_SERVERS = Gauge(
 
 TOTAL_USERS = Gauge('jupyterhub_total_users', 'total number of users')
 
-DAILY_ACTIVE_USERS = Gauge(
-    'jupyterhub_daily_active_users', 'number of users who were active in the last 24h'
+ACTIVE_USERS = Gauge(
+    'jupyterhub_active_users',
+    'number of users who were active in the given time period',
+    ['period'],
 )
 
 MONTHLY_ACTIVE_USERS = Gauge(
@@ -193,6 +195,20 @@ for s in ProxyDeleteStatus:
     PROXY_DELETE_DURATION_SECONDS.labels(status=s)
 
 
+class ActiveUserPeriods(Enum):
+    """
+    Possible values for 'period' label of ACTIVE_USERS
+    """
+
+    twenty_four_hours = '24h'
+    seven_days = '7d'
+    thirty_days = '30d'
+
+
+for s in ActiveUserPeriods:
+    ACTIVE_USERS.labels(period=s.value)
+
+
 def prometheus_log_method(handler):
     """
     Tornado log handler for recording RED metrics.
@@ -224,10 +240,10 @@ class PeriodicMetricsCollector(LoggingConfigurable):
     active_users_metrics_enabled = Bool(
         True,
         help="""
-        Enable daily_active_users and monthly_active_users prometheus metric.
+        Enable active_users prometheus metric
 
-        daily_active_users reports number of users who have registered *some* kind of activity
-        in the last 24h. monthly_active_users reports it for the last 30 days.
+        Populates an `active_users` prometheus metric, with a label `period` that counts the time period
+        over which these many users were active. Defaults to 24h (24 hours), 7d (7 days) and 30d (30 days).
         """,
         config=True,
     )
@@ -235,13 +251,10 @@ class PeriodicMetricsCollector(LoggingConfigurable):
     active_users_metrics_update_period = Integer(
         60 * 60,
         help="""
-        Number of seconds between updating daily_active_users and monthly_active_users metric.
+        Number of seconds between updating active_users.
 
         To avoid extra load on the database, this is only calculated periodically rather than
         at per-minute intervals. Defaults to once an hour.
-
-        Both the metrics are updated at the same time so they provide a consistent snapshot of
-        stats at that point in time.
         """,
         config=True,
     )
@@ -252,25 +265,20 @@ class PeriodicMetricsCollector(LoggingConfigurable):
         """
         Update all these metrics!
         """
-        # daily cutoff
-        daily_cutoff = datetime.now() - timedelta(days=1)
-        monthly_cutoff = datetime.now() - timedelta(days=30)
 
-        daily_active_users = (
-            self.db.query(orm.User)
-            .filter(orm.User.last_activity >= daily_cutoff)
-            .count()
-        )
-        monthly_active_users = (
-            self.db.query(orm.User)
-            .filter(orm.User.last_activity >= monthly_cutoff)
-            .count()
-        )
+        now = datetime.utcnow()
+        cutoffs = {
+            ActiveUserPeriods.twenty_four_hours: now - timedelta(hours=24),
+            ActiveUserPeriods.seven_days: now - timedelta(days=7),
+            ActiveUserPeriods.thirty_days: now - timedelta(days=30),
+        }
+        for period, cutoff in cutoffs.items():
+            value = (
+                self.db.query(orm.User).filter(orm.User.last_activity >= cutoff).count()
+            )
 
-        DAILY_ACTIVE_USERS.set(daily_active_users)
-        MONTHLY_ACTIVE_USERS.set(monthly_active_users)
-        self.log.info(f'Found {daily_active_users} active users in the last 24h')
-        self.log.info(f'Found {monthly_active_users} active users in the last 30d')
+            self.log.info(f'Found {value} active users in the last {period}')
+            ACTIVE_USERS.labels(period=period.value).set(value)
 
     def start(self):
         """

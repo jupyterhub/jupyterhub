@@ -70,7 +70,6 @@ from .emptyclass import EmptyClass
 from .handlers.static import CacheControlStaticFilesHandler, LogoHandler
 from .log import CoroutineLogFormatter, log_request
 from .metrics import (
-    DAILY_ACTIVE_USERS,
     HUB_STARTUP_DURATION_SECONDS,
     INIT_SPAWNERS_DURATION_SECONDS,
     MONTHLY_ACTIVE_USERS,
