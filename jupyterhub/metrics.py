@@ -266,6 +266,9 @@ class PeriodicMetricsCollector(LoggingConfigurable):
         Update all these metrics!
         """
 
+        # All the metrics should be based off a cutoff from a *fixed* point, so we calculate
+        # the fixed point here - and then calculate the individual cutoffs in relation to this
+        # fixed point.
         now = datetime.utcnow()
         cutoffs = {
             ActiveUserPeriods.twenty_four_hours: now - timedelta(hours=24),
