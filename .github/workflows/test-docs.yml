@@ -55,7 +55,7 @@ jobs:
 
       - name: Install requirements
         run: |
-          pip install -r docs/requirements.txt pytest -e .
+          pip install -r docs/requirements.txt pytest
 
       - name: pytest docs/
         run: |
