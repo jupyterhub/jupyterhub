@@ -72,7 +72,6 @@ from .log import CoroutineLogFormatter, log_request
 from .metrics import (
     HUB_STARTUP_DURATION_SECONDS,
     INIT_SPAWNERS_DURATION_SECONDS,
-    MONTHLY_ACTIVE_USERS,
     RUNNING_SERVERS,
     TOTAL_USERS,
     PeriodicMetricsCollector,

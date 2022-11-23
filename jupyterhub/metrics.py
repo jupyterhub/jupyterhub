@@ -23,7 +23,7 @@ from datetime import datetime, timedelta
 from enum import Enum
 
 from prometheus_client import Gauge, Histogram
-from tornado.ioloop import IOLoop, PeriodicCallback
+from tornado.ioloop import PeriodicCallback
 from traitlets import Any, Bool, Integer
 from traitlets.config import LoggingConfigurable
 
