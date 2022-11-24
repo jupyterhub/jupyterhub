@@ -28,7 +28,6 @@ var addUserJsx = (spy, spy2, spy3) => (
     <HashRouter>
       <AddUser
         addUsers={spy}
-        failRegexEvent={spy2 || spy}
         updateUsers={spy3 || spy2 || spy}
         history={{ push: () => {} }}
       />
