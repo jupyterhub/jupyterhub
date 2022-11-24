@@ -5,10 +5,9 @@ Upgrading JupyterHub
 JupyterHub offers easy upgrade pathways between minor versions. This
 document describes how to do these upgrades.
 
-If you use :ref:`a JupyterHub distribution <index/distributions>`, you
-should consult the distribution's documentation on how to upgrade. This
-document is applicable if you have set up your own JupyterHub without using a
-distribution.
+If you are using :ref:`a JupyterHub distribution <index/distributions>`, you
+should consult the distribution's documentation on how to upgrade. This documentation is 
+for those who have set up their JupyterHub without using a distribution.
 
 This documentation is lengthy because it is quite detailed. Most likely, upgrading
 JupyterHub is painless, quick and with minimal user interruption.
