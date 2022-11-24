@@ -896,7 +896,6 @@ class Spawner(LoggingConfigurable):
         Override in subclasses to restore any extra state that is needed to track
         the single-user server for that user. Subclasses should call super().
         """
-        pass
 
     def get_state(self):
         """Save state of spawner into database.
@@ -1341,7 +1340,6 @@ class Spawner(LoggingConfigurable):
 
         Stopping a server does *not* call this method.
         """
-        pass
 
     def add_poll_callback(self, callback, *args, **kwargs):
         """Add a callback to fire when the single-user server stops"""

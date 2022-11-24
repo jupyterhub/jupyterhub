@@ -29,6 +29,9 @@ Install nodejs
 If you have not installed NodeJS before, we recommend installing it in the ``miniconda`` environment you set up for Python.
 You can do so with ``conda install nodejs``.
 
+Many in the Jupyter community use [``nvm``](https://github.com/nvm-sh/nvm) to
+managing node dependencies.
+
 Install git
 -----------
 
@@ -77,9 +80,9 @@ When developing JupyterHub, you would need to make changes and be able to instan
 
       npm install -g configurable-http-proxy yarn
 
-   If you get an error that says ``Error: EACCES: permission denied``,
-   you might need to prefix the command with ``sudo``. If you do not
-   have access to sudo, you may instead run the following commands:
+   If you get an error that says ``Error: EACCES: permission denied``, you might need to prefix the command with ``sudo``.
+   ``sudo`` may be required to perform a system-wide install.
+   If you do not have access to sudo, you may instead run the following commands:
 
    .. code:: bash
 
@@ -94,12 +97,13 @@ When developing JupyterHub, you would need to make changes and be able to instan
 
       conda install configurable-http-proxy yarn
 
-4. Install the python packages required for JupyterHub development.
+4. Install an editable version of JupyterHub and its requirements for
+   development and testing. This lets you edit JupyterHub code in a text editor
+   & restart the JupyterHub process to see your code changes immediately.
 
    .. code:: bash
 
-      python3 -m pip install -r dev-requirements.txt
-      python3 -m pip install -r requirements.txt
+      python3 -m pip install --editable ".[test]"
 
 5. Set up a database.
 
@@ -108,21 +112,13 @@ When developing JupyterHub, you would need to make changes and be able to instan
    available via `Python <https://docs.python.org/3.5/library/sqlite3.html>`__.
    See :doc:`/reference/database` for details on other supported databases.
 
-6. Install the development version of JupyterHub. This lets you edit
-   JupyterHub code in a text editor & restart the JupyterHub process to
-   see your code changes immediately.
-
-   .. code:: bash
-
-      python3 -m pip install --editable .
-
-7. You are now ready to start JupyterHub!
+6. You are now ready to start JupyterHub!
 
    .. code:: bash
 
       jupyterhub
 
-8. You can access JupyterHub from your browser at
+7. You can access JupyterHub from your browser at
    ``http://localhost:8000`` now.
 
 Happy developing!

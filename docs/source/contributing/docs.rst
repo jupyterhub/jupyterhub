@@ -5,7 +5,7 @@ Contributing Documentation
 ==========================
 
 Documentation is often more important than code. This page helps
-you get set up on how to contribute documentation to JupyterHub.
+you get set up on how to contribute to JupyterHub's documentation.
 
 Building documentation locally
 ==============================
@@ -18,7 +18,7 @@ stored under the ``docs/source`` directory) and converts it into various
 formats for people to read. To make sure the documentation you write or
 change renders correctly, it is good practice to test it locally.
 
-#. Make sure you have successfuly completed :ref:`contributing/setup`.
+#. Make sure you have successfully completed :ref:`contributing/setup`.
 
 #. Install the packages required to build the docs.
 
@@ -27,7 +27,7 @@ change renders correctly, it is good practice to test it locally.
       python3 -m pip install -r docs/requirements.txt
 
 #. Build the html version of the docs. This is the most commonly used
-   output format, so verifying it renders as you should is usually good
+   output format, so verifying it renders correctly is usually good
    enough.
 
    .. code-block:: bash
@@ -44,9 +44,14 @@ change renders correctly, it is good practice to test it locally.
 
    .. tip::
 
-      On Windows, you can open a file from the terminal with ``start <path-to-file>``.
-      On macOS, you can do the same with ``open <path-to-file>``.
-      On Linux, you can do the same with ``xdg-open <path-to-file>``.
+      **On Windows**, you can open a file from the terminal with ``start <path-to-file>``.
+      
+      **On macOS**, you can do the same with ``open <path-to-file>``.
+      
+      **On Linux**, you can do the same with ``xdg-open <path-to-file>``.
+
+      After opening index.html in your browser you can just refresh the page whenever
+      you rebuild the docs via ``make html``
 
 
 .. _contributing/docs/conventions:

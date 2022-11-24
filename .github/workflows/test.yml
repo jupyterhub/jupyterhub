@@ -83,12 +83,13 @@ jobs:
             db: mysql
           - python: "3.10"
             db: postgres
-          - python: "3.10"
+          - python: "3.11"
             subdomain: subdomain
-          - python: "3.10"
+          - python: "3.11"
             ssl: ssl
-          - python: "3.11.0-rc.1"
-          - python: "3.10"
+          - python: "3.11"
+            selenium: selenium
+          - python: "3.11"
             main_dependencies: main_dependencies
 
     steps:
@@ -139,16 +140,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           pip install --upgrade pip
-
-          if [[ "${{ matrix.python }}" == "3.11"* ]]; then
-            # greenlet is not actually required,
-            # but is an install dependency of sqlalchemy.
-            # It does not yet install on 3.11
-            # see: see https://github.com/gevent/gevent/issues/1867
-            pip install ./ci/mock-greenlet
-          fi
-
-          pip install --upgrade . -r dev-requirements.txt
+          pip install ".[test]"
 
           if [ "${{ matrix.oldest_dependencies }}" != "" ]; then
             # take any dependencies in requirements.txt such as tornado>=5.0
@@ -214,13 +206,25 @@ jobs:
               DB=postgres bash ci/docker-db.sh
               DB=postgres bash ci/init-db.sh
           fi
+      - name: Setup Firefox
+        if: matrix.selenium
+        uses: browser-actions/setup-firefox@latest
+        with:
+          firefox-version: latest
+
+      - name: Setup Geckodriver
+        if: matrix.selenium
+        uses: browser-actions/setup-geckodriver@latest
+
+      - name: Configure selenium tests
+        if: matrix.selenium
+        run: echo "PYTEST_ADDOPTS=$PYTEST_ADDOPTS -m selenium" >> "${GITHUB_ENV}"
 
       - name: Run pytest
         run: |
           pytest --maxfail=2 --cov=jupyterhub jupyterhub/tests
-      - name: Submit codecov report
-        run: |
-          codecov
+
+      - uses: codecov/codecov-action@v3
 
   docker-build:
     runs-on: ubuntu-20.04

@@ -16,7 +16,8 @@ to come to _your server_ and look at the exact same file.
 In most circumstances, this is forbidden by permissions because the person you share with does not have access to your server.
 What actually happens when someone visits this URL will depend on whether your server is running and other factors.
 
-But what is our actual goal?
+**But what is our actual goal?**
+
 A typical situation is that you have some shared or common filesystem,
 such that the same path corresponds to the same document
 (either the exact same document or another copy of it).

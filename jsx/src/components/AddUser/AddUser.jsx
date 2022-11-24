@@ -98,13 +98,13 @@ const AddUser = (props) => {
                               .then((data) => dispatchPageChange(data, 0))
                               .then(() => history.push("/"))
                               .catch(() =>
-                                setErrorAlert(`Failed to update users.`)
+                                setErrorAlert(`Failed to update users.`),
                               )
                           : setErrorAlert(
                               `Failed to create user. ${
                                 data.status == 409 ? "User already exists." : ""
-                              }`
-                            )
+                              }`,
+                            ),
                       )
                       .catch(() => setErrorAlert(`Failed to create user.`));
                   }}

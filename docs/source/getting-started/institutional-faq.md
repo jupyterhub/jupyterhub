@@ -78,7 +78,7 @@ gives administrators more control over their setup and hardware.
 
 Because JupyterHub is an open-source, community-driven tool, it can be extended and
 modified to fit an institution's needs. It plays nicely with the open source data science
-stack, and can serve a variety of computing enviroments, user interfaces, and
+stack, and can serve a variety of computing environments, user interfaces, and
 computational hardware. It can also be deployed anywhere - on enterprise cloud infrastructure, on
 High-Performance-Computing machines, on local hardware, or even on a single laptop, which
 is not possible with most other tools for shared interactive computing.

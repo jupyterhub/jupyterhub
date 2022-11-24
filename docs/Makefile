@@ -63,6 +63,9 @@ scopes: source/rbac/scope-table.md
 source/rbac/scope-table.md: source/rbac/generate-scope-table.py
 	python3 source/rbac/generate-scope-table.py
 
+# If the pre-requisites for the html target is updated, also update the Read The
+# Docs section in docs/source/conf.py.
+#
 html: metrics scopes
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
 	@echo
