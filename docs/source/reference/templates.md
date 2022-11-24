@@ -1,7 +1,7 @@
 # Working with templates and UI
 
 The pages of the JupyterHub application are generated from
-[Jinja](https://jinja.palletsprojects.com/en/3.1.x/) templates. These allow the header, for
+[Jinja](https://jinja.palletsprojects.com) templates. These allow the header, for
 example, to be defined once and incorporated into all pages. By providing
 your own template(s), you can have complete control over JupyterHub's
 appearance.
@@ -20,7 +20,7 @@ or as few templates as you desire.
 
 Jinja provides a mechanism to [extend templates](https://jinja.palletsprojects.com/en/3.0.x/templates/#template-inheritance).
 
-A base template can define `block`(s) within itself that child(ren) templates can fill up or
+A base template can define `block`(s) within itself that child templates can fill up or
 supply content to. The
 [JupyterHub default templates](https://github.com/jupyterhub/jupyterhub/tree/HEAD/share/jupyterhub/templates)
 make extensive use of blocks, thus allowing you to customize parts of the
@@ -41,7 +41,7 @@ file with this block:
 {% extends "templates/page.html" %}
 ```
 
-By defining `block`s with same name as in the base template, child(ren) templates
+By defining `block`s with same name as in the base template, child templates
 can replace those sections with custom content. The content from the base
 template can be included in the child template with the `{{ super() }}` directive.
 
