@@ -233,7 +233,7 @@ jupyterhub-session-id
 This is a random string, meaningless in itself, and the only cookie
 shared by the Hub and single-user servers.
 
-Its sole purpose is to coordinate the logout of multiple OAuth cookies.
+Its sole purpose is to coordinate the logout of the multiple OAuth cookies.
 
 This cookie is set to ``/`` so all endpoints can receive it, or clear it, etc.
 
