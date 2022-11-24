@@ -14,11 +14,11 @@ can find them under the `jupyterhub/tests <https://github.com/jupyterhub/jupyter
 Running the tests
 ==================
 
-#. Make sure you have completed :ref:`contributing/setup`. Once completed, you should be able
-   to run ``jupyterhub`` on your command line and access JupyterHub from your browser at http://localhost:8000. Being able to run and access `jupyterhub` should mean that the dev environment is properly set
-   up for tests to run.
+#. Make sure you have completed :ref:`contributing/setup`.
+   Once you are done, you would be able to run ``jupyterhub`` from the command line and access it from your web browser.
+   This ensures that the dev environment is properly set up for tests to run.
 
-#. You can run all tests in JupyterHub 
+#. You can run all tests in JupyterHub
 
    .. code-block:: bash
 
@@ -26,7 +26,7 @@ Running the tests
 
    This should display progress as it runs all the tests, printing
    information about any test failures as they occur.
-   
+
    If you wish to confirm test coverage the run tests with the `--cov` flag:
 
    .. code-block:: bash
@@ -53,10 +53,10 @@ Running the tests
    you would run:
 
    .. code-block:: bash
-      
+
       pytest -v jupyterhub/tests/test_api.py::test_shutdown
 
-   For more information, refer to the `pytest usage documentation <https://pytest.readthedocs.io/en/latest/usage.html>`_.
+   For more details, refer to the `pytest usage documentation <https://pytest.readthedocs.io/en/latest/usage.html>`_.
 
 Test organisation
 =================
@@ -97,8 +97,7 @@ And fixtures to add functionality or spawning behavior:
 - ``bad_spawn``: enables the BadSpawner (a spawner that fails immediately)
 - ``slow_bad_spawn``: enables the SlowBadSpawner (a spawner that fails after a short delay)
 
-For information on using the existing fixtures and creating new ones, refer to the `pytest fixtures documentation <https://pytest.readthedocs.io/en/latest/fixture.html>`_
-
+Refer to the `pytest fixtures documentation <https://pytest.readthedocs.io/en/latest/fixture.html>`_  to learn how to use fixtures that exists already and to create new ones.
 
 Troubleshooting Test Failures
 =============================
