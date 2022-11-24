@@ -39,8 +39,8 @@ to install the numpy package in the default Python 3 environment on your system
 
 You may also use conda to install packages. If you do, you should make sure
 that the conda environment has appropriate permissions for users to be able to
-run Python code in the env. The env must be *readable and executable* by all
-users. Additionally it must be *writeable* if you want users to install
+run Python code in the env. The env must be _readable and executable_ by all
+users. Additionally it must be _writeable_ if you want users to install
 additional packages.
 
 ## Configuring Jupyter and IPython

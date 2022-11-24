@@ -42,7 +42,7 @@ port.
 ## Set the Proxy's REST API communication URL (optional)
 
 By default, the proxy's REST API listens on port 8081 of `localhost` only.
-The Hub service talks to the proxy via a REST API on a secondary port. 
+The Hub service talks to the proxy via a REST API on a secondary port.
 The REST API URL (hostname and port) can be configured separately and override the default settings.
 
 ### Set api_url

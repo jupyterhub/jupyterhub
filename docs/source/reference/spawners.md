@@ -405,6 +405,6 @@ When `.create_certs` is run, it will create the certificates in a default,
 central location specified by `c.JupyterHub.internal_certs_location`. For
 `Spawners` that need access to these certs elsewhere (i.e. on another host
 altogether), the `.move_certs` method can be overridden to move the certs
-appropriately.  Again, using `DockerSpawner` as an example, this would entail
+appropriately. Again, using `DockerSpawner` as an example, this would entail
 moving certs to a directory that will get mounted into the container this
 spawner starts.

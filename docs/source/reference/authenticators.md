@@ -109,9 +109,9 @@ When using `PAMAuthenticator`, you can set
 normalize usernames using PAM (basically round-tripping them: username
 to uid to username), which is useful in case you use some external
 service that allows multiple usernames mapping to the same user (such
-as ActiveDirectory, yes, this really happens).  When
+as ActiveDirectory, yes, this really happens). When
 `pam_normalize_username` is on, usernames are _not_ normalized to
-lowercase. 
+lowercase.
 
 #### Validate usernames
 

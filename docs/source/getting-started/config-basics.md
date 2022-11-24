@@ -91,10 +91,10 @@ meant as illustrations, are:
 This is _not_ strictly necessary, but useful in many cases. If you
 use a custom proxy (e.g. Traefik), this is also not needed.
 
-Connections to user servers go through the proxy, and *not* the hub
-itself.  If the proxy stays running when the hub restarts (for
+Connections to user servers go through the proxy, and _not_ the hub
+itself. If the proxy stays running when the hub restarts (for
 maintenance, re-configuration, etc.), then user connections are not
-interrupted.  For simplicity, by default the hub starts the proxy
+interrupted. For simplicity, by default the hub starts the proxy
 automatically, so if the hub restarts, the proxy restarts, and user
 connections are interrupted. It is easy to run the proxy separately,
 for information see [the separate proxy page](../reference/separate-proxy).

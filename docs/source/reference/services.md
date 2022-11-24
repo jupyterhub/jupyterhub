@@ -239,11 +239,10 @@ done either programmatically when constructing the class, or via the
 `JUPYTERHUB_API_TOKEN` environment variable. A number of the examples in the
 root of the jupyterhub git repository set the `JUPYTERHUB_API_TOKEN` variable
 so consider having a look at those for futher reading
-([cull-idle](https://github.com/jupyterhub/jupyterhub/tree/master/examples/cull-idle), 
+([cull-idle](https://github.com/jupyterhub/jupyterhub/tree/master/examples/cull-idle),
 [external-oauth](https://github.com/jupyterhub/jupyterhub/tree/master/examples/external-oauth),
 [service-notebook](https://github.com/jupyterhub/jupyterhub/tree/master/examples/service-notebook)
 and [service-whoiami](https://github.com/jupyterhub/jupyterhub/tree/master/examples/service-whoami))
-
 
 (TODO: Where is this API TOKen set?)
 
