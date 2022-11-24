@@ -4,9 +4,11 @@ Dockerfile.alpine contains the base image for jupyterhub. It does not work indep
 
 ## How to use it?
 
+You will need:
+
 1. A running configurable-http-proxy, whose API is accessible.
 2. A jupyterhub_config file.
-3. Authentication and other libraries are required by the specific jupyterhub_config file.
+3. Authentication and other libraries required by the specific jupyterhub_config file.
 
 ## Steps to test it outside a cluster
 
