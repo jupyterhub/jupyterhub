@@ -32,7 +32,7 @@ Here is a quick breakdown of these three tools:
   has several extensions that are tailored for using Jupyter Notebooks, as well as extensions
   for other parts of the data science stack.
 - **JupyterHub** is an application that manages interactive computing sessions for **multiple users**.
-  It also connects them(sessions) with infrastructure those users wish to access. It can provide
+  It also connects users with infrastructure they wish to access. It can provide
   remote access to Jupyter Notebooks and JupyterLab for many people.
 
 ## For management
