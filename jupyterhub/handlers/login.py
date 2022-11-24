@@ -3,6 +3,7 @@
 # Distributed under the terms of the Modified BSD License.
 import asyncio
 
+from jinja2 import Template
 from tornado import web
 from tornado.escape import url_escape
 from tornado.httputil import url_concat
@@ -72,14 +73,14 @@ class LogoutHandler(BaseHandler):
         Override this function to set a custom logout page.
         """
         if self.authenticator.auto_login:
-            html = self.render_template('logout.html')
+            html = await self.render_template('logout.html')
             self.finish(html)
         else:
             self.redirect(self.settings['login_url'], permanent=False)
 
     async def get(self):
         """Log the user out, call the custom action, forward the user
-            to the logout page
+        to the logout page
         """
         await self.default_handle_logout()
         await self.handle_logout()
@@ -90,17 +91,23 @@ class LoginHandler(BaseHandler):
     """Render the login page."""
 
     def _render(self, login_error=None, username=None):
-        return self.render_template(
-            'login.html',
-            next=url_escape(self.get_argument('next', default='')),
-            username=username,
-            login_error=login_error,
-            custom_html=self.authenticator.custom_html,
-            login_url=self.settings['login_url'],
-            authenticator_login_url=url_concat(
+        context = {
+            "next": url_escape(self.get_argument('next', default='')),
+            "username": username,
+            "login_error": login_error,
+            "login_url": self.settings['login_url'],
+            "authenticator_login_url": url_concat(
                 self.authenticator.login_url(self.hub.base_url),
                 {'next': self.get_argument('next', '')},
             ),
+        }
+        custom_html = Template(
+            self.authenticator.get_custom_html(self.hub.base_url)
+        ).render(**context)
+        return self.render_template(
+            'login.html',
+            **context,
+            custom_html=custom_html,
         )
 
     async def get(self):
@@ -132,13 +139,15 @@ class LoginHandler(BaseHandler):
                     self.redirect(auto_login_url)
                 return
             username = self.get_argument('username', default='')
-            self.finish(self._render(username=username))
+            self.finish(await self._render(username=username))
 
     async def post(self):
         # parse the arguments dict
         data = {}
         for arg in self.request.arguments:
-            data[arg] = self.get_argument(arg, strip=False)
+            # strip username, but not other fields like passwords,
+            # which should be allowed to start or end with space
+            data[arg] = self.get_argument(arg, strip=arg == "username")
 
         auth_timer = self.statsd.timer('login.authenticate').start()
         user = await self.login_user(data)
@@ -149,7 +158,7 @@ class LoginHandler(BaseHandler):
             self._jupyterhub_user = user
             self.redirect(self.get_next_url(user))
         else:
-            html = self._render(
+            html = await self._render(
                 login_error='Invalid username or password', username=data['username']
             )
             self.finish(html)

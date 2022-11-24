@@ -3,25 +3,20 @@
 # Distributed under the terms of the Modified BSD License.
 import socket
 import warnings
-from urllib.parse import urlparse
-from urllib.parse import urlunparse
+from urllib.parse import urlparse, urlunparse
 
-from traitlets import default
-from traitlets import HasTraits
-from traitlets import Instance
-from traitlets import Integer
-from traitlets import observe
-from traitlets import Unicode
-from traitlets import validate
+from traitlets import HasTraits, Instance, Integer, Unicode, default, observe, validate
 
 from . import orm
 from .traitlets import URLPrefix
-from .utils import can_connect
-from .utils import make_ssl_context
-from .utils import random_port
-from .utils import url_path_join
-from .utils import wait_for_http_server
-from .utils import wait_for_server
+from .utils import (
+    can_connect,
+    make_ssl_context,
+    random_port,
+    url_path_join,
+    wait_for_http_server,
+    wait_for_server,
+)
 
 
 class Server(HasTraits):
@@ -53,7 +48,7 @@ class Server(HasTraits):
         Never used in APIs, only logging,
         since it can be non-connectable value, such as '', meaning all interfaces.
         """
-        if self.ip in {'', '0.0.0.0'}:
+        if self.ip in {'', '0.0.0.0', '::'}:
             return self.url.replace(self._connect_ip, self.ip or '*', 1)
         return self.url
 
@@ -87,13 +82,13 @@ class Server(HasTraits):
         """The address to use when connecting to this server
 
         When `ip` is set to a real ip address, the same value is used.
-        When `ip` refers to 'all interfaces' (e.g. '0.0.0.0'),
+        When `ip` refers to 'all interfaces' (e.g. '0.0.0.0' or '::'),
         clients connect via hostname by default.
         Setting `connect_ip` explicitly overrides any default behavior.
         """
         if self.connect_ip:
             return self.connect_ip
-        elif self.ip in {'', '0.0.0.0'}:
+        elif self.ip in {'', '0.0.0.0', '::'}:
             # if listening on all interfaces, default to hostname for connect
             return socket.gethostname()
         else:
@@ -148,8 +143,15 @@ class Server(HasTraits):
     def host(self):
         if self.connect_url:
             parsed = urlparse(self.connect_url)
-            return "{proto}://{host}".format(proto=parsed.scheme, host=parsed.netloc)
-        return "{proto}://{ip}:{port}".format(
+            proto = parsed.scheme
+            host = parsed.netloc
+            return f"{proto}://{host}"
+
+        if ':' in self._connect_ip:
+            fmt = "{proto}://[{ip}]:{port}"
+        else:
+            fmt = "{proto}://{ip}:{port}"
+        return fmt.format(
             proto=self.proto, ip=self._connect_ip, port=self._connect_port
         )
 
@@ -157,7 +159,7 @@ class Server(HasTraits):
     def url(self):
         if self.connect_url:
             return self.connect_url
-        return "{host}{uri}".format(host=self.host, uri=self.base_url)
+        return f"{self.host}{self.base_url}"
 
     def __repr__(self):
         return "{name}(url={url}, bind_url={bind})".format(
@@ -213,8 +215,4 @@ class Hub(Server):
         return url_path_join(self.url, 'api')
 
     def __repr__(self):
-        return "<%s %s:%s>" % (
-            self.__class__.__name__,
-            self.server.ip,
-            self.server.port,
-        )
+        return f"<{self.__class__.__name__} {self.ip}:{self.port}>"

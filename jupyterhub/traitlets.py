@@ -3,13 +3,15 @@ Traitlets that are used in JupyterHub
 """
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
-import entrypoints
-from traitlets import Integer
-from traitlets import List
-from traitlets import TraitError
-from traitlets import TraitType
-from traitlets import Type
-from traitlets import Unicode
+import sys
+
+# See compatibility note on `group` keyword in https://docs.python.org/3/library/importlib.metadata.html#entry-points
+if sys.version_info < (3, 10):
+    from importlib_metadata import entry_points
+else:
+    from importlib.metadata import entry_points
+
+from traitlets import Integer, List, TraitError, TraitType, Type, Undefined, Unicode
 
 
 class URLPrefix(Unicode):
@@ -27,11 +29,15 @@ class Command(List):
     but allows it to be specified as a single string.
     """
 
-    def __init__(self, default_value=None, **kwargs):
+    def __init__(self, default_value=Undefined, **kwargs):
         kwargs.setdefault('minlen', 1)
         if isinstance(default_value, str):
             default_value = [default_value]
-        super().__init__(Unicode(), default_value, **kwargs)
+        if default_value is not Undefined and (
+            not (default_value is None and not kwargs.get("allow_none", False))
+        ):
+            kwargs["default_value"] = default_value
+        super().__init__(Unicode(), **kwargs)
 
     def validate(self, obj, value):
         if isinstance(value, str):
@@ -126,11 +132,7 @@ class EntryPointType(Type):
         chunks = [self._original_help]
         chunks.append("Currently installed: ")
         for key, entry_point in self.load_entry_points().items():
-            chunks.append(
-                "  - {}: {}.{}".format(
-                    key, entry_point.module_name, entry_point.object_name
-                )
-            )
+            chunks.append(f"  - {key}: {entry_point.module}.{entry_point.attr}")
         return '\n'.join(chunks)
 
     @help.setter
@@ -138,11 +140,14 @@ class EntryPointType(Type):
         self._original_help = value
 
     def load_entry_points(self):
-        """Load my entry point group"""
-        # load the group
-        group = entrypoints.get_group_named(self.entry_point_group)
-        # make it case-insensitive
-        return {key.lower(): value for key, value in group.items()}
+        """Load my entry point group
+
+        Returns a dict whose keys are lowercase entrypoint names
+        """
+        return {
+            entry_point.name.lower(): entry_point
+            for entry_point in entry_points(group=self.entry_point_group)
+        }
 
     def validate(self, obj, value):
         if isinstance(value, str):

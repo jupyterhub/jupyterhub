@@ -1,17 +1,5 @@
 # Services
 
-With version 0.7, JupyterHub adds support for **Services**.
-
-This section provides the following information about Services:
-
-- [Definition of a Service](#definition-of-a-service)
-- [Properties of a Service](#properties-of-a-service)
-- [Hub-Managed Services](#hub-managed-services)
-- [Launching a Hub-Managed Service](#launching-a-hub-managed-service)
-- [Externally-Managed Services](#externally-managed-services)
-- [Writing your own Services](#writing-your-own-services)
-- [Hub Authentication and Services](#hub-authentication-and-services)
-
 ## Definition of a Service
 
 When working with JupyterHub, a **Service** is defined as a process that interacts
@@ -45,17 +33,25 @@ A Service may have the following properties:
 - `url: str (default - None)` - The URL where the service is/should be. If a
   url is specified for where the Service runs its own web server,
   the service will be added to the proxy at `/services/:name`
-- `api_token: str (default - None)` - For Externally-Managed Services you need to specify 
+- `api_token: str (default - None)` - For Externally-Managed Services you need to specify
   an API token to perform API requests to the Hub
+- `display: bool (default - True)` - When set to true, display a link to the
+  service's URL under the 'Services' dropdown in user's hub home page.
+
+- `oauth_no_confirm: bool (default - False)` - When set to true,
+  skip the OAuth confirmation page when users access this service.
+
+  By default, when users authenticate with a service using JupyterHub,
+  they are prompted to confirm that they want to grant that service
+  access to their credentials.
+  Skipping the confirmation page is useful for admin-managed services that are considered part of the Hub
+  and shouldn't need extra prompts for login.
 
 If a service is also to be managed by the Hub, it has a few extra options:
 
-- `command: (str/Popen list`) - Command for JupyterHub to spawn the service.
-      - Only use this if the service should be a subprocess.
-      - If command is not specified, the Service is assumed to be managed
-        externally.
-      - If a command is specified for launching the Service, the Service will
-        be started and managed by the Hub.
+- `command: (str/Popen list)` - Command for JupyterHub to spawn the service. - Only use this if the service should be a subprocess. - If command is not specified, the Service is assumed to be managed
+  externally. - If a command is specified for launching the Service, the Service will
+  be started and managed by the Hub.
 - `environment: dict` - additional environment variables for the Service.
 - `user: str` - the name of a system user to manage the Service. If
   unspecified, run as the same user as the Hub.
@@ -89,11 +85,21 @@ Hub-Managed Service would include:
 This example would be configured as follows in `jupyterhub_config.py`:
 
 ```python
+c.JupyterHub.load_roles = [
+    {
+        "name": "idle-culler",
+        "scopes": [
+            "read:users:activity", # read user last_activity
+            "servers", # start and stop servers
+            # 'admin:users' # needed if culling idle users as well
+        ]
+    }
+]
+
 c.JupyterHub.services = [
     {
-        'name': 'cull-idle',
-        'admin': True,
-        'command': [sys.executable, '/path/to/cull-idle.py', '--timeout']
+        'name': 'idle-culler',
+        'command': [sys.executable, '-m', 'jupyterhub_idle_culler', '--timeout=3600']
     }
 ]
 ```
@@ -103,11 +109,13 @@ parameters, which describe the environment needed to start the Service process:
 
 - `environment: dict` - additional environment variables for the Service.
 - `user: str` - name of the user to run the server if different from the Hub.
-   Requires Hub to be root.
+  Requires Hub to be root.
 - `cwd: path` directory in which to run the Service, if different from the
-   Hub directory.
+  Hub directory.
 
 The Hub will pass the following environment variables to launch the Service:
+
+(service-env)=
 
 ```bash
 JUPYTERHUB_SERVICE_NAME:   The name of the service
@@ -117,21 +125,24 @@ JUPYTERHUB_BASE_URL:       Base URL of the Hub (https://mydomain[:port]/)
 JUPYTERHUB_SERVICE_PREFIX: URL path prefix of this service (/services/:service-name/)
 JUPYTERHUB_SERVICE_URL:    Local URL where the service is expected to be listening.
                            Only for proxied web services.
+JUPYTERHUB_OAUTH_SCOPES:   JSON-serialized list of scopes to use for allowing access to the service
+                           (deprecated in 3.0, use JUPYTERHUB_OAUTH_ACCESS_SCOPES).
+JUPYTERHUB_OAUTH_ACCESS_SCOPES: JSON-serialized list of scopes to use for allowing access to the service (new in 3.0).
+JUPYTERHUB_OAUTH_CLIENT_ALLOWED_SCOPES: JSON-serialized list of scopes that can be requested by the oauth client on behalf of users (new in 3.0).
 ```
 
 For the previous 'cull idle' Service example, these environment variables
 would be passed to the Service when the Hub starts the 'cull idle' Service:
 
 ```bash
-JUPYTERHUB_SERVICE_NAME: 'cull-idle'
+JUPYTERHUB_SERVICE_NAME: 'idle-culler'
 JUPYTERHUB_API_TOKEN: API token assigned to the service
 JUPYTERHUB_API_URL: http://127.0.0.1:8080/hub/api
 JUPYTERHUB_BASE_URL: https://mydomain[:port]
-JUPYTERHUB_SERVICE_PREFIX: /services/cull-idle/
+JUPYTERHUB_SERVICE_PREFIX: /services/idle-culler/
 ```
 
-See the JupyterHub GitHub repo for additional information about the
-[`cull-idle` example](https://github.com/jupyterhub/jupyterhub/tree/master/examples/cull-idle).
+See the GitHub repo for additional information about the [jupyterhub_idle_culler][].
 
 ## Externally-Managed Services
 
@@ -151,6 +162,8 @@ c.JupyterHub.services = [
     {
         'name': 'my-web-service',
         'url': 'https://10.0.1.1:1984',
+        # any secret >8 characters, you'll use api_token to
+        # authenticate api requests to the hub from your service
         'api_token': 'super-secret',
     }
 ]
@@ -173,7 +186,7 @@ information to the Service via the environment variables described above. A
 flexible Service, whether managed by the Hub or not, can make use of these
 same environment variables.
 
-When you run a service that has a url, it will be accessible under a
+When you run a service that has a URL, it will be accessible under a
 `/services/` prefix, such as `https://myhub.horse/services/my-service/`. For
 your service to route proxied requests properly, it must take
 `JUPYTERHUB_SERVICE_PREFIX` into account when routing requests. For example, a
@@ -188,18 +201,38 @@ extra slash you might get unexpected behavior. For example if your service has a
 
 ## Hub Authentication and Services
 
-JupyterHub 0.7 introduces some utilities for using the Hub's authentication
-mechanism to govern access to your service. When a user logs into JupyterHub,
-the Hub sets a **cookie (`jupyterhub-services`)**. The service can use this
-cookie to authenticate requests.
+JupyterHub provides some utilities for using the Hub's authentication
+mechanism to govern access to your service.
 
-JupyterHub ships with a reference implementation of Hub authentication that
+Requests to all JupyterHub services are made with OAuth tokens.
+These can either be requests with a token in the `Authorization` header,
+or url parameter `?token=...`,
+or browser requests which must complete the OAuth authorization code flow,
+which results in a token that should be persisted for future requests
+(persistence is up to the service,
+but an encrypted cookie confined to the service path is appropriate,
+and provided by default).
+
+:::{versionchanged} 2.0
+The shared `jupyterhub-services` cookie is removed.
+OAuth must be used to authenticate browser requests with services.
+:::
+
+JupyterHub includes a reference implementation of Hub authentication that
 can be used by services. You may go beyond this reference implementation and
 create custom hub-authenticating clients and services. We describe the process
 below.
 
-The reference, or base, implementation is the [`HubAuth`][HubAuth] class,
-which implements the requests to the Hub.
+The reference, or base, implementation is the {class}`.HubAuth` class,
+which implements the API requests to the Hub that resolve a token to a User model.
+
+There are two levels of authentication with the Hub:
+
+- {class}`.HubAuth` - the most basic authentication,
+  for services that should only accept API requests authorized with a token.
+
+- {class}`.HubOAuth` - For services that should use oauth to authenticate with the Hub.
+  This should be used for any service that serves pages that should be visited with a browser.
 
 To use HubAuth, you must set the `.api_token` instance variable. This can be
 done either programmatically when constructing the class, or via the
@@ -214,11 +247,9 @@ and [service-whoiami](https://github.com/jupyterhub/jupyterhub/tree/master/examp
 
 (TODO: Where is this API TOKen set?)
 
-Most of the logic for authentication implementation is found in the 
-[`HubAuth.user_for_cookie`][HubAuth.user_for_cookie] 
-and in the 
-[`HubAuth.user_for_token`][HubAuth.user_for_token]
-methods, which makes a request of the Hub, and returns:
+Most of the logic for authentication implementation is found in the
+{meth}`.HubAuth.user_for_token` methods,
+which makes a request of the Hub, and returns:
 
 - None, if no user could be identified, or
 - a dict of the following form:
@@ -227,7 +258,9 @@ methods, which makes a request of the Hub, and returns:
   {
     "name": "username",
     "groups": ["list", "of", "groups"],
-    "admin": False, # or True
+    "scopes": [
+        "access:servers!server=username/",
+    ],
   }
   ```
 
@@ -237,79 +270,45 @@ action.
 HubAuth also caches the Hub's response for a number of seconds,
 configurable by the `cookie_cache_max_age` setting (default: five minutes).
 
+If your service would like to make further requests _on behalf of users_,
+it should use the token issued by this OAuth process.
+If you are using tornado,
+you can access the token authenticating the current request with {meth}`.HubAuth.get_token`.
+
+:::{versionchanged} 2.2
+
+{meth}`.HubAuth.get_token` adds support for retrieving
+tokens stored in tornado cookies after the completion of OAuth.
+Previously, it only retrieved tokens from URL parameters or the Authorization header.
+Passing `get_token(handler, in_cookie=False)` preserves this behavior.
+:::
+
 ### Flask Example
 
 For example, you have a Flask service that returns information about a user.
 JupyterHub's HubAuth class can be used to authenticate requests to the Flask
 service. See the `service-whoami-flask` example in the
-[JupyterHub GitHub repo](https://github.com/jupyterhub/jupyterhub/tree/master/examples/service-whoami-flask)
+[JupyterHub GitHub repo](https://github.com/jupyterhub/jupyterhub/tree/HEAD/examples/service-whoami-flask)
 for more details.
 
-```python
-from functools import wraps
-import json
-import os
-from urllib.parse import quote
-
-from flask import Flask, redirect, request, Response
-
-from jupyterhub.services.auth import HubAuth
-
-prefix = os.environ.get('JUPYTERHUB_SERVICE_PREFIX', '/')
-
-auth = HubAuth(
-    api_token=os.environ['JUPYTERHUB_API_TOKEN'],
-    cookie_cache_max_age=60,
-)
-
-app = Flask(__name__)
-
-
-def authenticated(f):
-    """Decorator for authenticating with the Hub"""
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        cookie = request.cookies.get(auth.cookie_name)
-        token = request.headers.get(auth.auth_header_name)
-        if cookie:
-            user = auth.user_for_cookie(cookie)
-        elif token:
-            user = auth.user_for_token(token)
-        else:
-            user = None
-        if user:
-            return f(user, *args, **kwargs)
-        else:
-            # redirect to login url on failed auth
-            return redirect(auth.login_url + '?next=%s' % quote(request.path))
-    return decorated
-
-
-@app.route(prefix)
-@authenticated
-def whoami(user):
-    return Response(
-        json.dumps(user, indent=1, sort_keys=True),
-        mimetype='application/json',
-        )
+```{literalinclude} ../../../examples/service-whoami-flask/whoami-flask.py
+:language: python
 ```
-
 
 ### Authenticating tornado services with JupyterHub
 
 Since most Jupyter services are written with tornado,
-we include a mixin class, [`HubAuthenticated`][HubAuthenticated],
+we include a mixin class, [`HubOAuthenticated`][huboauthenticated],
 for quickly authenticating your own tornado services with JupyterHub.
 
-Tornado's `@web.authenticated` method calls a Handler's `.get_current_user`
-method to identify the user. Mixing in `HubAuthenticated` defines
-`get_current_user` to use HubAuth. If you want to configure the HubAuth
-instance beyond the default, you'll want to define an `initialize` method,
+Tornado's {py:func}`~.tornado.web.authenticated` decorator calls a Handler's {py:meth}`~.tornado.web.RequestHandler.get_current_user`
+method to identify the user. Mixing in {class}`.HubAuthenticated` defines
+{meth}`~.HubAuthenticated.get_current_user` to use HubAuth. If you want to configure the HubAuth
+instance beyond the default, you'll want to define an {py:meth}`~.tornado.web.RequestHandler.initialize` method,
 such as:
 
 ```python
-class MyHandler(HubAuthenticated, web.RequestHandler):
-    hub_users = {'inara', 'mal'}
+class MyHandler(HubOAuthenticated, web.RequestHandler):
 
     def initialize(self, hub_auth):
         self.hub_auth = hub_auth
@@ -319,66 +318,97 @@ class MyHandler(HubAuthenticated, web.RequestHandler):
         ...
 ```
 
+The HubAuth class will automatically load the desired configuration from the Service
+[environment variables](service-env).
 
-The HubAuth will automatically load the desired configuration from the Service
-environment variables.
+:::{versionchanged} 2.0
 
-If you want to limit user access, you can whitelist users through either the
-`.hub_users` attribute or `.hub_groups`. These are sets that check against the
-username and user group list, respectively. If a user matches neither the user
-list nor the group list, they will not be allowed access. If both are left
-undefined, then any user will be allowed.
+Access scopes are used to govern access to services.
+Prior to 2.0,
+sets of users and groups could be used to grant access
+by defining `.hub_groups` or `.hub_users` on the authenticated handler.
+These are ignored if the 2.0 `.hub_scopes` is defined.
+:::
 
+:::{seealso}
+{meth}`.HubAuth.check_scopes`
+:::
 
 ### Implementing your own Authentication with JupyterHub
 
 If you don't want to use the reference implementation
 (e.g. you find the implementation a poor fit for your Flask app),
 you can implement authentication via the Hub yourself.
-We recommend looking at the [`HubAuth`][HubAuth] class implementation for reference,
+JupyterHub is a standard OAuth2 provider,
+so you can use any OAuth 2 client implementation appropriate for your toolkit.
+See the [FastAPI example][] for an example of using JupyterHub as an OAuth provider with [FastAPI][],
+without using any code imported from JupyterHub.
+
+On completion of OAuth, you will have an access token for JupyterHub,
+which can be used to identify the user and the permissions (scopes)
+the user has authorized for your service.
+
+You will only get to this stage if the user has the required `access:services!service=$service-name` scope.
+
+To retrieve the user model for the token, make a request to `GET /hub/api/user` with the token in the Authorization header.
+For example, using flask:
+
+```{literalinclude} ../../../examples/service-whoami-flask/whoami-flask.py
+:language: python
+```
+
+We recommend looking at the [`HubOAuth`][huboauth] class implementation for reference,
 and taking note of the following process:
 
-1. retrieve the cookie `jupyterhub-services` from the request.
-2. Make an API request `GET /hub/api/authorizations/cookie/jupyterhub-services/cookie-value`,
-    where cookie-value is the url-encoded value of the `jupyterhub-services` cookie.
-    This request must be authenticated with a Hub API token in the `Authorization` header.
-    For example, with [requests][]:
+1. retrieve the token from the request.
+2. Make an API request `GET /hub/api/user`,
+   with the token in the `Authorization` header.
 
-    ```python
-    r = requests.get(
-        '/'.join((["http://127.0.0.1:8081/hub/api",
-                   "authorizations/cookie/jupyterhub-services",
-                   quote(encrypted_cookie, safe=''),
-        ]),
-        headers = {
-            'Authorization' : 'token %s' % api_token,
-        },
-    )
-    r.raise_for_status()
-    user = r.json()
-    ```
+   For example, with [requests][]:
+
+   ```python
+   r = requests.get(
+       "http://127.0.0.1:8081/hub/api/user",
+       headers = {
+           'Authorization' : f'token {api_token}',
+       },
+   )
+   r.raise_for_status()
+   user = r.json()
+   ```
 
 3. On success, the reply will be a JSON model describing the user:
 
-   ```json
+   ```python
    {
      "name": "inara",
-     "groups": ["serenity", "guild"]
-
+     # groups may be omitted, depending on permissions
+     "groups": ["serenity", "guild"],
+     # scopes is new in JupyterHub 2.0
+     "scopes": [
+       "access:services",
+       "read:users:name",
+       "read:users!user=inara",
+       "..."
+     ]
    }
    ```
 
+The `scopes` field can be used to manage access.
+Note: a user will have access to a service to complete oauth access to the service for the first time.
+Individual permissions may be revoked at any later point without revoking the token,
+in which case the `scopes` field in this model should be checked on each access.
+The default required scopes for access are available from `hub_auth.oauth_scopes` or `$JUPYTERHUB_OAUTH_ACCESS_SCOPES`.
+
 An example of using an Externally-Managed Service and authentication is
 in the [nbviewer README][nbviewer example] section on securing the notebook viewer,
-and an example of its configuration is found [here](https://github.com/jupyter/nbviewer/blob/master/nbviewer/providers/base.py#L94).
+and an example of its configuration is found [here](https://github.com/jupyter/nbviewer/blob/ed942b10a52b6259099e2dd687930871dc8aac22/nbviewer/providers/base.py#L95).
 nbviewer can also be run as a Hub-Managed Service as described [nbviewer README][nbviewer example]
 section on securing the notebook viewer.
 
-
 [requests]: http://docs.python-requests.org/en/master/
 [services_auth]: ../api/services.auth.html
-[HubAuth]: ../api/services.auth.html#jupyterhub.services.auth.HubAuth
-[HubAuth.user_for_cookie]: ../api/services.auth.html#jupyterhub.services.auth.HubAuth.user_for_cookie
-[HubAuth.user_for_token]: ../api/services.auth.html#jupyterhub.services.auth.HubAuth.user_for_token
-[HubAuthenticated]: ../api/services.auth.html#jupyterhub.services.auth.HubAuthenticated
 [nbviewer example]: https://github.com/jupyter/nbviewer#securing-the-notebook-viewer
+[fastapi example]: https://github.com/jupyterhub/jupyterhub/tree/HEAD/examples/service-fastapi
+[fastapi]: https://fastapi.tiangolo.com
+[jupyterhub_idle_culler]: https://github.com/jupyterhub/jupyterhub-idle-culler

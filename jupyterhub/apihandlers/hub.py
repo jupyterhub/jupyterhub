@@ -5,20 +5,19 @@ import json
 import sys
 
 from tornado import web
-from tornado.ioloop import IOLoop
 
 from .._version import __version__
-from ..utils import admin_only
+from ..scopes import needs_scope
 from .base import APIHandler
 
 
 class ShutdownAPIHandler(APIHandler):
-    @admin_only
+    @needs_scope('shutdown')
     def post(self):
         """POST /api/shutdown triggers a clean shutdown
-        
+
         POST (JSON) parameters:
-        
+
         - servers: specify whether single-user servers should be terminated
         - proxy: specify whether the proxy should be terminated
         """
@@ -47,17 +46,15 @@ class ShutdownAPIHandler(APIHandler):
         self.set_status(202)
         self.finish(json.dumps({"message": "Shutting down Hub"}))
 
-        # stop the eventloop, which will trigger cleanup
-        loop = IOLoop.current()
-        loop.add_callback(loop.stop)
+        # instruct the app to stop, which will trigger cleanup
+        app.stop()
 
 
 class RootAPIHandler(APIHandler):
     def get(self):
         """GET /api/ returns info about the Hub and its API.
 
-        It is not an authenticated endpoint.
-        
+        It is not an authenticated endpoint
         For now, it just returns the version of JupyterHub itself.
         """
         data = {'version': __version__}
@@ -65,20 +62,17 @@ class RootAPIHandler(APIHandler):
 
 
 class InfoAPIHandler(APIHandler):
-    @admin_only
+    @needs_scope('read:hub')
     def get(self):
         """GET /api/info returns detailed info about the Hub and its API.
 
-        It is not an authenticated endpoint.
-        
-        For now, it just returns the version of JupyterHub itself.
+        Currently, it returns information on the python version, spawner and authenticator.
+        Since this information might be sensitive, it is an authenticated endpoint
         """
 
         def _class_info(typ):
             """info about a class (Spawner or Authenticator)"""
-            info = {
-                'class': '{mod}.{name}'.format(mod=typ.__module__, name=typ.__name__)
-            }
+            info = {'class': f'{typ.__module__}.{typ.__name__}'}
             pkg = typ.__module__.split('.')[0]
             try:
                 version = sys.modules[pkg].__version__

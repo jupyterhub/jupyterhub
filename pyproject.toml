@@ -1,2 +1,77 @@
+# autoflake is used for autoformatting Python code
+#
+# ref: https://github.com/PyCQA/autoflake#readme
+#
+[tool.autoflake]
+ignore-init-module-imports = true
+remove-all-unused-imports = true
+remove-duplicate-keys = true
+#remove-unused-variables = true
+
+
+# isort is used for autoformatting Python code
+#
+# ref: https://pycqa.github.io/isort/
+#
+[tool.isort]
+profile = "black"
+
+
+# black is used for autoformatting Python code
+#
+# ref: https://black.readthedocs.io/en/stable/
+#
 [tool.black]
 skip-string-normalization = true
+# target-version should be all supported versions, see
+# https://github.com/psf/black/issues/751#issuecomment-473066811
+target_version = [
+    "py37",
+    "py38",
+    "py39",
+    "py310",
+]
+
+
+# tbump is used to simplify and standardize the release process when updating
+# the version, making a git commit and tag, and pushing changes.
+#
+# ref: https://github.com/your-tools/tbump#readme
+#
+[tool.tbump]
+# Uncomment this if your project is hosted on GitHub:
+github_url = "https://github.com/jupyterhub/jupyterhub"
+
+[tool.tbump.version]
+current = "3.1.0.dev"
+
+# Example of a semver regexp.
+# Make sure this matches current_version before
+# using tbump
+regex = '''
+  (?P<major>\d+)
+  \.
+  (?P<minor>\d+)
+  \.
+  (?P<patch>\d+)
+  (?P<pre>((a|b|rc)\d+)|)
+  \.?
+  (?P<dev>(?<=\.)dev\d*|)
+  '''
+
+[tool.tbump.git]
+message_template = "Bump to {new_version}"
+tag_template = "{new_version}"
+
+# For each file to patch, add a [[tool.tbump.file]] config
+# section containing the path of the file, relative to the
+# pyproject.toml location.
+
+[[tool.tbump.file]]
+src = "jupyterhub/_version.py"
+version_template = '({major}, {minor}, {patch}, "{pre}", "{dev}")'
+search = "version_info = {current_version}"
+
+[[tool.tbump.file]]
+src = "docs/source/_static/rest-api.yml"
+search = "version: {current_version}"

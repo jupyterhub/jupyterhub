@@ -7,16 +7,12 @@ authentication can expire in a number of ways:
 - doesn't need refresh
 - needs refresh and cannot be refreshed without new login
 """
-import asyncio
-from contextlib import contextmanager
 from unittest import mock
-from urllib.parse import parse_qs
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 import pytest
 
-from .utils import api_request
-from .utils import get_page
+from .utils import api_request, get_page
 
 
 async def refresh_expired(authenticator, user):
@@ -128,7 +124,7 @@ async def test_refresh_pre_spawn(app, user, refresh_pre_spawn):
 
     # auth is fresh, but should be forced to refresh by spawn
     r = await api_request(
-        app, 'users/{}/server'.format(user.name), method='post', name=user.name
+        app, f'users/{user.name}/server', method='post', name=user.name
     )
     assert 200 <= r.status_code < 300
     assert user._auth_refreshed > before
@@ -142,7 +138,7 @@ async def test_refresh_pre_spawn_expired(app, user, refresh_pre_spawn, disable_r
 
     # auth is fresh, doesn't trigger expiry
     r = await api_request(
-        app, 'users/{}/server'.format(user.name), method='post', name=user.name
+        app, f'users/{user.name}/server', method='post', name=user.name
     )
     assert r.status_code == 403
     assert user._auth_refreshed == before

@@ -3,16 +3,12 @@
 # Distributed under the terms of the Modified BSD License.
 import os
 import socket
-from datetime import datetime
-from datetime import timedelta
+from datetime import datetime, timedelta
 from unittest import mock
 
 import pytest
-from tornado import gen
 
-from .. import crypto
-from .. import objects
-from .. import orm
+from .. import crypto, objects, orm, roles
 from ..emptyclass import EmptyClass
 from ..user import User
 from .mocking import MockSpawner
@@ -74,6 +70,16 @@ def test_user(db):
     assert found is None
 
 
+def test_user_escaping(db):
+    orm_user = orm.User(name='company\\user@company.com,\"quoted\"')
+    db.add(orm_user)
+    db.commit()
+    user = User(orm_user)
+    assert user.name == 'company\\user@company.com,\"quoted\"'
+    assert user.escaped_name == 'company%5Cuser@company.com%2C%22quoted%22'
+    assert user.json_escaped_name == 'company\\\\user@company.com,\\\"quoted\\\"'
+
+
 def test_tokens(db):
     user = orm.User(name='inara')
     db.add(user)
@@ -124,7 +130,7 @@ def test_token_expiry(db):
     assert orm_token.expires_at > now + timedelta(seconds=50)
     assert orm_token.expires_at < now + timedelta(seconds=70)
     the_future = mock.patch(
-        'jupyterhub.orm.utcnow', lambda: now + timedelta(seconds=70)
+        'jupyterhub.orm.APIToken.now', lambda: now + timedelta(seconds=70)
     )
     with the_future:
         found = orm.APIToken.find(db, token=token)
@@ -210,10 +216,13 @@ async def test_spawn_fails(db):
     orm_user = orm.User(name='aeofel')
     db.add(orm_user)
     db.commit()
+    def_roles = roles.get_default_roles()
+    for role in def_roles:
+        roles.create_role(db, role)
+    roles.assign_default_roles(db, orm_user)
 
     class BadSpawner(MockSpawner):
-        @gen.coroutine
-        def start(self):
+        async def start(self):
             raise RuntimeError("Split the party")
 
     user = User(
@@ -235,10 +244,12 @@ def test_groups(db):
     db.commit()
     assert group.users == []
     assert user.groups == []
+
     group.users.append(user)
     db.commit()
     assert group.users == [user]
     assert user.groups == [group]
+
     db.delete(user)
     db.commit()
     assert group.users == []
@@ -344,8 +355,9 @@ def test_user_delete_cascade(db):
     spawner.server = server = orm.Server()
     oauth_code = orm.OAuthCode(client=oauth_client, user=user)
     db.add(oauth_code)
-    oauth_token = orm.OAuthAccessToken(
-        client=oauth_client, user=user, grant_type=orm.GrantType.authorization_code
+    oauth_token = orm.APIToken(
+        oauth_client=oauth_client,
+        user=user,
     )
     db.add(oauth_token)
     db.commit()
@@ -366,7 +378,7 @@ def test_user_delete_cascade(db):
     assert_not_found(db, orm.Spawner, spawner_id)
     assert_not_found(db, orm.Server, server_id)
     assert_not_found(db, orm.OAuthCode, oauth_code_id)
-    assert_not_found(db, orm.OAuthAccessToken, oauth_token_id)
+    assert_not_found(db, orm.APIToken, oauth_token_id)
 
 
 def test_oauth_client_delete_cascade(db):
@@ -380,12 +392,13 @@ def test_oauth_client_delete_cascade(db):
     # these should all be deleted automatically when the user goes away
     oauth_code = orm.OAuthCode(client=oauth_client, user=user)
     db.add(oauth_code)
-    oauth_token = orm.OAuthAccessToken(
-        client=oauth_client, user=user, grant_type=orm.GrantType.authorization_code
+    oauth_token = orm.APIToken(
+        oauth_client=oauth_client,
+        user=user,
     )
     db.add(oauth_token)
     db.commit()
-    assert user.oauth_tokens == [oauth_token]
+    assert user.api_tokens == [oauth_token]
 
     # record all of the ids
     oauth_code_id = oauth_code.id
@@ -397,8 +410,8 @@ def test_oauth_client_delete_cascade(db):
 
     # verify that everything gets deleted
     assert_not_found(db, orm.OAuthCode, oauth_code_id)
-    assert_not_found(db, orm.OAuthAccessToken, oauth_token_id)
-    assert user.oauth_tokens == []
+    assert_not_found(db, orm.APIToken, oauth_token_id)
+    assert user.api_tokens == []
     assert user.oauth_codes == []
 
 
@@ -450,7 +463,7 @@ def test_group_delete_cascade(db):
     assert group2 in user2.groups
 
     # now start deleting
-    # 1. remove group via user.groups
+    # 1. remove group via user.group
     user1.groups.remove(group2)
     db.commit()
     assert user1 not in group2.users
@@ -470,5 +483,80 @@ def test_group_delete_cascade(db):
 
     # 4. delete user object
     db.delete(user1)
+    db.delete(user2)
     db.commit()
     assert user1 not in group1.users
+
+
+def test_expiring_api_token(app, user):
+    db = app.db
+    token = orm.APIToken.new(expires_in=30, user=user)
+    orm_token = orm.APIToken.find(db, token, kind='user')
+    assert orm_token
+
+    # purge_expired doesn't delete non-expired
+    orm.APIToken.purge_expired(db)
+    found = orm.APIToken.find(db, token)
+    assert found is orm_token
+
+    with mock.patch.object(
+        orm.APIToken, 'now', lambda: datetime.utcnow() + timedelta(seconds=60)
+    ):
+        found = orm.APIToken.find(db, token)
+        assert found is None
+        assert orm_token in db.query(orm.APIToken)
+        orm.APIToken.purge_expired(db)
+        assert orm_token not in db.query(orm.APIToken)
+
+
+def test_expiring_oauth_token(app, user):
+    db = app.db
+    token = "abc123"
+    now = orm.APIToken.now
+    client = orm.OAuthClient(identifier="xxx", secret="yyy")
+    db.add(client)
+    orm_token = orm.APIToken(
+        token=token,
+        oauth_client=client,
+        user=user,
+        expires_at=now() + timedelta(seconds=30),
+    )
+    db.add(orm_token)
+    db.commit()
+
+    found = orm.APIToken.find(db, token)
+    assert found is orm_token
+    # purge_expired doesn't delete non-expired
+    orm.APIToken.purge_expired(db)
+    found = orm.APIToken.find(db, token)
+    assert found is orm_token
+
+    with mock.patch.object(orm.APIToken, 'now', lambda: now() + timedelta(seconds=60)):
+        found = orm.APIToken.find(db, token)
+        assert found is None
+        assert orm_token in db.query(orm.APIToken)
+        orm.APIToken.purge_expired(db)
+        assert orm_token not in db.query(orm.APIToken)
+
+
+def test_expiring_oauth_code(app, user):
+    db = app.db
+    code = "abc123"
+    now = orm.OAuthCode.now
+    orm_code = orm.OAuthCode(code=code, expires_at=now() + 30)
+    db.add(orm_code)
+    db.commit()
+
+    found = orm.OAuthCode.find(db, code)
+    assert found is orm_code
+    # purge_expired doesn't delete non-expired
+    orm.OAuthCode.purge_expired(db)
+    found = orm.OAuthCode.find(db, code)
+    assert found is orm_code
+
+    with mock.patch.object(orm.OAuthCode, 'now', lambda: now() + 60):
+        found = orm.OAuthCode.find(db, code)
+        assert found is None
+        assert orm_code in db.query(orm.OAuthCode)
+        orm.OAuthCode.purge_expired(db)
+        assert orm_code not in db.query(orm.OAuthCode)

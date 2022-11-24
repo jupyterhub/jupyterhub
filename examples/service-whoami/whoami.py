@@ -1,28 +1,21 @@
 """An example service authenticating with the Hub.
 
-This serves `/services/whoami/`, authenticated with the Hub, showing the user their own info.
+This serves `/services/whoami-api/`, authenticated with the Hub, showing the user their own info.
+
+HubAuthenticated only supports token-based access.
 """
 import json
 import os
-from getpass import getuser
 from urllib.parse import urlparse
 
 from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop
-from tornado.web import Application
-from tornado.web import authenticated
-from tornado.web import RequestHandler
+from tornado.web import Application, RequestHandler, authenticated
 
 from jupyterhub.services.auth import HubAuthenticated
 
 
 class WhoAmIHandler(HubAuthenticated, RequestHandler):
-    # hub_users can be a set of users who are allowed to access the service
-    # `getuser()` here would mean only the user who started the service
-    # can access the service:
-
-    # hub_users = {getuser()}
-
     @authenticated
     def get(self):
         user_model = self.get_current_user()

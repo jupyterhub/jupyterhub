@@ -8,89 +8,89 @@ import binascii
 import logging
 import os
 import re
+import secrets
 import signal
 import socket
+import ssl
 import sys
+import time
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
-from datetime import timezone
+from datetime import datetime, timedelta, timezone
 from functools import partial
 from getpass import getuser
 from operator import itemgetter
 from textwrap import dedent
-from urllib.parse import unquote
-from urllib.parse import urlparse
-from urllib.parse import urlunparse
+from urllib.parse import unquote, urlparse, urlunparse
 
 if sys.version_info[:2] < (3, 3):
     raise ValueError("Python < 3.3 not supported: %s" % sys.version)
 
-
-from dateutil.parser import parse as parse_date
-from jinja2 import Environment, FileSystemLoader, PrefixLoader, ChoiceLoader
-from sqlalchemy.exc import OperationalError, SQLAlchemyError
-
-from tornado.httpclient import AsyncHTTPClient
 import tornado.httpserver
-from tornado.ioloop import IOLoop, PeriodicCallback
-from tornado.log import app_log, access_log, gen_log
 import tornado.options
+from dateutil.parser import parse as parse_date
+from jinja2 import ChoiceLoader, Environment, FileSystemLoader, PrefixLoader
+from jupyter_telemetry.eventlog import EventLog
+from sqlalchemy.exc import OperationalError, SQLAlchemyError
 from tornado import gen, web
-from tornado.platform.asyncio import AsyncIOMainLoop
-
+from tornado.httpclient import AsyncHTTPClient
+from tornado.ioloop import IOLoop, PeriodicCallback
+from tornado.log import access_log, app_log, gen_log
 from traitlets import (
-    Unicode,
-    Integer,
-    Dict,
-    TraitError,
-    List,
-    Bool,
     Any,
-    Tuple,
-    Type,
-    Set,
-    Instance,
+    Bool,
     Bytes,
+    Dict,
     Float,
-    observe,
+    Instance,
+    Integer,
+    List,
+    Set,
+    Tuple,
+    Unicode,
+    Union,
     default,
+    observe,
+    validate,
 )
 from traitlets.config import Application, Configurable, catch_config_error
 
 here = os.path.dirname(__file__)
 
 import jupyterhub
-from . import handlers, apihandlers
-from .handlers.static import CacheControlStaticFilesHandler, LogoHandler
-from .services.service import Service
 
-from . import crypto
-from . import dbutil, orm
-from .user import UserDict
-from .oauth.provider import make_provider
+from . import apihandlers, crypto, dbutil, handlers, orm, roles, scopes
 from ._data import DATA_FILES_PATH
-from .log import CoroutineLogFormatter, log_request
-from .proxy import Proxy, ConfigurableHTTPProxy
-from .traitlets import URLPrefix, Command, EntryPointType
-from .utils import (
-    maybe_future,
-    url_path_join,
-    print_stacks,
-    print_ps_info,
-    make_ssl_context,
-)
-from .metrics import RUNNING_SERVERS
-from .metrics import TOTAL_USERS
 
 # classes for config
 from .auth import Authenticator, PAMAuthenticator
 from .crypto import CryptKeeper
-from .spawner import Spawner, LocalProcessSpawner
-from .objects import Hub, Server
 
 # For faking stats
 from .emptyclass import EmptyClass
-
+from .handlers.static import CacheControlStaticFilesHandler, LogoHandler
+from .log import CoroutineLogFormatter, log_request
+from .metrics import (
+    HUB_STARTUP_DURATION_SECONDS,
+    INIT_SPAWNERS_DURATION_SECONDS,
+    RUNNING_SERVERS,
+    TOTAL_USERS,
+)
+from .oauth.provider import make_provider
+from .objects import Hub, Server
+from .proxy import ConfigurableHTTPProxy, Proxy
+from .services.service import Service
+from .spawner import LocalProcessSpawner, Spawner
+from .traitlets import Callable, Command, EntryPointType, URLPrefix
+from .user import UserDict
+from .utils import (
+    AnyTimeoutError,
+    catch_db_error,
+    make_ssl_context,
+    maybe_future,
+    print_ps_info,
+    print_stacks,
+    url_path_join,
+)
 
 common_aliases = {
     'log-level': 'Application.log_level',
@@ -98,7 +98,8 @@ common_aliases = {
     'config': 'JupyterHub.config_file',
     'db': 'JupyterHub.db_url',
 }
-
+if isinstance(Application.aliases, dict):
+    common_aliases.update(Application.aliases)
 
 aliases = {
     'base-url': 'JupyterHub.base_url',
@@ -115,7 +116,10 @@ token_aliases = {}
 token_aliases.update(common_aliases)
 aliases.update(common_aliases)
 
-flags = {
+flags = {}
+if isinstance(Application.flags, dict):
+    flags.update(Application.flags)
+hub_flags = {
     'debug': (
         {'Application': {'log_level': logging.DEBUG}},
         "set log level to logging.DEBUG (maximize logging output)",
@@ -145,10 +149,11 @@ flags = {
         "[DEPRECATED in 0.7: does nothing]",
     ),
 }
+flags.update(hub_flags)
 
 COOKIE_SECRET_BYTES = (
-    32
-)  # the number of bytes to use when generating new cookie secrets
+    32  # the number of bytes to use when generating new cookie secrets
+)
 
 HEX_RE = re.compile('^([a-f0-9]{2})+$', re.IGNORECASE)
 
@@ -195,11 +200,12 @@ class NewToken(Application):
         hub.load_config_file(hub.config_file)
         hub.init_db()
 
-        def init_users():
+        def init_roles_and_users():
             loop = asyncio.new_event_loop()
+            loop.run_until_complete(hub.init_role_creation())
             loop.run_until_complete(hub.init_users())
 
-        ThreadPoolExecutor(1).submit(init_users).result()
+        ThreadPoolExecutor(1).submit(init_roles_and_users).result()
         user = orm.User.find(hub.db, self.name)
         if user is None:
             print("No such user: %s" % self.name, file=sys.stderr)
@@ -302,9 +308,70 @@ class JupyterHub(Application):
         """,
     ).tag(config=True)
 
+    load_roles = List(
+        Dict(),
+        help="""List of predefined role dictionaries to load at startup.
+
+        For instance::
+
+            load_roles = [
+                            {
+                                'name': 'teacher',
+                                'description': 'Access to users' information and group membership',
+                                'scopes': ['users', 'groups'],
+                                'users': ['cyclops', 'gandalf'],
+                                'services': [],
+                                'groups': []
+                            }
+                        ]
+
+        All keys apart from 'name' are optional.
+        See all the available scopes in the JupyterHub REST API documentation.
+
+        Default roles are defined in roles.py.
+
+        """,
+    ).tag(config=True)
+
+    custom_scopes = Dict(
+        key_trait=Unicode(),
+        value_trait=Dict(
+            key_trait=Unicode(),
+        ),
+        help="""Custom scopes to define.
+
+        For use when defining custom roles,
+        to grant users granular permissions
+
+        All custom scopes must have a description,
+        and must start with the prefix `custom:`.
+
+        For example::
+
+            custom_scopes = {
+                "custom:jupyter_server:read": {
+                    "description": "read-only access to a single-user server",
+                },
+            }
+        """,
+    ).tag(config=True)
+
     config_file = Unicode('jupyterhub_config.py', help="The config file to load").tag(
         config=True
     )
+
+    @validate("config_file")
+    def _validate_config_file(self, proposal):
+        if not self.generate_config and not os.path.isfile(proposal.value):
+            print(
+                "ERROR: Failed to find specified config file: {}".format(
+                    proposal.value
+                ),
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        return proposal.value
+
     generate_config = Bool(False, help="Generate default config file").tag(config=True)
     generate_certs = Bool(False, help="Generate certs used for internal ssl").tag(
         config=True
@@ -324,6 +391,42 @@ class JupyterHub(Application):
         Default is two weeks.
         """,
     ).tag(config=True)
+
+    oauth_token_expires_in = Integer(
+        help="""Expiry (in seconds) of OAuth access tokens.
+
+        The default is to expire when the cookie storing them expires,
+        according to `cookie_max_age_days` config.
+
+        These are the tokens stored in cookies when you visit
+        a single-user server or service.
+        When they expire, you must re-authenticate with the Hub,
+        even if your Hub authentication is still valid.
+        If your Hub authentication is valid,
+        logging in may be a transparent redirect as you refresh the page.
+
+        This does not affect JupyterHub API tokens in general,
+        which do not expire by default.
+        Only tokens issued during the oauth flow
+        accessing services and single-user servers are affected.
+
+        .. versionadded:: 1.4
+            OAuth token expires_in was not previously configurable.
+        .. versionchanged:: 1.4
+            Default now uses cookie_max_age_days so that oauth tokens
+            which are generally stored in cookies,
+            expire when the cookies storing them expire.
+            Previously, it was one hour.
+        """,
+        config=True,
+    )
+
+    @default("oauth_token_expires_in")
+    def _cookie_max_age_seconds(self):
+        """default to cookie max age, where these tokens are stored"""
+        # convert cookie max age days to seconds
+        return int(self.cookie_max_age_days * 24 * 3600)
+
     redirect_to_server = Bool(
         True, help="Redirect user to server (if running), instead of control panel."
     ).tag(config=True)
@@ -343,7 +446,8 @@ class JupyterHub(Application):
         300, help="Interval (in seconds) at which to update last-activity timestamps."
     ).tag(config=True)
     proxy_check_interval = Integer(
-        30, help="Interval (in seconds) at which to check if the proxy is running."
+        5,
+        help="DEPRECATED since version 0.8: Use ConfigurableHTTPProxy.check_running_interval",
     ).tag(config=True)
     service_check_interval = Integer(
         60,
@@ -540,10 +644,23 @@ class JupyterHub(Application):
     def _url_part_changed(self, change):
         """propagate deprecated ip/port/base_url config to the bind_url"""
         urlinfo = urlparse(self.bind_url)
-        urlinfo = urlinfo._replace(netloc='%s:%i' % (self.ip, self.port))
+        if ':' in self.ip:
+            fmt = '[%s]:%i'
+        else:
+            fmt = '%s:%i'
+        urlinfo = urlinfo._replace(netloc=fmt % (self.ip, self.port))
         urlinfo = urlinfo._replace(path=self.base_url)
         bind_url = urlunparse(urlinfo)
+
+        # Warn if both bind_url and ip/port/base_url are set
         if bind_url != self.bind_url:
+            if self.bind_url != self._bind_url_default():
+                self.log.warning(
+                    "Both bind_url and ip/port/base_url have been configured. "
+                    "JupyterHub.ip, JupyterHub.port, JupyterHub.base_url are"
+                    " deprecated in JupyterHub 0.9,"
+                    " please use JupyterHub.bind_url instead."
+                )
             self.bind_url = bind_url
 
     bind_url = Unicode(
@@ -554,6 +671,22 @@ class JupyterHub(Application):
         Sets protocol, ip, base_url
         """,
     ).tag(config=True)
+
+    @validate('bind_url')
+    def _validate_bind_url(self, proposal):
+        """ensure protocol field of bind_url matches ssl"""
+        v = proposal['value']
+        proto, sep, rest = v.partition('://')
+        if self.ssl_cert and proto != 'https':
+            return 'https' + sep + rest
+        elif proto != 'http' and not self.ssl_cert:
+            return 'http' + sep + rest
+        return v
+
+    @default('bind_url')
+    def _bind_url_default(self):
+        proto = 'https' if self.ssl_cert else 'http'
+        return proto + '://:8000'
 
     subdomain_host = Unicode(
         '',
@@ -571,11 +704,14 @@ class JupyterHub(Application):
         """,
     ).tag(config=True)
 
-    def _subdomain_host_changed(self, name, old, new):
+    @validate("subdomain_host")
+    def _validate_subdomain_host(self, proposal):
+        new = proposal.value
         if new and '://' not in new:
             # host should include '://'
             # if not specified, assume https: You have to be really explicit about HTTP!
-            self.subdomain_host = 'https://' + new
+            new = 'https://' + new
+        return new
 
     domain = Unicode(help="domain name, e.g. 'example.com' (excludes protocol, port)")
 
@@ -592,7 +728,9 @@ class JupyterHub(Application):
 
     @default('logo_file')
     def _logo_file_default(self):
-        return os.path.join(self.data_files_path, 'static', 'images', 'jupyter.png')
+        return os.path.join(
+            self.data_files_path, 'static', 'images', 'jupyterhub-80.png'
+        )
 
     jinja_environment_options = Dict(
         help="Supply extra arguments that will be passed to Jinja environment."
@@ -626,6 +764,7 @@ class JupyterHub(Application):
     ).tag(config=True)
 
     _proxy_config_map = {
+        'proxy_check_interval': 'check_running_interval',
         'proxy_cmd': 'command',
         'debug_proxy': 'debug',
         'proxy_auth_token': 'auth_token',
@@ -658,6 +797,16 @@ class JupyterHub(Application):
             self.proxy_api_ip or '127.0.0.1', self.proxy_api_port or self.port + 1
         )
 
+    forwarded_host_header = Unicode(
+        '',
+        help="""Alternate header to use as the Host (e.g., X-Forwarded-Host)
+        when determining whether a request is cross-origin
+
+        This may be useful when JupyterHub is running behind a proxy that rewrites
+        the Host header.
+        """,
+    ).tag(config=True)
+
     hub_port = Integer(
         8081,
         help="""The internal port for the Hub process.
@@ -688,10 +837,10 @@ class JupyterHub(Application):
         help="""The ip or hostname for proxies and spawners to use
         for connecting to the Hub.
 
-        Use when the bind address (`hub_ip`) is 0.0.0.0 or otherwise different
+        Use when the bind address (`hub_ip`) is 0.0.0.0, :: or otherwise different
         from the connect address.
 
-        Default: when `hub_ip` is 0.0.0.0, use `socket.gethostname()`, otherwise use `hub_ip`.
+        Default: when `hub_ip` is 0.0.0.0 or ::, use `socket.gethostname()`, otherwise use `hub_ip`.
 
         Note: Some spawners or proxy implementations might not support hostnames. Check your
         spawner or proxy documentation to see if they have extra requirements.
@@ -757,6 +906,66 @@ class JupyterHub(Application):
     def _hub_prefix_default(self):
         return url_path_join(self.base_url, '/hub/')
 
+    hub_routespec = Unicode(
+        "/",
+        help="""
+        The routing prefix for the Hub itself.
+
+        Override to send only a subset of traffic to the Hub.
+        Default is to use the Hub as the default route for all requests.
+
+        This is necessary for normal jupyterhub operation,
+        as the Hub must receive requests for e.g. `/user/:name`
+        when the user's server is not running.
+
+        However, some deployments using only the JupyterHub API
+        may want to handle these events themselves,
+        in which case they can register their own default target with the proxy
+        and set e.g. `hub_routespec = /hub/` to serve only the hub's own pages, or even `/hub/api/` for api-only operation.
+
+        Note: hub_routespec must include the base_url, if any.
+
+        .. versionadded:: 1.4
+        """,
+    ).tag(config=True)
+
+    @default("hub_routespec")
+    def _default_hub_routespec(self):
+        # Default routespec for the Hub is the *app* base url
+        # not the hub URL, so the Hub receives requests for non-running servers
+        # use `/` with host-based routing so the Hub
+        # gets requests for all hosts
+        if self.subdomain_host:
+            routespec = '/'
+        else:
+            routespec = self.base_url
+        return routespec
+
+    @validate("hub_routespec")
+    def _validate_hub_routespec(self, proposal):
+        """ensure leading/trailing / on custom routespec prefix
+
+        - trailing '/' always required
+        - leading '/' required unless using subdomains
+        """
+        routespec = proposal.value
+        if not routespec.endswith("/"):
+            routespec = routespec + "/"
+        if not self.subdomain_host and not routespec.startswith("/"):
+            routespec = "/" + routespec
+        return routespec
+
+    @observe("hub_routespec")
+    def _hub_routespec_changed(self, change):
+        if change.new == change.old:
+            return
+        routespec = change.new
+        if routespec not in {'/', self.base_url}:
+            self.log.warning(
+                f"Using custom route for Hub: {routespec}."
+                " Requests for not-running servers may not be handled."
+            )
+
     @observe('base_url')
     def _update_hub_prefix(self, change):
         """add base URL to hub prefix"""
@@ -784,14 +993,29 @@ class JupyterHub(Application):
         to reduce the cost of checking authentication tokens.
         """,
     ).tag(config=True)
-    cookie_secret = Bytes(
+    cookie_secret = Union(
+        [Bytes(), Unicode()],
         help="""The cookie secret to use to encrypt cookies.
 
         Loaded from the JPY_COOKIE_SECRET env variable by default.
 
         Should be exactly 256 bits (32 bytes).
-        """
+        """,
     ).tag(config=True, env='JPY_COOKIE_SECRET')
+
+    @validate('cookie_secret')
+    def _validate_secret_key(self, proposal):
+        """Coerces strings with even number of hexadecimal characters to bytes."""
+        r = proposal['value']
+        if isinstance(r, str):
+            try:
+                return bytes.fromhex(r)
+            except ValueError:
+                raise ValueError(
+                    "cookie_secret set as a string must contain an even amount of hexadecimal characters."
+                )
+        else:
+            return r
 
     @observe('cookie_secret')
     def _cookie_secret_check(self, change):
@@ -809,15 +1033,24 @@ class JupyterHub(Application):
 
     api_tokens = Dict(
         Unicode(),
-        help="""PENDING DEPRECATION: consider using service_tokens
+        help="""PENDING DEPRECATION: consider using services
 
         Dict of token:username to be loaded into the database.
 
         Allows ahead-of-time generation of API tokens for use by externally managed services,
         which authenticate as JupyterHub users.
 
-        Consider using service_tokens for general services that talk to the JupyterHub API.
+        Consider using services for general services that talk to the JupyterHub API.
         """,
+    ).tag(config=True)
+
+    api_page_default_limit = Integer(
+        50,
+        help="The default amount of records returned by a paginated endpoint",
+    ).tag(config=True)
+
+    api_page_max_limit = Integer(
+        200, help="The maximum amount of records that can be returned at once"
     ).tag(config=True)
 
     authenticate_prometheus = Bool(
@@ -892,22 +1125,70 @@ class JupyterHub(Application):
 
     @default('authenticator')
     def _authenticator_default(self):
-        return self.authenticator_class(parent=self, db=self.db)
+        return self.authenticator_class(parent=self, _deprecated_db_session=self.db)
+
+    implicit_spawn_seconds = Float(
+        0,
+        help="""Trigger implicit spawns after this many seconds.
+
+        When a user visits a URL for a server that's not running,
+        they are shown a page indicating that the requested server
+        is not running with a button to spawn the server.
+
+        Setting this to a positive value will redirect the user
+        after this many seconds, effectively clicking this button
+        automatically for the users,
+        automatically beginning the spawn process.
+
+        Warning: this can result in errors and surprising behavior
+        when sharing access URLs to actual servers,
+        since the wrong server is likely to be started.
+        """,
+    ).tag(config=True)
 
     allow_named_servers = Bool(
         False, help="Allow named single-user servers per user"
     ).tag(config=True)
 
-    named_server_limit_per_user = Integer(
-        0,
+    named_server_limit_per_user = Union(
+        [Integer(), Callable()],
+        default_value=0,
         help="""
         Maximum number of concurrent named servers that can be created by a user at a time.
 
         Setting this can limit the total resources a user can consume.
 
         If set to 0, no limit is enforced.
+        
+        Can be an integer or a callable/awaitable based on the handler object:
+
+        ::
+
+            def named_server_limit_per_user_fn(handler):
+                user = handler.current_user
+                if user and user.admin:
+                    return 0
+                return 5
+
+            c.JupyterHub.named_server_limit_per_user = named_server_limit_per_user_fn
         """,
     ).tag(config=True)
+
+    default_server_name = Unicode(
+        "",
+        help="If named servers are enabled, default name of server to spawn or open, e.g. by user-redirect.",
+    ).tag(config=True)
+    # Ensure that default_server_name doesn't do anything if named servers aren't allowed
+    _default_server_name = Unicode(
+        help="Non-configurable version exposed to JupyterHub."
+    )
+
+    @default('_default_server_name')
+    def _set_default_server_name(self):
+        if self.allow_named_servers:
+            return self.default_server_name
+        else:
+            return ""
 
     # class for spawning single-user servers
     spawner_class = EntryPointType(
@@ -982,6 +1263,28 @@ class JupyterHub(Application):
         """,
     ).tag(config=True)
 
+    init_spawners_timeout = Integer(
+        10,
+        help="""
+        Timeout (in seconds) to wait for spawners to initialize
+
+        Checking if spawners are healthy can take a long time
+        if many spawners are active at hub start time.
+
+        If it takes longer than this timeout to check,
+        init_spawner will be left to complete in the background
+        and the http server is allowed to start.
+
+        A timeout of -1 means wait forever,
+        which can mean a slow startup of the Hub
+        but ensures that the Hub is fully consistent by the time it starts responding to requests.
+        This matches the behavior of jupyterhub 1.0.
+
+        .. versionadded: 1.1.0
+
+        """,
+    ).tag(config=True)
+
     db_url = Unicode(
         'sqlite:///jupyterhub.sqlite',
         help="url for the database. e.g. `sqlite:///jupyterhub.sqlite`",
@@ -1023,11 +1326,14 @@ class JupyterHub(Application):
 
     admin_access = Bool(
         False,
-        help="""Grant admin users permission to access single-user servers.
+        help="""DEPRECATED since version 2.0.0.
 
-        Users should be properly informed if this is enabled.
+        The default admin role has full permissions, use custom RBAC scopes instead to
+        create restricted administrator roles.
+        https://jupyterhub.readthedocs.io/en/stable/rbac/index.html
         """,
     ).tag(config=True)
+
     admin_users = Set(
         help="""DEPRECATED since version 0.7.2, use Authenticator.admin_users instead."""
     ).tag(config=True)
@@ -1177,14 +1483,16 @@ class JupyterHub(Application):
             max(self.log_level, logging.INFO)
         )
 
-        # hook up tornado 3's loggers to our app handlers
         for log in (app_log, access_log, gen_log):
             # ensure all log statements identify the application they come from
             log.name = self.log.name
-        logger = logging.getLogger('tornado')
-        logger.propagate = True
-        logger.parent = self.log
-        logger.setLevel(self.log.level)
+
+        # hook up tornado's and oauthlib's loggers to our own
+        for name in ("tornado", "oauthlib"):
+            logger = logging.getLogger(name)
+            logger.propagate = True
+            logger.parent = self.log
+            logger.setLevel(self.log.level)
 
     @staticmethod
     def add_url_prefix(prefix, handlers):
@@ -1205,13 +1513,62 @@ class JupyterHub(Application):
         """
     ).tag(config=True)
 
-    default_url = Unicode(
+    default_url = Union(
+        [Unicode(), Callable()],
         help="""
         The default URL for users when they arrive (e.g. when user directs to "/")
 
         By default, redirects users to their own server.
-        """
+
+        Can be a Unicode string (e.g. '/hub/home') or a callable based on the handler object:
+
+        ::
+
+            def default_url_fn(handler):
+                user = handler.current_user
+                if user and user.admin:
+                    return '/hub/admin'
+                return '/hub/home'
+
+            c.JupyterHub.default_url = default_url_fn
+        """,
     ).tag(config=True)
+
+    user_redirect_hook = Callable(
+        None,
+        allow_none=True,
+        help="""
+        Callable to affect behavior of /user-redirect/
+
+        Receives 4 parameters:
+        1. path - URL path that was provided after /user-redirect/
+        2. request - A Tornado HTTPServerRequest representing the current request.
+        3. user - The currently authenticated user.
+        4. base_url - The base_url of the current hub, for relative redirects
+
+        It should return the new URL to redirect to, or None to preserve
+        current behavior.
+        """,
+    ).tag(config=True)
+
+    use_legacy_stopped_server_status_code = Bool(
+        False,
+        help="""
+        Return 503 rather than 424 when request comes in for a non-running server.
+
+        Prior to JupyterHub 2.0, we returned a 503 when any request came in for
+        a user server that was currently not running. By default, JupyterHub 2.0
+        will return a 424 - this makes operational metric dashboards more useful.
+
+        JupyterLab < 3.2 expected the 503 to know if the user server is no longer
+        running, and prompted the user to start their server. Set this config to
+        true to retain the old behavior, so JupyterLab < 3.2 can continue to show
+        the appropriate UI when the user server is stopped.
+
+        This option will be removed in a future release.
+        """,
+        config=True,
+    )
 
     def init_handlers(self):
         h = []
@@ -1309,7 +1666,7 @@ class JupyterHub(Application):
         if not secret:
             secret_from = 'new'
             self.log.debug("Generating new %s", trait_name)
-            secret = os.urandom(COOKIE_SECRET_BYTES)
+            secret = secrets.token_bytes(COOKIE_SECRET_BYTES)
 
         if secret_file and secret_from == 'new':
             # if we generated a new secret, store it in the secret_file
@@ -1354,7 +1711,9 @@ class JupyterHub(Application):
             for authority, files in self.internal_ssl_authorities.items():
                 if files:
                     self.log.info("Adding CA for %s", authority)
-                    certipy.store.add_record(authority, is_ca=True, files=files)
+                    certipy.store.add_record(
+                        authority, is_ca=True, files=files, overwrite=True
+                    )
 
             self.internal_trust_bundles = certipy.trust_from_graph(
                 self.internal_ssl_components_trust
@@ -1462,10 +1821,31 @@ class JupyterHub(Application):
         except orm.DatabaseSchemaMismatch as e:
             self.exit(e)
 
+        # ensure the default oauth client exists
+        if (
+            not self.db.query(orm.OAuthClient)
+            .filter_by(identifier="jupyterhub")
+            .one_or_none()
+        ):
+            # create the oauth client for jupyterhub itself
+            # this allows us to distinguish between orphaned tokens
+            # (failed cascade deletion) and tokens issued by the hub
+            # it has no client_secret, which means it cannot be used
+            # to make requests
+            client = orm.OAuthClient(
+                identifier="jupyterhub",
+                secret="",
+                redirect_uri="",
+                description="JupyterHub",
+            )
+            self.db.add(client)
+            self.db.commit()
+
     def init_hub(self):
         """Load the Hub URL config"""
         hub_args = dict(
             base_url=self.hub_prefix,
+            routespec=self.hub_routespec,
             public_host=self.subdomain_host,
             certfile=self.internal_ssl_cert,
             keyfile=self.internal_ssl_key,
@@ -1481,17 +1861,15 @@ class JupyterHub(Application):
             hub_args['ip'] = self.hub_ip
             hub_args['port'] = self.hub_port
 
-        # routespec for the Hub is the *app* base url
-        # not the hub URL, so it receives requests for non-running servers
-        # use `/` with host-based routing so the Hub
-        # gets requests for all hosts
-        host = ''
-        if self.subdomain_host:
-            routespec = '/'
-        else:
-            routespec = self.base_url
+        self.hub = Hub(**hub_args)
 
-        self.hub = Hub(routespec=routespec, **hub_args)
+        if not self.subdomain_host:
+            api_prefix = url_path_join(self.hub.base_url, "api/")
+            if not api_prefix.startswith(self.hub.routespec):
+                self.log.warning(
+                    f"Hub API prefix {api_prefix} not on prefix {self.hub.routespec}. "
+                    "The Hub may not receive any API requests from outside."
+                )
 
         if self.hub_connect_ip:
             self.hub.connect_ip = self.hub_connect_ip
@@ -1542,12 +1920,6 @@ class JupyterHub(Application):
             if not self.authenticator.validate_username(username):
                 raise ValueError("username %r is not valid" % username)
 
-        if not admin_users:
-            self.log.warning("No admin users, admin interface will be unavailable.")
-            self.log.warning(
-                "Add any administrative users to `c.Authenticator.admin_users` in config."
-            )
-
         new_users = []
 
         for name in admin_users:
@@ -1555,30 +1927,30 @@ class JupyterHub(Application):
             user = orm.User.find(db, name)
             if user is None:
                 user = orm.User(name=name, admin=True)
+                roles.assign_default_roles(self.db, entity=user)
                 new_users.append(user)
                 db.add(user)
             else:
                 user.admin = True
-
         # the admin_users config variable will never be used after this point.
         # only the database values will be referenced.
 
-        whitelist = [
+        allowed_users = [
             self.authenticator.normalize_username(name)
-            for name in self.authenticator.whitelist
+            for name in self.authenticator.allowed_users
         ]
-        self.authenticator.whitelist = set(whitelist)  # force normalization
-        for username in whitelist:
+        self.authenticator.allowed_users = set(allowed_users)  # force normalization
+        for username in allowed_users:
             if not self.authenticator.validate_username(username):
                 raise ValueError("username %r is not valid" % username)
 
-        if not whitelist:
+        if not allowed_users:
             self.log.info(
-                "Not using whitelist. Any authenticated user will be allowed."
+                "Not using allowed_users. Any authenticated user will be allowed."
             )
 
-        # add whitelisted users to the db
-        for name in whitelist:
+        # add allowed users to the db
+        for name in allowed_users:
             user = orm.User.find(db, name)
             if user is None:
                 user = orm.User(name=name)
@@ -1588,13 +1960,16 @@ class JupyterHub(Application):
         db.commit()
 
         # Notify authenticator of all users.
-        # This ensures Auth whitelist is up-to-date with the database.
-        # This lets whitelist be used to set up initial list,
-        # but changes to the whitelist can occur in the database,
+        # This ensures Authenticator.allowed_users is up-to-date with the database.
+        # This lets .allowed_users be used to set up initial list,
+        # but changes to the allowed_users set can occur in the database,
         # and persist across sessions.
+        total_users = 0
         for user in db.query(orm.User):
             try:
-                await maybe_future(self.authenticator.add_user(user))
+                f = self.authenticator.add_user(user)
+                if f:
+                    await maybe_future(f)
             except Exception:
                 self.log.exception("Error adding user %s already in db", user.name)
                 if self.authenticator.delete_invalid_users:
@@ -1616,6 +1991,7 @@ class JupyterHub(Application):
                         )
                     )
             else:
+                total_users += 1
                 # handle database upgrades where user.created is undefined.
                 # we don't want to allow user.created to be undefined,
                 # so initialize it to last_activity (if defined) or now.
@@ -1623,34 +1999,223 @@ class JupyterHub(Application):
                     user.created = user.last_activity or datetime.utcnow()
         db.commit()
 
-        # The whitelist set and the users in the db are now the same.
+        # The allowed_users set and the users in the db are now the same.
         # From this point on, any user changes should be done simultaneously
-        # to the whitelist set and user db, unless the whitelist is empty (all users allowed).
+        # to the allowed_users set and user db, unless the allowed set is empty (all users allowed).
+
+        TOTAL_USERS.set(total_users)
+
+    async def _get_or_create_user(self, username):
+        """Create user if username is found in config but user does not exist"""
+        if not (await maybe_future(self.authenticator.check_allowed(username, None))):
+            raise ValueError(
+                "Username %r is not in Authenticator.allowed_users" % username
+            )
+        user = orm.User.find(self.db, name=username)
+        if user is None:
+            if not self.authenticator.validate_username(username):
+                raise ValueError("Username %r is not valid" % username)
+            self.log.info(f"Creating user {username}")
+            user = orm.User(name=username)
+            self.db.add(user)
+            roles.assign_default_roles(self.db, entity=user)
+            self.db.commit()
+        return user
 
     async def init_groups(self):
         """Load predefined groups into the database"""
         db = self.db
+
+        if self.authenticator.manage_groups and self.load_groups:
+            raise ValueError("Group management has been offloaded to the authenticator")
         for name, usernames in self.load_groups.items():
             group = orm.Group.find(db, name)
             if group is None:
+                self.log.info(f"Creating group {name}")
                 group = orm.Group(name=name)
                 db.add(group)
             for username in usernames:
                 username = self.authenticator.normalize_username(username)
-                if not (
-                    await maybe_future(
-                        self.authenticator.check_whitelist(username, None)
-                    )
-                ):
-                    raise ValueError("Username %r is not in whitelist" % username)
-                user = orm.User.find(db, name=username)
-                if user is None:
-                    if not self.authenticator.validate_username(username):
-                        raise ValueError("Group username %r is not valid" % username)
-                    user = orm.User(name=username)
-                    db.add(user)
+                user = await self._get_or_create_user(username)
+                self.log.debug(f"Adding user {username} to group {name}")
                 group.users.append(user)
         db.commit()
+
+    async def init_role_creation(self):
+        """Load default and user-defined roles and scopes into the database"""
+        if self.custom_scopes:
+            self.log.info(f"Defining {len(self.custom_scopes)} custom scopes.")
+            scopes.define_custom_scopes(self.custom_scopes)
+        self.log.debug('Loading roles into database')
+        default_roles = roles.get_default_roles()
+        config_role_names = [r['name'] for r in self.load_roles]
+
+        default_roles_dict = {role["name"]: role for role in default_roles}
+        init_roles = []
+        roles_with_new_permissions = []
+        for role_spec in self.load_roles:
+            role_name = role_spec['name']
+            if role_name in default_roles_dict:
+                self.log.debug(f"Overriding default role {role_name}")
+                # merge custom role spec with default role spec when overriding
+                # so the new role can be partially defined
+                default_role_spec = default_roles_dict.pop(role_name)
+                merged_role_spec = {}
+                merged_role_spec.update(default_role_spec)
+                merged_role_spec.update(role_spec)
+                role_spec = merged_role_spec
+
+            # Check for duplicates
+            if config_role_names.count(role_name) > 1:
+                raise ValueError(
+                    f"Role {role_name} multiply defined. Please check the `load_roles` configuration"
+                )
+            init_roles.append(role_spec)
+            # Check if some roles have obtained new permissions (to avoid 'scope creep')
+            old_role = orm.Role.find(self.db, name=role_name)
+            if old_role:
+                if not set(role_spec.get('scopes', [])).issubset(old_role.scopes):
+                    self.log.warning(
+                        "Role %s has obtained extra permissions" % role_name
+                    )
+                    roles_with_new_permissions.append(role_name)
+
+        # make sure we load any default roles not overridden
+        init_roles = list(default_roles_dict.values()) + init_roles
+
+        init_role_names = [r['name'] for r in init_roles]
+        if (
+            self.db.query(orm.Role).first() is None
+            and self.db.query(orm.User).first() is not None
+        ):
+            # apply rbac-upgrade default role assignment if there are users in the db,
+            # but not any roles
+            self._rbac_upgrade = True
+        else:
+            self._rbac_upgrade = False
+        for role in self.db.query(orm.Role).filter(
+            orm.Role.name.notin_(init_role_names)
+        ):
+            self.log.warning(f"Deleting role {role.name}")
+            self.db.delete(role)
+        self.db.commit()
+        for role in init_roles:
+            roles.create_role(self.db, role)
+
+    async def init_role_assignment(self):
+        # tokens are added separately
+        kinds = ['users', 'services', 'groups']
+        admin_role_objects = ['users', 'services']
+        config_admin_users = set(self.authenticator.admin_users)
+        db = self.db
+        # load predefined roles from config file
+        if config_admin_users:
+            for role_spec in self.load_roles:
+                if role_spec['name'] == 'admin':
+                    self.log.warning(
+                        "Configuration specifies both admin_users and users in the admin role specification. "
+                        "If admin role is present in config, c.Authenticator.admin_users should not be used."
+                    )
+                    self.log.info(
+                        "Merging admin_users set with users list in admin role"
+                    )
+                    role_spec['users'] = set(role_spec.get('users', []))
+                    role_spec['users'] |= config_admin_users
+        self.log.debug('Loading role assignments from config')
+        has_admin_role_spec = {role_bearer: False for role_bearer in admin_role_objects}
+        for role_spec in self.load_roles:
+            role = orm.Role.find(db, name=role_spec['name'])
+            role_name = role_spec["name"]
+            if role_name == 'admin':
+                for kind in admin_role_objects:
+                    has_admin_role_spec[kind] = kind in role_spec
+                    if has_admin_role_spec[kind]:
+                        self.log.info(f"Admin role specifies static {kind} list")
+                    else:
+                        self.log.info(
+                            f"Admin role does not specify {kind}, preserving admin membership in database"
+                        )
+            # add users, services, and/or groups,
+            # tokens need to be checked for permissions
+            for kind in kinds:
+                orm_role_bearers = []
+                if kind in role_spec:
+                    for name in role_spec[kind]:
+                        if kind == 'users':
+                            name = self.authenticator.normalize_username(name)
+                            if not (
+                                await maybe_future(
+                                    self.authenticator.check_allowed(name, None)
+                                )
+                            ):
+                                raise ValueError(
+                                    f"Username {name} is not in Authenticator.allowed_users"
+                                )
+                        Class = orm.get_class(kind)
+                        orm_obj = Class.find(db, name)
+                        if orm_obj is not None:
+                            orm_role_bearers.append(orm_obj)
+                        else:
+                            self.log.info(
+                                f"Found unexisting {kind} {name} in role definition {role_name}"
+                            )
+                            if kind == 'users':
+                                orm_obj = await self._get_or_create_user(name)
+                                orm_role_bearers.append(orm_obj)
+                            elif kind == 'groups':
+                                group = orm.Group(name=name)
+                                db.add(group)
+                                db.commit()
+                                orm_role_bearers.append(group)
+                            else:
+                                raise ValueError(
+                                    f"{kind} {name} defined in config role definition {role_name} but not present in database"
+                                )
+                        # Ensure all with admin role have admin flag
+                        if role_name == 'admin':
+                            orm_obj.admin = True
+                    # explicitly defined list
+                    # ensure membership list is exact match (adds and revokes permissions)
+                    setattr(role, kind, orm_role_bearers)
+                else:
+                    # no defined members
+                    # leaving 'users' undefined in overrides of the default 'user' role
+                    # should not clear membership on startup
+                    # since allowed users could be managed by the authenticator
+                    if kind == "users" and role_name == "user":
+                        # Default user lists can be managed by the Authenticator,
+                        # if unspecified in role config
+                        pass
+                    else:
+                        # otherwise, omitting a member category is equivalent to specifying an empty list
+                        setattr(role, kind, [])
+
+        db.commit()
+        if self.authenticator.allowed_users:
+            self.log.debug(
+                f"Assigning {len(self.authenticator.allowed_users)} allowed_users to the user role"
+            )
+            allowed_users = db.query(orm.User).filter(
+                orm.User.name.in_(self.authenticator.allowed_users)
+            )
+            for user in allowed_users:
+                roles.grant_role(db, user, 'user')
+        admin_role = orm.Role.find(db, 'admin')
+        for kind in admin_role_objects:
+            Class = orm.get_class(kind)
+            for admin_obj in db.query(Class).filter_by(admin=True):
+                if has_admin_role_spec[kind]:
+                    admin_obj.admin = admin_role in admin_obj.roles
+                else:
+                    roles.grant_role(db, admin_obj, 'admin')
+        db.commit()
+        # make sure that on hub upgrade, all users, services and tokens have at least one role (update with default)
+        if getattr(self, '_rbac_upgrade', False):
+            self.log.warning(
+                "No roles found; assuming hub upgrade. Initializing default roles for all entities"
+            )
+            for kind in kinds:
+                roles.check_for_default_roles(db, kind)
 
     async def _add_tokens(self, token_dict, kind):
         """Add tokens for users or services to the database"""
@@ -1666,11 +2231,20 @@ class JupyterHub(Application):
             if kind == 'user':
                 name = self.authenticator.normalize_username(name)
                 if not (
-                    await maybe_future(self.authenticator.check_whitelist(name, None))
+                    await maybe_future(self.authenticator.check_allowed(name, None))
                 ):
-                    raise ValueError("Token name %r is not in whitelist" % name)
+                    raise ValueError(
+                        "Token user name %r is not in Authenticator.allowed_users"
+                        % name
+                    )
                 if not self.authenticator.validate_username(name):
-                    raise ValueError("Token name %r is not valid" % name)
+                    raise ValueError("Token user name %r is not valid" % name)
+            if kind == 'service':
+                if not any(service["name"] == name for service in self.services):
+                    self.log.warning(
+                        "Warning: service '%s' not in services, creating implicitly. It is recommended to register services using services list."
+                        % name
+                    )
             orm_token = orm.APIToken.find(db, token)
             if orm_token is None:
                 obj = Class.find(db, name)
@@ -1695,7 +2269,7 @@ class JupyterHub(Application):
                         # don't allow bad tokens to create users
                         db.delete(obj)
                         db.commit()
-                        raise
+                    raise
             else:
                 self.log.debug("Not duplicating token %s", orm_token)
         db.commit()
@@ -1703,17 +2277,30 @@ class JupyterHub(Application):
     # purge expired tokens hourly
     purge_expired_tokens_interval = 3600
 
+    @catch_db_error
+    def purge_expired_tokens(self):
+        """purge all expiring token objects from the database
+
+        run periodically
+        """
+        # this should be all the subclasses of Expiring
+        for cls in (orm.APIToken, orm.OAuthCode):
+            self.log.debug(f"Purging expired {cls.__name__}s")
+            cls.purge_expired(self.db)
+
     async def init_api_tokens(self):
         """Load predefined API tokens (for services) into database"""
+
         await self._add_tokens(self.service_tokens, kind='service')
         await self._add_tokens(self.api_tokens, kind='user')
-        purge_expired_tokens = partial(orm.APIToken.purge_expired, self.db)
-        purge_expired_tokens()
+
+        await self.purge_expired_tokens()
         # purge expired tokens hourly
         # we don't need to be prompt about this
         # because expired tokens cannot be used anyway
+
         pc = PeriodicCallback(
-            purge_expired_tokens, 1e3 * self.purge_expired_tokens_interval
+            self.purge_expired_tokens, 1e3 * self.purge_expired_tokens_interval
         )
         pc.start()
 
@@ -1722,7 +2309,7 @@ class JupyterHub(Application):
         if self.domain:
             domain = 'services.' + self.domain
             parsed = urlparse(self.subdomain_host)
-            host = '%s://services.%s' % (parsed.scheme, parsed.netloc)
+            host = f'{parsed.scheme}://services.{parsed.netloc}'
         else:
             domain = host = ''
 
@@ -1735,6 +2322,14 @@ class JupyterHub(Application):
             if orm_service is None:
                 # not found, create a new one
                 orm_service = orm.Service(name=name)
+                if spec.get('admin', False):
+                    self.log.warning(
+                        f"Service {name} sets `admin: True`, which is deprecated in JupyterHub 2.0."
+                        " You can assign now assign roles via `JupyterHub.load_roles` configuration."
+                        " If you specify services in the admin role configuration, "
+                        "the Service admin flag will be ignored."
+                    )
+                    roles.update_roles(self.db, entity=orm_service, roles=['admin'])
                 self.db.add(orm_service)
             orm_service.admin = spec.get('admin', False)
             self.db.commit()
@@ -1744,6 +2339,7 @@ class JupyterHub(Application):
                 base_url=self.base_url,
                 db=self.db,
                 orm=orm_service,
+                roles=orm_service.roles,
                 domain=domain,
                 host=host,
                 hub=self.hub,
@@ -1755,18 +2351,14 @@ class JupyterHub(Application):
                     raise AttributeError("No such service field: %s" % key)
                 setattr(service, key, value)
 
-            if service.managed:
-                if not service.api_token:
-                    # generate new token
-                    # TODO: revoke old tokens?
-                    service.api_token = service.orm.new_api_token(
-                        note="generated at startup"
-                    )
-                else:
-                    # ensure provided token is registered
-                    self.service_tokens[service.api_token] = service.name
-            else:
+            if service.api_token:
                 self.service_tokens[service.api_token] = service.name
+            elif service.managed:
+                # generate new token
+                # TODO: revoke old tokens?
+                service.api_token = service.orm.new_api_token(
+                    note="generated at startup"
+                )
 
             if service.url:
                 parsed = urlparse(service.url)
@@ -1789,12 +2381,37 @@ class JupyterHub(Application):
                 service.orm.server = None
 
             if service.oauth_available:
-                self.oauth_provider.add_client(
+                allowed_scopes = set()
+                if service.oauth_client_allowed_scopes:
+                    allowed_scopes.update(service.oauth_client_allowed_scopes)
+                if service.oauth_roles:
+                    if not allowed_scopes:
+                        # DEPRECATED? It's still convenient and valid,
+                        # e.g. 'admin'
+                        allowed_roles = list(
+                            self.db.query(orm.Role).filter(
+                                orm.Role.name.in_(service.oauth_roles)
+                            )
+                        )
+                        allowed_scopes.update(roles.roles_to_scopes(allowed_roles))
+                    else:
+                        self.log.warning(
+                            f"Ignoring oauth_roles for {service.name}: {service.oauth_roles},"
+                            f" using oauth_client_allowed_scopes={allowed_scopes}."
+                        )
+                oauth_client = self.oauth_provider.add_client(
                     client_id=service.oauth_client_id,
                     client_secret=service.api_token,
                     redirect_uri=service.oauth_redirect_uri,
                     description="JupyterHub service %s" % service.name,
                 )
+                service.orm.oauth_client = oauth_client
+                # add access-scopes, derived from OAuthClient itself
+                allowed_scopes.update(scopes.access_scopes(oauth_client))
+                oauth_client.allowed_scopes = sorted(allowed_scopes)
+            else:
+                if service.oauth_client:
+                    self.db.delete(service.oauth_client)
 
             self._service_map[name] = service
 
@@ -1810,8 +2427,8 @@ class JupyterHub(Application):
             if not service.url:
                 continue
             try:
-                await Server.from_orm(service.orm.server).wait_up(timeout=1)
-            except TimeoutError:
+                await Server.from_orm(service.orm.server).wait_up(timeout=1, http=True)
+            except AnyTimeoutError:
                 self.log.warning(
                     "Cannot connect to %s service %s at %s",
                     service.kind,
@@ -1827,18 +2444,17 @@ class JupyterHub(Application):
                 )
 
     async def init_spawners(self):
+        self.log.debug("Initializing spawners")
         db = self.db
 
         def _user_summary(user):
             """user is an orm.User, not a full user"""
-            parts = ['{0: >8}'.format(user.name)]
+            parts = [f'{user.name: >8}']
             if user.admin:
                 parts.append('admin')
             for name, spawner in sorted(user.orm_spawners.items(), key=itemgetter(0)):
                 if spawner.server:
-                    parts.append(
-                        '%s:%s running at %s' % (user.name, name, spawner.server)
-                    )
+                    parts.append(f'{user.name}:{name} running at {spawner.server}')
             return ' '.join(parts)
 
         async def user_stopped(user, server_name):
@@ -1890,7 +2506,7 @@ class JupyterHub(Application):
                 )
                 try:
                     await user._wait_up(spawner)
-                except TimeoutError:
+                except AnyTimeoutError:
                     self.log.error(
                         "%s does not appear to be running at %s, shutting it down.",
                         spawner._log_name,
@@ -1917,21 +2533,43 @@ class JupyterHub(Application):
                 else:
                     self.log.debug("%s not running", spawner._log_name)
 
+            spawner._check_pending = False
+
         # parallelize checks for running Spawners
+        # run query on extant Server objects
+        # so this is O(running servers) not O(total users)
+        # Server objects can be associated with either a Spawner or a Service,
+        # we are only interested in the ones associated with a Spawner
         check_futures = []
-        for orm_user in db.query(orm.User):
-            user = self.users[orm_user]
-            self.log.debug("Loading state for %s from db", user.name)
-            for name, orm_spawner in user.orm_spawners.items():
-                if orm_spawner.server is not None:
-                    # spawner should be running
-                    # instantiate Spawner wrapper and check if it's still alive
-                    spawner = user.spawners[name]
-                    f = asyncio.ensure_future(check_spawner(user, name, spawner))
-                    check_futures.append(f)
+        for orm_server in db.query(orm.Server):
+            orm_spawner = orm_server.spawner
+            if not orm_spawner:
+                # check for orphaned Server rows
+                # this shouldn't happen if we've got our sqlachemy right
+                if not orm_server.service:
+                    self.log.warning("deleting orphaned server %s", orm_server)
+                    self.db.delete(orm_server)
+                    self.db.commit()
+                continue
+            # instantiate Spawner wrapper and check if it's still alive
+            # spawner should be running
+            user = self.users[orm_spawner.user]
+            spawner = user.spawners[orm_spawner.name]
+            self.log.debug("Loading state for %s from db", spawner._log_name)
+            # signal that check is pending to avoid race conditions
+            spawner._check_pending = True
+            f = asyncio.ensure_future(check_spawner(user, spawner.name, spawner))
+            check_futures.append(f)
+
+        # it's important that we get here before the first await
+        # so that we know all spawners are instantiated and in the check-pending state
 
         # await checks after submitting them all
-        await gen.multi(check_futures)
+        if check_futures:
+            self.log.debug(
+                "Awaiting checks for %i possibly-running spawners", len(check_futures)
+            )
+            await asyncio.gather(*check_futures)
         db.commit()
 
         # only perform this query if we are going to log it
@@ -1941,7 +2579,7 @@ class JupyterHub(Application):
 
         active_counts = self.users.count_active_users()
         RUNNING_SERVERS.set(active_counts['active'])
-        TOTAL_USERS.set(len(self.users))
+        return len(check_futures)
 
     def init_oauth(self):
         base_url = self.hub.base_url
@@ -1949,6 +2587,7 @@ class JupyterHub(Application):
             lambda: self.db,
             url_prefix=url_path_join(base_url, 'api/oauth2'),
             login_url=url_path_join(base_url, 'login'),
+            token_expires_in=self.oauth_token_expires_in,
         )
 
     def cleanup_oauth_clients(self):
@@ -1956,17 +2595,13 @@ class JupyterHub(Application):
 
         This should mainly be services that have been removed from configuration or renamed.
         """
-        oauth_client_ids = set()
+        oauth_client_ids = {"jupyterhub"}
         for service in self._service_map.values():
             if service.oauth_available:
                 oauth_client_ids.add(service.oauth_client_id)
         for user in self.users.values():
             for spawner in user.spawners.values():
                 oauth_client_ids.add(spawner.oauth_client_id)
-                # avoid deleting clients created by 0.8
-                # 0.9 uses `jupyterhub-user-...` for the client id, while
-                # 0.8 uses just `user-...`
-                oauth_client_ids.add(spawner.oauth_client_id.split('-', 1)[1])
 
         for i, oauth_client in enumerate(self.db.query(orm.OAuthClient)):
             if oauth_client.identifier not in oauth_client_ids:
@@ -1998,7 +2633,7 @@ class JupyterHub(Application):
     def init_tornado_settings(self):
         """Set up the tornado settings dict."""
         base_url = self.hub.base_url
-        jinja_options = dict(autoescape=True)
+        jinja_options = dict(autoescape=True, enable_async=True)
         jinja_options.update(self.jinja_environment_options)
         base_path = self._template_paths_default()[0]
         if base_path not in self.template_paths:
@@ -2010,6 +2645,14 @@ class JupyterHub(Application):
             ]
         )
         jinja_env = Environment(loader=loader, **jinja_options)
+        # We need a sync jinja environment too, for the times we *must* use sync
+        # code - particularly in RequestHandler.write_error. Since *that*
+        # is called from inside the asyncio event loop, we can't actulaly just
+        # schedule it on the loop - without starting another thread with its
+        # own loop, which seems not worth the trouble. Instead, we create another
+        # environment, exactly like this one, but sync
+        del jinja_options['enable_async']
+        jinja_env_sync = Environment(loader=loader, **jinja_options)
 
         login_url = url_path_join(base_url, 'login')
         logout_url = self.authenticator.logout_url(base_url)
@@ -2022,6 +2665,15 @@ class JupyterHub(Application):
         else:
             version_hash = datetime.now().strftime("%Y%m%d%H%M%S")
 
+        oauth_no_confirm_list = set()
+        for service in self._service_map.values():
+            if service.oauth_no_confirm:
+                self.log.warning(
+                    "Allowing service %s to complete OAuth without confirmation on an authorization web page",
+                    service.name,
+                )
+                oauth_no_confirm_list.add(service.oauth_client_id)
+
         settings = dict(
             log_function=log_request,
             config=self.config,
@@ -2032,6 +2684,8 @@ class JupyterHub(Application):
             activity_resolution=self.activity_resolution,
             admin_users=self.authenticator.admin_users,
             admin_access=self.admin_access,
+            api_page_default_limit=self.api_page_default_limit,
+            api_page_max_limit=self.api_page_max_limit,
             authenticator=self.authenticator,
             spawner_class=self.spawner_class,
             base_url=self.base_url,
@@ -2047,13 +2701,17 @@ class JupyterHub(Application):
             template_path=self.template_paths,
             template_vars=self.template_vars,
             jinja2_env=jinja_env,
+            jinja2_env_sync=jinja_env_sync,
             version_hash=version_hash,
             subdomain_host=self.subdomain_host,
             domain=self.domain,
             statsd=self.statsd,
+            implicit_spawn_seconds=self.implicit_spawn_seconds,
             allow_named_servers=self.allow_named_servers,
+            default_server_name=self._default_server_name,
             named_server_limit_per_user=self.named_server_limit_per_user,
             oauth_provider=self.oauth_provider,
+            oauth_no_confirm_list=oauth_no_confirm_list,
             concurrent_spawn_limit=self.concurrent_spawn_limit,
             spawn_throttle_retry_range=self.spawn_throttle_retry_range,
             active_server_limit=self.active_server_limit,
@@ -2067,6 +2725,8 @@ class JupyterHub(Application):
             internal_ssl_ca=self.internal_ssl_ca,
             trusted_alt_names=self.trusted_alt_names,
             shutdown_on_logout=self.shutdown_on_logout,
+            eventlog=self.eventlog,
+            app=self,
         )
         # allow configured settings to have priority
         settings.update(self.tornado_settings)
@@ -2092,6 +2752,16 @@ class JupyterHub(Application):
                 e,
             )
 
+    def init_eventlog(self):
+        """Set up the event logging system."""
+        self.eventlog = EventLog(parent=self)
+
+        for dirname, _, files in os.walk(os.path.join(here, 'event-schemas')):
+            for file in files:
+                if not file.endswith('.yaml'):
+                    continue
+                self.eventlog.register_schema_file(os.path.join(dirname, file))
+
     def write_pid_file(self):
         pid = os.getpid()
         if self.pid_file:
@@ -2101,16 +2771,27 @@ class JupyterHub(Application):
 
     @catch_config_error
     async def initialize(self, *args, **kwargs):
+        hub_startup_start_time = time.perf_counter()
         super().initialize(*args, **kwargs)
         if self.generate_config or self.generate_certs or self.subapp:
             return
+        self._start_future = asyncio.Future()
+
+        def record_start(f):
+            startup_time = time.perf_counter() - hub_startup_start_time
+            self.log.debug("It took %.3f seconds for the Hub to start", startup_time)
+            HUB_STARTUP_DURATION_SECONDS.observe(startup_time)
+
+        self._start_future.add_done_callback(record_start)
+
         self.load_config_file(self.config_file)
         self.init_logging()
+        self.log.info("Running JupyterHub version %s", jupyterhub.__version__)
         if 'JupyterHubApp' in self.config:
             self.log.warning(
                 "Use JupyterHub in config, not JupyterHubApp. Outdated config:\n%s",
                 '\n'.join(
-                    'JupyterHubApp.{key} = {value!r}'.format(key=key, value=value)
+                    f'JupyterHubApp.{key} = {value!r}'
                     for key, value in self.config.JupyterHubApp.items()
                 ),
             )
@@ -2132,7 +2813,7 @@ class JupyterHub(Application):
                 mod = sys.modules.get(cls.__module__.split('.')[0])
                 version = getattr(mod, '__version__', '')
                 if version:
-                    version = '-{}'.format(version)
+                    version = f'-{version}'
             else:
                 version = ''
             self.log.info(
@@ -2141,7 +2822,9 @@ class JupyterHub(Application):
 
         _log_cls("Authenticator", self.authenticator_class)
         _log_cls("Spawner", self.spawner_class)
+        _log_cls("Proxy", self.proxy_class)
 
+        self.init_eventlog()
         self.init_pycurl()
         self.init_secrets()
         self.init_internal_ssl()
@@ -2149,15 +2832,68 @@ class JupyterHub(Application):
         self.init_hub()
         self.init_proxy()
         self.init_oauth()
+        await self.init_role_creation()
         await self.init_users()
         await self.init_groups()
         self.init_services()
         await self.init_api_tokens()
+        await self.init_role_assignment()
         self.init_tornado_settings()
-        await self.init_spawners()
-        self.cleanup_oauth_clients()
         self.init_handlers()
         self.init_tornado_application()
+
+        # init_spawners can take a while
+        init_spawners_timeout = self.init_spawners_timeout
+        if init_spawners_timeout < 0:
+            # negative timeout means forever (previous, most stable behavior)
+            init_spawners_timeout = 86400
+
+        init_start_time = time.perf_counter()
+        init_spawners_future = asyncio.ensure_future(self.init_spawners())
+
+        def log_init_time(f):
+            n_spawners = f.result()
+            spawner_initialization_time = time.perf_counter() - init_start_time
+            INIT_SPAWNERS_DURATION_SECONDS.observe(spawner_initialization_time)
+            self.log.info(
+                "Initialized %i spawners in %.3f seconds",
+                n_spawners,
+                spawner_initialization_time,
+            )
+
+        init_spawners_future.add_done_callback(log_init_time)
+
+        try:
+
+            # don't allow a zero timeout because we still need to be sure
+            # that the Spawner objects are defined and pending
+            await gen.with_timeout(
+                timedelta(seconds=max(init_spawners_timeout, 1)), init_spawners_future
+            )
+        except AnyTimeoutError:
+            self.log.warning(
+                "init_spawners did not complete within %i seconds. "
+                "Allowing to complete in the background.",
+                self.init_spawners_timeout,
+            )
+
+        if init_spawners_future.done():
+            self.cleanup_oauth_clients()
+        else:
+            # schedule async operations after init_spawners finishes
+            async def finish_init_spawners():
+                await init_spawners_future
+                # schedule cleanup after spawners are all set up
+                # because it relies on the state resolved by init_spawners
+                self.cleanup_oauth_clients()
+                # trigger a proxy check as soon as all spawners are ready
+                # because this may be *after* the check made as part of normal startup.
+                # To avoid races with partially-complete start,
+                # ensure that start is complete before running this check.
+                await self._start_future
+                await self.proxy.check_routes(self.users, self._service_map)
+
+            asyncio.ensure_future(finish_init_spawners())
 
     async def cleanup(self):
         """Shutdown managed services and various subprocesses. Cleanup runtime files."""
@@ -2239,6 +2975,7 @@ class JupyterHub(Application):
         with open(self.config_file, mode='w') as f:
             f.write(config_text)
 
+    @catch_db_error
     async def update_last_activity(self):
         """Update User.last_activity timestamps from the proxy"""
         routes = await self.proxy.get_all_routes()
@@ -2266,7 +3003,7 @@ class JupyterHub(Application):
                 continue
             dt = parse_date(route_data['last_activity'])
             if dt.tzinfo:
-                # strip timezone info to naïve UTC datetime
+                # strip timezone info to naive UTC datetime
                 dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
 
             if user.last_activity:
@@ -2308,7 +3045,7 @@ class JupyterHub(Application):
         if self.generate_certs:
             self.load_config_file(self.config_file)
             if not self.internal_ssl:
-                self.log.warn(
+                self.log.warning(
                     "You'll need to enable `internal_ssl` "
                     "in the `jupyterhub_config` file to use "
                     "these certs."
@@ -2323,11 +3060,25 @@ class JupyterHub(Application):
             loop.stop()
             return
 
+        # start the proxy
+        if self.proxy.should_start:
+            try:
+                await self.proxy.start()
+            except Exception as e:
+                self.log.critical("Failed to start proxy", exc_info=True)
+                self.exit(1)
+        else:
+            self.log.info("Not starting proxy")
+
+        # verify that we can talk to the proxy before listening.
+        # avoids delayed failure if we can't talk to the proxy
+        await self.proxy.get_all_routes()
+
         ssl_context = make_ssl_context(
             self.internal_ssl_key,
             self.internal_ssl_cert,
             cafile=self.internal_ssl_ca,
-            check_hostname=False,
+            purpose=ssl.Purpose.CLIENT_AUTH,
         )
 
         # start the webserver
@@ -2360,27 +3111,13 @@ class JupyterHub(Application):
             self.log.error("Failed to bind hub to %s", self.hub.bind_url)
             raise
 
-        # start the proxy
-        if self.proxy.should_start:
-            try:
-                await self.proxy.start()
-            except Exception as e:
-                self.log.critical("Failed to start proxy", exc_info=True)
-                self.exit(1)
-        else:
-            self.log.info("Not starting proxy")
-
         # start the service(s)
         for service_name, service in self._service_map.items():
-            msg = (
-                '%s at %s' % (service_name, service.url)
-                if service.url
-                else service_name
-            )
+            msg = f'{service_name} at {service.url}' if service.url else service_name
             if service.managed:
                 self.log.info("Starting managed service %s", msg)
                 try:
-                    service.start()
+                    await service.start()
                 except Exception as e:
                     self.log.critical(
                         "Failed to start service %s", service_name, exc_info=True
@@ -2393,15 +3130,10 @@ class JupyterHub(Application):
                 tries = 10 if service.managed else 1
                 for i in range(tries):
                     try:
-                        ssl_context = make_ssl_context(
-                            self.internal_ssl_key,
-                            self.internal_ssl_cert,
-                            cafile=self.internal_ssl_ca,
-                        )
                         await Server.from_orm(service.orm.server).wait_up(
                             http=True, timeout=1, ssl_context=ssl_context
                         )
-                    except TimeoutError:
+                    except AnyTimeoutError:
                         if service.managed:
                             status = await service.spawner.poll()
                             if status is not None:
@@ -2438,12 +3170,18 @@ class JupyterHub(Application):
             self.last_activity_callback = pc
             pc.start()
 
-        self.log.info("JupyterHub is now running at %s", self.proxy.public_url)
+        if self.proxy.should_start:
+            self.log.info("JupyterHub is now running at %s", self.proxy.public_url)
+        else:
+            self.log.info(
+                "JupyterHub is now running, internal Hub API at %s", self.hub.url
+            )
         # Use atexit for Windows, it doesn't have signal handling support
         if _mswindows:
             atexit.register(self.atexit)
         # register cleanup on both TERM and INT
         self.init_signal()
+        self._start_future.set_result(None)
 
     def init_signal(self):
         loop = asyncio.get_event_loop()
@@ -2474,6 +3212,40 @@ class JupyterHub(Application):
         self.log.critical("Received signalnum %s, , initiating shutdown...", signum)
         raise SystemExit(128 + signum)
 
+    def _init_asyncio_patch(self):
+        """Set default asyncio policy to be compatible with Tornado.
+
+        Tornado 6 (at least) is not compatible with the default
+        asyncio implementation on Windows.
+
+        Pick the older SelectorEventLoopPolicy on Windows
+        if the known-incompatible default policy is in use.
+
+        Do this as early as possible to make it a low priority and overrideable.
+
+        ref: https://github.com/tornadoweb/tornado/issues/2608
+
+        FIXME: If/when tornado supports the defaults in asyncio,
+               remove and bump tornado requirement for py38.
+        """
+        if sys.platform.startswith("win") and sys.version_info >= (3, 8):
+            try:
+                from asyncio import (
+                    WindowsProactorEventLoopPolicy,
+                    WindowsSelectorEventLoopPolicy,
+                )
+            except ImportError:
+                pass
+                # not affected
+            else:
+                if (
+                    type(asyncio.get_event_loop_policy())
+                    is WindowsProactorEventLoopPolicy
+                ):
+                    # WindowsProactorEventLoopPolicy is not compatible with Tornado 6.
+                    # Fallback to the pre-3.8 default of WindowsSelectorEventLoopPolicy.
+                    asyncio.set_event_loop_policy(WindowsSelectorEventLoopPolicy())
+
     _atexit_ran = False
 
     def atexit(self):
@@ -2481,19 +3253,20 @@ class JupyterHub(Application):
         if self._atexit_ran:
             return
         self._atexit_ran = True
+        self._init_asyncio_patch()
         # run the cleanup step (in a new loop, because the interrupted one is unclean)
-        asyncio.set_event_loop(asyncio.new_event_loop())
-        IOLoop.clear_current()
-        loop = IOLoop()
-        loop.make_current()
-        loop.run_sync(self.cleanup)
+        asyncio.run(self.cleanup())
 
-    async def shutdown_cancel_tasks(self, sig):
+    async def shutdown_cancel_tasks(self, sig=None):
         """Cancel all other tasks of the event loop and initiate cleanup"""
-        self.log.critical("Received signal %s, initiating shutdown...", sig.name)
-        tasks = [
-            t for t in asyncio.Task.all_tasks() if t is not asyncio.Task.current_task()
-        ]
+        if sig is None:
+            self.log.critical("Initiating shutdown...")
+        else:
+            self.log.critical("Received signal %s, initiating shutdown...", sig.name)
+
+        await self.cleanup()
+
+        tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
 
         if tasks:
             self.log.debug("Cancelling pending tasks")
@@ -2506,10 +3279,9 @@ class JupyterHub(Application):
             except StopAsyncIteration as e:
                 self.log.error("Caught StopAsyncIteration Exception", exc_info=True)
 
-            tasks = [t for t in asyncio.Task.all_tasks()]
+            tasks = [t for t in asyncio.all_tasks()]
             for t in tasks:
                 self.log.debug("Task status: %s", t)
-        await self.cleanup()
         asyncio.get_event_loop().stop()
 
     def stop(self):
@@ -2517,7 +3289,19 @@ class JupyterHub(Application):
             return
         if self.http_server:
             self.http_server.stop()
-        self.io_loop.add_callback(self.io_loop.stop)
+        self.io_loop.add_callback(self.shutdown_cancel_tasks)
+
+    async def start_show_config(self):
+        """Async wrapper around base start_show_config method"""
+        # We need this because of our custom launch_instance_async,
+        # where `start` isn't a blocking call,
+        # it only gets async things going
+        # and `--show-config` replaces `start` with a blocking function.
+        # so our version:
+        # 1. calls the original blocking method
+        # 2. stops the event loop when we are done, so the process exits
+        super().start_show_config()
+        self.exit(0)
 
     async def launch_instance_async(self, argv=None):
         try:
@@ -2530,17 +3314,20 @@ class JupyterHub(Application):
     @classmethod
     def launch_instance(cls, argv=None):
         self = cls.instance()
-        AsyncIOMainLoop().install()
-        loop = IOLoop.current()
-        task = asyncio.ensure_future(self.launch_instance_async(argv))
+        self._init_asyncio_patch()
+        loop = IOLoop(make_current=False)
+
+        try:
+            loop.run_sync(partial(self.launch_instance_async, argv))
+        except Exception:
+            loop.close()
+            raise
+
         try:
             loop.start()
         except KeyboardInterrupt:
             print("\nInterrupted")
         finally:
-            if task.done():
-                # re-raise exceptions in launch_instance_async
-                task.result()
             loop.stop()
             loop.close()
 

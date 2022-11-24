@@ -1,8 +1,6 @@
 """Tests for dummy authentication"""
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
-import pytest
-
 from jupyterhub.auth import DummyAuthenticator
 
 

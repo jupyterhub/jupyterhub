@@ -3,31 +3,35 @@
 # Distributed under the terms of the Modified BSD License.
 import json
 from datetime import datetime
-from urllib.parse import parse_qsl
-from urllib.parse import quote
-from urllib.parse import urlencode
-from urllib.parse import urlparse
-from urllib.parse import urlunparse
+from unittest import mock
+from urllib.parse import parse_qsl, quote, urlencode, urlparse, urlunparse
 
 from oauthlib import oauth2
 from tornado import web
 
-from .. import orm
-from ..user import User
-from ..utils import compare_token
-from ..utils import token_authenticated
-from .base import APIHandler
-from .base import BaseHandler
+from .. import orm, roles, scopes
+from ..utils import get_browser_protocol, token_authenticated
+from .base import APIHandler, BaseHandler
 
 
 class TokenAPIHandler(APIHandler):
     @token_authenticated
     def get(self, token):
+        # FIXME: deprecate this API for oauth token resolution, in favor of using /api/user
+        # TODO: require specific scope for this deprecated API, applied to service tokens only?
+        self.log.warning(
+            "/authorizations/token/:token endpoint is deprecated in JupyterHub 2.0. Use /api/user"
+        )
         orm_token = orm.APIToken.find(self.db, token)
         if orm_token is None:
-            orm_token = orm.OAuthAccessToken.find(self.db, token)
-        if orm_token is None:
             raise web.HTTPError(404)
+
+        owner = orm_token.user or orm_token.service
+        if owner:
+            # having a token means we should be able to read the owner's model
+            # (this is the only thing this handler is for)
+            self.expanded_scopes |= scopes.identify_scopes(owner)
+            self.parsed_scopes = scopes.parse_scopes(self.expanded_scopes)
 
         # record activity whenever we see a token
         now = orm_token.last_activity = datetime.utcnow()
@@ -45,53 +49,20 @@ class TokenAPIHandler(APIHandler):
         self.write(json.dumps(model))
 
     async def post(self):
-        warn_msg = (
-            "Using deprecated token creation endpoint %s."
-            " Use /hub/api/users/:user/tokens instead."
-        ) % self.request.uri
-        self.log.warning(warn_msg)
-        requester = user = self.current_user
-        if user is None:
-            # allow requesting a token with username and password
-            # for authenticators where that's possible
-            data = self.get_json_body()
-            try:
-                requester = user = await self.login_user(data)
-            except Exception as e:
-                self.log.error("Failure trying to authenticate with form data: %s" % e)
-                user = None
-            if user is None:
-                raise web.HTTPError(403)
-        else:
-            data = self.get_json_body()
-            # admin users can request tokens for other users
-            if data and data.get('username'):
-                user = self.find_user(data['username'])
-                if user is not requester and not requester.admin:
-                    raise web.HTTPError(
-                        403, "Only admins can request tokens for other users."
-                    )
-                if requester.admin and user is None:
-                    raise web.HTTPError(400, "No such user '%s'" % data['username'])
-
-        note = (data or {}).get('note')
-        if not note:
-            note = "Requested via deprecated api"
-            if requester is not user:
-                kind = 'user' if isinstance(user, User) else 'service'
-                note += " by %s %s" % (kind, requester.name)
-
-        api_token = user.new_api_token(note=note)
-        self.write(
-            json.dumps(
-                {'token': api_token, 'warning': warn_msg, 'user': self.user_model(user)}
-            )
+        raise web.HTTPError(
+            404,
+            "Deprecated endpoint /hub/api/authorizations/token is removed in JupyterHub 2.0."
+            " Use /hub/api/users/:user/tokens instead.",
         )
 
 
 class CookieAPIHandler(APIHandler):
     @token_authenticated
     def get(self, cookie_name, cookie_value=None):
+        self.log.warning(
+            "/authorizations/cookie endpoint is deprecated in JupyterHub 2.0. Use /api/user with OAuth tokens."
+        )
+
         cookie_name = quote(cookie_name, safe='')
         if cookie_value is None:
             self.log.warning(
@@ -137,7 +108,10 @@ class OAuthHandler:
         # make absolute local redirects full URLs
         # to satisfy oauthlib's absolute URI requirement
         redirect_uri = (
-            self.request.protocol + "://" + self.request.headers['Host'] + redirect_uri
+            get_browser_protocol(self.request)
+            + "://"
+            + self.request.host
+            + redirect_uri
         )
         parsed_url = urlparse(uri)
         query_list = parse_qsl(parsed_url.query, keep_blank_values=True)
@@ -198,37 +172,198 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
             raise
         self.send_oauth_response(headers, body, status)
 
+    def needs_oauth_confirm(self, user, oauth_client, requested_scopes):
+        """Return whether the given oauth client needs to prompt for access for the given user
+
+        Checks list for oauth clients that don't need confirmation
+
+        Sources:
+
+        - the user's own servers
+        - Clients which already have authorization for the same roles
+        - Explicit oauth_no_confirm_list configuration (e.g. admin-operated services)
+
+        .. versionadded: 1.1
+        """
+        # get the oauth client ids for the user's own server(s)
+        own_oauth_client_ids = {
+            spawner.oauth_client_id for spawner in user.spawners.values()
+        }
+        if (
+            # it's the user's own server
+            oauth_client.identifier in own_oauth_client_ids
+            # or it's in the global no-confirm list
+            or oauth_client.identifier
+            in self.settings.get('oauth_no_confirm_list', set())
+        ):
+            return False
+
+        # Check existing authorization
+        existing_tokens = self.db.query(orm.APIToken).filter_by(
+            user_id=user.id,
+            client_id=oauth_client.identifier,
+        )
+        authorized_scopes = set()
+        for token in existing_tokens:
+            authorized_scopes.update(token.scopes)
+
+        if authorized_scopes:
+            if set(requested_scopes).issubset(authorized_scopes):
+                self.log.debug(
+                    f"User {user.name} has already authorized {oauth_client.identifier} for scopes {requested_scopes}"
+                )
+                return False
+            else:
+                self.log.debug(
+                    f"User {user.name} has authorized {oauth_client.identifier}"
+                    f" for scopes {authorized_scopes}, confirming additional scopes {requested_scopes}"
+                )
+        # default: require confirmation
+        return True
+
+    def get_login_url(self):
+        """
+        Support automatically logging in when JupyterHub is used as auth provider
+        """
+        if self.authenticator.auto_login_oauth2_authorize:
+            return self.authenticator.login_url(self.hub.base_url)
+        return super().get_login_url()
+
     @web.authenticated
-    def get(self):
+    async def get(self):
         """GET /oauth/authorization
 
         Render oauth confirmation page:
         "Server at ... would like permission to ...".
 
-        Users accessing their own server will skip confirmation.
+        Users accessing their own server or a blessed service
+        will skip confirmation.
         """
 
         uri, http_method, body, headers = self.extract_oauth_params()
         try:
-            scopes, credentials = self.oauth_provider.validate_authorization_request(
-                uri, http_method, body, headers
-            )
+            with mock.patch.object(
+                self.oauth_provider.request_validator,
+                "_current_user",
+                self.current_user,
+                create=True,
+            ):
+                (
+                    requested_scopes,
+                    credentials,
+                ) = self.oauth_provider.validate_authorization_request(
+                    uri, http_method, body, headers
+                )
             credentials = self.add_credentials(credentials)
             client = self.oauth_provider.fetch_by_client_id(credentials['client_id'])
-            if client.redirect_uri.startswith(self.current_user.url):
+            allowed = False
+
+            # check for access to target resource
+            if client.spawner:
+                scope_filter = self.get_scope_filter("access:servers")
+                allowed = scope_filter(client.spawner, kind='server')
+            elif client.service:
+                scope_filter = self.get_scope_filter("access:services")
+                allowed = scope_filter(client.service, kind='service')
+            else:
+                # client is not associated with a service or spawner.
+                # This shouldn't happen, but it might if this is a stale or forged request
+                # from a service or spawner that's since been deleted
+                self.log.error(
+                    f"OAuth client {client} has no service or spawner, cannot resolve scopes."
+                )
+                raise web.HTTPError(500, "OAuth configuration error")
+
+            if not allowed:
+                self.log.error(
+                    f"User {self.current_user} not allowed to access {client.description}"
+                )
+                raise web.HTTPError(
+                    403, f"You do not have permission to access {client.description}"
+                )
+
+            # subset 'raw scopes' to those held by authenticating user
+            requested_scopes = set(requested_scopes)
+            user = self.current_user
+            # raw, _not_ expanded scopes
+            user_scopes = roles.roles_to_scopes(roles.get_roles_for(user.orm_user))
+            # these are some scopes the user may not have
+            # in 'raw' form, but definitely have at this point
+            # make sure they are here, because we are computing the
+            # 'raw' scope intersection,
+            # rather than the expanded_scope intersection
+
+            required_scopes = {*scopes.identify_scopes(), *scopes.access_scopes(client)}
+            user_scopes |= {"inherit", *required_scopes}
+
+            allowed_scopes, disallowed_scopes = scopes._resolve_requested_scopes(
+                requested_scopes,
+                user_scopes,
+                user=user.orm_user,
+                client=client,
+                db=self.db,
+            )
+
+            if disallowed_scopes:
+                self.log.warning(
+                    f"Service {client.description} requested scopes {','.join(requested_scopes)}"
+                    f" for user {self.current_user.name},"
+                    f" granting only {','.join(allowed_scopes) or '[]'}."
+                )
+
+            if not self.needs_oauth_confirm(self.current_user, client, allowed_scopes):
                 self.log.debug(
                     "Skipping oauth confirmation for %s accessing %s",
                     self.current_user,
                     client.description,
                 )
-                # access to my own server doesn't require oauth confirmation
                 # this is the pre-1.0 behavior for all oauth
-                self._complete_login(uri, headers, scopes, credentials)
+                self._complete_login(uri, headers, allowed_scopes, credentials)
                 return
 
+            # discard 'required' scopes from description
+            # no need to describe the ability to access itself
+            scopes_to_describe = allowed_scopes.difference(required_scopes)
+
+            if not scopes_to_describe:
+                # TODO: describe all scopes?
+                # Not right now, because the no-scope default 'identify' text
+                # is clearer than what we produce for those scopes individually
+                scope_descriptions = [
+                    {
+                        "scope": None,
+                        "description": scopes.scope_definitions['(no_scope)'][
+                            'description'
+                        ],
+                        "filter": "",
+                    }
+                ]
+            elif 'inherit' in scopes_to_describe:
+                allowed_scopes = scopes_to_describe = ['inherit']
+                scope_descriptions = [
+                    {
+                        "scope": "inherit",
+                        "description": scopes.scope_definitions['inherit'][
+                            'description'
+                        ],
+                        "filter": "",
+                    }
+                ]
+            else:
+                scope_descriptions = scopes.describe_raw_scopes(
+                    scopes_to_describe,
+                    username=self.current_user.name,
+                )
             # Render oauth 'Authorize application...' page
+            auth_state = await self.current_user.get_auth_state()
             self.write(
-                self.render_template("oauth.html", scopes=scopes, oauth_client=client)
+                await self.render_template(
+                    "oauth.html",
+                    auth_state=auth_state,
+                    allowed_scopes=allowed_scopes,
+                    scope_descriptions=scope_descriptions,
+                    oauth_client=client,
+                )
             )
 
         # Errors that should be shown to the user on the provider website
@@ -245,9 +380,26 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
         uri, http_method, body, headers = self.extract_oauth_params()
         referer = self.request.headers.get('Referer', 'no referer')
         full_url = self.request.full_url()
-        if referer != full_url:
+        # trim protocol, which cannot be trusted with multiple layers of proxies anyway
+        # Referer is set by browser, but full_url can be modified by proxy layers to appear as http
+        # when it is actually https
+        referer_proto, _, stripped_referer = referer.partition("://")
+        referer_proto = referer_proto.lower()
+        req_proto, _, stripped_full_url = full_url.partition("://")
+        req_proto = req_proto.lower()
+        if referer_proto != req_proto:
+            self.log.warning("Protocol mismatch: %s != %s", referer, full_url)
+            if req_proto == "https":
+                # insecure origin to secure target is not allowed
+                raise web.HTTPError(
+                    403, "Not allowing authorization form submitted from insecure page"
+                )
+        if stripped_referer != stripped_full_url:
             # OAuth post must be made to the URL it came from
-            self.log.error("OAuth POST from %s != %s", referer, full_url)
+            self.log.error("Original OAuth POST from %s != %s", referer, full_url)
+            self.log.error(
+                "Stripped OAuth POST from %s != %s", stripped_referer, stripped_full_url
+            )
             raise web.HTTPError(
                 403, "Authorization form must be sent from authorization page"
             )
@@ -255,6 +407,10 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
         # The scopes the user actually authorized, i.e. checkboxes
         # that were selected.
         scopes = self.get_arguments('scopes')
+        if scopes == []:
+            # avoid triggering default scopes (provider selects default scopes when scopes is falsy)
+            # when an explicit empty list is authorized
+            scopes = ["identify"]
         # credentials we need in the validator
         credentials = self.add_credentials()
 

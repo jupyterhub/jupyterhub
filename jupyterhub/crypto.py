@@ -4,19 +4,12 @@ import os
 from binascii import a2b_hex
 from concurrent.futures import ThreadPoolExecutor
 
-from traitlets import Any
-from traitlets import default
-from traitlets import Dict
-from traitlets import Integer
-from traitlets import List
-from traitlets import observe
-from traitlets import validate
-from traitlets.config import Config
-from traitlets.config import SingletonConfigurable
+from traitlets import Any, Integer, List, default, observe, validate
+from traitlets.config import Config, SingletonConfigurable
 
 try:
     import cryptography
-    from cryptography.fernet import Fernet, MultiFernet, InvalidToken
+    from cryptography.fernet import Fernet, InvalidToken, MultiFernet
 except ImportError:
     cryptography = None
 

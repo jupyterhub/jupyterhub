@@ -3,17 +3,16 @@ import sys
 from logging.config import fileConfig
 
 from alembic import context
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
+from sqlalchemy import engine_from_config, pool
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
-
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
 if 'jupyterhub' in sys.modules:
     from traitlets.config import MultipleInstanceError
+
     from jupyterhub.app import JupyterHub
 
     app = None
@@ -28,7 +27,7 @@ if 'jupyterhub' in sys.modules:
         alembic_logger.propagate = True
         alembic_logger.parent = app.log
     else:
-        fileConfig(config.config_file_name)
+        fileConfig(config.config_file_name, disable_existing_loggers=False)
 else:
     fileConfig(config.config_file_name)
 
@@ -41,6 +40,16 @@ target_metadata = orm.Base.metadata
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
+
+# pass these to context.configure(**config_opts)
+common_config_opts = dict(
+    # target_metadata for autogenerate
+    target_metadata=target_metadata,
+    # transaction per migration to ensure
+    # each migration is 'complete' before running the next one
+    # (e.g. dropped tables)
+    transaction_per_migration=True,
+)
 
 
 def run_migrations_offline():
@@ -55,8 +64,16 @@ def run_migrations_offline():
     script output.
 
     """
-    url = config.get_main_option("sqlalchemy.url")
-    context.configure(url=url, target_metadata=target_metadata, literal_binds=True)
+    connectable = config.attributes.get('connection', None)
+    config_opts = {}
+    config_opts.update(common_config_opts)
+    config_opts["literal_binds"] = True
+
+    if connectable is None:
+        config_opts["url"] = config.get_main_option("sqlalchemy.url")
+    else:
+        config_opts["connection"] = connectable
+    context.configure(**config_opts)
 
     with context.begin_transaction():
         context.run_migrations()
@@ -69,14 +86,22 @@ def run_migrations_online():
     and associate a connection with the context.
 
     """
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section),
-        prefix='sqlalchemy.',
-        poolclass=pool.NullPool,
-    )
+    connectable = config.attributes.get('connection', None)
+    config_opts = {}
+    config_opts.update(common_config_opts)
+
+    if connectable is None:
+        connectable = engine_from_config(
+            config.get_section(config.config_ini_section),
+            prefix='sqlalchemy.',
+            poolclass=pool.NullPool,
+        )
 
     with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata)
+        context.configure(
+            connection=connection,
+            **common_config_opts,
+        )
 
         with context.begin_transaction():
             context.run_migrations()

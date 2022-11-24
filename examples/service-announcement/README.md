@@ -1,4 +1,3 @@
-
 # Simple Announcement Service Example
 
 This is a simple service that allows administrators to manage announcements
@@ -7,32 +6,63 @@ that appear when JupyterHub renders pages.
 To run the service as a hub-managed service simply include in your JupyterHub
 configuration file something like:
 
-    c.JupyterHub.services = [
-            {
-                'name': 'announcement',
-                'url': 'http://127.0.0.1:8888',
-                'command': [sys.executable, "-m", "announcement"],
-            }
-    ]
+:notebook:**Info**: You can run the announcement service example from the `examples`
+directory, using one of the several services provided by JupyterHub.
 
-This starts the announcements service up at `/services/announcement` when
-JupyterHub launches.  By default the announcement text is empty.
+```python
+
+import sys
+
+from pathlib import Path
+# absolute path to announcement.py
+announcement_py = str(Path(__file__).parent.joinpath("announcement.py").resolve())
+
+#ensure get_config() is added in
+ c = get_config()
+
+...
+..
+
+c.JupyterHub.services = [
+        {
+            'name': 'announcement',
+            'url': 'http://127.0.0.1:8888',
+            'command': [sys.executable, announcement_py, "--port", "8888"],
+        }
+]
+```
+
+This starts the announcements service up at `/services/announcement/` when
+JupyterHub launches. By default the announcement text is empty.
 
 The `announcement` module has a configurable port (default 8888) and an API
-prefix setting.  By default the API prefix is `JUPYTERHUB_SERVICE_PREFIX` if
+prefix setting. By default the API prefix is `JUPYTERHUB_SERVICE_PREFIX` if
 that environment variable is set or `/` if it is not.
 
 ## Managing the Announcement
 
-Admin users can set the announcement text with an API token:
+Users with permission can set the announcement text with an API token:
 
     $ curl -X POST -H "Authorization: token <token>"                        \
-        -d "{'announcement':'JupyterHub will be upgraded on August 14!'}"   \
-        https://.../services/announcement
+        -d '{"announcement":"JupyterHub will be upgraded on August 14!"}'   \
+        https://.../services/announcement/
+
+To grant permission, add a role (JupyterHub 2.0) with access to the announcement service:
+
+```python
+# grant the 'announcer' permission to access the announcement service
+c.JupyterHub.load_roles = [
+    {
+        "name": "announcers",
+        "users": ["announcer"], # or groups
+        "scopes": ["access:services!service=announcement"],
+    }
+]
+```
 
 Anyone can read the announcement:
 
-    $ curl https://.../services/announcement | python -m json.tool
+    $ curl https://.../services/announcement/ | python -m json.tool
     {
         announcement: "JupyterHub will be upgraded on August 14!",
         timestamp: "...",
@@ -42,19 +72,20 @@ Anyone can read the announcement:
 The time the announcement was posted is recorded in the `timestamp` field and
 the user who posted the announcement is recorded in the `user` field.
 
-To clear the announcement text, just DELETE.  Only admin users can do this.
+To clear the announcement text, send a DELETE request.
+This has the same permission requirement.
 
-    $ curl -X POST -H "Authorization: token <token>"                        \
-        https://.../services/announcement
+    $ curl -X DELETE -H "Authorization: token <token>"                        \
+        https://.../services/announcement/
 
 ## Seeing the Announcement in JupyterHub
 
 To be able to render the announcement, include the provide `page.html` template
-that extends the base `page.html` template.  Set `c.JupyterHub.template_paths`
+that extends the base `page.html` template. Set `c.JupyterHub.template_paths`
 in JupyterHub's configuration to include the path to the extending template.
 The template changes the `announcement` element and does a JQuery `$.get()` call
 to retrieve the announcement text.
 
 JupyterHub's configurable announcement template variables can be set for various
-pages like login, logout, spawn, and home.  Including the template provided in
+pages like login, logout, spawn, and home. Including the template provided in
 this example overrides all of those.

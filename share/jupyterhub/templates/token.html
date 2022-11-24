@@ -19,6 +19,21 @@
         <small id="note-note" class="form-text text-muted">
           This note will help you keep track of what your tokens are for.
         </small>
+        <br><br>
+        <label for="token-expiration-seconds">Token expires</label>
+        {% block expiration_options %}
+        <select id="token-expiration-seconds"
+                class="form-control">
+          <!-- unit used for each value is `seconds` -->
+          <option value="3600">1 Hour</option>
+          <option value="86400">1 Day</option>
+          <option value="604800">1 Week</option>
+          <option value="" selected="selected">Never</option>
+        </select>
+        {% endblock expiration_options %}
+        <small id="note-expires-at" class="form-text text-muted">
+          You can configure when your token will be expired.
+        </small>
       </div>
     </form>
   </div>
@@ -56,6 +71,7 @@
           <td>Note</td>
           <td>Last used</td>
           <td>Created</td>
+          <td>Expires at</td>
         </tr>
       </thead>
       <tbody>
@@ -75,6 +91,13 @@
             {{ token.created.isoformat() + 'Z' }}
             {%- else -%}
             N/A
+            {%- endif -%}
+          </td>
+          <td class="time-col col-sm-3">
+            {%- if token.expires_at -%}
+            {{ token.expires_at.isoformat() + 'Z' }}
+            {%- else -%}
+            Never
             {%- endif -%}
           </td>
           <td class="col-sm-1 text-center">

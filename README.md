@@ -6,27 +6,37 @@
 **[License](#license)** |
 **[Help and Resources](#help-and-resources)**
 
+---
+
+Please note that this repository is participating in a study into the sustainability of open source projects. Data will be gathered about this repository for approximately the next 12 months, starting from 2021-06-11.
+
+Data collected will include the number of contributors, number of PRs, time taken to close/merge these PRs, and issues closed.
+
+For more information, please visit
+[our informational page](https://sustainable-open-science-and-software.github.io/) or download our [participant information sheet](https://sustainable-open-science-and-software.github.io/assets/PIS_sustainable_software.pdf).
+
+---
 
 # [JupyterHub](https://github.com/jupyterhub/jupyterhub)
 
-
-[![PyPI](https://img.shields.io/pypi/v/jupyterhub.svg)](https://pypi.python.org/pypi/jupyterhub)
-[![Documentation Status](https://readthedocs.org/projects/jupyterhub/badge/?version=latest)](https://jupyterhub.readthedocs.org/en/latest/?badge=latest)
-[![Build Status](https://travis-ci.org/jupyterhub/jupyterhub.svg?branch=master)](https://travis-ci.org/jupyterhub/jupyterhub)
-[![Circle CI](https://circleci.com/gh/jupyterhub/jupyterhub.svg?style=shield&circle-token=b5b65862eb2617b9a8d39e79340b0a6b816da8cc)](https://circleci.com/gh/jupyterhub/jupyterhub)
-[![codecov.io](https://codecov.io/github/jupyterhub/jupyterhub/coverage.svg?branch=master)](https://codecov.io/github/jupyterhub/jupyterhub?branch=master)
-[![GitHub](https://img.shields.io/badge/issue_tracking-github-blue.svg)](https://github.com/jupyterhub/jupyterhub/issues)
-[![Discourse](https://img.shields.io/badge/help_forum-discourse-blue.svg)](https://discourse.jupyter.org/c/jupyterhub)
-[![Gitter](https://img.shields.io/badge/social_chat-gitter-blue.svg)](https://gitter.im/jupyterhub/jupyterhub)
+[![Latest PyPI version](https://img.shields.io/pypi/v/jupyterhub?logo=pypi)](https://pypi.python.org/pypi/jupyterhub)
+[![Latest conda-forge version](https://img.shields.io/conda/vn/conda-forge/jupyterhub?logo=conda-forge)](https://anaconda.org/conda-forge/jupyterhub)
+[![Documentation build status](https://img.shields.io/readthedocs/jupyterhub?logo=read-the-docs)](https://jupyterhub.readthedocs.org/en/latest/)
+[![GitHub Workflow Status - Test](https://img.shields.io/github/workflow/status/jupyterhub/jupyterhub/Test?logo=github&label=tests)](https://github.com/jupyterhub/jupyterhub/actions)
+[![DockerHub build status](https://img.shields.io/docker/build/jupyterhub/jupyterhub?logo=docker&label=build)](https://hub.docker.com/r/jupyterhub/jupyterhub/tags)
+[![Test coverage of code](https://codecov.io/gh/jupyterhub/jupyterhub/branch/main/graph/badge.svg)](https://codecov.io/gh/jupyterhub/jupyterhub)
+[![GitHub](https://img.shields.io/badge/issue_tracking-github-blue?logo=github)](https://github.com/jupyterhub/jupyterhub/issues)
+[![Discourse](https://img.shields.io/badge/help_forum-discourse-blue?logo=discourse)](https://discourse.jupyter.org/c/jupyterhub)
+[![Gitter](https://img.shields.io/badge/social_chat-gitter-blue?logo=gitter)](https://gitter.im/jupyterhub/jupyterhub)
 
 With [JupyterHub](https://jupyterhub.readthedocs.io) you can create a
-**multi-user Hub** which spawns, manages, and proxies multiple instances of the
+**multi-user Hub** that spawns, manages, and proxies multiple instances of the
 single-user [Jupyter notebook](https://jupyter-notebook.readthedocs.io)
 server.
 
 [Project Jupyter](https://jupyter.org) created JupyterHub to support many
 users. The Hub can offer notebook servers to a class of students, a corporate
-data science workgroup, a scientific research project, or a high performance
+data science workgroup, a scientific research project, or a high-performance
 computing group.
 
 ## Technical overview
@@ -40,38 +50,32 @@ Three main actors make up JupyterHub:
 Basic principles for operation are:
 
 - Hub launches a proxy.
-- Proxy forwards all requests to Hub by default.
-- Hub handles login, and spawns single-user servers on demand.
-- Hub configures proxy to forward url prefixes to the single-user notebook
+- The Proxy forwards all requests to Hub by default.
+- Hub handles login and spawns single-user servers on demand.
+- Hub configures proxy to forward URL prefixes to the single-user notebook
   servers.
 
 JupyterHub also provides a
-[REST API](http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyter/jupyterhub/master/docs/rest-api.yml#/default)
+[REST API][]
 for administration of the Hub and its users.
 
-## Installation
+[rest api]: https://jupyterhub.readthedocs.io/en/latest/reference/rest-api.html
 
+## Installation
 
 ### Check prerequisites
 
 - A Linux/Unix based system
-- [Python](https://www.python.org/downloads/) 3.5 or greater
+- [Python](https://www.python.org/downloads/) 3.6 or greater
 - [nodejs/npm](https://www.npmjs.com/)
 
-  * If you are using **`conda`**, the nodejs and npm dependencies will be installed for
+  - If you are using **`conda`**, the nodejs and npm dependencies will be installed for
     you by conda.
 
-  * If you are using **`pip`**, install a recent version of
+  - If you are using **`pip`**, install a recent version (at least 12.0) of
     [nodejs/npm](https://docs.npmjs.com/getting-started/installing-node).
-    For example, install it on Linux (Debian/Ubuntu) using:
 
-    ```
-    sudo apt-get install npm nodejs-legacy
-    ```
-
-    The `nodejs-legacy` package installs the `node` executable and is currently
-    required for npm to work on Debian/Ubuntu.
-
+- If using the default PAM Authenticator, a [pluggable authentication module (PAM)](https://en.wikipedia.org/wiki/Pluggable_authentication_module).
 - TLS certificate and key for HTTPS communication
 - Domain name
 
@@ -85,12 +89,11 @@ To install JupyterHub along with its dependencies including nodejs/npm:
 conda install -c conda-forge jupyterhub
 ```
 
-If you plan to run notebook servers locally, install the Jupyter notebook
-or JupyterLab:
+If you plan to run notebook servers locally, install JupyterLab or Jupyter notebook:
 
 ```bash
-conda install notebook
 conda install jupyterlab
+conda install notebook
 ```
 
 #### Using `pip`
@@ -99,13 +102,13 @@ JupyterHub can be installed with `pip`, and the proxy with `npm`:
 
 ```bash
 npm install -g configurable-http-proxy
-python3 -m pip install jupyterhub    
+python3 -m pip install jupyterhub
 ```
 
-If you plan to run notebook servers locally, you will need to install the
-[Jupyter notebook](https://jupyter.readthedocs.io/en/latest/install.html)
-package:
+If you plan to run notebook servers locally, you will need to install
+[JupyterLab or Jupyter notebook](https://jupyter.readthedocs.io/en/latest/install.html):
 
+    python3 -m pip install --upgrade jupyterlab
     python3 -m pip install --upgrade notebook
 
 ### Run the Hub server
@@ -114,13 +117,12 @@ To start the Hub server, run the command:
 
     jupyterhub
 
-Visit `https://localhost:8000` in your browser, and sign in with your unix
-PAM credentials.
+Visit `http://localhost:8000` in your browser, and sign in with your system username and password.
 
-*Note*: To allow multiple users to sign into the server, you will need to
-run the `jupyterhub` command as a *privileged user*, such as root.
+_Note_: To allow multiple users to sign in to the server, you will need to
+run the `jupyterhub` command as a _privileged user_, such as root.
 The [wiki](https://github.com/jupyterhub/jupyterhub/wiki/Using-sudo-to-run-JupyterHub-without-root-privileges)
-describes how to run the server as a *less privileged user*, which requires
+describes how to run the server as a _less privileged user_, which requires
 more configuration of the system.
 
 ## Configuration
@@ -139,7 +141,7 @@ To generate a default config file with settings and descriptions:
 
 ### Start the Hub
 
-To start the Hub on a specific url and port ``10.0.1.2:443`` with **https**:
+To start the Hub on a specific url and port `10.0.1.2:443` with **https**:
 
     jupyterhub --ip 10.0.1.2 --port 443 --ssl-key my_ssl.key --ssl-cert my_ssl.cert
 
@@ -201,7 +203,7 @@ These accounts will be used for authentication in JupyterHub's default configura
 ## Contributing
 
 If you would like to contribute to the project, please read our
-[contributor documentation](http://jupyter.readthedocs.io/en/latest/contributor/content-contributor.html)
+[contributor documentation](https://jupyter.readthedocs.io/en/latest/contributing/content-contributor.html)
 and the [`CONTRIBUTING.md`](CONTRIBUTING.md). The `CONTRIBUTING.md` file
 explains how to set up a development installation, how to run the test suite,
 and how to contribute to documentation.
@@ -228,20 +230,20 @@ docker container or Linux VM.
 We use a shared copyright model that enables all contributors to maintain the
 copyright on their contributions.
 
-All code is licensed under the terms of the revised BSD license.
+All code is licensed under the terms of the [revised BSD license](./COPYING.md).
 
 ## Help and resources
 
-We encourage you to ask questions on the [Jupyter mailing list](https://groups.google.com/forum/#!forum/jupyter).
-To participate in development discussions or get help, talk with us on
-our JupyterHub [Gitter](https://gitter.im/jupyterhub/jupyterhub) channel.
+We encourage you to ask questions and share ideas on the [Jupyter community forum](https://discourse.jupyter.org/).
+You can also talk with us on our JupyterHub [Gitter](https://gitter.im/jupyterhub/jupyterhub) channel.
 
 - [Reporting Issues](https://github.com/jupyterhub/jupyterhub/issues)
 - [JupyterHub tutorial](https://github.com/jupyterhub/jupyterhub-tutorial)
 - [Documentation for JupyterHub](https://jupyterhub.readthedocs.io/en/latest/) | [PDF (latest)](https://media.readthedocs.org/pdf/jupyterhub/latest/jupyterhub.pdf) | [PDF (stable)](https://media.readthedocs.org/pdf/jupyterhub/stable/jupyterhub.pdf)
-- [Documentation for JupyterHub's REST API](http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyter/jupyterhub/master/docs/rest-api.yml#/default)
+- [Documentation for JupyterHub's REST API][rest api]
 - [Documentation for Project Jupyter](http://jupyter.readthedocs.io/en/latest/index.html) | [PDF](https://media.readthedocs.org/pdf/jupyter/latest/jupyter.pdf)
 - [Project Jupyter website](https://jupyter.org)
+- [Project Jupyter community](https://jupyter.org/community)
 
 JupyterHub follows the Jupyter [Community Guides](https://jupyter.readthedocs.io/en/latest/community/content-community.html).
 

@@ -11,8 +11,8 @@ This section will help you with basic proxy and network configuration to:
 
 The Proxy's main IP address setting determines where JupyterHub is available to users.
 By default, JupyterHub is configured to be available on all network interfaces
-(`''`) on port 8000. *Note*: Use of `'*'` is discouraged for IP configuration;
-instead, use of `'0.0.0.0'` is preferred. 
+(`''`) on port 8000. _Note_: Use of `'*'` is discouraged for IP configuration;
+instead, use of `'0.0.0.0'` is preferred.
 
 Changing the Proxy's main IP address and port can be done with the following
 JupyterHub **command line options**:
@@ -74,7 +74,7 @@ The Hub service listens only on `localhost` (port 8081) by default.
 The Hub needs to be accessible from both the proxy and all Spawners.
 When spawning local servers, an IP address setting of `localhost` is fine.
 
-If *either* the Proxy *or* (more likely) the Spawners will be remote or
+If _either_ the Proxy _or_ (more likely) the Spawners will be remote or
 isolated in containers, the Hub must listen on an IP that is accessible.
 
 ```python
@@ -82,20 +82,20 @@ c.JupyterHub.hub_ip = '10.0.1.4'
 c.JupyterHub.hub_port = 54321
 ```
 
-**Added in 0.8:** The `c.JupyterHub.hub_connect_ip` setting is the ip address or
+**Added in 0.8:** The `c.JupyterHub.hub_connect_ip` setting is the IP address or
 hostname that other services should use to connect to the Hub. A common
 configuration for, e.g. docker, is:
 
 ```python
 c.JupyterHub.hub_ip = '0.0.0.0'  # listen on all interfaces
-c.JupyterHub.hub_connect_ip = '10.0.1.4'  # ip as seen on the docker network. Can also be a hostname.
+c.JupyterHub.hub_connect_ip = '10.0.1.4'  # IP as seen on the docker network. Can also be a hostname.
 ```
 
 ## Adjusting the hub's URL
 
-The hub will most commonly be running on a hostname of its own.  If it
+The hub will most commonly be running on a hostname of its own. If it
 is not – for example, if the hub is being reverse-proxied and being
 exposed at a URL such as `https://proxy.example.org/jupyter/` – then
-you will need to tell JupyterHub the base URL of the service.  In such
+you will need to tell JupyterHub the base URL of the service. In such
 a case, it is both necessary and sufficient to set
 `c.JupyterHub.base_url = '/jupyter/'` in the configuration.

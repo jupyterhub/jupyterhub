@@ -48,19 +48,25 @@ help:
 	@echo "  doctest    to run all doctests embedded in the documentation (if enabled)"
 	@echo "  coverage   to run coverage check of the documentation (if enabled)"
 	@echo "  spelling   to run spell check on documentation"
+	@echo "  metrics    to generate documentation for metrics by inspecting the source code"
 
 clean:
 	rm -rf $(BUILDDIR)/*
 
-node_modules: package.json
-	npm install && touch node_modules
+metrics: source/reference/metrics.rst
 
-rest-api: source/_static/rest-api/index.html
+source/reference/metrics.rst: generate-metrics.py
+	python3 generate-metrics.py
 
-source/_static/rest-api/index.html: rest-api.yml node_modules
-	npm run rest-api
+scopes: source/rbac/scope-table.md
 
-html: rest-api
+source/rbac/scope-table.md: source/rbac/generate-scope-table.py
+	python3 source/rbac/generate-scope-table.py
+
+# If the pre-requisites for the html target is updated, also update the Read The
+# Docs section in docs/source/conf.py.
+#
+html: metrics scopes
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."

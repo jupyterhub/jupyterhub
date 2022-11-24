@@ -15,17 +15,19 @@ Handlers and their purpose include:
 import json
 import os
 import pprint
+import ssl
 import sys
 from urllib.parse import urlparse
 
 import requests
-from tornado import httpserver
-from tornado import ioloop
-from tornado import web
+from tornado import httpserver, ioloop, log, web
+from tornado.httputil import url_concat
 
-from jupyterhub.services.auth import HubAuthenticated
-from jupyterhub.services.auth import HubOAuthCallbackHandler
-from jupyterhub.services.auth import HubOAuthenticated
+from jupyterhub.services.auth import (
+    HubAuthenticated,
+    HubOAuthCallbackHandler,
+    HubOAuthenticated,
+)
 from jupyterhub.utils import make_ssl_context
 
 
@@ -60,24 +62,31 @@ class APIHandler(web.RequestHandler):
 
 class WhoAmIHandler(HubAuthenticated, web.RequestHandler):
     """Reply with the name of the user who made the request.
-    
+
     Uses "deprecated" cookie login
     """
 
     @web.authenticated
     def get(self):
-        self.write(self.get_current_user())
+        self.write(json.dumps(self.get_current_user()))
 
 
 class OWhoAmIHandler(HubOAuthenticated, web.RequestHandler):
     """Reply with the name of the user who made the request.
-    
+
     Uses OAuth login flow
     """
 
+    def get_login_url(self):
+        login_url = super().get_login_url()
+        scopes = self.get_argument("request-scope", None)
+        if scopes is not None:
+            login_url = url_concat(login_url, {"scope": scopes})
+        return login_url
+
     @web.authenticated
     def get(self):
-        self.write(self.get_current_user())
+        self.write(json.dumps(self.get_current_user()))
 
 
 def main():
@@ -103,7 +112,9 @@ def main():
         ca = os.environ.get('JUPYTERHUB_SSL_CLIENT_CA') or ''
 
         if key and cert and ca:
-            ssl_context = make_ssl_context(key, cert, cafile=ca, check_hostname=False)
+            ssl_context = make_ssl_context(
+                key, cert, cafile=ca, purpose=ssl.Purpose.CLIENT_AUTH
+            )
 
         server = httpserver.HTTPServer(app, ssl_options=ssl_context)
         server.listen(url.port, url.hostname)
@@ -114,7 +125,9 @@ def main():
 
 
 if __name__ == '__main__':
-    from tornado.options import parse_command_line
+    from tornado.options import options, parse_command_line
 
     parse_command_line()
+    options.logging = 'debug'
+    log.enable_pretty_logging()
     main()

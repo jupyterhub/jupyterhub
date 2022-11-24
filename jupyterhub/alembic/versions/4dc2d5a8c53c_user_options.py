@@ -11,13 +11,15 @@ down_revision = '896818069c98'
 branch_labels = None
 depends_on = None
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
+
 from jupyterhub.orm import JSONDict
 
 
 def upgrade():
-    tables = op.get_bind().engine.table_names()
+    engine = op.get_bind().engine
+    tables = sa.inspect(engine).get_table_names()
     if 'spawners' in tables:
         op.add_column('spawners', sa.Column('user_options', JSONDict()))
 

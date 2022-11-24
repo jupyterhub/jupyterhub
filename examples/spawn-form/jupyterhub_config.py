@@ -10,10 +10,15 @@ class DemoFormSpawner(LocalProcessSpawner):
     def _options_form_default(self):
         default_env = "YOURNAME=%s\n" % self.user.name
         return """
-        <label for="args">Extra notebook CLI arguments</label>
-        <input name="args" placeholder="e.g. --debug"></input>
-        <label for="env">Environment variables (one per line)</label>
-        <textarea name="env">{env}</textarea>
+        <div class="form-group">
+            <label for="args">Extra notebook CLI arguments</label>
+            <input name="args" class="form-control"
+                placeholder="e.g. --debug"></input>
+        </div>
+        <div class="form-group">
+            <label for="env">Environment variables (one per line)</label>
+            <textarea class="form-control" name="env">{env}</textarea>
+        </div>
         """.format(
             env=default_env
         )

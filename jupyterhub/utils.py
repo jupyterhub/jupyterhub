@@ -4,10 +4,11 @@
 import asyncio
 import concurrent.futures
 import errno
+import functools
 import hashlib
 import inspect
-import os
 import random
+import secrets
 import socket
 import ssl
 import sys
@@ -15,22 +16,37 @@ import threading
 import uuid
 import warnings
 from binascii import b2a_hex
-from datetime import datetime
-from datetime import timezone
+from datetime import datetime, timezone
 from hmac import compare_digest
 from operator import itemgetter
+from urllib.parse import quote
 
 from async_generator import aclosing
-from async_generator import async_generator
-from async_generator import asynccontextmanager
-from async_generator import yield_
-from tornado import gen
-from tornado import ioloop
-from tornado import web
-from tornado.httpclient import AsyncHTTPClient
-from tornado.httpclient import HTTPError
+from sqlalchemy.exc import SQLAlchemyError
+from tornado import gen, ioloop, web
+from tornado.httpclient import AsyncHTTPClient, HTTPError
 from tornado.log import app_log
-from tornado.platform.asyncio import to_asyncio_future
+
+
+# Deprecated aliases: no longer needed now that we require 3.7
+def asyncio_all_tasks(loop=None):
+    warnings.warn(
+        "jupyterhub.utils.asyncio_all_tasks is deprecated in JupyterHub 2.4."
+        " Use asyncio.all_tasks().",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return asyncio.all_tasks(loop=loop)
+
+
+def asyncio_current_task(loop=None):
+    warnings.warn(
+        "jupyterhub.utils.asyncio_current_task is deprecated in JupyterHub 2.4."
+        " Use asyncio.current_task().",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return asyncio.current_task(loop=loop)
 
 
 def random_port():
@@ -50,7 +66,7 @@ ISO8601_s = '%Y-%m-%dT%H:%M:%SZ'
 def isoformat(dt):
     """Render a datetime object as an ISO 8601 UTC timestamp
 
-    Naïve datetime objects are assumed to be UTC
+    Naive datetime objects are assumed to be UTC
     """
     # allow null timestamps to remain None without
     # having to check if isoformat should be called
@@ -66,11 +82,11 @@ def can_connect(ip, port):
 
     Return True if we can connect, False otherwise.
     """
-    if ip in {'', '0.0.0.0'}:
+    if ip in {'', '0.0.0.0', '::'}:
         ip = '127.0.0.1'
     try:
         socket.create_connection((ip, port)).close()
-    except socket.error as e:
+    except OSError as e:
         if e.errno not in {errno.ECONNREFUSED, errno.ETIMEDOUT}:
             app_log.error("Unexpected error connecting to %s:%i %s", ip, port, e)
         return False
@@ -78,16 +94,58 @@ def can_connect(ip, port):
         return True
 
 
-def make_ssl_context(keyfile, certfile, cafile=None, verify=True, check_hostname=True):
+def make_ssl_context(
+    keyfile,
+    certfile,
+    cafile=None,
+    verify=None,
+    check_hostname=None,
+    purpose=ssl.Purpose.SERVER_AUTH,
+):
     """Setup context for starting an https server or making requests over ssl.
+
+    Used for verifying internal ssl connections.
+    Certificates are always verified in both directions.
+    Hostnames are checked for client sockets.
+
+    Client sockets are created with `purpose=ssl.Purpose.SERVER_AUTH` (default),
+    Server sockets are created with `purpose=ssl.Purpose.CLIENT_AUTH`.
     """
     if not keyfile or not certfile:
         return None
-    purpose = ssl.Purpose.SERVER_AUTH if verify else ssl.Purpose.CLIENT_AUTH
+    if verify is not None:
+        purpose = ssl.Purpose.SERVER_AUTH if verify else ssl.Purpose.CLIENT_AUTH
+        warnings.warn(
+            f"make_ssl_context(verify={verify}) is deprecated in jupyterhub 2.4."
+            f" Use make_ssl_context(purpose={purpose!s}).",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+    if check_hostname is not None:
+        purpose = ssl.Purpose.SERVER_AUTH if check_hostname else ssl.Purpose.CLIENT_AUTH
+        warnings.warn(
+            f"make_ssl_context(check_hostname={check_hostname}) is deprecated in jupyterhub 2.4."
+            f" Use make_ssl_context(purpose={purpose!s}).",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
     ssl_context = ssl.create_default_context(purpose, cafile=cafile)
+    # always verify
+    ssl_context.verify_mode = ssl.CERT_REQUIRED
+
+    if purpose == ssl.Purpose.SERVER_AUTH:
+        # SERVER_AUTH is authenticating servers (i.e. for a client)
+        ssl_context.check_hostname = True
+    ssl_context.load_default_certs()
+
     ssl_context.load_cert_chain(certfile, keyfile)
     ssl_context.check_hostname = check_hostname
     return ssl_context
+
+
+# AnyTimeoutError catches TimeoutErrors coming from asyncio, tornado, stdlib
+AnyTimeoutError = (gen.TimeoutError, asyncio.TimeoutError, TimeoutError)
 
 
 async def exponential_backoff(
@@ -99,7 +157,7 @@ async def exponential_backoff(
     timeout=10,
     timeout_tolerance=0.1,
     *args,
-    **kwargs
+    **kwargs,
 ):
     """
     Exponentially backoff until `pass_func` is true.
@@ -172,14 +230,15 @@ async def exponential_backoff(
         # this prevents overloading any single tornado loop iteration with
         # too many things
         dt = min(max_wait, remaining, random.uniform(0, start_wait * scale))
-        scale *= scale_factor
-        await gen.sleep(dt)
-    raise TimeoutError(fail_message)
+        if dt < max_wait:
+            scale *= scale_factor
+        await asyncio.sleep(dt)
+    raise asyncio.TimeoutError(fail_message)
 
 
 async def wait_for_server(ip, port, timeout=10):
     """Wait for any server to show up at ip:port."""
-    if ip in {'', '0.0.0.0'}:
+    if ip in {'', '0.0.0.0', '::'}:
         ip = '127.0.0.1'
     await exponential_backoff(
         lambda: can_connect(ip, port),
@@ -217,7 +276,7 @@ async def wait_for_http_server(url, timeout=10, ssl_context=None):
             else:
                 app_log.debug("Server at %s responded with %s", url, e.code)
                 return e.response
-        except (OSError, socket.error) as e:
+        except OSError as e:
             if e.errno not in {
                 errno.ECONNABORTED,
                 errno.ECONNREFUSED,
@@ -246,9 +305,10 @@ def auth_decorator(check_auth):
 
     def decorator(method):
         def decorated(self, *args, **kwargs):
-            check_auth(self)
+            check_auth(self, **kwargs)
             return method(self, *args, **kwargs)
 
+        # Perhaps replace with functools.wrap
         decorated.__name__ = method.__name__
         decorated.__doc__ = method.__doc__
         return decorated
@@ -279,20 +339,39 @@ def authenticated_403(self):
         raise web.HTTPError(403)
 
 
-@auth_decorator
-def admin_only(self):
-    """Decorator for restricting access to admin users"""
-    user = self.current_user
-    if user is None or not user.admin:
-        raise web.HTTPError(403)
+def admin_only(f):
+    """Deprecated!"""
+    # write it this way to trigger deprecation warning at decoration time,
+    # not on the method call
+    warnings.warn(
+        """@jupyterhub.utils.admin_only is deprecated in JupyterHub 2.0.
+
+        Use the new `@jupyterhub.scopes.needs_scope` decorator to resolve permissions,
+        or check against `self.current_user.parsed_scopes`.
+        """,
+        DeprecationWarning,
+        stacklevel=2,
+    )
+
+    # the original decorator
+    @auth_decorator
+    def admin_only(self):
+        """Decorator for restricting access to admin users"""
+        user = self.current_user
+        if user is None or not user.admin:
+            raise web.HTTPError(403)
+
+    return admin_only(f)
 
 
 @auth_decorator
 def metrics_authentication(self):
     """Decorator for restricting access to metrics"""
-    user = self.current_user
-    if user is None and self.authenticate_prometheus:
-        raise web.HTTPError(403)
+    if not self.authenticate_prometheus:
+        return
+    scope = 'read:metrics'
+    if scope not in self.parsed_scopes:
+        raise web.HTTPError(403, f"Access to metrics requires scope '{scope}'")
 
 
 # Token utilities
@@ -313,7 +392,7 @@ def hash_token(token, salt=8, rounds=16384, algorithm='sha512'):
     """
     h = hashlib.new(algorithm)
     if isinstance(salt, int):
-        salt = b2a_hex(os.urandom(salt))
+        salt = b2a_hex(secrets.token_bytes(salt))
     if isinstance(salt, bytes):
         bsalt = salt
         salt = salt.decode('utf8')
@@ -325,7 +404,7 @@ def hash_token(token, salt=8, rounds=16384, algorithm='sha512'):
         h.update(btoken)
     digest = h.hexdigest()
 
-    return "{algorithm}:{rounds}:{salt}:{digest}".format(**locals())
+    return f"{algorithm}:{rounds}:{salt}:{digest}"
 
 
 def compare_token(compare, token):
@@ -341,6 +420,11 @@ def compare_token(compare, token):
     if compare_digest(compare, hashed):
         return True
     return False
+
+
+def url_escape_path(value):
+    """Escape a value to be used in URLs, cookies, etc."""
+    return quote(value, safe='@~')
 
 
 def url_path_join(*pieces):
@@ -443,9 +527,8 @@ def print_stacks(file=sys.stderr):
     """
     # local imports because these will not be used often,
     # no need to add them to startup
-    import asyncio
-    import resource
     import traceback
+
     from .log import coroutine_frames
 
     print("Active threads: %i" % threading.active_count(), file=file)
@@ -478,7 +561,7 @@ def print_stacks(file=sys.stderr):
     # also show asyncio tasks, if any
     # this will increase over time as we transition from tornado
     # coroutines to native `async def`
-    tasks = asyncio.Task.all_tasks()
+    tasks = asyncio_all_tasks()
     if tasks:
         print("AsyncIO tasks: %i" % len(tasks))
         for task in tasks:
@@ -506,28 +589,12 @@ def maybe_future(obj):
         return asyncio.wrap_future(obj)
     else:
         # could also check for tornado.concurrent.Future
-        # but with tornado >= 5 tornado.Future is asyncio.Future
+        # but with tornado >= 5.1 tornado.Future is asyncio.Future
         f = asyncio.Future()
         f.set_result(obj)
         return f
 
 
-@asynccontextmanager
-@async_generator
-async def not_aclosing(coro):
-    """An empty context manager for Python < 3.5.2
-    which lacks the `aclose` method on async iterators
-    """
-    await yield_(await coro)
-
-
-if sys.version_info < (3, 5, 2):
-    # Python 3.5.1 is missing the aclose method on async iterators,
-    # so we can't close them
-    aclosing = not_aclosing
-
-
-@async_generator
 async def iterate_until(deadline_future, generator):
     """An async generator that yields items from a generator
     until a deadline future resolves
@@ -552,7 +619,7 @@ async def iterate_until(deadline_future, generator):
             )
             if item_future.done():
                 try:
-                    await yield_(item_future.result())
+                    yield item_future.result()
                 except (StopAsyncIteration, asyncio.CancelledError):
                     break
             elif deadline_future.done():
@@ -580,7 +647,7 @@ def utcnow():
 def _parse_accept_header(accept):
     """
     Parse the Accept header *accept*
-    
+
     Return a list with 3-tuples of
     [(str(media_type), dict(params), float(q_value)),] ordered by q values.
     If the accept header includes vendor-specific types like::
@@ -618,7 +685,7 @@ def _parse_accept_header(accept):
                 media_params.append(('vendor', vnd))
                 # and re-write media_type to something like application/json so
                 # it can be used usefully when looking up emitters
-                media_type = '{}/{}'.format(typ, extra)
+                media_type = f'{typ}/{extra}'
 
         q = 1.0
         for part in parts:
@@ -652,3 +719,62 @@ def get_accepted_mimetype(accept_header, choices=None):
         else:
             return mime
     return None
+
+
+def catch_db_error(f):
+    """Catch and rollback database errors"""
+
+    @functools.wraps(f)
+    async def catching(self, *args, **kwargs):
+        try:
+            r = f(self, *args, **kwargs)
+            if inspect.isawaitable(r):
+                r = await r
+        except SQLAlchemyError:
+            self.log.exception("Rolling back session due to database error")
+            self.db.rollback()
+        else:
+            return r
+
+    return catching
+
+
+def get_browser_protocol(request):
+    """Get the _protocol_ seen by the browser
+
+    Like tornado's _apply_xheaders,
+    but in the case of multiple proxy hops,
+    use the outermost value (what the browser likely sees)
+    instead of the innermost value,
+    which is the most trustworthy.
+
+    We care about what the browser sees,
+    not where the request actually came from,
+    so trusting possible spoofs is the right thing to do.
+    """
+    headers = request.headers
+    # first choice: Forwarded header
+    forwarded_header = headers.get("Forwarded")
+    if forwarded_header:
+        first_forwarded = forwarded_header.split(",", 1)[0].strip()
+        fields = {}
+        forwarded_dict = {}
+        for field in first_forwarded.split(";"):
+            key, _, value = field.partition("=")
+            fields[key.strip().lower()] = value.strip()
+        if "proto" in fields and fields["proto"].lower() in {"http", "https"}:
+            return fields["proto"].lower()
+        else:
+            app_log.warning(
+                f"Forwarded header present without protocol: {forwarded_header}"
+            )
+
+    # second choice: X-Scheme or X-Forwarded-Proto
+    proto_header = headers.get("X-Scheme", headers.get("X-Forwarded-Proto", None))
+    if proto_header:
+        proto_header = proto_header.split(",")[0].strip().lower()
+        if proto_header in {"http", "https"}:
+            return proto_header
+
+    # no forwarded headers
+    return request.protocol

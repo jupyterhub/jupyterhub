@@ -2,23 +2,20 @@
 
 implements https://oauthlib.readthedocs.io/en/latest/oauth2/server.html
 """
-from datetime import datetime
-from urllib.parse import urlparse
-
 from oauthlib import uri_validate
-from oauthlib.oauth2 import RequestValidator
-from oauthlib.oauth2 import WebApplicationServer
-from oauthlib.oauth2.rfc6749.grant_types import authorization_code
-from oauthlib.oauth2.rfc6749.grant_types import base
-from sqlalchemy.orm import scoped_session
-from tornado import web
-from tornado.escape import url_escape
+from oauthlib.oauth2 import RequestValidator, WebApplicationServer
+from oauthlib.oauth2.rfc6749.grant_types import authorization_code, base
 from tornado.log import app_log
 
 from .. import orm
-from ..utils import compare_token
-from ..utils import hash_token
-from ..utils import url_path_join
+from ..roles import roles_to_scopes
+from ..scopes import (
+    _check_scopes_exist,
+    _resolve_requested_scopes,
+    access_scopes,
+    identify_scopes,
+)
+from ..utils import compare_token, hash_token
 
 # patch absolute-uri check
 # because we want to allow relative uri oauth
@@ -64,6 +61,9 @@ class JupyterHubRequestValidator(RequestValidator):
             self.db.query(orm.OAuthClient).filter_by(identifier=client_id).first()
         )
         if oauth_client is None:
+            return False
+        if not client_secret or not oauth_client.secret:
+            # disallow authentication with no secret
             return False
         if not compare_token(oauth_client.secret, client_secret):
             app_log.warning("Client secret mismatch for %s", client_id)
@@ -151,7 +151,17 @@ class JupyterHubRequestValidator(RequestValidator):
             - Resource Owner Password Credentials Grant
             - Client Credentials grant
         """
-        return ['identify']
+        orm_client = (
+            self.db.query(orm.OAuthClient).filter_by(identifier=client_id).first()
+        )
+        if orm_client is None:
+            raise ValueError("No such client: %s" % client_id)
+        scopes = set(orm_client.allowed_scopes)
+        if 'inherit' not in scopes:
+            # add identify-user scope
+            # and access-service scope
+            scopes |= identify_scopes() | access_scopes(orm_client)
+        return scopes
 
     def get_original_scopes(self, refresh_token, request, *args, **kwargs):
         """Get the list of scopes associated with the refresh token.
@@ -250,9 +260,8 @@ class JupyterHubRequestValidator(RequestValidator):
             client=orm_client,
             code=code['code'],
             # oauth has 5 minutes to complete
-            expires_at=int(datetime.utcnow().timestamp() + 300),
-            # TODO: persist oauth scopes
-            # scopes=request.scopes,
+            expires_at=int(orm.OAuthCode.now() + 300),
+            scopes=list(request.scopes),
             user=request.user.orm_user,
             redirect_uri=orm_client.redirect_uri,
             session_id=request.session_id,
@@ -261,7 +270,7 @@ class JupyterHubRequestValidator(RequestValidator):
         self.db.commit()
 
     def get_authorization_code_scopes(self, client_id, code, redirect_uri, request):
-        """ Extracts scopes from saved authorization code.
+        """Extracts scopes from saved authorization code.
         The scopes returned by this method is used to route token requests
         based on scopes passed to Authorization Code requests.
         With that the token endpoint knows when to include OpenIDConnect
@@ -326,10 +335,6 @@ class JupyterHubRequestValidator(RequestValidator):
         """
         log_token = {}
         log_token.update(token)
-        scopes = token['scope'].split(' ')
-        # TODO:
-        if scopes != ['identify']:
-            raise ValueError("Only 'identify' scope is supported")
         # redact sensitive keys in log
         for key in ('access_token', 'refresh_token', 'state'):
             if key in token:
@@ -337,6 +342,7 @@ class JupyterHubRequestValidator(RequestValidator):
                 if isinstance(value, str):
                     log_token[key] = 'REDACTED'
         app_log.debug("Saving bearer token %s", log_token)
+
         if request.user is None:
             raise ValueError("No user for access token: %s" % request.user)
         client = (
@@ -344,19 +350,19 @@ class JupyterHubRequestValidator(RequestValidator):
             .filter_by(identifier=request.client.client_id)
             .first()
         )
-        orm_access_token = orm.OAuthAccessToken(
-            client=client,
-            grant_type=orm.GrantType.authorization_code,
-            expires_at=datetime.utcnow().timestamp() + token['expires_in'],
-            refresh_token=token['refresh_token'],
-            # TODO: save scopes,
-            # scopes=scopes,
+        # FIXME: support refresh tokens
+        # These should be in a new table
+        token.pop("refresh_token", None)
+
+        # APIToken.new commits the token to the db
+        orm.APIToken.new(
+            oauth_client=client,
+            expires_in=token['expires_in'],
+            scopes=request.scopes,
             token=token['access_token'],
             session_id=request.session_id,
             user=request.user,
         )
-        self.db.add(orm_access_token)
-        self.db.commit()
         return client.redirect_uri
 
     def validate_bearer_token(self, token, scopes, request):
@@ -417,6 +423,8 @@ class JupyterHubRequestValidator(RequestValidator):
         )
         if orm_client is None:
             return False
+        if not orm_client.secret:
+            return False
         request.client = orm_client
         return True
 
@@ -441,7 +449,7 @@ class JupyterHubRequestValidator(RequestValidator):
         Method is used by:
             - Authorization Code Grant
         """
-        orm_code = self.db.query(orm.OAuthCode).filter_by(code=code).first()
+        orm_code = orm.OAuthCode.find(self.db, code=code)
         if orm_code is None:
             app_log.debug("No such code: %s", code)
             return False
@@ -452,9 +460,7 @@ class JupyterHubRequestValidator(RequestValidator):
             return False
         request.user = orm_code.user
         request.session_id = orm_code.session_id
-        # TODO: record state on oauth codes
-        # TODO: specify scopes
-        request.scopes = ['identify']
+        request.scopes = orm_code.scopes
         return True
 
     def validate_grant_type(
@@ -540,7 +546,7 @@ class JupyterHubRequestValidator(RequestValidator):
     def validate_scopes(self, client_id, scopes, client, request, *args, **kwargs):
         """Ensure the client is authorized access to requested scopes.
         :param client_id: Unicode client identifier
-        :param scopes: List of scopes (defined by you)
+        :param scopes: List of 'raw' scopes (defined by you)
         :param client: Client object set by you, see authenticate_client.
         :param request: The HTTP Request (oauthlib.common.Request)
         :rtype: True or False
@@ -550,6 +556,73 @@ class JupyterHubRequestValidator(RequestValidator):
             - Resource Owner Password Credentials Grant
             - Client Credentials Grant
         """
+        orm_client = (
+            self.db.query(orm.OAuthClient).filter_by(identifier=client_id).one_or_none()
+        )
+        if orm_client is None:
+            app_log.warning("No such oauth client %s", client_id)
+            return False
+
+        requested_scopes = set(scopes)
+        # explicitly allow 'identify', which was the only allowed scope previously
+        # requesting 'identify' gets no actual permissions other than self-identification
+        if "identify" in requested_scopes:
+            app_log.warning(
+                f"Ignoring deprecated 'identify' scope, requested by {client_id}"
+            )
+            requested_scopes.discard("identify")
+
+        # TODO: handle roles->scopes transition
+        # In 2.x, `?scopes=` only accepted _role_ names,
+        # but in 3.0 we accept and prefer scopes.
+        # For backward-compatibility, we still accept both.
+        # Should roles be deprecated here, or kept as a convenience?
+        try:
+            _check_scopes_exist(requested_scopes)
+        except KeyError as e:
+            # scopes don't exist, maybe they are role names
+            requested_roles = list(
+                self.db.query(orm.Role).filter(orm.Role.name.in_(requested_scopes))
+            )
+            if len(requested_roles) != len(requested_scopes):
+                # did not find roles
+                app_log.warning(f"No such scopes: {requested_scopes}")
+                return False
+            app_log.info(
+                f"OAuth client {client_id} requesting roles: {requested_scopes}"
+            )
+            requested_scopes = roles_to_scopes(requested_roles)
+
+        client_allowed_scopes = set(orm_client.allowed_scopes)
+
+        # scope resolution only works if we have a user defined
+        user = request.user or getattr(self, "_current_user")
+
+        # always grant reading the token-owner's name
+        # and accessing the service itself
+        required_scopes = {*identify_scopes(), *access_scopes(orm_client)}
+        requested_scopes.update(required_scopes)
+        client_allowed_scopes.update(required_scopes)
+
+        allowed_scopes, disallowed_scopes = _resolve_requested_scopes(
+            requested_scopes,
+            client_allowed_scopes,
+            user=user.orm_user,
+            client=orm_client,
+            db=self.db,
+        )
+
+        if disallowed_scopes:
+            app_log.error(
+                f"Scope(s) not allowed for {client_id}: {', '.join(disallowed_scopes)}"
+            )
+            return False
+
+        # store resolved scopes on request
+        app_log.debug(
+            f"Allowing request for scope(s) for {client_id}:  {','.join(requested_scopes) or '[]'}"
+        )
+        request.scopes = requested_scopes
         return True
 
 
@@ -558,35 +631,53 @@ class JupyterHubOAuthServer(WebApplicationServer):
         self.db = db
         super().__init__(validator, *args, **kwargs)
 
-    def add_client(self, client_id, client_secret, redirect_uri, description=''):
+    def add_client(
+        self,
+        client_id,
+        client_secret,
+        redirect_uri,
+        allowed_scopes=None,
+        description='',
+    ):
         """Add a client
 
         hash its client_secret before putting it in the database.
         """
-        # clear existing clients with same ID
-        for orm_client in self.db.query(orm.OAuthClient).filter_by(
-            identifier=client_id
-        ):
-            self.db.delete(orm_client)
-        self.db.commit()
-
-        orm_client = orm.OAuthClient(
-            identifier=client_id,
-            secret=hash_token(client_secret),
-            redirect_uri=redirect_uri,
-            description=description,
+        # Update client if it already exists, else create it
+        # Sqlalchemy doesn't have a good db agnostic UPSERT,
+        # so we do this manually. It's protected inside a
+        # transaction, so should fail if there are multiple
+        # rows with the same identifier.
+        orm_client = (
+            self.db.query(orm.OAuthClient).filter_by(identifier=client_id).one_or_none()
         )
-        self.db.add(orm_client)
+        if orm_client is None:
+            orm_client = orm.OAuthClient(
+                identifier=client_id,
+            )
+            self.db.add(orm_client)
+            app_log.info(f'Creating oauth client {client_id}')
+        else:
+            app_log.info(f'Updating oauth client {client_id}')
+        if allowed_scopes == None:
+            allowed_scopes = []
+        orm_client.secret = hash_token(client_secret) if client_secret else ""
+        orm_client.redirect_uri = redirect_uri
+        orm_client.description = description or client_id
+        orm_client.allowed_scopes = list(allowed_scopes)
         self.db.commit()
+        return orm_client
 
     def fetch_by_client_id(self, client_id):
         """Find a client by its id"""
-        return self.db.query(orm.OAuthClient).filter_by(identifier=client_id).first()
+        client = self.db.query(orm.OAuthClient).filter_by(identifier=client_id).first()
+        if client and client.secret:
+            return client
 
 
-def make_provider(session_factory, url_prefix, login_url):
+def make_provider(session_factory, url_prefix, login_url, **oauth_server_kwargs):
     """Make an OAuth provider"""
     db = session_factory()
     validator = JupyterHubRequestValidator(db)
-    server = JupyterHubOAuthServer(db, validator)
+    server = JupyterHubOAuthServer(db, validator, **oauth_server_kwargs)
     return server

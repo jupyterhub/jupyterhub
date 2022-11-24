@@ -5,15 +5,10 @@ so all URLs and requests necessary for OAuth with JupyterHub should be in one pl
 """
 import json
 import os
-import sys
-from urllib.parse import urlencode
-from urllib.parse import urlparse
+from urllib.parse import urlencode, urlparse
 
-from tornado import log
-from tornado import web
-from tornado.auth import OAuth2Mixin
-from tornado.httpclient import AsyncHTTPClient
-from tornado.httpclient import HTTPRequest
+from tornado import log, web
+from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 from tornado.httputil import url_concat
 from tornado.ioloop import IOLoop
 

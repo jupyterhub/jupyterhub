@@ -1,20 +1,61 @@
+# pre-commit is a tool to perform a predefined set of tasks manually and/or
+# automatically before git commits are made.
+#
+# Config reference: https://pre-commit.com/#pre-commit-configyaml---top-level
+#
+# Common tasks
+#
+# - Run on all files:   pre-commit run --all-files
+# - Register git hooks: pre-commit install --install-hooks
+#
 repos:
-- repo: https://github.com/asottile/reorder_python_imports
-  rev: v1.3.5
-  hooks:
-  - id: reorder-python-imports
-    language_version: python3.6
-- repo: https://github.com/ambv/black
-  rev: 18.9b0
-  hooks:
-  - id: black
-- repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v2.1.0
-  hooks:
-  - id: end-of-file-fixer
-  - id: check-json
-  - id: check-yaml
-  - id: check-case-conflict
-  - id: check-executables-have-shebangs
-  - id: requirements-txt-fixer
-  - id: flake8
+  # Autoformat: Python code, syntax patterns are modernized
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v3.2.2
+    hooks:
+      - id: pyupgrade
+        args:
+          - --py36-plus
+
+  # Autoformat: Python code
+  - repo: https://github.com/PyCQA/autoflake
+    rev: v1.7.7
+    hooks:
+      - id: autoflake
+        # args ref: https://github.com/PyCQA/autoflake#advanced-usage
+        args:
+          - --in-place
+
+  # Autoformat: Python code
+  - repo: https://github.com/pycqa/isort
+    rev: 5.10.1
+    hooks:
+      - id: isort
+
+  # Autoformat: Python code
+  - repo: https://github.com/psf/black
+    rev: 22.10.0
+    hooks:
+      - id: black
+
+  # Autoformat: markdown, yaml, javascript (see the file .prettierignore)
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v3.0.0-alpha.4
+    hooks:
+      - id: prettier
+
+  # Autoformat and linting, misc. details
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.3.0
+    hooks:
+      - id: end-of-file-fixer
+        exclude: share/jupyterhub/static/js/admin-react.js
+      - id: requirements-txt-fixer
+      - id: check-case-conflict
+      - id: check-executables-have-shebangs
+
+  # Linting: Python code (see the file .flake8)
+  - repo: https://github.com/PyCQA/flake8
+    rev: "5.0.4"
+    hooks:
+      - id: flake8

@@ -1,22 +1,22 @@
 """Test the JupyterHub entry point"""
+import asyncio
 import binascii
+import json
+import logging
 import os
 import re
 import sys
-from subprocess import check_output
-from subprocess import PIPE
-from subprocess import Popen
-from tempfile import NamedTemporaryFile
-from tempfile import TemporaryDirectory
+import time
+from subprocess import PIPE, Popen, check_output
+from tempfile import NamedTemporaryFile, TemporaryDirectory
 from unittest.mock import patch
 
 import pytest
-from tornado import gen
+import traitlets
 from traitlets.config import Config
 
 from .. import orm
-from ..app import COOKIE_SECRET_BYTES
-from ..app import JupyterHub
+from ..app import COOKIE_SECRET_BYTES, JupyterHub
 from .mocking import MockHub
 from .test_api import add_user
 
@@ -29,6 +29,27 @@ def test_help_all():
     assert '--JupyterHub.ip' in out
 
 
+@pytest.mark.skipif(traitlets.version_info < (5,), reason="requires traitlets 5")
+def test_show_config(tmpdir):
+    tmpdir.chdir()
+    p = Popen(
+        [sys.executable, '-m', 'jupyterhub', '--show-config', '--debug'], stdout=PIPE
+    )
+    p.wait(timeout=10)
+    out = p.stdout.read().decode('utf8', 'replace')
+    assert 'log_level' in out
+
+    p = Popen(
+        [sys.executable, '-m', 'jupyterhub', '--show-config-json', '--debug'],
+        stdout=PIPE,
+    )
+    p.wait(timeout=10)
+    out = p.stdout.read().decode('utf8', 'replace')
+    config = json.loads(out)
+    assert 'JupyterHub' in config
+    assert config["JupyterHub"]["log_level"] == 10
+
+
 def test_token_app():
     cmd = [sys.executable, '-m', 'jupyterhub', 'token']
     out = check_output(cmd + ['--help-all']).decode('utf8', 'replace')
@@ -37,6 +58,28 @@ def test_token_app():
             f.write("c.Authenticator.admin_users={'user'}")
         out = check_output(cmd + ['user'], cwd=td).decode('utf8', 'replace').strip()
     assert re.match(r'^[a-z0-9]+$', out)
+
+
+def test_raise_error_on_missing_specified_config():
+    """
+    Using the -f or --config flag when starting JupyterHub should require the
+    file to be found and exit if it isn't.
+    """
+    # subprocess.run doesn't have a timeout flag, so if this test would fail by
+    # not letting jupyterhub error out, we would wait forever. subprocess.Popen
+    # allow us to manually timeout.
+    process = Popen(
+        [sys.executable, '-m', 'jupyterhub', '--config', 'not-available.py']
+    )
+    # wait impatiently for the process to exit like we want it to
+    for i in range(100):
+        time.sleep(0.1)
+        returncode = process.poll()
+        if returncode is not None:
+            break
+    else:
+        process.kill()
+    assert returncode == 1
 
 
 def test_generate_config():
@@ -69,7 +112,7 @@ def test_generate_config():
     os.remove(cfg_file)
     assert cfg_file in out
     assert 'Spawner.cmd' in cfg_text
-    assert 'Authenticator.whitelist' in cfg_text
+    assert 'Authenticator.allowed_users' in cfg_text
 
 
 async def test_init_tokens(request):
@@ -177,6 +220,18 @@ def test_cookie_secret_env(tmpdir, request):
     assert not os.path.exists(hub.cookie_secret_file)
 
 
+def test_cookie_secret_string_():
+    cfg = Config()
+
+    cfg.JupyterHub.cookie_secret = "not hex"
+    with pytest.raises(ValueError):
+        JupyterHub(config=cfg)
+
+    cfg.JupyterHub.cookie_secret = "abc123"
+    app = JupyterHub(config=cfg)
+    assert app.cookie_secret == binascii.a2b_hex('abc123')
+
+
 async def test_load_groups(tmpdir, request):
     to_load = {
         'blue': ['cyclops', 'rogue', 'wolverine'],
@@ -188,15 +243,16 @@ async def test_load_groups(tmpdir, request):
         kwargs['internal_certs_location'] = str(tmpdir)
     hub = MockHub(**kwargs)
     hub.init_db()
+    await hub.init_role_creation()
     await hub.init_users()
     await hub.init_groups()
     db = hub.db
     blue = orm.Group.find(db, name='blue')
     assert blue is not None
-    assert sorted([u.name for u in blue.users]) == sorted(to_load['blue'])
+    assert sorted(u.name for u in blue.users) == sorted(to_load['blue'])
     gold = orm.Group.find(db, name='gold')
     assert gold is not None
-    assert sorted([u.name for u in gold.users]) == sorted(to_load['gold'])
+    assert sorted(u.name for u in gold.users) == sorted(to_load['gold'])
 
 
 async def test_resume_spawners(tmpdir, request):
@@ -295,3 +351,71 @@ def test_url_config(hub_config, expected):
     # validate additional properties
     for key, value in expected.items():
         assert getattr(app, key) == value
+
+
+@pytest.mark.parametrize(
+    "base_url, hub_routespec, expected_routespec, should_warn, bad_prefix",
+    [
+        (None, None, "/", False, False),
+        ("/", "/", "/", False, False),
+        ("/base", "/base", "/base/", False, False),
+        ("/", "/hub", "/hub/", True, False),
+        (None, "hub/api", "/hub/api/", True, False),
+        ("/base", "/hub/", "/hub/", True, True),
+        (None, "/hub/api/health", "/hub/api/health/", True, True),
+    ],
+)
+def test_hub_routespec(
+    base_url, hub_routespec, expected_routespec, should_warn, bad_prefix, caplog
+):
+    cfg = Config()
+    if base_url:
+        cfg.JupyterHub.base_url = base_url
+    if hub_routespec:
+        cfg.JupyterHub.hub_routespec = hub_routespec
+    with caplog.at_level(logging.WARNING):
+        app = JupyterHub(config=cfg, log=logging.getLogger())
+        app.init_hub()
+    hub = app.hub
+    assert hub.routespec == expected_routespec
+
+    if should_warn:
+        assert "custom route for Hub" in caplog.text
+        assert hub_routespec in caplog.text
+    else:
+        assert "custom route for Hub" not in caplog.text
+
+    if bad_prefix:
+        assert "may not receive" in caplog.text
+    else:
+        assert "may not receive" not in caplog.text
+
+
+@pytest.mark.parametrize(
+    "argv, sys_argv",
+    [
+        (None, ["jupyterhub", "--debug", "--port=1234"]),
+        (["--log-level=INFO"], ["jupyterhub"]),
+    ],
+)
+def test_launch_instance(request, argv, sys_argv):
+    class DummyHub(JupyterHub):
+        def launch_instance_async(self, argv):
+            # short-circuit initialize
+            # by indicating we are going to generate config in start
+            self.generate_config = True
+            return super().launch_instance_async(argv)
+
+        async def start(self):
+            asyncio.get_running_loop().stop()
+
+    DummyHub.clear_instance()
+    request.addfinalizer(DummyHub.clear_instance)
+
+    with patch.object(sys, "argv", sys_argv):
+        DummyHub.launch_instance(argv)
+    hub = DummyHub.instance()
+    if argv is None:
+        assert hub.argv == sys_argv[1:]
+    else:
+        assert hub.argv == argv

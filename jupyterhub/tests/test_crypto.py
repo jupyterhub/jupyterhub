@@ -1,13 +1,11 @@
 import os
-from binascii import b2a_base64
-from binascii import b2a_hex
+from binascii import b2a_base64, b2a_hex
 from unittest.mock import patch
 
 import pytest
 
 from .. import crypto
-from ..crypto import decrypt
-from ..crypto import encrypt
+from ..crypto import decrypt, encrypt
 
 keys = [('%i' % i).encode('ascii') * 32 for i in range(3)]
 hex_keys = [b2a_hex(key).decode('ascii') for key in keys]

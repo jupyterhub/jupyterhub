@@ -120,3 +120,4 @@ contribution on JupyterHub:
 - yuvipanda
 - zoltan-fedor
 - zonca
+- Neeraj Natu

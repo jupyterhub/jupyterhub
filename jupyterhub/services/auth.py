@@ -1,15 +1,31 @@
 """Authenticating services with JupyterHub.
 
-Cookies are sent to the Hub for verification. The Hub replies with a JSON
-model describing the authenticated user.
+Tokens are sent to the Hub for verification.
+The Hub replies with a JSON model describing the authenticated user.
 
-``HubAuth`` can be used in any application, even outside tornado.
+This contains two levels of authentication:
 
-``HubAuthenticated`` is a mixin class for tornado handlers that should
-authenticate with the Hub.
+- :class:`HubOAuth` - Use OAuth 2 to authenticate browsers with the Hub.
+  This should be used for any service that should respond to browser requests
+  (i.e. most services).
+
+- :class:`HubAuth` - token-only authentication, for a service that only need to handle token-authenticated API requests
+
+The ``Auth`` classes (:class:`HubAuth`, :class:`HubOAuth`)
+can be used in any application, even outside tornado.
+They contain reference implementations of talking to the Hub API
+to resolve a token to a user.
+
+The ``Authenticated`` classes (:class:`HubAuthenticated`, :class:`HubOAuthenticated`)
+are mixins for tornado handlers that should authenticate with the Hub.
+
+If you are using OAuth, you will also need to register an oauth callback handler to complete the oauth process.
+A tornado implementation is provided in :class:`HubOAuthCallbackHandler`.
 
 """
+import asyncio
 import base64
+import hashlib
 import json
 import os
 import random
@@ -19,25 +35,64 @@ import string
 import time
 import uuid
 import warnings
-from urllib.parse import quote
+from http import HTTPStatus
+from unittest import mock
 from urllib.parse import urlencode
 
-import requests
-from tornado.gen import coroutine
+from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 from tornado.httputil import url_concat
 from tornado.log import app_log
-from tornado.web import HTTPError
-from tornado.web import RequestHandler
-from traitlets import default
-from traitlets import Dict
-from traitlets import Instance
-from traitlets import Integer
-from traitlets import observe
-from traitlets import Unicode
-from traitlets import validate
+from tornado.web import HTTPError, RequestHandler
+from traitlets import (
+    Any,
+    Dict,
+    Instance,
+    Integer,
+    Set,
+    Unicode,
+    default,
+    observe,
+    validate,
+)
 from traitlets.config import SingletonConfigurable
 
-from ..utils import url_path_join
+from ..scopes import _intersect_expanded_scopes
+from ..utils import get_browser_protocol, url_path_join
+
+
+def check_scopes(required_scopes, scopes):
+    """Check that required_scope(s) are in scopes
+
+    Returns the subset of scopes matching required_scopes,
+    which is truthy if any scopes match any required scopes.
+
+    Correctly resolves scope filters *except* for groups -> user,
+    e.g. require: access:server!user=x, have: access:server!group=y
+    will not grant access to user x even if user x is in group y.
+
+    Parameters
+    ----------
+
+    required_scopes: set
+        The set of scopes required.
+    scopes: set
+        The set (or list) of scopes to check against required_scopes
+
+    Returns
+    -------
+    relevant_scopes: set
+        The set of scopes in required_scopes that are present in scopes,
+        which is truthy if any required scopes are present,
+        and falsy otherwise.
+    """
+    if isinstance(required_scopes, str):
+        required_scopes = {required_scopes}
+
+    intersection = _intersect_expanded_scopes(required_scopes, scopes)
+    # re-intersect with required_scopes in case the intersection
+    # applies stricter filters than required_scopes declares
+    # e.g. required_scopes = {'read:users'} and intersection has only {'read:users!user=x'}
+    return set(required_scopes) & intersection
 
 
 class _ExpiringDict(dict):
@@ -113,9 +168,15 @@ class HubAuth(SingletonConfigurable):
 
     This can be used by any application.
 
+    Use this base class only for direct, token-authenticated applications
+    (web APIs).
+    For applications that support direct visits from browsers,
+    use HubOAuth to enable OAuth redirect-based authentication.
+
+
     If using tornado, use via :class:`HubAuthenticated` mixin.
-    If using manually, use the ``.user_for_cookie(cookie_value)`` method
-    to identify the user corresponding to a given cookie value.
+    If using manually, use the ``.user_for_token(token_value)`` method
+    to identify the user owning a given token.
 
     The following config must be set:
 
@@ -129,15 +190,12 @@ class HubAuth(SingletonConfigurable):
     - cookie_cache_max_age: the number of seconds responses
       from the Hub should be cached.
     - login_url (the *public* ``/hub/login`` URL of the Hub).
-    - cookie_name: the name of the cookie I should be using,
-      if different from the default (unlikely).
-
     """
 
     hub_host = Unicode(
         '',
         help="""The public host of JupyterHub
-        
+
         Only used if JupyterHub is spreading servers across subdomains.
         """,
     ).tag(config=True)
@@ -172,6 +230,7 @@ class HubAuth(SingletonConfigurable):
         help="""The base API URL of the Hub.
 
         Typically `http://hub-ip:hub-port/hub/api`
+        Default: $JUPYTERHUB_API_URL
         """,
     ).tag(config=True)
 
@@ -187,7 +246,10 @@ class HubAuth(SingletonConfigurable):
         os.getenv('JUPYTERHUB_API_TOKEN', ''),
         help="""API key for accessing Hub API.
 
-        Generate with `jupyterhub token [username]` or add to JupyterHub.services config.
+        Default: $JUPYTERHUB_API_TOKEN
+
+        Loaded from services configuration in jupyterhub_config.
+        Will be auto-generated for hub-managed services.
         """,
     ).tag(config=True)
 
@@ -196,6 +258,7 @@ class HubAuth(SingletonConfigurable):
         help="""The URL prefix for the Hub itself.
 
         Typically /hub/
+        Default: $JUPYTERHUB_BASE_URL
         """,
     ).tag(config=True)
 
@@ -237,10 +300,6 @@ class HubAuth(SingletonConfigurable):
 
         Use with keyfile and certfile
         """,
-    ).tag(config=True)
-
-    cookie_name = Unicode(
-        'jupyterhub-services', help="""The name of the cookie I should be looking for"""
     ).tag(config=True)
 
     cookie_options = Dict(
@@ -286,12 +345,83 @@ class HubAuth(SingletonConfigurable):
     def _default_cache(self):
         return _ExpiringDict(self.cache_max_age)
 
-    def _check_hub_authorization(self, url, cache_key=None, use_cache=True):
+    @property
+    def oauth_scopes(self):
+        warnings.warn(
+            "HubAuth.oauth_scopes is deprecated in JupyterHub 3.0. Use .access_scopes",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.access_scopes
+
+    access_scopes = Set(
+        Unicode(),
+        help="""OAuth scopes to use for allowing access.
+
+        Get from $JUPYTERHUB_OAUTH_ACCESS_SCOPES by default.
+        """,
+    ).tag(config=True)
+
+    @default('access_scopes')
+    def _default_scopes(self):
+        env_scopes = os.getenv('JUPYTERHUB_OAUTH_ACCESS_SCOPES')
+        if not env_scopes:
+            # deprecated name (since 3.0)
+            env_scopes = os.getenv('JUPYTERHUB_OAUTH_SCOPES')
+        if env_scopes:
+            return set(json.loads(env_scopes))
+        # scopes not specified, use service name if defined
+        service_name = os.getenv("JUPYTERHUB_SERVICE_NAME")
+        if service_name:
+            return {f'access:services!service={service_name}'}
+        return set()
+
+    _pool = Any(help="Thread pool for running async methods in the background")
+
+    @default("_pool")
+    def _new_pool(self):
+        # start a single ThreadPool in the background
+        from concurrent.futures import ThreadPoolExecutor
+
+        pool = ThreadPoolExecutor(1)
+        # create an event loop in the thread
+        pool.submit(self._setup_asyncio_thread).result()
+        return pool
+
+    def _setup_asyncio_thread(self):
+        """Create asyncio loop
+
+        To be called from the background thread,
+        so that any thread-local state is setup correctly
+        """
+        self._thread_loop = asyncio.new_event_loop()
+
+    def _synchronize(self, async_f, *args, **kwargs):
+        """Call an async method in our background thread"""
+        future = self._pool.submit(
+            lambda: self._thread_loop.run_until_complete(async_f(*args, **kwargs))
+        )
+        return future.result()
+
+    def _call_coroutine(self, sync, async_f, *args, **kwargs):
+        """Call an async coroutine function, either blocking or returning an awaitable
+
+        if not sync: calls function directly, returning awaitable
+        else: Block on a call in our background thread, return actual result
+        """
+        if not sync:
+            return async_f(*args, **kwargs)
+        else:
+            return self._synchronize(async_f, *args, **kwargs)
+
+    async def _check_hub_authorization(
+        self, url, api_token, cache_key=None, use_cache=True
+    ):
         """Identify a user with the Hub
-        
+
         Args:
             url (str): The API URL to check the Hub for authorization
-                       (e.g. http://127.0.0.1:8081/hub/api/authorizations/token/abc-def)
+                       (e.g. http://127.0.0.1:8081/hub/api/user)
             cache_key (str): The key for checking the cache
             use_cache (bool): Specify use_cache=False to skip cached cookie values (default: True)
 
@@ -309,7 +439,12 @@ class HubAuth(SingletonConfigurable):
             except KeyError:
                 app_log.debug("HubAuth cache miss: %s", cache_key)
 
-        data = self._api_request('GET', url, allow_404=True)
+        data = await self._api_request(
+            'GET',
+            url,
+            headers={"Authorization": "token " + api_token},
+            allow_403=True,
+        )
         if data is None:
             app_log.warning("No Hub user identified for request")
         else:
@@ -319,18 +454,26 @@ class HubAuth(SingletonConfigurable):
             self.cache[cache_key] = data
         return data
 
-    def _api_request(self, method, url, **kwargs):
+    async def _api_request(self, method, url, **kwargs):
         """Make an API request"""
-        allow_404 = kwargs.pop('allow_404', False)
+        allow_403 = kwargs.pop('allow_403', False)
         headers = kwargs.setdefault('headers', {})
-        headers.setdefault('Authorization', 'token %s' % self.api_token)
-        if "cert" not in kwargs and self.certfile and self.keyfile:
-            kwargs["cert"] = (self.certfile, self.keyfile)
-            if self.client_ca:
-                kwargs["verify"] = self.client_ca
+        headers.setdefault('Authorization', f'token {self.api_token}')
+        # translate requests args to tornado's
+        if self.certfile:
+            kwargs["client_cert"] = self.certfile
+        if self.keyfile:
+            kwargs["client_key"] = self.keyfile
+        if self.client_ca:
+            kwargs["ca_certs"] = self.client_ca
+        req = HTTPRequest(
+            url,
+            method=method,
+            **kwargs,
+        )
         try:
-            r = requests.request(method, url, **kwargs)
-        except requests.ConnectionError as e:
+            r = await AsyncHTTPClient().fetch(req, raise_error=False)
+        except Exception as e:
             app_log.error("Error connecting to %s: %s", self.api_url, e)
             msg = "Failed to connect to Hub API at %r." % self.api_url
             msg += (
@@ -345,96 +488,111 @@ class HubAuth(SingletonConfigurable):
             raise HTTPError(500, msg)
 
         data = None
-        if r.status_code == 404 and allow_404:
+        try:
+            status = HTTPStatus(r.code)
+        except ValueError:
+            app_log.error(
+                f"Unknown error checking authorization with JupyterHub: {r.code}"
+            )
+            app_log.error(r.body.decode("utf8", "replace"))
+
+        response_text = r.body.decode("utf8", "replace")
+        if status.value == 403 and allow_403:
             pass
-        elif r.status_code == 403:
+        elif status.value == 403:
             app_log.error(
                 "I don't have permission to check authorization with JupyterHub, my auth token may have expired: [%i] %s",
-                r.status_code,
-                r.reason,
+                status.value,
+                status.description,
             )
-            app_log.error(r.text)
+            app_log.error(response_text)
             raise HTTPError(
                 500, "Permission failure checking authorization, I may need a new token"
             )
-        elif r.status_code >= 500:
+        elif status.value >= 500:
             app_log.error(
                 "Upstream failure verifying auth token: [%i] %s",
-                r.status_code,
-                r.reason,
+                status.value,
+                status.description,
             )
-            app_log.error(r.text)
+            app_log.error(response_text)
             raise HTTPError(502, "Failed to check authorization (upstream problem)")
-        elif r.status_code >= 400:
+        elif status.value >= 400:
             app_log.warning(
-                "Failed to check authorization: [%i] %s", r.status_code, r.reason
+                "Failed to check authorization: [%i] %s",
+                status.value,
+                status.description,
             )
-            app_log.warning(r.text)
+            app_log.warning(response_text)
             msg = "Failed to check authorization"
-            # pass on error_description from oauth failure
+            # pass on error from oauth failure
             try:
-                description = r.json().get("error_description")
+                response = json.loads(response_text)
+                # prefer more specific 'error_description', fallback to 'error'
+                description = response.get(
+                    "error_description", response.get("error", "Unknown error")
+                )
             except Exception:
                 pass
             else:
                 msg += ": " + description
             raise HTTPError(500, msg)
         else:
-            data = r.json()
+            data = json.loads(response_text)
 
         return data
 
     def user_for_cookie(self, encrypted_cookie, use_cache=True, session_id=''):
-        """Ask the Hub to identify the user for a given cookie.
-
-        Args:
-            encrypted_cookie (str): the cookie value (not decrypted, the Hub will do that)
-            use_cache (bool): Specify use_cache=False to skip cached cookie values (default: True)
-
-        Returns:
-            user_model (dict): The user model, if a user is identified, None if authentication fails.
-
-            The 'name' field contains the user's name.
-        """
-        return self._check_hub_authorization(
-            url=url_path_join(
-                self.api_url,
-                "authorizations/cookie",
-                self.cookie_name,
-                quote(encrypted_cookie, safe=''),
-            ),
-            cache_key='cookie:{}:{}'.format(session_id, encrypted_cookie),
-            use_cache=use_cache,
+        """Deprecated and removed. Use HubOAuth to authenticate browsers."""
+        raise RuntimeError(
+            "Identifying users by shared cookie is removed in JupyterHub 2.0. Use OAuth tokens."
         )
 
-    def user_for_token(self, token, use_cache=True, session_id=''):
+    def user_for_token(self, token, use_cache=True, session_id='', *, sync=True):
         """Ask the Hub to identify the user for a given token.
+
+        .. versionadded:: 2.4
+            async support via `sync` argument.
 
         Args:
             token (str): the token
             use_cache (bool): Specify use_cache=False to skip cached cookie values (default: True)
+            sync (bool): whether to block for the result or return an awaitable
 
         Returns:
             user_model (dict): The user model, if a user is identified, None if authentication fails.
 
             The 'name' field contains the user's name.
         """
-        return self._check_hub_authorization(
+        return self._call_coroutine(
+            sync,
+            self._check_hub_authorization,
             url=url_path_join(
-                self.api_url, "authorizations/token", quote(token, safe='')
+                self.api_url,
+                "user",
             ),
-            cache_key='token:{}:{}'.format(session_id, token),
+            api_token=token,
+            cache_key='token:{}:{}'.format(
+                session_id,
+                hashlib.sha256(token.encode("utf8", "replace")).hexdigest(),
+            ),
             use_cache=use_cache,
         )
 
     auth_header_name = 'Authorization'
-    auth_header_pat = re.compile('token\s+(.+)', re.IGNORECASE)
+    auth_header_pat = re.compile(r'(?:token|bearer)\s+(.+)', re.IGNORECASE)
 
-    def get_token(self, handler):
-        """Get the user token from a request
+    def get_token(self, handler, in_cookie=True):
+        """Get the token authenticating a request
+
+        .. versionchanged:: 2.2
+          in_cookie added.
+          Previously, only URL params and header were considered.
+          Pass `in_cookie=False` to preserve that behavior.
 
         - in URL parameters: ?token=<token>
         - in header: Authorization: token <token>
+        - in cookie (stored after oauth), if in_cookie is True
         """
 
         user_token = handler.get_argument('token', '')
@@ -445,14 +603,18 @@ class HubAuth(SingletonConfigurable):
             )
             if m:
                 user_token = m.group(1)
+        if not user_token and in_cookie:
+            user_token = self._get_token_cookie(handler)
         return user_token
 
-    def _get_user_cookie(self, handler):
+    def _get_token_cookie(self, handler):
+        """Base class doesn't store tokens in cookies"""
+        return None
+
+    async def _get_user_cookie(self, handler):
         """Get the user model from a cookie"""
-        encrypted_cookie = handler.get_cookie(self.cookie_name)
-        session_id = self.get_session_id(handler)
-        if encrypted_cookie:
-            return self.user_for_cookie(encrypted_cookie, session_id=session_id)
+        # overridden in HubOAuth to store the access token after oauth
+        return None
 
     def get_session_id(self, handler):
         """Get the jupyterhub session id
@@ -461,20 +623,26 @@ class HubAuth(SingletonConfigurable):
         """
         return handler.get_cookie('jupyterhub-session-id', '')
 
-    def get_user(self, handler):
+    def get_user(self, handler, *, sync=True):
         """Get the Hub user for a given tornado handler.
 
         Checks cookie with the Hub to identify the current user.
 
+        .. versionadded:: 2.4
+            async support via `sync` argument.
+
         Args:
             handler (tornado.web.RequestHandler): the current request handler
+            sync (bool): whether to block for the result or return an awaitable
 
         Returns:
             user_model (dict): The user model, if a user is identified, None if authentication fails.
 
             The 'name' field contains the user's name.
         """
+        return self._call_coroutine(sync, self._get_user, handler)
 
+    async def _get_user(self, handler):
         # only allow this to be called once per handler
         # avoids issues if an error is raised,
         # since this may be called again when trying to render the error page
@@ -484,16 +652,20 @@ class HubAuth(SingletonConfigurable):
         handler._cached_hub_user = user_model = None
         session_id = self.get_session_id(handler)
 
-        # check token first
-        token = self.get_token(handler)
+        # check token first, ignoring cookies
+        # because some checks are different when a request
+        # is token-authenticated (CORS-related)
+        token = self.get_token(handler, in_cookie=False)
         if token:
-            user_model = self.user_for_token(token, session_id=session_id)
+            user_model = await self.user_for_token(
+                token, session_id=session_id, sync=False
+            )
             if user_model:
                 handler._token_authenticated = True
 
         # no token, check cookie
         if user_model is None:
-            user_model = self._get_user_cookie(handler)
+            user_model = await self._get_user_cookie(handler)
 
         # cache result
         handler._cached_hub_user = user_model
@@ -501,9 +673,16 @@ class HubAuth(SingletonConfigurable):
             app_log.debug("No user identified")
         return user_model
 
+    def check_scopes(self, required_scopes, user):
+        """Check whether the user has required scope(s)"""
+        return check_scopes(required_scopes, set(user["scopes"]))
+
 
 class HubOAuth(HubAuth):
     """HubAuth using OAuth for login instead of cookies set by the Hub.
+
+    Use this class if you want users to be able to visit your service with a browser.
+    They will be authenticated via OAuth with the Hub.
 
     .. versionadded: 0.8
     """
@@ -538,12 +717,21 @@ class HubOAuth(HubAuth):
         """
         return self.cookie_name + '-oauth-state'
 
-    def _get_user_cookie(self, handler):
+    def _get_token_cookie(self, handler):
+        """Base class doesn't store tokens in cookies"""
         token = handler.get_secure_cookie(self.cookie_name)
+        if token:
+            # decode cookie bytes
+            token = token.decode('ascii', 'replace')
+        return token
+
+    async def _get_user_cookie(self, handler):
+        token = self._get_token_cookie(handler)
         session_id = self.get_session_id(handler)
         if token:
-            token = token.decode('ascii', 'replace')
-            user_model = self.user_for_token(token, session_id=session_id)
+            user_model = await self.user_for_token(
+                token, session_id=session_id, sync=False
+            )
             if user_model is None:
                 app_log.warning("Token stored in cookie may have expired")
                 handler.clear_cookie(self.cookie_name)
@@ -553,7 +741,7 @@ class HubOAuth(HubAuth):
 
     oauth_client_id = Unicode(
         help="""The OAuth client ID for this application.
-        
+
         Use JUPYTERHUB_CLIENT_ID by default.
         """
     ).tag(config=True)
@@ -570,7 +758,7 @@ class HubOAuth(HubAuth):
 
     oauth_redirect_uri = Unicode(
         help="""OAuth redirect URI
-        
+
         Should generally be /base_url/oauth_callback
         """
     ).tag(config=True)
@@ -598,17 +786,20 @@ class HubOAuth(HubAuth):
     def _token_url(self):
         return url_path_join(self.api_url, 'oauth2/token')
 
-    def token_for_code(self, code):
+    def token_for_code(self, code, *, sync=True):
         """Get token for OAuth temporary code
-        
+
         This is the last step of OAuth login.
         Should be called in OAuth Callback handler.
-        
+
         Args:
             code (str): oauth code for finishing OAuth login
         Returns:
             token (str): JupyterHub API Token
         """
+        return self._call_coroutine(sync, self._token_for_code, code)
+
+    async def _token_for_code(self, code):
         # GitHub specifies a POST request yet requires URL parameters
         params = dict(
             client_id=self.oauth_client_id,
@@ -618,10 +809,10 @@ class HubOAuth(HubAuth):
             redirect_uri=self.oauth_redirect_uri,
         )
 
-        token_reply = self._api_request(
+        token_reply = await self._api_request(
             'POST',
             self.oauth_token_url,
-            data=urlencode(params).encode('utf8'),
+            body=urlencode(params).encode('utf8'),
             headers={'Content-Type': 'application/x-www-form-urlencoded'},
         )
 
@@ -664,12 +855,15 @@ class HubOAuth(HubAuth):
 
         Parameters
         ----------
-        handler (RequestHandler): A tornado RequestHandler
-        next_url (str): The page to redirect to on successful login
+        handler : RequestHandler
+            A tornado RequestHandler
+        next_url : str
+            The page to redirect to on successful login
 
         Returns
         -------
-        state (str): The OAuth state that has been stored in the cookie (url safe, base64-encoded)
+        state : str
+            The OAuth state that has been stored in the cookie (url safe, base64-encoded)
         """
         extra_state = {}
         if handler.get_cookie(self.state_cookie_name):
@@ -680,7 +874,7 @@ class HubOAuth(HubAuth):
             cookie_suffix = ''.join(
                 random.choice(string.ascii_letters) for i in range(8)
             )
-            cookie_name = '{}-{}'.format(self.state_cookie_name, cookie_suffix)
+            cookie_name = f'{self.state_cookie_name}-{cookie_suffix}'
             extra_state['cookie_name'] = cookie_name
         else:
             cookie_name = self.state_cookie_name
@@ -694,7 +888,7 @@ class HubOAuth(HubAuth):
             # OAuth that doesn't complete shouldn't linger too long.
             'max_age': 600,
         }
-        if handler.request.protocol == 'https':
+        if get_browser_protocol(handler.request) == 'https':
             kwargs['secure'] = True
         # load user cookie overrides
         kwargs.update(self.cookie_options)
@@ -706,7 +900,8 @@ class HubOAuth(HubAuth):
 
         Parameters
         ----------
-        next_url (str): The URL of the page to redirect to on successful login.
+        next_url : str
+            The URL of the page to redirect to on successful login.
 
         Returns
         -------
@@ -733,7 +928,7 @@ class HubOAuth(HubAuth):
     def set_cookie(self, handler, access_token):
         """Set a cookie recording OAuth result"""
         kwargs = {'path': self.base_url, 'httponly': True}
-        if handler.request.protocol == 'https':
+        if get_browser_protocol(handler.request) == 'https':
             kwargs['secure'] = True
         # load user cookie overrides
         kwargs.update(self.cookie_options)
@@ -764,22 +959,36 @@ class UserNotAllowed(Exception):
         )
 
 
-class HubAuthenticated(object):
+class HubAuthenticated:
     """Mixin for tornado handlers that are authenticated with JupyterHub
 
     A handler that mixes this in must have the following attributes/properties:
 
     - .hub_auth: A HubAuth instance
+    - .hub_scopes: A set of JupyterHub 2.0 OAuth scopes to allow.
+      Default comes from .hub_auth.oauth_access_scopes,
+      which in turn is set by $JUPYTERHUB_OAUTH_ACCESS_SCOPES
+      Default values include:
+      - 'access:services', 'access:services!service={service_name}' for services
+      - 'access:servers', 'access:servers!user={user}',
+      'access:servers!server={user}/{server_name}'
+      for single-user servers
+
+    If hub_scopes is not used (e.g. JupyterHub 1.x),
+    these additional properties can be used:
+
+    - .allow_admin: If True, allow any admin user.
+      Default: False.
     - .hub_users: A set of usernames to allow.
       If left unspecified or None, username will not be checked.
     - .hub_groups: A set of group names to allow.
       If left unspecified or None, groups will not be checked.
+    - .allow_admin: Is admin user access allowed or not
+      If left unspecified or False, admin user won't have an access.
 
     Examples::
 
         class MyHandler(HubAuthenticated, web.RequestHandler):
-            hub_users = {'inara', 'mal'}
-
             def initialize(self, hub_auth):
                 self.hub_auth = hub_auth
 
@@ -789,10 +998,16 @@ class HubAuthenticated(object):
 
     """
 
+    # deprecated, pre-2.0 allow sets
     hub_services = None  # set of allowed services
     hub_users = None  # set of allowed users
     hub_groups = None  # set of allowed groups
     allow_admin = False  # allow any admin user access
+
+    @property
+    def hub_scopes(self):
+        """Set of allowed scopes (use hub_auth.access_scopes by default)"""
+        return self.hub_auth.access_scopes or None
 
     @property
     def allow_all(self):
@@ -800,9 +1015,11 @@ class HubAuthenticated(object):
         or service should be allowed.
         """
         return (
-            self.hub_services is None
+            self.hub_scopes is None
+            and self.hub_services is None
             and self.hub_users is None
             and self.hub_groups is None
+            and not self.allow_admin
         )
 
     # self.hub_auth must be a HubAuth instance.
@@ -829,29 +1046,58 @@ class HubAuthenticated(object):
             # add state argument to OAuth url
             state = self.hub_auth.set_state_cookie(self, next_url=self.request.uri)
             login_url = url_concat(login_url, {'state': state})
-        app_log.debug("Redirecting to login url: %s", login_url)
-        return login_url
+        # temporary override at setting level,
+        # to allow any subclass overrides of get_login_url to preserve their effect
+        # for example, APIHandler raises 403 to prevent redirects
+        with mock.patch.dict(self.application.settings, {"login_url": login_url}):
+            app_log.debug("Redirecting to login url: %s", login_url)
+            return super().get_login_url()
 
     def check_hub_user(self, model):
         """Check whether Hub-authenticated user or service should be allowed.
 
         Returns the input if the user should be allowed, None otherwise.
 
-        Override if you want to check anything other than the username's presence in hub_users list.
+        Override for custom logic in authenticating users.
 
         Args:
-            model (dict): the user or service model returned from :class:`HubAuth`
+            user_model (dict): the user or service model returned from :class:`HubAuth`
         Returns:
             user_model (dict): The user model if the user should be allowed, None otherwise.
         """
 
         name = model['name']
         kind = model.setdefault('kind', 'user')
+
         if self.allow_all:
             app_log.debug(
                 "Allowing Hub %s %s (all Hub users and services allowed)", kind, name
             )
             return model
+
+        if self.hub_scopes:
+            scopes = self.hub_auth.check_scopes(self.hub_scopes, model)
+            if scopes:
+                app_log.debug(
+                    f"Allowing Hub {kind} {name} based on oauth scopes {scopes}"
+                )
+                return model
+            else:
+                app_log.warning(
+                    f"Not allowing Hub {kind} {name}: missing required scopes"
+                )
+                app_log.debug(
+                    f"Hub {kind} {name} needs scope(s) {self.hub_scopes}, has scope(s) {model['scopes']}"
+                )
+                # if hub_scopes are used, *only* hub_scopes are used
+                # note: this means successful authentication, but insufficient permission
+                raise UserNotAllowed(model)
+
+        # proceed with the pre-2.0 way if hub_scopes is not set
+        warnings.warn(
+            "hub_scopes ($JUPYTERHUB not set, proceeding with pre-2.0 authentication",
+            DeprecationWarning,
+        )
 
         if self.allow_admin and model.get('admin', False):
             app_log.debug("Allowing Hub admin %s", name)
@@ -860,15 +1106,15 @@ class HubAuthenticated(object):
         if kind == 'service':
             # it's a service, check hub_services
             if self.hub_services and name in self.hub_services:
-                app_log.debug("Allowing whitelisted Hub service %s", name)
+                app_log.debug("Allowing Hub service %s", name)
                 return model
             else:
                 app_log.warning("Not allowing Hub service %s", name)
                 raise UserNotAllowed(model)
 
         if self.hub_users and name in self.hub_users:
-            # user in whitelist
-            app_log.debug("Allowing whitelisted Hub user %s", name)
+            # user in allowed list
+            app_log.debug("Allowing Hub user %s", name)
             return model
         elif self.hub_groups and set(model['groups']).intersection(self.hub_groups):
             allowed_groups = set(model['groups']).intersection(self.hub_groups)
@@ -877,7 +1123,7 @@ class HubAuthenticated(object):
                 name,
                 ','.join(sorted(allowed_groups)),
             )
-            # group in whitelist
+            # group in allowed list
             return model
         else:
             app_log.warning("Not allowing Hub user %s", name)
@@ -915,8 +1161,8 @@ class HubAuthenticated(object):
             self._hub_auth_user_cache = None
             raise
 
-        # store tokens passed via url or header in a cookie for future requests
-        url_token = self.hub_auth.get_token(self)
+        # store ?token=... tokens passed via url in a cookie for future requests
+        url_token = self.get_argument('token', '')
         if (
             user_model
             and url_token
@@ -946,8 +1192,7 @@ class HubOAuthCallbackHandler(HubOAuthenticated, RequestHandler):
     .. versionadded: 0.8
     """
 
-    @coroutine
-    def get(self):
+    async def get(self):
         error = self.get_argument("error", False)
         if error:
             msg = self.get_argument("error_description", error)
@@ -972,10 +1217,12 @@ class HubOAuthCallbackHandler(HubOAuthenticated, RequestHandler):
             app_log.warning("oauth state %r != %r", arg_state, cookie_state)
             raise HTTPError(403, "oauth state does not match. Try logging in again.")
         next_url = self.hub_auth.get_next_url(cookie_state)
-        # TODO: make async (in a Thread?)
-        token = self.hub_auth.token_for_code(code)
+
+        token = await self.hub_auth.token_for_code(code, sync=False)
         session_id = self.hub_auth.get_session_id(self)
-        user_model = self.hub_auth.user_for_token(token, session_id=session_id)
+        user_model = await self.hub_auth.user_for_token(
+            token, session_id=session_id, sync=False
+        )
         if user_model is None:
             raise HTTPError(500, "oauth callback failed to identify a user")
         app_log.info("Logged-in user %s", user_model)

@@ -1,7 +1,21 @@
-# ReadTheDocs uses the `environment.yaml` so make sure to update that as well
-# if you change this file
--r ../requirements.txt
-alabaster_jupyterhub
-recommonmark==0.5.0
+# We install the jupyterhub package to help autodoc-traits inspect it and
+# generate documentation.
+#
+# FIXME: If there is a way for this requirements.txt file to pass a flag that
+#        the build system can intercept to not build the javascript artifacts,
+#        then do so so. That would mean that installing the documentation can
+#        avoid needing node/npm installed.
+#
+--editable .
+
+autodoc-traits
+myst-parser
+pre-commit
+pydata-sphinx-theme
+pytablewriter>=0.56
+ruamel.yaml
+sphinx>=4
 sphinx-copybutton
-sphinx>=1.7
+sphinx-jsonschema
+sphinxext-opengraph
+sphinxext-rediraffe

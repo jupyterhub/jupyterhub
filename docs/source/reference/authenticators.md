@@ -1,6 +1,6 @@
 # Authenticators
 
-The [Authenticator][] is the mechanism for authorizing users to use the
+The {class}`.Authenticator` is the mechanism for authorizing users to use the
 Hub and single user notebook servers.
 
 ## The default PAM Authenticator
@@ -36,7 +36,7 @@ A [generic implementation](https://github.com/jupyterhub/oauthenticator/blob/mas
 ## The Dummy Authenticator
 
 When testing, it may be helpful to use the
-:class:`~jupyterhub.auth.DummyAuthenticator`. This allows for any username and
+{class}`jupyterhub.auth.DummyAuthenticator`. This allows for any username and
 password unless if a global password has been set. Once set, any username will
 still be accepted but the correct password will need to be provided.
 
@@ -88,7 +88,6 @@ class DictionaryAuthenticator(Authenticator):
             return data['username']
 ```
 
-
 #### Normalize usernames
 
 Since the Authenticator and Spawner both use the same username,
@@ -111,11 +110,8 @@ normalize usernames using PAM (basically round-tripping them: username
 to uid to username), which is useful in case you use some external
 service that allows multiple usernames mapping to the same user (such
 as ActiveDirectory, yes, this really happens).  When
-`pam_normalize_username` is on, usernames are *not* normalized to
+`pam_normalize_username` is on, usernames are _not_ normalized to
 lowercase. 
-NOTE: Earlier it says that usernames are normalized using PAM. 
-I guess that doesn't normalize them?
-
 
 #### Validate usernames
 
@@ -133,7 +129,6 @@ To only allow usernames that start with 'w':
 c.Authenticator.username_pattern = r'w.*'
 ```
 
-
 ### How to write a custom authenticator
 
 You can use custom Authenticator subclasses to enable authentication
@@ -141,11 +136,10 @@ via other mechanisms. One such example is using [GitHub OAuth][].
 
 Because the username is passed from the Authenticator to the Spawner,
 a custom Authenticator and Spawner are often used together.
-For example, the Authenticator methods, [pre_spawn_start(user, spawner)][]
-and [post_spawn_stop(user, spawner)][], are hooks that can be used to do
+For example, the Authenticator methods, {meth}`.Authenticator.pre_spawn_start`
+and {meth}`.Authenticator.post_spawn_stop`, are hooks that can be used to do
 auth-related startup (e.g. opening PAM sessions) and cleanup
 (e.g. closing PAM sessions).
-
 
 See a list of custom Authenticators [on the wiki](https://github.com/jupyterhub/jupyterhub/wiki/Authenticators).
 
@@ -187,7 +181,6 @@ Additionally, configurable attributes for your authenticator will
 appear in jupyterhub help output and auto-generated configuration files
 via `jupyterhub --generate-config`.
 
-
 ### Authentication state
 
 JupyterHub 0.8 adds the ability to persist state related to authentication,
@@ -221,25 +214,22 @@ To store auth_state, two conditions must be met:
    export JUPYTERHUB_CRYPT_KEY=$(openssl rand -hex 32)
    ```
 
-
 JupyterHub uses [Fernet](https://cryptography.io/en/latest/fernet/) to encrypt auth_state.
 To facilitate key-rotation, `JUPYTERHUB_CRYPT_KEY` may be a semicolon-separated list of encryption keys.
 If there are multiple keys present, the **first** key is always used to persist any new auth_state.
-
 
 #### Using auth_state
 
 Typically, if `auth_state` is persisted it is desirable to affect the Spawner environment in some way.
 This may mean defining environment variables, placing certificate in the user's home directory, etc.
-The `Authenticator.pre_spawn_start` method can be used to pass information from authenticator state
+The {meth}`Authenticator.pre_spawn_start` method can be used to pass information from authenticator state
 to Spawner environment:
 
 ```python
 class MyAuthenticator(Authenticator):
-    @gen.coroutine
-    def authenticate(self, handler, data=None):
-        username = yield identify_user(handler, data)
-        upstream_token = yield token_for_user(username)
+    async def authenticate(self, handler, data=None):
+        username = await identify_user(handler, data)
+        upstream_token = await token_for_user(username)
         return {
             'name': username,
             'auth_state': {
@@ -247,21 +237,69 @@ class MyAuthenticator(Authenticator):
             },
         }
 
-    @gen.coroutine
-    def pre_spawn_start(self, user, spawner):
+    async def pre_spawn_start(self, user, spawner):
         """Pass upstream_token to spawner via environment variable"""
-        auth_state = yield user.get_auth_state()
+        auth_state = await user.get_auth_state()
         if not auth_state:
             # auth_state not enabled
             return
         spawner.environment['UPSTREAM_TOKEN'] = auth_state['upstream_token']
 ```
 
+Note that environment variable names and values are always strings, so passing multiple values means setting multiple environment variables or serializing more complex data into a single variable, e.g. as a JSON string.
+
+auth state can also be used to configure the spawner via _config_ without subclassing
+by setting `c.Spawner.auth_state_hook`. This function will be called with `(spawner, auth_state)`,
+only when auth_state is defined.
+
+For example:
+(for KubeSpawner)
+
+```python
+def auth_state_hook(spawner, auth_state):
+    spawner.volumes = auth_state['user_volumes']
+    spawner.mounts = auth_state['user_mounts']
+
+c.Spawner.auth_state_hook = auth_state_hook
+```
+
+(authenticator-groups)=
+
+## Authenticator-managed group membership
+
+:::{versionadded} 2.2
+:::
+
+Some identity providers may have their own concept of group membership that you would like to preserve in JupyterHub.
+This is now possible with `Authenticator.managed_groups`.
+
+You can set the config:
+
+```python
+c.Authenticator.manage_groups = True
+```
+
+to enable this behavior.
+The default is False for Authenticators that ship with JupyterHub,
+but may be True for custom Authenticators.
+Check your Authenticator's documentation for manage_groups support.
+
+If True, {meth}`.Authenticator.authenticate` and {meth}`.Authenticator.refresh_user` may include a field `groups`
+which is a list of group names the user should be a member of:
+
+- Membership will be added for any group in the list
+- Membership in any groups not in the list will be revoked
+- Any groups not already present in the database will be created
+- If `None` is returned, no changes are made to the user's group membership
+
+If authenticator-managed groups are enabled,
+all group-management via the API is disabled.
+
 ## pre_spawn_start and post_spawn_stop hooks
 
-Authenticators uses two hooks, [pre_spawn_start(user, spawner)][] and
-[post_spawn_stop(user, spawner)][] to pass additional state information
-between the authenticator and a spawner. These hooks are typically used for auth-related
+Authenticators use two hooks, {meth}`.Authenticator.pre_spawn_start` and
+{meth}`.Authenticator.post_spawn_stop(user, spawner)` to add pass additional state information
+between the authenticator and a spawner. These hooks are typically used auth-related
 startup, i.e. opening a PAM session, and auth-related cleanup, i.e. closing a
 PAM session.
 
@@ -269,11 +307,7 @@ PAM session.
 
 Beginning with version 0.8, JupyterHub is an OAuth provider.
 
-
-[Authenticator]: https://github.com/jupyterhub/jupyterhub/blob/master/jupyterhub/auth.py
-[PAM]: https://en.wikipedia.org/wiki/Pluggable_authentication_module
-[OAuth]: https://en.wikipedia.org/wiki/OAuth
-[GitHub OAuth]: https://developer.github.com/v3/oauth/
-[OAuthenticator]: https://github.com/jupyterhub/oauthenticator
-[pre_spawn_start(user, spawner)]: https://jupyterhub.readthedocs.io/en/latest/api/auth.html#jupyterhub.auth.Authenticator.pre_spawn_start
-[post_spawn_stop(user, spawner)]: https://jupyterhub.readthedocs.io/en/latest/api/auth.html#jupyterhub.auth.Authenticator.post_spawn_stop
+[pam]: https://en.wikipedia.org/wiki/Pluggable_authentication_module
+[oauth]: https://en.wikipedia.org/wiki/OAuth
+[github oauth]: https://developer.github.com/v3/oauth/
+[oauthenticator]: https://github.com/jupyterhub/oauthenticator

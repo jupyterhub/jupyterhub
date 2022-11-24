@@ -7,9 +7,12 @@ Hub manages by default as a subprocess (it can be run externally, as well, and
 typically is in production deployments).
 
 The upside to CHP, and why we use it by default, is that it's easy to install
-and run (if you have nodejs, you are set!). The downsides are that it's a
-single process and does not support any persistence of the routing table. So
-if the proxy process dies, your whole JupyterHub instance is inaccessible
+and run (if you have nodejs, you are set!). The downsides are that
+
+- it's a single process and
+- does not support any persistence of the routing table.
+
+So if the proxy process dies, your whole JupyterHub instance is inaccessible
 until the Hub notices, restarts the proxy, and restores the routing table. For
 deployments that want to avoid such a single point of failure, or leverage
 existing proxy infrastructure in their chosen deployment (such as Kubernetes
@@ -54,7 +57,7 @@ class MyProxy(Proxy):
         """Stop the proxy"""
 ```
 
-These methods **may** be  coroutines.
+These methods **may** be coroutines.
 
 `c.Proxy.should_start` is a configurable flag that determines whether the
 Hub should call these methods when the Hub itself starts and stops.
@@ -103,7 +106,7 @@ route to be proxied, such as `/user/name/`. A routespec will:
 
 When adding a route, JupyterHub may pass a JSON-serializable dict as a `data`
 argument that should be attached to the proxy route. When that route is
-retrieved, the `data` argument should be returned as well. If your  proxy
+retrieved, the `data` argument should be returned as well. If your proxy
 implementation doesn't support storing data attached to routes, then your
 Python wrapper may have to handle storing the `data` piece itself, e.g in a
 simple file or database.
@@ -136,7 +139,7 @@ async def delete_route(self, routespec):
 
 ### Retrieving routes
 
-For retrieval, you only *need* to implement a single method that retrieves all
+For retrieval, you only _need_ to implement a single method that retrieves all
 routes. The return value for this function should be a dictionary, keyed by
 `routespec`, of dicts whose keys are the same three arguments passed to
 `add_route` (`routespec`, `target`, `data`)
@@ -220,3 +223,11 @@ as previously required.
 Additionally, configurable attributes for your proxy will
 appear in jupyterhub help output and auto-generated configuration files
 via `jupyterhub --generate-config`.
+
+### Index of proxies
+
+A list of the proxies that are currently available for JupyterHub (that we know about).
+
+1. [`jupyterhub/configurable-http-proxy`](https://github.com/jupyterhub/configurable-http-proxy) The default proxy which uses node-http-proxy
+2. [`jupyterhub/traefik-proxy`](https://github.com/jupyterhub/traefik-proxy) The proxy which configures traefik proxy server for jupyterhub
+3. [`AbdealiJK/configurable-http-proxy`](https://github.com/AbdealiJK/configurable-http-proxy) A pure python implementation of the configurable-http-proxy

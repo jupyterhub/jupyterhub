@@ -1,0 +1,52 @@
+# This is a GitHub workflow defining a set of jobs with a set of steps.
+# ref: https://docs.github.com/en/actions/learn-github-actions/workflow-syntax-for-github-actions
+#
+name: Test jsx (admin-react.js)
+
+on:
+  pull_request:
+    paths:
+      - "jsx/**"
+      - ".github/workflows/test-jsx.yml"
+  push:
+    paths:
+      - "jsx/**"
+      - ".github/workflows/test-jsx.yml"
+    branches-ignore:
+      - "dependabot/**"
+      - "pre-commit-ci-update-config"
+    tags:
+      - "**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # The ./jsx folder contains React based source code files that are to compile
+  # to share/jupyterhub/static/js/admin-react.js. The ./jsx folder includes
+  # tests also has tests that this job is meant to run with `yarn test`
+  # according to the documentation in jsx/README.md.
+  test-jsx-admin-react:
+    runs-on: ubuntu-20.04
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: "14"
+
+      - name: Install yarn
+        run: |
+          npm install -g yarn
+
+      - name: yarn
+        run: |
+          cd jsx
+          yarn
+
+      - name: yarn test
+        run: |
+          cd jsx
+          yarn test

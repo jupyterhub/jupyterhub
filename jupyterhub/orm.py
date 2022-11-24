@@ -3,45 +3,42 @@
 # Distributed under the terms of the Modified BSD License.
 import enum
 import json
-from base64 import decodebytes
-from base64 import encodebytes
-from datetime import datetime
-from datetime import timedelta
+from base64 import decodebytes, encodebytes
+from datetime import datetime, timedelta
 
 import alembic.command
 import alembic.config
 from alembic.script import ScriptDirectory
-from sqlalchemy import Boolean
-from sqlalchemy import Column
-from sqlalchemy import create_engine
-from sqlalchemy import DateTime
-from sqlalchemy import Enum
-from sqlalchemy import event
-from sqlalchemy import exc
-from sqlalchemy import ForeignKey
-from sqlalchemy import inspect
-from sqlalchemy import Integer
-from sqlalchemy import or_
-from sqlalchemy import select
-from sqlalchemy import Table
-from sqlalchemy import Unicode
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    MetaData,
+    Table,
+    Unicode,
+    create_engine,
+    event,
+    exc,
+    inspect,
+    or_,
+    select,
+)
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import interfaces
-from sqlalchemy.orm import object_session
-from sqlalchemy.orm import relationship
-from sqlalchemy.orm import Session
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import (
+    Session,
+    backref,
+    interfaces,
+    object_session,
+    relationship,
+    sessionmaker,
+)
 from sqlalchemy.pool import StaticPool
-from sqlalchemy.sql.expression import bindparam
-from sqlalchemy.types import LargeBinary
-from sqlalchemy.types import Text
-from sqlalchemy.types import TypeDecorator
+from sqlalchemy.types import LargeBinary, Text, TypeDecorator
 from tornado.log import app_log
 
-from .utils import compare_token
-from .utils import hash_token
-from .utils import new_token
-from .utils import random_port
+from .utils import compare_token, hash_token, new_token, random_port
 
 # top-level variable for easier mocking in tests
 utcnow = datetime.utcnow
@@ -89,7 +86,39 @@ class JSONDict(TypeDecorator):
         return value
 
 
-Base = declarative_base()
+class JSONList(JSONDict):
+    """Represents an immutable structure as a json-encoded string (to be used for list type columns).
+
+    Usage::
+
+        JSONList(JSONDict)
+
+    """
+
+    def process_bind_param(self, value, dialect):
+        if isinstance(value, list) and value is not None:
+            value = json.dumps(value)
+        return value
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return []
+        else:
+            value = json.loads(value)
+        return value
+
+
+meta = MetaData(
+    naming_convention={
+        "ix": "ix_%(column_0_label)s",
+        "uq": "uq_%(table_name)s_%(column_0_name)s",
+        "ck": "ck_%(table_name)s_%(constraint_name)s",
+        "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+        "pk": "pk_%(table_name)s",
+    }
+)
+
+Base = declarative_base(metadata=meta)
 Base.log = app_log
 
 
@@ -109,7 +138,62 @@ class Server(Base):
     cookie_name = Column(Unicode(255), default='cookie')
 
     def __repr__(self):
-        return "<Server(%s:%s)>" % (self.ip, self.port)
+        return f"<Server({self.ip}:{self.port})>"
+
+
+# lots of things have roles
+# mapping tables are the same for all of them
+
+_role_map_tables = []
+
+for has_role in (
+    'user',
+    'group',
+    'service',
+):
+    role_map = Table(
+        f'{has_role}_role_map',
+        Base.metadata,
+        Column(
+            f'{has_role}_id',
+            ForeignKey(f'{has_role}s.id', ondelete='CASCADE'),
+            primary_key=True,
+        ),
+        Column(
+            'role_id',
+            ForeignKey('roles.id', ondelete='CASCADE'),
+            primary_key=True,
+        ),
+    )
+    _role_map_tables.append(role_map)
+
+
+class Role(Base):
+    """User Roles"""
+
+    __tablename__ = 'roles'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(Unicode(255), unique=True)
+    description = Column(Unicode(1023))
+    scopes = Column(JSONList, default=[])
+    users = relationship('User', secondary='user_role_map', backref='roles')
+    services = relationship('Service', secondary='service_role_map', backref='roles')
+    groups = relationship('Group', secondary='group_role_map', backref='roles')
+
+    def __repr__(self):
+        return "<{} {} ({}) - scopes: {}>".format(
+            self.__class__.__name__,
+            self.name,
+            self.description,
+            self.scopes,
+        )
+
+    @classmethod
+    def find(cls, db, name):
+        """Find a role by name.
+        Returns None if not found.
+        """
+        return db.query(cls).filter(cls.name == name).first()
 
 
 # user:group many:many mapping table
@@ -179,14 +263,11 @@ class User(Base):
     def orm_spawners(self):
         return {s.name: s for s in self._orm_spawners}
 
-    admin = Column(Boolean, default=False)
+    admin = Column(Boolean(create_constraint=False), default=False)
     created = Column(DateTime, default=datetime.utcnow)
     last_activity = Column(DateTime, nullable=True)
 
     api_tokens = relationship("APIToken", backref="user", cascade="all, delete-orphan")
-    oauth_tokens = relationship(
-        "OAuthAccessToken", backref="user", cascade="all, delete-orphan"
-    )
     oauth_codes = relationship(
         "OAuthCode", backref="user", cascade="all, delete-orphan"
     )
@@ -222,7 +303,7 @@ class User(Base):
 
 
 class Spawner(Base):
-    """"State about a Spawner"""
+    """ "State about a Spawner"""
 
     __tablename__ = 'spawners'
 
@@ -230,7 +311,12 @@ class Spawner(Base):
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'))
 
     server_id = Column(Integer, ForeignKey('servers.id', ondelete='SET NULL'))
-    server = relationship(Server, cascade="all")
+    server = relationship(
+        Server,
+        backref=backref('spawner', uselist=False),
+        single_parent=True,
+        cascade="all, delete-orphan",
+    )
 
     state = Column(JSONDict)
     name = Column(Unicode(255))
@@ -238,6 +324,21 @@ class Spawner(Base):
     started = Column(DateTime)
     last_activity = Column(DateTime, nullable=True)
     user_options = Column(JSONDict)
+
+    # added in 2.0
+    oauth_client_id = Column(
+        Unicode(255),
+        ForeignKey(
+            'oauth_clients.identifier',
+            ondelete='SET NULL',
+        ),
+    )
+    oauth_client = relationship(
+        'OAuthClient',
+        backref=backref("spawner", uselist=False),
+        cascade="all, delete-orphan",
+        single_parent=True,
+    )
 
     # properties on the spawner wrapper
     # some APIs get these low-level objects
@@ -274,7 +375,7 @@ class Service(Base):
 
     # common user interface:
     name = Column(Unicode(255), unique=True)
-    admin = Column(Boolean, default=False)
+    admin = Column(Boolean(create_constraint=False), default=False)
 
     api_tokens = relationship(
         "APIToken", backref="service", cascade="all, delete-orphan"
@@ -282,8 +383,28 @@ class Service(Base):
 
     # service-specific interface
     _server_id = Column(Integer, ForeignKey('servers.id', ondelete='SET NULL'))
-    server = relationship(Server, cascade='all')
+    server = relationship(
+        Server,
+        backref=backref('service', uselist=False),
+        single_parent=True,
+        cascade="all, delete-orphan",
+    )
     pid = Column(Integer)
+
+    # added in 2.0
+    oauth_client_id = Column(
+        Unicode(255),
+        ForeignKey(
+            'oauth_clients.identifier',
+            ondelete='SET NULL',
+        ),
+    )
+    oauth_client = relationship(
+        'OAuthClient',
+        backref=backref("service", uselist=False),
+        cascade="all, delete-orphan",
+        single_parent=True,
+    )
 
     def new_api_token(self, token=None, **kwargs):
         """Create a new API token
@@ -300,7 +421,46 @@ class Service(Base):
         return db.query(cls).filter(cls.name == name).first()
 
 
-class Hashed(object):
+class Expiring:
+    """Mixin for expiring entries
+
+    Subclass must define at least expires_at property,
+    which should be unix timestamp or datetime object
+    """
+
+    now = utcnow  # function, must return float timestamp or datetime
+    expires_at = None  # must be defined
+
+    @property
+    def expires_in(self):
+        """Property returning expiration in seconds from now
+
+        or None
+        """
+        if self.expires_at:
+            delta = self.expires_at - self.now()
+            if isinstance(delta, timedelta):
+                delta = delta.total_seconds()
+            return delta
+        else:
+            return None
+
+    @classmethod
+    def purge_expired(cls, db):
+        """Purge expired API Tokens from the database"""
+        now = cls.now()
+        deleted = False
+        for obj in (
+            db.query(cls).filter(cls.expires_at != None).filter(cls.expires_at < now)
+        ):
+            app_log.debug("Purging expired %s", obj)
+            deleted = True
+            db.delete(obj)
+        if deleted:
+            db.commit()
+
+
+class Hashed(Expiring):
     """Mixin for tables with hashed tokens"""
 
     prefix_length = 4
@@ -357,11 +517,19 @@ class Hashed(object):
         """Start the query for matching token.
 
         Returns an SQLAlchemy query already filtered by prefix-matches.
+
+        .. versionchanged:: 1.2
+
+            Excludes expired matches.
         """
         prefix = token[: cls.prefix_length]
         # since we can't filter on hashed values, filter on prefix
         # so we aren't comparing with all tokens
-        return db.query(cls).filter(bindparam('prefix', prefix).startswith(cls.prefix))
+        prefix_match = db.query(cls).filter_by(prefix=prefix)
+        prefix_match = prefix_match.filter(
+            or_(cls.expires_at == None, cls.expires_at >= cls.now())
+        )
+        return prefix_match
 
     @classmethod
     def find(cls, db, token):
@@ -376,120 +544,6 @@ class Hashed(object):
         for orm_token in prefix_match:
             if orm_token.match(token):
                 return orm_token
-
-
-class APIToken(Hashed, Base):
-    """An API token"""
-
-    __tablename__ = 'api_tokens'
-
-    user_id = Column(Integer, ForeignKey('users.id', ondelete="CASCADE"), nullable=True)
-    service_id = Column(
-        Integer, ForeignKey('services.id', ondelete="CASCADE"), nullable=True
-    )
-
-    id = Column(Integer, primary_key=True)
-    hashed = Column(Unicode(255), unique=True)
-    prefix = Column(Unicode(16), index=True)
-
-    @property
-    def api_id(self):
-        return 'a%i' % self.id
-
-    # token metadata for bookkeeping
-    created = Column(DateTime, default=datetime.utcnow)
-    expires_at = Column(DateTime, default=None, nullable=True)
-    last_activity = Column(DateTime)
-    note = Column(Unicode(1023))
-
-    def __repr__(self):
-        if self.user is not None:
-            kind = 'user'
-            name = self.user.name
-        elif self.service is not None:
-            kind = 'service'
-            name = self.service.name
-        else:
-            # this shouldn't happen
-            kind = 'owner'
-            name = 'unknown'
-        return "<{cls}('{pre}...', {kind}='{name}')>".format(
-            cls=self.__class__.__name__, pre=self.prefix, kind=kind, name=name
-        )
-
-    @classmethod
-    def purge_expired(cls, db):
-        """Purge expired API Tokens from the database"""
-        now = utcnow()
-        deleted = False
-        for token in (
-            db.query(cls).filter(cls.expires_at != None).filter(cls.expires_at < now)
-        ):
-            app_log.debug("Purging expired %s", token)
-            deleted = True
-            db.delete(token)
-        if deleted:
-            db.commit()
-
-    @classmethod
-    def find(cls, db, token, *, kind=None):
-        """Find a token object by value.
-
-        Returns None if not found.
-
-        `kind='user'` only returns API tokens for users
-        `kind='service'` only returns API tokens for services
-        """
-        prefix_match = cls.find_prefix(db, token)
-        prefix_match = prefix_match.filter(
-            or_(cls.expires_at == None, cls.expires_at >= utcnow())
-        )
-        if kind == 'user':
-            prefix_match = prefix_match.filter(cls.user_id != None)
-        elif kind == 'service':
-            prefix_match = prefix_match.filter(cls.service_id != None)
-        elif kind is not None:
-            raise ValueError("kind must be 'user', 'service', or None, not %r" % kind)
-        for orm_token in prefix_match:
-            if orm_token.match(token):
-                return orm_token
-
-    @classmethod
-    def new(
-        cls,
-        token=None,
-        user=None,
-        service=None,
-        note='',
-        generated=True,
-        expires_in=None,
-    ):
-        """Generate a new API token for a user or service"""
-        assert user or service
-        assert not (user and service)
-        db = inspect(user or service).session
-        if token is None:
-            token = new_token()
-            # Don't need hash + salt rounds on generated tokens,
-            # which already have good entropy
-            generated = True
-        else:
-            cls.check_token(db, token)
-        # two stages to ensure orm_token.generated has been set
-        # before token setter is called
-        orm_token = cls(generated=generated, note=note or '')
-        orm_token.token = token
-        if user:
-            assert user.id is not None
-            orm_token.user = user
-        else:
-            assert service.id is not None
-            orm_token.service = service
-        if expires_in is not None:
-            orm_token.expires_at = utcnow() + timedelta(seconds=expires_in)
-        db.add(orm_token)
-        db.commit()
-        return token
 
 
 # ------------------------------------
@@ -506,59 +560,223 @@ class GrantType(enum.Enum):
     refresh_token = 'refresh_token'
 
 
-class OAuthAccessToken(Hashed, Base):
-    __tablename__ = 'oauth_access_tokens'
-    id = Column(Integer, primary_key=True, autoincrement=True)
+class APIToken(Hashed, Base):
+    """An API token"""
 
-    @property
-    def api_id(self):
-        return 'o%i' % self.id
+    __tablename__ = 'api_tokens'
 
-    client_id = Column(
-        Unicode(255), ForeignKey('oauth_clients.identifier', ondelete='CASCADE')
+    user_id = Column(
+        Integer,
+        ForeignKey('users.id', ondelete="CASCADE"),
+        nullable=True,
     )
-    grant_type = Column(Enum(GrantType), nullable=False)
-    expires_at = Column(Integer)
-    refresh_token = Column(Unicode(255))
-    # TODO: drop refresh_expires_at. Refresh tokens shouldn't expire
-    refresh_expires_at = Column(Integer)
-    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'))
-    service = None  # for API-equivalence with APIToken
+    service_id = Column(
+        Integer,
+        ForeignKey('services.id', ondelete="CASCADE"),
+        nullable=True,
+    )
 
-    # the browser session id associated with a given token
-    session_id = Column(Unicode(255))
-
-    # from Hashed
+    id = Column(Integer, primary_key=True)
     hashed = Column(Unicode(255), unique=True)
     prefix = Column(Unicode(16), index=True)
 
+    @property
+    def api_id(self):
+        return 'a%i' % self.id
+
+    @property
+    def owner(self):
+        return self.user or self.service
+
+    # added in 2.0
+    client_id = Column(
+        Unicode(255),
+        ForeignKey(
+            'oauth_clients.identifier',
+            ondelete='CASCADE',
+        ),
+    )
+
+    # FIXME: refresh_tokens not implemented
+    # should be a relation to another token table
+    # refresh_token = Column(
+    #     Integer,
+    #     ForeignKey('refresh_tokens.id', ondelete="CASCADE"),
+    #     nullable=True,
+    # )
+
+    # the browser session id associated with a given token,
+    # if issued during oauth to be stored in a cookie
+    session_id = Column(Unicode(255), nullable=True)
+
+    # token metadata for bookkeeping
+    now = datetime.utcnow  # for expiry
     created = Column(DateTime, default=datetime.utcnow)
-    last_activity = Column(DateTime, nullable=True)
+    expires_at = Column(DateTime, default=None, nullable=True)
+    last_activity = Column(DateTime)
+    note = Column(Unicode(1023))
+    scopes = Column(JSONList, default=[])
 
     def __repr__(self):
-        return "<{cls}('{prefix}...', client_id={client_id!r}, user={user!r}>".format(
+        if self.user is not None:
+            kind = 'user'
+            name = self.user.name
+        elif self.service is not None:
+            kind = 'service'
+            name = self.service.name
+        else:
+            # this shouldn't happen
+            kind = 'owner'
+            name = 'unknown'
+        return "<{cls}('{pre}...', {kind}='{name}', client_id={client_id!r})>".format(
             cls=self.__class__.__name__,
+            pre=self.prefix,
+            kind=kind,
+            name=name,
             client_id=self.client_id,
-            user=self.user and self.user.name,
-            prefix=self.prefix,
         )
 
     @classmethod
-    def find(cls, db, token):
-        orm_token = super().find(db, token)
-        if orm_token and not orm_token.client_id:
-            app_log.warning(
-                "Deleting stale oauth token for %s with no client",
-                orm_token.user and orm_token.user.name,
+    def find(cls, db, token, *, kind=None):
+        """Find a token object by value.
+
+        Returns None if not found.
+
+        `kind='user'` only returns API tokens for users
+        `kind='service'` only returns API tokens for services
+        """
+        prefix_match = cls.find_prefix(db, token)
+        if kind == 'user':
+            prefix_match = prefix_match.filter(cls.user_id != None)
+        elif kind == 'service':
+            prefix_match = prefix_match.filter(cls.service_id != None)
+        elif kind is not None:
+            raise ValueError("kind must be 'user', 'service', or None, not %r" % kind)
+        for orm_token in prefix_match:
+            if orm_token.match(token):
+                if not orm_token.client_id:
+                    app_log.warning(
+                        "Deleting stale oauth token for %s with no client",
+                        orm_token.user and orm_token.user.name,
+                    )
+                    db.delete(orm_token)
+                    db.commit()
+                    return
+                return orm_token
+
+    @classmethod
+    def new(
+        cls,
+        token=None,
+        *,
+        user=None,
+        service=None,
+        roles=None,
+        scopes=None,
+        note='',
+        generated=True,
+        session_id=None,
+        expires_in=None,
+        client_id=None,
+        oauth_client=None,
+        return_orm=False,
+    ):
+        """Generate a new API token for a user or service"""
+        assert user or service
+        assert not (user and service)
+        db = inspect(user or service).session
+        if token is None:
+            token = new_token()
+            # Don't need hash + salt rounds on generated tokens,
+            # which already have good entropy
+            generated = True
+        else:
+            cls.check_token(db, token)
+
+        # avoid circular import
+        from .roles import roles_to_scopes
+
+        if scopes is not None and roles is not None:
+            raise ValueError(
+                "Can only assign one of scopes or roles when creating tokens."
             )
-            db.delete(orm_token)
-            db.commit()
-            return
-        return orm_token
+
+        elif scopes is None and roles is None:
+            # this is the default branch
+            # use the default 'token' role to specify default permissions for API tokens
+            default_token_role = Role.find(db, 'token')
+            if not default_token_role:
+                scopes = ["inherit"]
+            else:
+                scopes = roles_to_scopes([default_token_role])
+        elif roles is not None:
+            # evaluate roles to scopes immediately
+            # TODO: should this be deprecated, or not?
+            # warnings.warn(
+            #     "Setting roles on tokens is deprecated in JupyterHub 3.0. Use scopes.",
+            #     DeprecationWarning,
+            #     stacklevel=3,
+            # )
+            orm_roles = []
+            for rolename in roles:
+                role = Role.find(db, name=rolename)
+                if role is None:
+                    raise ValueError(f"No such role: {rolename}")
+                orm_roles.append(role)
+            scopes = roles_to_scopes(orm_roles)
+
+        if oauth_client is None:
+            # lookup oauth client by identifier
+            if client_id is None:
+                # default: global 'jupyterhub' client
+                client_id = "jupyterhub"
+            oauth_client = db.query(OAuthClient).filter_by(identifier=client_id).one()
+        if client_id is None:
+            client_id = oauth_client.identifier
+
+        # avoid circular import
+        from .scopes import _check_scopes_exist, _check_token_scopes
+
+        _check_scopes_exist(scopes, who_for="token")
+        _check_token_scopes(scopes, owner=user or service, oauth_client=oauth_client)
+
+        # two stages to ensure orm_token.generated has been set
+        # before token setter is called
+        orm_token = cls(
+            generated=generated,
+            note=note or '',
+            client_id=client_id,
+            session_id=session_id,
+            scopes=list(scopes),
+        )
+        orm_token.token = token
+        if user:
+            assert user.id is not None
+            orm_token.user = user
+        else:
+            assert service.id is not None
+            orm_token.service = service
+        if expires_in is not None:
+            orm_token.expires_at = cls.now() + timedelta(seconds=expires_in)
+
+        db.add(orm_token)
+        db.commit()
+        return token
+
+    def update_scopes(self, new_scopes):
+        """Set new scopes, checking that they are allowed"""
+        from .scopes import _check_scopes_exist, _check_token_scopes
+
+        _check_scopes_exist(new_scopes, who_for="token")
+        _check_token_scopes(
+            new_scopes, owner=self.owner, oauth_client=self.oauth_client
+        )
+        self.scopes = new_scopes
 
 
-class OAuthCode(Base):
+class OAuthCode(Expiring, Base):
     __tablename__ = 'oauth_codes'
+
     id = Column(Integer, primary_key=True, autoincrement=True)
     client_id = Column(
         Unicode(255), ForeignKey('oauth_clients.identifier', ondelete='CASCADE')
@@ -569,6 +787,26 @@ class OAuthCode(Base):
     session_id = Column(Unicode(255))
     # state = Column(Unicode(1023))
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'))
+
+    scopes = Column(JSONList, default=[])
+
+    @staticmethod
+    def now():
+        return datetime.utcnow().timestamp()
+
+    @classmethod
+    def find(cls, db, code):
+        return (
+            db.query(cls)
+            .filter(cls.code == code)
+            .filter(or_(cls.expires_at == None, cls.expires_at >= cls.now()))
+            .first()
+        )
+
+    def __repr__(self):
+        return (
+            f"<{self.__class__.__name__}(id={self.id}, client_id={self.client_id!r})>"
+        )
 
 
 class OAuthClient(Base):
@@ -584,9 +822,16 @@ class OAuthClient(Base):
         return self.identifier
 
     access_tokens = relationship(
-        OAuthAccessToken, backref='client', cascade='all, delete-orphan'
+        APIToken, backref='oauth_client', cascade='all, delete-orphan'
     )
     codes = relationship(OAuthCode, backref='client', cascade='all, delete-orphan')
+
+    # these are the scopes an oauth client is allowed to request
+    # *not* the scopes of the client itself
+    allowed_scopes = Column(JSONList, default=[])
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__}(identifier={self.identifier!r})>"
 
 
 # General database utilities
@@ -623,7 +868,10 @@ def _expire_relationship(target, relationship_prop):
         return
     # many-to-many and one-to-many have a list of peers
     # many-to-one has only one
-    if relationship_prop.direction is interfaces.MANYTOONE:
+    if (
+        relationship_prop.direction is interfaces.MANYTOONE
+        or not relationship_prop.uselist
+    ):
         peers = [peers]
     for obj in peers:
         if inspect(obj).persistent:
@@ -702,7 +950,7 @@ def check_db_revision(engine):
     - Empty databases are tagged with the current revision
     """
     # Check database schema version
-    current_table_names = set(engine.table_names())
+    current_table_names = set(inspect(engine).get_table_names())
     my_table_names = set(Base.metadata.tables.keys())
 
     from .dbutil import _temp_alembic_ini
@@ -747,7 +995,6 @@ def check_db_revision(engine):
     ).first()[0]
     if alembic_revision == head:
         app_log.debug("database schema version found: %s", alembic_revision)
-        pass
     else:
         raise DatabaseSchemaMismatch(
             "Found database schema version {found} != {head}. "
@@ -770,8 +1017,8 @@ def mysql_large_prefix_check(engine):
         ).fetchall()
     )
     if (
-        variables['innodb_file_format'] == 'Barracuda'
-        and variables['innodb_large_prefix'] == 'ON'
+        variables.get('innodb_file_format', 'Barracuda') == 'Barracuda'
+        and variables.get('innodb_large_prefix', 'ON') == 'ON'
     ):
         return True
     else:
@@ -821,3 +1068,18 @@ def new_session_factory(
     # this off gives us a major performance boost
     session_factory = sessionmaker(bind=engine, expire_on_commit=expire_on_commit)
     return session_factory
+
+
+def get_class(resource_name):
+    """Translates resource string names to ORM classes"""
+    class_dict = {
+        'users': User,
+        'services': Service,
+        'tokens': APIToken,
+        'groups': Group,
+    }
+    if resource_name not in class_dict:
+        raise ValueError(
+            f'Kind must be one of {", ".join(class_dict)}, not {resource_name}'
+        )
+    return class_dict[resource_name]

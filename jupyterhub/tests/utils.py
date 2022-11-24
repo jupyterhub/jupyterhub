@@ -1,11 +1,15 @@
 import asyncio
+import inspect
+import os
 from concurrent.futures import ThreadPoolExecutor
 
+import pytest
 import requests
 from certipy import Certipy
 
-from jupyterhub import orm
+from jupyterhub import metrics, orm
 from jupyterhub.objects import Server
+from jupyterhub.roles import assign_default_roles, update_roles
 from jupyterhub.utils import url_path_join as ujoin
 
 
@@ -52,6 +56,12 @@ def ssl_setup(cert_dir, authority_name):
     return external_certs
 
 
+"""Skip tests that don't work under internal-ssl when testing under internal-ssl"""
+skip_if_ssl = pytest.mark.skipif(
+    os.environ.get('SSL_ENABLED', False), reason="Does not use internal SSL"
+)
+
+
 def check_db_locks(func):
     """Decorator that verifies no locks are held on database upon exit.
 
@@ -61,23 +71,34 @@ def check_db_locks(func):
     The decorator relies on an instance of JupyterHubApp being the first
     argument to the decorated function.
 
-    Example
-    -------
-
+    Examples
+    --------
         @check_db_locks
         def api_request(app, *api_path, **kwargs):
 
     """
 
     def new_func(app, *args, **kwargs):
-        retval = func(app, *args, **kwargs)
+        maybe_future = func(app, *args, **kwargs)
 
-        temp_session = app.session_factory()
-        temp_session.execute('CREATE TABLE dummy (foo INT)')
-        temp_session.execute('DROP TABLE dummy')
-        temp_session.close()
+        def _check(_=None):
+            temp_session = app.session_factory()
+            try:
+                temp_session.execute('CREATE TABLE dummy (foo INT)')
+                temp_session.execute('DROP TABLE dummy')
+            finally:
+                temp_session.close()
 
-        return retval
+        async def await_then_check():
+            result = await maybe_future
+            _check()
+            return result
+
+        if inspect.isawaitable(maybe_future):
+            return await_then_check()
+        else:
+            _check()
+            return maybe_future
 
     return new_func
 
@@ -97,10 +118,16 @@ def add_user(db, app=None, **kwargs):
     if orm_user is None:
         orm_user = orm.User(**kwargs)
         db.add(orm_user)
+        metrics.TOTAL_USERS.inc()
     else:
         for attr, value in kwargs.items():
             setattr(orm_user, attr, value)
     db.commit()
+    requested_roles = kwargs.get('roles')
+    if requested_roles:
+        update_roles(db, entity=orm_user, roles=requested_roles)
+    else:
+        assign_default_roles(db, entity=orm_user)
     if app:
         return app.users[orm_user.id]
     else:
@@ -111,7 +138,7 @@ def auth_header(db, name):
     """Return header with user's API authorization token."""
     user = find_user(db, name)
     if user is None:
-        user = add_user(db, name=name)
+        raise KeyError(f"No such user: {name}")
     token = user.new_api_token()
     return {'Authorization': 'token %s' % token}
 
@@ -128,7 +155,6 @@ async def api_request(
     else:
         base_url = public_url(app, path='hub')
     headers = kwargs.setdefault('headers', {})
-
     if 'Authorization' not in headers and not noauth and 'cookies' not in kwargs:
         # make a copy to avoid modifying arg in-place
         kwargs['headers'] = h = {}

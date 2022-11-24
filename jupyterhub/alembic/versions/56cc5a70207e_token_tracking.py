@@ -11,16 +11,17 @@ down_revision = '1cebaf56856c'
 branch_labels = None
 depends_on = None
 
-from alembic import op
-import sqlalchemy as sa
-
 import logging
+
+import sqlalchemy as sa
+from alembic import op
 
 logger = logging.getLogger('alembic')
 
 
 def upgrade():
-    tables = op.get_bind().engine.table_names()
+    engine = op.get_bind().engine
+    tables = sa.inspect(engine).get_table_names()
     op.add_column('api_tokens', sa.Column('created', sa.DateTime(), nullable=True))
     op.add_column(
         'api_tokens', sa.Column('last_activity', sa.DateTime(), nullable=True)

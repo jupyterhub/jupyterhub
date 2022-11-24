@@ -5,7 +5,7 @@ Built from the `jupyter/base-notebook` base image.
 This image contains a single user notebook server for use with
 [JupyterHub](https://github.com/jupyterhub/jupyterhub). In particular, it is meant
 to be used with the
-[DockerSpawner](https://github.com/jupyterhub/dockerspawner/blob/master/dockerspawner/dockerspawner.py)
+[DockerSpawner](https://github.com/jupyterhub/dockerspawner/blob/HEAD/dockerspawner/dockerspawner.py)
 class to launch user notebook servers within docker containers.
 
 The only thing this image accomplishes is pinning the jupyterhub version on top of base-notebook.
@@ -31,6 +31,6 @@ This particular image runs as the `jovyan` user, with home directory at `/home/j
 
 ## Note on persistence
 
-This home directory, `/home/jovyan`, is *not* persistent by default,
+This home directory, `/home/jovyan`, is _not_ persistent by default,
 so some configuration is required unless the directory is to be used
 with temporary or demonstration JupyterHub deployments.

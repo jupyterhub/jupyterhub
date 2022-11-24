@@ -23,29 +23,32 @@ import signal
 import time
 from functools import wraps
 from subprocess import Popen
-from urllib.parse import quote
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
+from weakref import WeakKeyDictionary
 
-from tornado import gen
-from tornado.httpclient import AsyncHTTPClient
-from tornado.httpclient import HTTPError
-from tornado.httpclient import HTTPRequest
+from tornado.httpclient import AsyncHTTPClient, HTTPError, HTTPRequest
 from tornado.ioloop import PeriodicCallback
-from traitlets import Any
-from traitlets import Bool
-from traitlets import default
-from traitlets import Instance
-from traitlets import Integer
-from traitlets import observe
-from traitlets import Unicode
+from traitlets import (
+    Any,
+    Bool,
+    CaselessStrEnum,
+    Dict,
+    Instance,
+    Integer,
+    TraitError,
+    Unicode,
+    default,
+    observe,
+    validate,
+)
 from traitlets.config import LoggingConfigurable
 
-from . import utils
-from .metrics import CHECK_ROUTES_DURATION_SECONDS
-from .objects import Server
-from .utils import make_ssl_context
-from .utils import url_path_join
 from jupyterhub.traitlets import Command
+
+from . import utils
+from .metrics import CHECK_ROUTES_DURATION_SECONDS, PROXY_POLL_DURATION_SECONDS
+from .objects import Server
+from .utils import AnyTimeoutError, exponential_backoff, url_escape_path, url_path_join
 
 
 def _one_at_a_time(method):
@@ -54,11 +57,18 @@ def _one_at_a_time(method):
     If multiple concurrent calls to this method are made,
     queue them instead of allowing them to be concurrently outstanding.
     """
-    method._lock = asyncio.Lock()
+    # use weak dict for locks
+    # so that the lock is always acquired within the current asyncio loop
+    # should only be relevant in testing, where eventloops are created and destroyed often
+    method._locks = WeakKeyDictionary()
 
     @wraps(method)
     async def locked_method(*args, **kwargs):
-        async with method._lock:
+        loop = asyncio.get_event_loop()
+        lock = method._locks.get(loop, None)
+        if lock is None:
+            lock = method._locks[loop] = asyncio.Lock()
+        async with lock:
             return await method(*args, **kwargs)
 
     return locked_method
@@ -111,6 +121,72 @@ class Proxy(LoggingConfigurable):
         such as by systemd, docker, or another service manager.
         """,
     )
+
+    extra_routes = Dict(
+        key_trait=Unicode(),
+        value_trait=Unicode(),
+        config=True,
+        help="""
+        Additional routes to be maintained in the proxy.
+
+        A dictionary with a route specification as key, and
+        a URL as target. The hub will ensure this route is present
+        in the proxy.
+
+        If the hub is running in host based mode (with
+        JupyterHub.subdomain_host set), the routespec *must*
+        have a domain component (example.com/my-url/). If the
+        hub is not running in host based mode, the routespec
+        *must not* have a domain component (/my-url/).
+
+        Helpful when the hub is running in API-only mode.
+        """,
+    )
+
+    @validate("extra_routes")
+    def _validate_extra_routes(self, proposal):
+        extra_routes = {}
+        # check routespecs for leading/trailing slashes
+        for routespec, target in proposal.value.items():
+            if not isinstance(routespec, str):
+                raise TraitError(
+                    f"Proxy.extra_routes keys must be str, got {routespec!r}"
+                )
+            if not isinstance(target, str):
+                raise TraitError(
+                    f"Proxy.extra_routes values must be str, got {target!r}"
+                )
+            if not routespec.endswith("/"):
+                # trailing / is unambiguous, so we can add it
+                self.log.warning(
+                    f"Adding missing trailing '/' to c.Proxy.extra_routes {routespec} -> {routespec}/"
+                )
+                routespec += "/"
+
+            if self.app.subdomain_host:
+                # subdomain routing must _not_ start with /
+                if routespec.startswith("/"):
+                    raise ValueError(
+                        f"Proxy.extra_routes missing host component in {routespec} (must not have leading '/') when using `JupyterHub.subdomain_host = {self.app.subdomain_host!r}`"
+                    )
+
+            else:
+                # no subdomains, must start with /
+                # this is ambiguous with host routing, so raise instead of warn
+                if not routespec.startswith("/"):
+                    raise ValueError(
+                        f"Proxy.extra_routes routespec {routespec} missing leading '/'."
+                    )
+
+            # validate target URL?
+            target_url = urlparse(target.lower())
+            if target_url.scheme not in {"http", "https"} or not target_url.netloc:
+                raise ValueError(
+                    f"Proxy.extra_routes target {routespec}={target!r} doesn't look like a URL (should have http[s]://...)"
+                )
+            extra_routes[routespec] = target
+
+        return extra_routes
 
     def start(self):
         """Start the proxy.
@@ -174,14 +250,12 @@ class Proxy(LoggingConfigurable):
         The proxy implementation should also have a way to associate the fact that a
         route came from JupyterHub.
         """
-        pass
 
     async def delete_route(self, routespec):
         """Delete a route with a given routespec if it exists.
 
         **Subclasses must define this method**
         """
-        pass
 
     async def get_all_routes(self):
         """Fetch and return all the routes associated by JupyterHub from the
@@ -198,7 +272,6 @@ class Proxy(LoggingConfigurable):
             'data': the attached data dict for this route (as specified in add_route)
           }
         """
-        pass
 
     async def get_route(self, routespec):
         """Return the route info for a given routespec.
@@ -277,7 +350,9 @@ class Proxy(LoggingConfigurable):
         """Remove a user's server from the proxy table."""
         routespec = user.proxy_spec
         if server_name:
-            routespec = url_path_join(user.proxy_spec, server_name, '/')
+            routespec = url_path_join(
+                user.proxy_spec, url_escape_path(server_name), '/'
+            )
         self.log.info("Removing user %s from proxy (%s)", user.name, routespec)
         await self.delete_route(routespec)
 
@@ -291,7 +366,7 @@ class Proxy(LoggingConfigurable):
             if service.server:
                 futures.append(self.add_service(service))
         # wait after submitting them all
-        await gen.multi(futures)
+        await asyncio.gather(*futures)
 
     async def add_all_users(self, user_dict):
         """Update the proxy table from the database.
@@ -304,7 +379,7 @@ class Proxy(LoggingConfigurable):
                 if spawner.ready:
                     futures.append(self.add_user(user, name))
         # wait after submitting them all
-        await gen.multi(futures)
+        await asyncio.gather(*futures)
 
     @_one_at_a_time
     async def check_routes(self, user_dict, service_dict, routes=None):
@@ -313,10 +388,8 @@ class Proxy(LoggingConfigurable):
         if not routes:
             self.log.debug("Fetching routes to check")
             routes = await self.get_all_routes()
-        # log info-level that we are starting the route-checking
-        # this may help diagnose performance issues,
-        # as we are about
-        self.log.info("Checking routes")
+
+        self.log.debug("Checking routes")
 
         user_routes = {path for path, r in routes.items() if 'user' in r['data']}
         futures = []
@@ -330,7 +403,7 @@ class Proxy(LoggingConfigurable):
             route = routes[self.app.hub.routespec]
             if route['target'] != hub.host:
                 self.log.warning(
-                    "Updating default route %s → %s", route['target'], hub.host
+                    "Updating Hub route %s → %s", route['target'], hub.host
                 )
                 futures.append(self.add_hub_route(hub))
 
@@ -384,19 +457,24 @@ class Proxy(LoggingConfigurable):
                     )
                     futures.append(self.add_service(service))
 
+        # Add extra routes we've been configured for
+        for routespec, url in self.extra_routes.items():
+            good_routes.add(routespec)
+            futures.append(self.add_route(routespec, url, {'extra': True}))
+
         # Now delete the routes that shouldn't be there
         for routespec in routes:
             if routespec not in good_routes:
                 self.log.warning("Deleting stale route %s", routespec)
                 futures.append(self.delete_route(routespec))
 
-        await gen.multi(futures)
+        await asyncio.gather(*futures)
         stop = time.perf_counter()  # timer stops here when user is deleted
         CHECK_ROUTES_DURATION_SECONDS.observe(stop - start)  # histogram metric
 
     def add_hub_route(self, hub):
         """Add the default route for the Hub"""
-        self.log.info("Adding default route for Hub: %s => %s", hub.routespec, hub.host)
+        self.log.info("Adding route for Hub: %s => %s", hub.routespec, hub.host)
         return self.add_route(hub.routespec, self.hub.host, {'hub': True})
 
     async def restore_routes(self):
@@ -443,14 +521,32 @@ class ConfigurableHTTPProxy(Proxy):
     def _concurrency_changed(self, change):
         self.semaphore = asyncio.BoundedSemaphore(change.new)
 
+    # https://github.com/jupyterhub/configurable-http-proxy/blob/4.5.1/bin/configurable-http-proxy#L92
+    log_level = CaselessStrEnum(
+        ["debug", "info", "warn", "error"],
+        "info",
+        help="Proxy log level",
+        config=True,
+    )
+
     debug = Bool(False, help="Add debug-level logging to the Proxy.", config=True)
+
+    @observe('debug')
+    def _debug_changed(self, change):
+        if change.new:
+            self.log_level = "debug"
+
     auth_token = Unicode(
         help="""The Proxy auth token
 
         Loaded from the CONFIGPROXY_AUTH_TOKEN env variable by default.
         """
     ).tag(config=True)
-    check_running_interval = Integer(5, config=True)
+    check_running_interval = Integer(
+        5,
+        help="Interval (in seconds) at which to check if the proxy is running.",
+        config=True,
+    )
 
     @default('auth_token')
     def _auth_token_default(self):
@@ -472,7 +568,7 @@ class ConfigurableHTTPProxy(Proxy):
         if self.app.internal_ssl:
             proto = 'https'
 
-        return "{proto}://{url}".format(proto=proto, url=url)
+        return f"{proto}://{url}"
 
     command = Command(
         'configurable-http-proxy',
@@ -496,6 +592,19 @@ class ConfigurableHTTPProxy(Proxy):
 
             if not psutil.pid_exists(pid):
                 raise ProcessLookupError
+
+            try:
+                process = psutil.Process(pid)
+                if self.command and self.command[0]:
+                    process_cmd = process.cmdline()
+                    if process_cmd and not any(
+                        self.command[0] in clause for clause in process_cmd
+                    ):
+                        raise ProcessLookupError
+            except (psutil.AccessDenied, psutil.NoSuchProcess):
+                # If there is a process at the proxy's PID but we don't have permissions to see it,
+                # then it is unlikely to actually be the proxy.
+                raise ProcessLookupError
         else:
             os.kill(pid, 0)
 
@@ -515,7 +624,7 @@ class ConfigurableHTTPProxy(Proxy):
         pid_file = os.path.abspath(self.pid_file)
         self.log.warning("Found proxy pid file: %s", pid_file)
         try:
-            with open(pid_file, "r") as f:
+            with open(pid_file) as f:
                 pid = int(f.read().strip())
         except ValueError:
             self.log.warning("%s did not appear to contain a pid", pid_file)
@@ -571,7 +680,34 @@ class ConfigurableHTTPProxy(Proxy):
             os.remove(self.pid_file)
         except FileNotFoundError:
             self.log.debug("PID file %s already removed", self.pid_file)
-            pass
+
+    def _get_ssl_options(self):
+        """List of cmd proxy options to use internal SSL"""
+        cmd = []
+        proxy_api = 'proxy-api'
+        proxy_client = 'proxy-client'
+        api_key = self.app.internal_proxy_certs[proxy_api][
+            'keyfile'
+        ]  # Check content in next test and just patch manulaly or in the config of the file
+        api_cert = self.app.internal_proxy_certs[proxy_api]['certfile']
+        api_ca = self.app.internal_trust_bundles[proxy_api + '-ca']
+
+        client_key = self.app.internal_proxy_certs[proxy_client]['keyfile']
+        client_cert = self.app.internal_proxy_certs[proxy_client]['certfile']
+        client_ca = self.app.internal_trust_bundles[proxy_client + '-ca']
+
+        cmd.extend(['--api-ssl-key', api_key])
+        cmd.extend(['--api-ssl-cert', api_cert])
+        cmd.extend(['--api-ssl-ca', api_ca])
+        cmd.extend(['--api-ssl-request-cert'])
+        cmd.extend(['--api-ssl-reject-unauthorized'])
+
+        cmd.extend(['--client-ssl-key', client_key])
+        cmd.extend(['--client-ssl-cert', client_cert])
+        cmd.extend(['--client-ssl-ca', client_ca])
+        cmd.extend(['--client-ssl-request-cert'])
+        cmd.extend(['--client-ssl-reject-unauthorized'])
+        return cmd
 
     async def start(self):
         """Start the proxy process"""
@@ -594,48 +730,17 @@ class ConfigurableHTTPProxy(Proxy):
             str(api_server.port),
             '--error-target',
             url_path_join(self.hub.url, 'error'),
+            '--log-level',
+            self.log_level,
         ]
         if self.app.subdomain_host:
             cmd.append('--host-routing')
-        if self.debug:
-            cmd.extend(['--log-level', 'debug'])
         if self.ssl_key:
             cmd.extend(['--ssl-key', self.ssl_key])
         if self.ssl_cert:
             cmd.extend(['--ssl-cert', self.ssl_cert])
         if self.app.internal_ssl:
-            proxy_api = 'proxy-api'
-            proxy_client = 'proxy-client'
-            api_key = self.app.internal_proxy_certs[proxy_api]['keyfile']
-            api_cert = self.app.internal_proxy_certs[proxy_api]['certfile']
-            api_ca = self.app.internal_trust_bundles[proxy_api + '-ca']
-
-            client_key = self.app.internal_proxy_certs[proxy_client]['keyfile']
-            client_cert = self.app.internal_proxy_certs[proxy_client]['certfile']
-            client_ca = self.app.internal_trust_bundles[proxy_client + '-ca']
-
-            cmd.extend(['--api-ssl-key', api_key])
-            cmd.extend(['--api-ssl-cert', api_cert])
-            cmd.extend(['--api-ssl-ca', api_ca])
-            cmd.extend(['--api-ssl-request-cert'])
-            cmd.extend(['--api-ssl-reject-unauthorized'])
-
-            cmd.extend(['--client-ssl-key', client_key])
-            cmd.extend(['--client-ssl-cert', client_cert])
-            cmd.extend(['--client-ssl-ca', client_ca])
-            cmd.extend(['--client-ssl-request-cert'])
-            cmd.extend(['--client-ssl-reject-unauthorized'])
-        if self.app.statsd_host:
-            cmd.extend(
-                [
-                    '--statsd-host',
-                    self.app.statsd_host,
-                    '--statsd-port',
-                    str(self.app.statsd_port),
-                    '--statsd-prefix',
-                    self.app.statsd_prefix + '.chp',
-                ]
-            )
+            cmd.extend(self._get_ssl_options())
         # Warn if SSL is not used
         if ' --ssl' not in ' '.join(cmd):
             self.log.warning(
@@ -664,15 +769,16 @@ class ConfigurableHTTPProxy(Proxy):
         def _check_process():
             status = self.proxy_process.poll()
             if status is not None:
-                e = RuntimeError("Proxy failed to start with exit code %i" % status)
-                raise e from None
+                with self.proxy_process:
+                    e = RuntimeError("Proxy failed to start with exit code %i" % status)
+                    raise e from None
 
         for server in (public_server, api_server):
             for i in range(10):
                 _check_process()
                 try:
                     await server.wait_up(1)
-                except TimeoutError:
+                except AnyTimeoutError:
                     continue
                 else:
                     break
@@ -691,8 +797,17 @@ class ConfigurableHTTPProxy(Proxy):
         parent = psutil.Process(pid)
         children = parent.children(recursive=True)
         for child in children:
-            child.kill()
-        psutil.wait_procs(children, timeout=5)
+            child.terminate()
+        gone, alive = psutil.wait_procs(children, timeout=5)
+        for p in alive:
+            p.kill()
+        # Clear the shell, too, if it still exists.
+        try:
+            parent.terminate()
+            parent.wait(timeout=5)
+            parent.kill()
+        except psutil.NoSuchProcess:
+            pass
 
     def _terminate(self):
         """Terminate our process"""
@@ -766,12 +881,38 @@ class ConfigurableHTTPProxy(Proxy):
         req = HTTPRequest(
             url,
             method=method,
-            headers={'Authorization': 'token {}'.format(self.auth_token)},
+            headers={'Authorization': f'token {self.auth_token}'},
             body=body,
+            connect_timeout=3,  # default: 20s
+            request_timeout=10,  # default: 20s
         )
-        async with self.semaphore:
-            result = await client.fetch(req)
-            return result
+
+        async def _wait_for_api_request():
+            try:
+                async with self.semaphore:
+                    return await client.fetch(req)
+            except HTTPError as e:
+                # Retry on potentially transient errors in CHP, typically
+                # numbered 500 and up. Note that CHP isn't able to emit 429
+                # errors.
+                if e.code >= 500:
+                    self.log.warning(
+                        "api_request to the proxy failed with status code {}, retrying...".format(
+                            e.code
+                        )
+                    )
+                    return False  # a falsy return value make exponential_backoff retry
+                else:
+                    self.log.error(f"api_request to proxy failed: {e}")
+                    # An unhandled error here will help the hub invoke cleanup logic
+                    raise
+
+        result = await exponential_backoff(
+            _wait_for_api_request,
+            f'Repeated api_request to proxy path "{path}" failed.',
+            timeout=30,
+        )
+        return result
 
     async def add_route(self, routespec, target, data):
         body = data or {}
@@ -801,6 +942,7 @@ class ConfigurableHTTPProxy(Proxy):
 
     async def get_all_routes(self, client=None):
         """Fetch the proxy's routes."""
+        proxy_poll_start_time = time.perf_counter()
         resp = await self.api_request('', client=client)
         chp_routes = json.loads(resp.body.decode('utf8', 'replace'))
         all_routes = {}
@@ -811,4 +953,5 @@ class ConfigurableHTTPProxy(Proxy):
                 self.log.debug("Omitting non-jupyterhub route %r", routespec)
                 continue
             all_routes[routespec] = self._reformat_routespec(routespec, chp_data)
+        PROXY_POLL_DURATION_SECONDS.observe(time.perf_counter() - proxy_poll_start_time)
         return all_routes

@@ -1,0 +1,62 @@
+# This is a GitHub workflow defining a set of jobs with a set of steps.
+# ref: https://docs.github.com/en/actions/learn-github-actions/workflow-syntax-for-github-actions
+#
+# This workflow validates the REST API definition and runs the pytest tests in
+# the docs/ folder. This workflow does not build the documentation. That is
+# instead tested via ReadTheDocs (https://readthedocs.org/projects/jupyterhub/).
+#
+name: Test docs
+
+# The tests defined in docs/ are currently influenced by changes to _version.py
+# and scopes.py.
+on:
+  pull_request:
+    paths:
+      - "docs/**"
+      - "jupyterhub/_version.py"
+      - "jupyterhub/scopes.py"
+      - ".github/workflows/test-docs.yml"
+  push:
+    paths:
+      - "docs/**"
+      - "jupyterhub/_version.py"
+      - "jupyterhub/scopes.py"
+      - ".github/workflows/test-docs.yml"
+    branches-ignore:
+      - "dependabot/**"
+      - "pre-commit-ci-update-config"
+    tags:
+      - "**"
+  workflow_dispatch:
+
+env:
+  # UTF-8 content may be interpreted as ascii and causes errors without this.
+  LANG: C.UTF-8
+  PYTEST_ADDOPTS: "--verbose --color=yes"
+
+jobs:
+  validate-rest-api-definition:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Validate REST API definition
+        uses: char0n/swagger-editor-validate@v1.3.2
+        with:
+          definition-file: docs/source/_static/rest-api.yml
+
+  test-docs:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
+
+      - name: Install requirements
+        run: |
+          pip install -r docs/requirements.txt pytest
+
+      - name: pytest docs/
+        run: |
+          pytest docs/

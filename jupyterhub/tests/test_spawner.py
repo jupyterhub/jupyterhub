@@ -1,6 +1,7 @@
 """Tests for process spawning"""
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
+import asyncio
 import logging
 import os
 import signal
@@ -12,17 +13,14 @@ from unittest import mock
 from urllib.parse import urlparse
 
 import pytest
-from tornado import gen
 
 from .. import orm
 from .. import spawner as spawnermod
-from ..objects import Hub
-from ..objects import Server
-from ..spawner import LocalProcessSpawner
-from ..spawner import Spawner
+from ..objects import Hub, Server
+from ..scopes import access_scopes
+from ..spawner import LocalProcessSpawner, Spawner
 from ..user import User
-from ..utils import new_token
-from ..utils import url_path_join
+from ..utils import AnyTimeoutError, new_token, url_path_join
 from .mocking import public_url
 from .test_api import add_user
 from .utils import async_requests
@@ -76,7 +74,20 @@ async def test_spawner(db, request):
     assert status is None
     await spawner.stop()
     status = await spawner.poll()
-    assert status == 1
+    assert status is not None
+    assert isinstance(status, int)
+
+
+def test_spawner_from_db(app, user):
+    spawner = user.spawners['name']
+    user_options = {"test": "value"}
+    spawner.orm_spawner.user_options = user_options
+    app.db.commit()
+    # delete and recreate the spawner from the db
+    user.spawners.pop('name')
+    new_spawner = user.spawners['name']
+    assert new_spawner.orm_spawner.user_options == user_options
+    assert new_spawner.user_options == user_options
 
 
 async def wait_for_spawner(spawner, timeout=10):
@@ -94,7 +105,7 @@ async def wait_for_spawner(spawner, timeout=10):
         assert status is None
         try:
             await wait()
-        except TimeoutError:
+        except AnyTimeoutError:
             continue
         else:
             break
@@ -102,7 +113,8 @@ async def wait_for_spawner(spawner, timeout=10):
 
 
 async def test_single_user_spawner(app, request):
-    user = next(iter(app.users.values()), None)
+    orm_user = app.db.query(orm.User).first()
+    user = app.users[orm_user]
     spawner = user.spawner
     spawner.cmd = ['jupyterhub-singleuser']
     await user.spawn()
@@ -121,7 +133,7 @@ async def test_stop_spawner_sigint_fails(db):
     await spawner.start()
 
     # wait for the process to get to the while True: loop
-    await gen.sleep(1)
+    await asyncio.sleep(1)
 
     status = await spawner.poll()
     assert status is None
@@ -136,7 +148,7 @@ async def test_stop_spawner_stop_now(db):
     await spawner.start()
 
     # wait for the process to get to the while True: loop
-    await gen.sleep(1)
+    await asyncio.sleep(1)
 
     status = await spawner.poll()
     assert status is None
@@ -163,7 +175,7 @@ async def test_spawner_poll(db):
     spawner.start_polling()
 
     # wait for the process to get to the while True: loop
-    await gen.sleep(1)
+    await asyncio.sleep(1)
     status = await spawner.poll()
     assert status is None
 
@@ -171,12 +183,12 @@ async def test_spawner_poll(db):
     proc.terminate()
     for i in range(10):
         if proc.poll() is None:
-            await gen.sleep(1)
+            await asyncio.sleep(1)
         else:
             break
     assert proc.poll() is not None
 
-    await gen.sleep(2)
+    await asyncio.sleep(2)
     status = await spawner.poll()
     assert status is not None
 
@@ -256,13 +268,11 @@ async def test_shell_cmd(db, tmpdir, request):
 
 
 def test_inherit_overwrite():
-    """On 3.6+ we check things are overwritten at import time
-    """
-    if sys.version_info >= (3, 6):
-        with pytest.raises(NotImplementedError):
+    """We check things are overwritten at import time"""
+    with pytest.raises(NotImplementedError):
 
-            class S(Spawner):
-                pass
+        class S(Spawner):
+            pass
 
 
 def test_inherit_ok():
@@ -402,3 +412,126 @@ async def test_spawner_routing(app, name):
     assert r.url == url
     assert r.text == urlparse(url).path
     await user.stop()
+
+
+async def test_spawner_env(db):
+    env_overrides = {
+        "JUPYTERHUB_API_URL": "https://test.horse/hub/api",
+        "TEST_KEY": "value",
+    }
+    spawner = new_spawner(db, environment=env_overrides)
+    env = spawner.get_env()
+    for key, value in env_overrides.items():
+        assert key in env
+        assert env[key] == value
+
+
+async def test_hub_connect_url(db):
+    spawner = new_spawner(db, hub_connect_url="https://example.com/")
+    name = spawner.user.name
+    env = spawner.get_env()
+    assert env["JUPYTERHUB_API_URL"] == "https://example.com/api"
+    assert (
+        env["JUPYTERHUB_ACTIVITY_URL"]
+        == "https://example.com/api/users/%s/activity" % name
+    )
+
+
+async def test_spawner_oauth_scopes(app, user):
+    allowed_scopes = ["read:users"]
+    spawner = user.spawners['']
+    spawner.oauth_client_allowed_scopes = allowed_scopes
+    # exercise start/stop which assign roles to oauth client
+    await spawner.user.spawn()
+    oauth_client = spawner.orm_spawner.oauth_client
+    assert sorted(oauth_client.allowed_scopes) == sorted(
+        allowed_scopes + list(access_scopes(oauth_client))
+    )
+    await spawner.user.stop()
+
+
+async def test_spawner_oauth_roles_bad(app, user):
+    allowed_roles = ["user", "nosuchrole"]
+    spawner = user.spawners['']
+    spawner.oauth_roles = allowed_roles
+    # exercise start/stop which assign roles
+    # raises ValueError if we try to assign a role that doesn't exist
+    with pytest.raises(ValueError):
+        await spawner.user.spawn()
+
+
+async def test_spawner_options_from_form(db):
+    def options_from_form(form_data):
+        return form_data
+
+    spawner = new_spawner(db, options_from_form=options_from_form)
+    form_data = {"key": ["value"]}
+    result = spawner.run_options_from_form(form_data)
+    for key, value in form_data.items():
+        assert key in result
+        assert result[key] == value
+
+
+async def test_spawner_options_from_form_with_spawner(db):
+    def options_from_form(form_data, spawner):
+        return form_data
+
+    spawner = new_spawner(db, options_from_form=options_from_form)
+    form_data = {"key": ["value"]}
+    result = spawner.run_options_from_form(form_data)
+    for key, value in form_data.items():
+        assert key in result
+        assert result[key] == value
+
+
+def test_spawner_server(db):
+    spawner = new_spawner(db)
+    spawner.orm_spawner = None
+    orm_spawner = orm.Spawner()
+    orm_server = orm.Server(base_url="/1/")
+    orm_spawner.server = orm_server
+    db.add(orm_spawner)
+    db.add(orm_server)
+    db.commit()
+    # initial: no orm_spawner
+    assert spawner.server is None
+    # assigning spawner.orm_spawner updates spawner.server
+    spawner.orm_spawner = orm_spawner
+    assert spawner.server is not None
+    assert spawner.server.orm_server is orm_server
+    # update orm_spawner.server without direct access on Spawner
+    orm_spawner.server = new_server = orm.Server(base_url="/2/")
+    db.commit()
+    assert spawner.server is not None
+    assert spawner.server.orm_server is not orm_server
+    assert spawner.server.orm_server is new_server
+    # clear orm_server via orm_spawner clears spawner.server
+    orm_spawner.server = None
+    db.commit()
+    assert spawner.server is None
+    # assigning spawner.server updates orm_spawner.server
+    orm_server = orm.Server(base_url="/3/")
+    db.add(orm_server)
+    db.commit()
+    spawner.server = server = Server(orm_server=orm_server)
+    db.commit()
+    assert spawner.server is server
+    assert spawner.orm_spawner.server is orm_server
+    # change orm spawner.server
+    orm_server = orm.Server(base_url="/4/")
+    db.add(orm_server)
+    db.commit()
+    spawner.server = server2 = Server(orm_server=orm_server)
+    assert spawner.server is server2
+    assert spawner.orm_spawner.server is orm_server
+    # clear server via spawner.server
+    spawner.server = None
+    db.commit()
+    assert spawner.orm_spawner.server is None
+
+    # test with no underlying orm.Spawner
+    # (only relevant for mocking, never true for actual Spawners)
+    spawner = Spawner()
+    spawner.server = Server.from_url("http://1.2.3.4")
+    assert spawner.server is not None
+    assert spawner.server.ip == "1.2.3.4"

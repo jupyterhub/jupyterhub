@@ -1,211 +1,215 @@
-# -*- coding: utf-8 -*-
+# Configuration file for Sphinx to build our documentation to HTML.
 #
+# Configuration reference: https://www.sphinx-doc.org/en/master/usage/configuration.html
+#
+import contextlib
+import datetime
+import io
 import os
-import shlex
-import sys
+import subprocess
 
-# Set paths
-sys.path.insert(0, os.path.abspath('.'))
-
-# -- General configuration ------------------------------------------------
-
-# Minimal Sphinx version
-needs_sphinx = '1.4'
-
-# Sphinx extension modules
-extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.intersphinx',
-    'sphinx.ext.napoleon',
-    'autodoc_traits',
-    'sphinx_copybutton',
-]
-
-templates_path = ['_templates']
-
-# The master toctree document.
-master_doc = 'index'
-
-# General information about the project.
-project = u'JupyterHub'
-copyright = u'2016, Project Jupyter team'
-author = u'Project Jupyter team'
-
-# Autopopulate version
-from os.path import dirname
-
-docs = dirname(dirname(__file__))
-root = dirname(docs)
-sys.path.insert(0, root)
-sys.path.insert(0, os.path.join(docs, 'sphinxext'))
+from docutils import nodes
+from sphinx.directives.other import SphinxDirective
 
 import jupyterhub
+from jupyterhub.app import JupyterHub
 
-# The short X.Y version.
-version = '%i.%i' % jupyterhub.version_info[:2]
-# The full version, including alpha/beta/rc tags.
+# -- Project information -----------------------------------------------------
+# ref: https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
+#
+project = "JupyterHub"
+author = "Project Jupyter Contributors"
+copyright = f"{datetime.date.today().year}, {author}"
+version = "%i.%i" % jupyterhub.version_info[:2]
 release = jupyterhub.__version__
 
-language = None
-exclude_patterns = []
-pygments_style = 'sphinx'
-todo_include_todos = False
 
-# Set the default role so we can use `foo` instead of ``foo``
-default_role = 'literal'
+# -- General Sphinx configuration --------------------------------------------
+# ref: https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
+#
+extensions = [
+    "sphinx.ext.autodoc",
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.napoleon",
+    "autodoc_traits",
+    "sphinx_copybutton",
+    "sphinx-jsonschema",
+    "sphinxext.opengraph",
+    "sphinxext.rediraffe",
+    "myst_parser",
+]
+root_doc = "index"
+source_suffix = [".md", ".rst"]
+# default_role let's use use `foo` instead of ``foo`` in rST
+default_role = "literal"
 
-# -- Source -------------------------------------------------------------
 
-import recommonmark
-from recommonmark.transform import AutoStructify
+# -- MyST configuration ------------------------------------------------------
+# ref: https://myst-parser.readthedocs.io/en/latest/configuration.html
+#
+myst_heading_anchors = 2
+myst_enable_extensions = [
+    "colon_fence",
+    "deflist",
+]
+
+
+# -- Custom directives to generate documentation -----------------------------
+# ref: https://myst-parser.readthedocs.io/en/latest/syntax/roles-and-directives.html
+#
+# We define custom directives to help us generate documentation using Python on
+# demand when referenced from our documentation files.
+#
+
+# Create a temp instance of JupyterHub for use by two separate directive classes
+# to get the output from using the "--generate-config" and "--help-all" CLI
+# flags respectively.
+#
+jupyterhub_app = JupyterHub()
+
+
+class ConfigDirective(SphinxDirective):
+    """Generate the configuration file output for use in the documentation."""
+
+    has_content = False
+    required_arguments = 0
+    optional_arguments = 0
+    final_argument_whitespace = False
+    option_spec = {}
+
+    def run(self):
+        # The generated configuration file for this version
+        generated_config = jupyterhub_app.generate_config_file()
+        # post-process output
+        home_dir = os.environ["HOME"]
+        generated_config = generated_config.replace(home_dir, "$HOME", 1)
+        par = nodes.literal_block(text=generated_config)
+        return [par]
+
+
+class HelpAllDirective(SphinxDirective):
+    """Print the output of jupyterhub help --all for use in the documentation."""
+
+    has_content = False
+    required_arguments = 0
+    optional_arguments = 0
+    final_argument_whitespace = False
+    option_spec = {}
+
+    def run(self):
+        # The output of the help command for this version
+        buffer = io.StringIO()
+        with contextlib.redirect_stdout(buffer):
+            jupyterhub_app.print_help("--help-all")
+        all_help = buffer.getvalue()
+        # post-process output
+        home_dir = os.environ["HOME"]
+        all_help = all_help.replace(home_dir, "$HOME", 1)
+        par = nodes.literal_block(text=all_help)
+        return [par]
 
 
 def setup(app):
-    app.add_config_value('recommonmark_config', {'enable_eval_rst': True}, True)
-    app.add_stylesheet('custom.css')
-    app.add_transform(AutoStructify)
+    app.add_css_file("custom.css")
+    app.add_directive("jupyterhub-generate-config", ConfigDirective)
+    app.add_directive("jupyterhub-help-all", HelpAllDirective)
 
 
-source_parsers = {'.md': 'recommonmark.parser.CommonMarkParser'}
-
-source_suffix = ['.rst', '.md']
-# source_encoding = 'utf-8-sig'
-
-# -- Options for HTML output ----------------------------------------------
-
-# The theme to use for HTML and HTML Help pages.
-import alabaster_jupyterhub
-
-html_theme = 'alabaster_jupyterhub'
-html_theme_path = [alabaster_jupyterhub.get_html_theme_path()]
-
-html_logo = '_static/images/logo/logo.png'
-html_favicon = '_static/images/logo/favicon.ico'
-
-# Paths that contain custom static files (such as style sheets)
-html_static_path = ['_static']
-
-html_theme_options = {
-    'show_related': True,
-    'description': 'Documentation for JupyterHub',
-    'github_user': 'jupyterhub',
-    'github_repo': 'jupyterhub',
-    'github_banner': False,
-    'github_button': True,
-    'github_type': 'star',
-    'show_powered_by': False,
-    'extra_nav_links': {
-        'GitHub Repo': 'http://github.com/jupyterhub/jupyterhub',
-        'Issue Tracker': 'http://github.com/jupyterhub/jupyterhub/issues',
-    },
-}
-
-html_sidebars = {
-    '**': [
-        'about.html',
-        'searchbox.html',
-        'navigation.html',
-        'relations.html',
-        'sourcelink.html',
-    ]
-}
-
-htmlhelp_basename = 'JupyterHubdoc'
-
-# -- Options for LaTeX output ---------------------------------------------
-
-latex_elements = {
-    # 'papersize': 'letterpaper',
-    # 'pointsize': '10pt',
-    # 'preamble': '',
-    # 'figure_align': 'htbp',
-}
-
-# Grouping the document tree into LaTeX files. List of tuples
-# (source start file, target name, title,
-#  author, documentclass [howto, manual, or own class]).
-latex_documents = [
-    (
-        master_doc,
-        'JupyterHub.tex',
-        u'JupyterHub Documentation',
-        u'Project Jupyter team',
-        'manual',
-    )
-]
-
-# latex_logo = None
-# latex_use_parts = False
-# latex_show_pagerefs = False
-# latex_show_urls = False
-# latex_appendices = []
-# latex_domain_indices = True
+# -- Read The Docs -----------------------------------------------------------
+#
+# Since RTD runs sphinx-build directly without running "make html", we run the
+# pre-requisite steps for "make html" from here if needed.
+#
+if os.environ.get("READTHEDOCS"):
+    docs = os.path.dirname(os.path.dirname(__file__))
+    subprocess.check_call(["make", "metrics", "scopes"], cwd=docs)
 
 
-# -- manual page output -------------------------------------------------
-
-# One entry per manual page. List of tuples
-# (source start file, name, description, authors, manual section).
-man_pages = [(master_doc, 'jupyterhub', u'JupyterHub Documentation', [author], 1)]
-
-# man_show_urls = False
-
-
-# -- Texinfo output -----------------------------------------------------
-
-# Grouping the document tree into Texinfo files. List of tuples
-# (source start file, target name, title, author,
-#  dir menu entry, description, category)
-texinfo_documents = [
-    (
-        master_doc,
-        'JupyterHub',
-        u'JupyterHub Documentation',
-        author,
-        'JupyterHub',
-        'One line description of project.',
-        'Miscellaneous',
-    )
-]
-
-# texinfo_appendices = []
-# texinfo_domain_indices = True
-# texinfo_show_urls = 'footnote'
-# texinfo_no_detailmenu = False
-
-
-# -- Epub output --------------------------------------------------------
-
-# Bibliographic Dublin Core info.
-epub_title = project
-epub_author = author
-epub_publisher = author
-epub_copyright = copyright
-
-# A list of files that should not be packed into the epub file.
-epub_exclude_files = ['search.html']
-
-# -- Intersphinx ----------------------------------------------------------
-
-intersphinx_mapping = {'https://docs.python.org/3/': None}
-
-# -- Read The Docs --------------------------------------------------------
-
-on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
-if on_rtd:
-    # readthedocs.org uses their theme by default, so no need to specify it
-    # build rest-api, since RTD doesn't run make
-    from subprocess import check_call as sh
-
-    sh(['make', 'rest-api'], cwd=docs)
-
-# -- Spell checking -------------------------------------------------------
-
+# -- Spell checking ----------------------------------------------------------
+# ref: https://sphinxcontrib-spelling.readthedocs.io/en/latest/customize.html#configuration-options
+#
+# The "sphinxcontrib.spelling" extension is optionally enabled if its available.
+#
 try:
-    import sphinxcontrib.spelling
+    import sphinxcontrib.spelling  # noqa
 except ImportError:
     pass
 else:
     extensions.append("sphinxcontrib.spelling")
+spelling_word_list_filename = "spelling_wordlist.txt"
 
-spelling_word_list_filename = 'spelling_wordlist.txt'
+
+# -- Options for HTML output -------------------------------------------------
+# ref: https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
+#
+html_logo = "_static/images/logo/logo.png"
+html_favicon = "_static/images/logo/favicon.ico"
+html_static_path = ["_static"]
+
+html_theme = "pydata_sphinx_theme"
+html_theme_options = {
+    "icon_links": [
+        {
+            "name": "GitHub",
+            "url": "https://github.com/jupyterhub/jupyterhub",
+            "icon": "fab fa-github-square",
+        },
+        {
+            "name": "Discourse",
+            "url": "https://discourse.jupyter.org/c/jupyterhub/10",
+            "icon": "fab fa-discourse",
+        },
+    ],
+    "use_edit_page_button": True,
+    "navbar_align": "left",
+}
+html_context = {
+    "github_user": "jupyterhub",
+    "github_repo": "jupyterhub",
+    "github_version": "main",
+    "doc_path": "docs/source",
+}
+
+
+# -- Options for linkcheck builder -------------------------------------------
+# ref: https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-the-linkcheck-builder
+#
+linkcheck_ignore = [
+    r"(.*)github\.com(.*)#",  # javascript based anchors
+    r"(.*)/#%21(.*)/(.*)",  # /#!forum/jupyter - encoded anchor edge case
+    r"https://github.com/[^/]*$",  # too many github usernames / searches in changelog
+    "https://github.com/jupyterhub/jupyterhub/pull/",  # too many PRs in changelog
+    "https://github.com/jupyterhub/jupyterhub/compare/",  # too many comparisons in changelog
+]
+linkcheck_anchors_ignore = [
+    "/#!",
+    "/#%21",
+]
+
+
+# -- Intersphinx -------------------------------------------------------------
+# ref: https://www.sphinx-doc.org/en/master/usage/extensions/intersphinx.html#configuration
+#
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3/", None),
+    "tornado": ("https://www.tornadoweb.org/en/stable/", None),
+}
+# -- Options for the opengraph extension -------------------------------------
+# ref: https://github.com/wpilibsuite/sphinxext-opengraph#options
+#
+# ogp_site_url is set automatically by RTD
+ogp_image = "_static/logo.png"
+ogp_use_first_image = True
+
+
+# -- Options for the rediraffe extension -------------------------------------
+# ref: https://github.com/wpilibsuite/sphinxext-rediraffe#readme
+#
+# This extensions help us relocated content without breaking links. If a
+# document is moved internally, a redirect like should be configured below to
+# help us not break links.
+#
+rediraffe_branch = "main"
+rediraffe_redirects = {
+    # "old-file": "new-folder/new-file-name",
+}

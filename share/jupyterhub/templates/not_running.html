@@ -18,12 +18,21 @@
       <p>
         {% if failed %}
         The latest attempt to start your server {{ server_name }} has failed.
-        {% if failed_message %}
-          {{ failed_message }}
+        {% if failed_html_message %}
+          </p><p>{{ failed_html_message | safe }}</p><p>
+        {% elif failed_message %}
+          </p><p>{{ failed_message }}</p><p>
         {% endif %}
         Would you like to retry starting it?
         {% else %}
-        Your server {{ server_name }} is not running. Would you like to start it?
+        Your server {{ server_name }} is not running.
+          {% if implicit_spawn_seconds %}
+          It will be restarted automatically.
+          If you are not redirected in a few seconds,
+          click below to launch your server.
+          {% else %}
+          Would you like to start it?
+          {% endif %}
         {% endif %}
       </p>
       {% endblock %}
@@ -42,3 +51,21 @@
 </div>
 
 {% endblock %}
+{% block script %}
+{{ super () }}
+{% if implicit_spawn_seconds %}
+<script type="text/javascript">
+  var spawn_url = "{{ spawn_url }}";
+  var implicit_spawn_seconds = {{ implicit_spawn_seconds }};
+  setTimeout(function () {
+      console.log("redirecting to spawn at", spawn_url);
+      window.location = spawn_url;
+    },
+    1000 * implicit_spawn_seconds
+  );
+</script>
+{% endif %}
+<script type="text/javascript">
+require(["not_running"]);
+</script>
+{% endblock script %}

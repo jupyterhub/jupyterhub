@@ -4,8 +4,6 @@ Contains base Spawner class & default implementation
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import ast
-import asyncio
-import errno
 import json
 import os
 import pipes
@@ -13,38 +11,46 @@ import shutil
 import signal
 import sys
 import warnings
+from inspect import signature
 from subprocess import Popen
 from tempfile import mkdtemp
+from textwrap import dedent
+from urllib.parse import urlparse
 
-from async_generator import async_generator
-from async_generator import yield_
+from async_generator import aclosing
 from sqlalchemy import inspect
 from tornado.ioloop import PeriodicCallback
-from traitlets import Any
-from traitlets import Bool
-from traitlets import default
-from traitlets import Dict
-from traitlets import Float
-from traitlets import Instance
-from traitlets import Integer
-from traitlets import List
-from traitlets import observe
-from traitlets import Unicode
-from traitlets import Union
-from traitlets import validate
+from traitlets import (
+    Any,
+    Bool,
+    Dict,
+    Float,
+    Instance,
+    Integer,
+    List,
+    Unicode,
+    Union,
+    default,
+    observe,
+    validate,
+)
 from traitlets.config import LoggingConfigurable
 
+from . import orm
 from .objects import Server
-from .traitlets import ByteSpecification
-from .traitlets import Callable
-from .traitlets import Command
-from .utils import exponential_backoff
-from .utils import iterate_until
-from .utils import maybe_future
-from .utils import random_port
-from .utils import url_path_join
+from .roles import roles_to_scopes
+from .traitlets import ByteSpecification, Callable, Command
+from .utils import (
+    AnyTimeoutError,
+    exponential_backoff,
+    maybe_future,
+    random_port,
+    url_escape_path,
+    url_path_join,
+)
 
-# FIXME: remove when we drop Python 3.5 support
+if os.name == 'nt':
+    import psutil
 
 
 def _quote_safe(s):
@@ -86,6 +92,7 @@ class Spawner(LoggingConfigurable):
     _start_pending = False
     _stop_pending = False
     _proxy_pending = False
+    _check_pending = False
     _waiting_for_response = False
     _jupyterhub_version = None
     _spawn_future = None
@@ -96,10 +103,15 @@ class Spawner(LoggingConfigurable):
 
         Used in logging for consistency with named servers.
         """
-        if self.name:
-            return '%s:%s' % (self.user.name, self.name)
+        if self.user:
+            user_name = self.user.name
         else:
-            return self.user.name
+            # no user, only happens in mock tests
+            user_name = "(no user)"
+        if self.name:
+            return f"{user_name}:{self.name}"
+        else:
+            return user_name
 
     @property
     def _failed(self):
@@ -121,6 +133,8 @@ class Spawner(LoggingConfigurable):
             return 'spawn'
         elif self._stop_pending:
             return 'stop'
+        elif self._check_pending:
+            return 'check'
         return None
 
     @property
@@ -147,8 +161,26 @@ class Spawner(LoggingConfigurable):
     authenticator = Any()
     hub = Any()
     orm_spawner = Any()
-    db = Any()
     cookie_options = Dict()
+
+    db = Any()
+
+    @default("db")
+    def _deprecated_db(self):
+        self.log.warning(
+            dedent(
+                """
+                The shared database session at Spawner.db is deprecated, and will be removed.
+                Please manage your own database and connections.
+
+                Contact JupyterHub at https://github.com/jupyterhub/jupyterhub/issues/3700
+                if you have questions or ideas about direct database needs for your Spawner.
+                """
+            ),
+        )
+        return self._deprecated_db_session
+
+    _deprecated_db_session = Any()
 
     @observe('orm_spawner')
     def _orm_spawner_changed(self, change):
@@ -181,17 +213,38 @@ class Spawner(LoggingConfigurable):
     def last_activity(self):
         return self.orm_spawner.last_activity
 
+    # Spawner.server is a wrapper of the ORM orm_spawner.server
+    # make sure it's always in sync with the underlying state
+    # this is harder to do with traitlets,
+    # which do not run on every access, only on set and first-get
+    _server = None
+
     @property
     def server(self):
-        if hasattr(self, '_server'):
+        # always check that we're in sync with orm_spawner
+        if not self.orm_spawner:
+            # no ORM spawner, nothing to check
             return self._server
-        if self.orm_spawner and self.orm_spawner.server:
-            return Server(orm_server=self.orm_spawner.server)
+
+        orm_server = self.orm_spawner.server
+
+        if orm_server is not None and (
+            self._server is None or orm_server is not self._server.orm_server
+        ):
+            # self._server is not connected to orm_spawner
+            self._server = Server(orm_server=self.orm_spawner.server)
+        elif orm_server is None:
+            # no ORM server, clear it
+            self._server = None
+        return self._server
 
     @server.setter
     def server(self, server):
         self._server = server
-        if self.orm_spawner:
+        if self.orm_spawner is not None:
+            if server is not None and server.orm_server == self.orm_spawner.server:
+                # no change
+                return
             if self.orm_spawner.server is not None:
                 # delete the old value
                 db = inspect(self.orm_spawner.server).session
@@ -199,7 +252,13 @@ class Spawner(LoggingConfigurable):
             if server is None:
                 self.orm_spawner.server = None
             else:
+                if server.orm_server is None:
+                    self.log.warning(f"No ORM server for {self._log_name}")
                 self.orm_spawner.server = server.orm_server
+        elif server is not None:
+            self.log.warning(
+                f"Setting Spawner.server for {self._log_name} with no underlying orm_spawner"
+            )
 
     @property
     def name(self):
@@ -207,8 +266,6 @@ class Spawner(LoggingConfigurable):
             return self.orm_spawner.name
         return ''
 
-    hub = Any()
-    authenticator = Any()
     internal_ssl = Bool(False)
     internal_trust_bundles = Dict()
     internal_certs_location = Unicode('')
@@ -216,7 +273,114 @@ class Spawner(LoggingConfigurable):
     admin_access = Bool(False)
     api_token = Unicode()
     oauth_client_id = Unicode()
+
+    oauth_scopes = List(Unicode())
+
+    @property
+    def oauth_scopes(self):
+        warnings.warn(
+            """Spawner.oauth_scopes is deprecated in JupyterHub 2.3.
+
+            Use Spawner.oauth_access_scopes
+            """,
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.oauth_access_scopes
+
+    oauth_access_scopes = List(
+        Unicode(),
+        help="""The scope(s) needed to access this server""",
+    )
+
+    @default("oauth_access_scopes")
+    def _default_access_scopes(self):
+        return [
+            f"access:servers!server={self.user.name}/{self.name}",
+            f"access:servers!user={self.user.name}",
+        ]
+
     handler = Any()
+
+    oauth_roles = Union(
+        [Callable(), List()],
+        help="""Allowed roles for oauth tokens.
+
+        Deprecated in 3.0: use oauth_client_allowed_scopes
+
+        This sets the maximum and default roles
+        assigned to oauth tokens issued by a single-user server's
+        oauth client (i.e. tokens stored in browsers after authenticating with the server),
+        defining what actions the server can take on behalf of logged-in users.
+
+        Default is an empty list, meaning minimal permissions to identify users,
+        no actions can be taken on their behalf.
+        """,
+    ).tag(config=True)
+
+    oauth_client_allowed_scopes = Union(
+        [Callable(), List()],
+        help="""Allowed scopes for oauth tokens issued by this server's oauth client.
+
+        This sets the maximum and default scopes
+        assigned to oauth tokens issued by a single-user server's
+        oauth client (i.e. tokens stored in browsers after authenticating with the server),
+        defining what actions the server can take on behalf of logged-in users.
+
+        Default is an empty list, meaning minimal permissions to identify users,
+        no actions can be taken on their behalf.
+
+        If callable, will be called with the Spawner as a single argument.
+        Callables may be async.
+    """,
+    ).tag(config=True)
+
+    async def _get_oauth_client_allowed_scopes(self):
+        """Private method: get oauth allowed scopes
+
+        Handle:
+
+        - oauth_client_allowed_scopes
+        - callable config
+        - deprecated oauth_roles config
+        - access_scopes
+        """
+        # cases:
+        # 1. only scopes
+        # 2. only roles
+        # 3. both! (conflict, favor scopes)
+        scopes = []
+        if self.oauth_client_allowed_scopes:
+            allowed_scopes = self.oauth_client_allowed_scopes
+            if callable(allowed_scopes):
+                allowed_scopes = allowed_scopes(self)
+                if inspect.isawaitable(allowed_scopes):
+                    allowed_scopes = await allowed_scopes
+            scopes.extend(allowed_scopes)
+
+        if self.oauth_roles:
+            if scopes:
+                # both defined! Warn
+                warnings.warn(
+                    f"Ignoring deprecated Spawner.oauth_roles={self.oauth_roles} in favor of Spawner.oauth_client_allowed_scopes.",
+                )
+            else:
+                role_names = self.oauth_roles
+                if callable(role_names):
+                    role_names = role_names(self)
+                roles = list(
+                    self.db.query(orm.Role).filter(orm.Role.name.in_(role_names))
+                )
+                if len(roles) != len(role_names):
+                    missing_roles = set(role_names).difference(
+                        {role.name for role in roles}
+                    )
+                    raise ValueError(f"No such role(s): {', '.join(missing_roles)}")
+                scopes.extend(roles_to_scopes(roles))
+
+        # always add access scope
+        scopes.append(f"access:servers!server={self.user.name}/{self.name}")
+        return sorted(set(scopes))
 
     will_resume = Bool(
         False,
@@ -231,11 +395,22 @@ class Spawner(LoggingConfigurable):
     )
 
     ip = Unicode(
-        '',
+        '127.0.0.1',
         help="""
         The IP address (or hostname) the single-user server should listen on.
 
+        Usually either '127.0.0.1' (default) or '0.0.0.0'.
+
         The JupyterHub proxy implementation should be able to send packets to this interface.
+
+        Subclasses which launch remotely or in containers
+        should override the default to '0.0.0.0'.
+
+        .. versionchanged:: 2.0
+            Default changed to '127.0.0.1', from ''.
+            In most cases, this does not result in a change in behavior,
+            as '' was interpreted as 'unspecified',
+            which used the subprocesses' own default, itself usually '127.0.0.1'.
         """,
     ).tag(config=True)
 
@@ -353,8 +528,9 @@ class Spawner(LoggingConfigurable):
 
         return options_form
 
-    def options_from_form(self, form_data):
-        """Interpret HTTP form data
+    options_from_form = Callable(
+        help="""
+        Interpret HTTP form data
 
         Form data will always arrive as a dict of lists of strings.
         Override this function to understand single-values, numbers, etc.
@@ -378,8 +554,53 @@ class Spawner(LoggingConfigurable):
             (with additional support for bytes in case of uploaded file data),
             and any non-bytes non-jsonable values will be replaced with None
             if the user_options are re-used.
-        """
+        """,
+    ).tag(config=True)
+
+    @default("options_from_form")
+    def _options_from_form(self):
+        return self._default_options_from_form
+
+    def _default_options_from_form(self, form_data):
         return form_data
+
+    def run_options_from_form(self, form_data):
+        sig = signature(self.options_from_form)
+        if 'spawner' in sig.parameters:
+            return self.options_from_form(form_data, spawner=self)
+        else:
+            return self.options_from_form(form_data)
+
+    def options_from_query(self, query_data):
+        """Interpret query arguments passed to /spawn
+
+        Query arguments will always arrive as a dict of unicode strings.
+        Override this function to understand single-values, numbers, etc.
+
+        By default, options_from_form is called from this function. You can however override
+        this function if you need to process the query arguments differently.
+
+        This should coerce form data into the structure expected by self.user_options,
+        which must be a dict, and should be JSON-serializeable,
+        though it can contain bytes in addition to standard JSON data types.
+
+        This method should not have any side effects.
+        Any handling of `user_options` should be done in `.start()`
+        to ensure consistent behavior across servers
+        spawned via the API and form submission page.
+
+        Instances will receive this data on self.user_options, after passing through this function,
+        prior to `Spawner.start`.
+
+        .. versionadded:: 1.2
+            user_options are persisted in the JupyterHub database to be reused
+            on subsequent spawns if no options are given.
+            user_options is serialized to JSON as part of this persistence
+            (with additional support for bytes in case of uploaded file data),
+            and any non-bytes non-jsonable values will be replaced with None
+            if the user_options are re-used.
+        """
+        return self.options_from_form(query_data)
 
     user_options = Dict(
         help="""
@@ -399,11 +620,12 @@ class Spawner(LoggingConfigurable):
             'VIRTUAL_ENV',
             'LANG',
             'LC_ALL',
+            'JUPYTERHUB_SINGLEUSER_APP',
         ],
         help="""
-        Whitelist of environment variables for the single-user server to inherit from the JupyterHub process.
+        List of environment variables for the single-user server to inherit from the JupyterHub process.
 
-        This whitelist is used to ensure that sensitive information in the JupyterHub process's environment
+        This list is used to ensure that sensitive information in the JupyterHub process's environment
         (such as `CONFIGPROXY_AUTH_TOKEN`) is not passed to the single-user server's process.
         """,
     ).tag(config=True)
@@ -422,7 +644,7 @@ class Spawner(LoggingConfigurable):
 
         Environment variables that end up in the single-user server's process come from 3 sources:
           - This `environment` configurable
-          - The JupyterHub process' environment variables that are whitelisted in `env_keep`
+          - The JupyterHub process' environment variables that are listed in `env_keep`
           - Variables to establish contact between the single-user notebook and the hub (such as JUPYTERHUB_API_TOKEN)
 
         The `environment` configurable should be set by JupyterHub administrators to add
@@ -433,6 +655,11 @@ class Spawner(LoggingConfigurable):
 
         Note that the spawner class' interface is not guaranteed to be exactly same across upgrades,
         so if you are using the callable take care to verify it continues to work after upgrades!
+
+        .. versionchanged:: 1.2
+            environment from this configuration has highest priority,
+            allowing override of 'default' env variables,
+            such as JUPYTERHUB_API_URL.
         """
     ).tag(config=True)
 
@@ -627,6 +854,37 @@ class Spawner(LoggingConfigurable):
         """
     ).tag(config=True)
 
+    auth_state_hook = Any(
+        help="""
+        An optional hook function that you can implement to pass `auth_state`
+        to the spawner after it has been initialized but before it starts.
+        The `auth_state` dictionary may be set by the `.authenticate()`
+        method of the authenticator.  This hook enables you to pass some
+        or all of that information to your spawner.
+
+        Example::
+
+            def userdata_hook(spawner, auth_state):
+                spawner.userdata = auth_state["userdata"]
+
+            c.Spawner.auth_state_hook = userdata_hook
+
+        """
+    ).tag(config=True)
+
+    hub_connect_url = Unicode(
+        None,
+        allow_none=True,
+        help="""
+        The URL the single-user server should connect to the Hub.
+
+        If the Hub URL set in your JupyterHub config is not reachable
+        from spawned notebooks, you can set differnt URL by this config.
+
+        Is None if you don't need to change the URL.
+        """,
+    ).tag(config=True)
+
     def load_state(self, state):
         """Restore state of spawner from database.
 
@@ -638,7 +896,6 @@ class Spawner(LoggingConfigurable):
         Override in subclasses to restore any extra state that is needed to track
         the single-user server for that user. Subclasses should call super().
         """
-        pass
 
     def get_state(self):
         """Save state of spawner into database.
@@ -652,7 +909,7 @@ class Spawner(LoggingConfigurable):
         Returns
         -------
         state: dict
-             a JSONable dict of state
+            a JSONable dict of state
         """
         state = {}
         return state
@@ -688,16 +945,6 @@ class Spawner(LoggingConfigurable):
             if key in os.environ:
                 env[key] = os.environ[key]
 
-        # config overrides. If the value is a callable, it will be called with
-        # one parameter - the current spawner instance - and the return value
-        # will be assigned to the environment variable. This will be called at
-        # spawn time.
-        for key, value in self.environment.items():
-            if callable(value):
-                env[key] = value(self)
-            else:
-                env[key] = value
-
         env['JUPYTERHUB_API_TOKEN'] = self.api_token
         # deprecated (as of 0.7.2), for old versions of singleuser
         env['JPY_API_TOKEN'] = self.api_token
@@ -709,23 +956,47 @@ class Spawner(LoggingConfigurable):
             env['JUPYTERHUB_COOKIE_OPTIONS'] = json.dumps(self.cookie_options)
         env['JUPYTERHUB_HOST'] = self.hub.public_host
         env['JUPYTERHUB_OAUTH_CALLBACK_URL'] = url_path_join(
-            self.user.url, self.name, 'oauth_callback'
+            self.user.url, url_escape_path(self.name), 'oauth_callback'
+        )
+
+        # deprecated env, renamed in 3.0 for disambiguation
+        env['JUPYTERHUB_OAUTH_SCOPES'] = json.dumps(self.oauth_access_scopes)
+        env['JUPYTERHUB_OAUTH_ACCESS_SCOPES'] = json.dumps(self.oauth_access_scopes)
+
+        # added in 3.0
+        env['JUPYTERHUB_OAUTH_CLIENT_ALLOWED_SCOPES'] = json.dumps(
+            self.oauth_client_allowed_scopes
         )
 
         # Info previously passed on args
         env['JUPYTERHUB_USER'] = self.user.name
         env['JUPYTERHUB_SERVER_NAME'] = self.name
-        env['JUPYTERHUB_API_URL'] = self.hub.api_url
+        if self.hub_connect_url is not None:
+            hub_api_url = url_path_join(
+                self.hub_connect_url, urlparse(self.hub.api_url).path
+            )
+        else:
+            hub_api_url = self.hub.api_url
+        env['JUPYTERHUB_API_URL'] = hub_api_url
         env['JUPYTERHUB_ACTIVITY_URL'] = url_path_join(
-            self.hub.api_url,
+            hub_api_url,
             'users',
             # tolerate mocks defining only user.name
             getattr(self.user, 'escaped_name', self.user.name),
             'activity',
         )
         env['JUPYTERHUB_BASE_URL'] = self.hub.base_url[:-4]
+
         if self.server:
+            base_url = self.server.base_url
             env['JUPYTERHUB_SERVICE_PREFIX'] = self.server.base_url
+        else:
+            # this should only occur in mock/testing scenarios
+            base_url = '/'
+
+        proto = 'https' if self.internal_ssl else 'http'
+        bind_url = f"{proto}://{self.ip}:{self.port}{base_url}"
+        env["JUPYTERHUB_SERVICE_URL"] = bind_url
 
         # Put in limit and guarantee info if they exist.
         # Note that this is for use by the humans / notebook extensions in the
@@ -745,6 +1016,31 @@ class Spawner(LoggingConfigurable):
             env['JUPYTERHUB_SSL_CERTFILE'] = self.cert_paths['certfile']
             env['JUPYTERHUB_SSL_CLIENT_CA'] = self.cert_paths['cafile']
 
+        if self.notebook_dir:
+            notebook_dir = self.format_string(self.notebook_dir)
+            env["JUPYTERHUB_ROOT_DIR"] = notebook_dir
+
+        if self.default_url:
+            default_url = self.format_string(self.default_url)
+            env["JUPYTERHUB_DEFAULT_URL"] = default_url
+
+        if self.debug:
+            env["JUPYTERHUB_DEBUG"] = "1"
+
+        if self.disable_user_config:
+            env["JUPYTERHUB_DISABLE_USER_CONFIG"] = "1"
+
+        # env overrides from config. If the value is a callable, it will be called with
+        # one parameter - the current spawner instance - and the return value
+        # will be assigned to the environment variable. This will be called at
+        # spawn time.
+        # Called last to ensure highest priority, in case of overriding other
+        # 'default' variables like the API url
+        for key, value in self.environment.items():
+            if callable(value):
+                env[key] = value(self)
+            else:
+                env[key] = value
         return env
 
     async def get_url(self):
@@ -885,14 +1181,13 @@ class Spawner(LoggingConfigurable):
 
         Arguments:
             paths (dict): a list of paths for key, cert, and CA.
-            These paths will be resolvable and readable by the Hub process,
-            but not necessarily by the notebook server.
+                These paths will be resolvable and readable by the Hub process,
+                but not necessarily by the notebook server.
 
         Returns:
-            dict: a list (potentially altered) of paths for key, cert,
-            and CA.
-            These paths should be resolvable and readable
-            by the notebook server to be launched.
+            dict: a list (potentially altered) of paths for key, cert, and CA.
+                These paths should be resolvable and readable by the notebook
+                server to be launched.
 
 
         `.move_certs` is called after certs for the singleuser notebook have
@@ -912,33 +1207,16 @@ class Spawner(LoggingConfigurable):
         """Return the arguments to be passed after self.cmd
 
         Doesn't expect shell expansion to happen.
+
+        .. versionchanged:: 2.0
+            Prior to 2.0, JupyterHub passed some options such as
+            ip, port, and default_url to the command-line.
+            JupyterHub 2.0 no longer builds any CLI args
+            other than `Spawner.cmd` and `Spawner.args`.
+            All values that come from jupyterhub itself
+            will be passed via environment variables.
         """
-        args = []
-
-        if self.ip:
-            args.append('--ip=%s' % _quote_safe(self.ip))
-
-        if self.port:
-            args.append('--port=%i' % self.port)
-        elif self.server and self.server.port:
-            self.log.warning(
-                "Setting port from user.server is deprecated as of JupyterHub 0.7."
-            )
-            args.append('--port=%i' % self.server.port)
-
-        if self.notebook_dir:
-            notebook_dir = self.format_string(self.notebook_dir)
-            args.append('--notebook-dir=%s' % _quote_safe(notebook_dir))
-        if self.default_url:
-            default_url = self.format_string(self.default_url)
-            args.append('--NotebookApp.default_url=%s' % _quote_safe(default_url))
-
-        if self.debug:
-            args.append('--debug')
-        if self.disable_user_config:
-            args.append('--disable-user-config')
-        args.extend(self.args)
-        return args
+        return self.args
 
     def run_pre_spawn_hook(self):
         """Run the pre_spawn_hook if defined"""
@@ -953,11 +1231,15 @@ class Spawner(LoggingConfigurable):
             except Exception:
                 self.log.exception("post_stop_hook failed with exception: %s", self)
 
+    async def run_auth_state_hook(self, auth_state):
+        """Run the auth_state_hook if defined"""
+        if self.auth_state_hook is not None:
+            await maybe_future(self.auth_state_hook(self, auth_state))
+
     @property
     def _progress_url(self):
         return self.user.progress_url(self.name)
 
-    @async_generator
     async def _generate_progress(self):
         """Private wrapper of progress generator
 
@@ -969,20 +1251,16 @@ class Spawner(LoggingConfigurable):
             )
             return
 
-        await yield_({"progress": 0, "message": "Server requested"})
-        from async_generator import aclosing
+        yield {"progress": 0, "message": "Server requested"}
 
         async with aclosing(self.progress()) as progress:
             async for event in progress:
-                await yield_(event)
+                yield event
 
-    @async_generator
     async def progress(self):
         """Async generator for progress events
 
         Must be an async generator
-
-        For Python 3.5-compatibility, use the async_generator package
 
         Should yield messages of the form:
 
@@ -1000,7 +1278,7 @@ class Spawner(LoggingConfigurable):
 
         .. versionadded:: 0.9
         """
-        await yield_({"progress": 50, "message": "Spawning server..."})
+        yield {"progress": 50, "message": "Spawning server..."}
 
     async def start(self):
         """Start the single-user server
@@ -1011,9 +1289,7 @@ class Spawner(LoggingConfigurable):
         .. versionchanged:: 0.7
             Return ip, port instead of setting on self.user.server directly.
         """
-        raise NotImplementedError(
-            "Override in subclass. Must be a Tornado gen.coroutine."
-        )
+        raise NotImplementedError("Override in subclass. Must be a coroutine.")
 
     async def stop(self, now=False):
         """Stop the single-user server
@@ -1026,9 +1302,7 @@ class Spawner(LoggingConfigurable):
 
         Must be a coroutine.
         """
-        raise NotImplementedError(
-            "Override in subclass. Must be a Tornado gen.coroutine."
-        )
+        raise NotImplementedError("Override in subclass. Must be a coroutine.")
 
     async def poll(self):
         """Check if the single-user process is running
@@ -1054,9 +1328,18 @@ class Spawner(LoggingConfigurable):
           process has not yet completed.
 
         """
-        raise NotImplementedError(
-            "Override in subclass. Must be a Tornado gen.coroutine."
-        )
+        raise NotImplementedError("Override in subclass. Must be a coroutine.")
+
+    def delete_forever(self):
+        """Called when a user or server is deleted.
+
+        This can do things like request removal of resources such as persistent storage.
+        Only called on stopped spawners, and is usually the last action ever taken for the user.
+
+        Will only be called once on each Spawner, immediately prior to removal.
+
+        Stopping a server does *not* call this method.
+        """
 
     def add_poll_callback(self, callback, *args, **kwargs):
         """Add a callback to fire when the single-user server stops"""
@@ -1121,12 +1404,12 @@ class Spawner(LoggingConfigurable):
         try:
             r = await exponential_backoff(
                 _wait_for_death,
-                'Process did not die in {timeout} seconds'.format(timeout=timeout),
+                f'Process did not die in {timeout} seconds',
                 start_wait=self.death_interval,
                 timeout=timeout,
             )
             return r
-        except TimeoutError:
+        except AnyTimeoutError:
             return False
 
 
@@ -1140,7 +1423,7 @@ def _try_setcwd(path):
             os.chdir(path)
         except OSError as e:
             exc = e  # break exception instance out of except scope
-            print("Couldn't set CWD to %s (%s)" % (path, e), file=sys.stderr)
+            print(f"Couldn't set CWD to {path} ({e})", file=sys.stderr)
             path, _ = os.path.split(path)
         else:
             return
@@ -1286,7 +1569,7 @@ class LocalProcessSpawner(Spawner):
 
         Local processes only need the process id.
         """
-        super(LocalProcessSpawner, self).load_state(state)
+        super().load_state(state)
         if 'pid' in state:
             self.pid = state['pid']
 
@@ -1295,14 +1578,14 @@ class LocalProcessSpawner(Spawner):
 
         Local processes only need the process id.
         """
-        state = super(LocalProcessSpawner, self).get_state()
+        state = super().get_state()
         if self.pid:
             state['pid'] = self.pid
         return state
 
     def clear_state(self):
         """Clear stored state about this spawner (pid)"""
-        super(LocalProcessSpawner, self).clear_state()
+        super().clear_state()
         self.pid = 0
 
     def user_env(self, env):
@@ -1351,7 +1634,8 @@ class LocalProcessSpawner(Spawner):
         home = user.pw_dir
 
         # Create dir for user's certs wherever we're starting
-        out_dir = "{home}/.jupyterhub/jupyterhub-certs".format(home=home)
+        hub_dir = f"{home}/.jupyterhub"
+        out_dir = f"{hub_dir}/jupyterhub-certs"
         shutil.rmtree(out_dir, ignore_errors=True)
         os.makedirs(out_dir, 0o700, exist_ok=True)
 
@@ -1365,14 +1649,15 @@ class LocalProcessSpawner(Spawner):
         ca = os.path.join(out_dir, os.path.basename(paths['cafile']))
 
         # Set cert ownership to user
-        for f in [out_dir, key, cert, ca]:
+        for f in [hub_dir, out_dir, key, cert, ca]:
             shutil.chown(f, user=uid, group=gid)
 
         return {"keyfile": key, "certfile": cert, "cafile": ca}
 
     async def start(self):
         """Start the single-user server."""
-        self.port = random_port()
+        if self.port == 0:
+            self.port = random_port()
         cmd = []
         env = self.get_env()
 
@@ -1407,16 +1692,6 @@ class LocalProcessSpawner(Spawner):
 
         self.pid = self.proc.pid
 
-        if self.__class__ is not LocalProcessSpawner:
-            # subclasses may not pass through return value of super().start,
-            # relying on deprecated 0.6 way of setting ip, port,
-            # so keep a redundant copy here for now.
-            # A deprecation warning will be shown if the subclass
-            # does not return ip, port.
-            if self.ip:
-                self.server.ip = self.ip
-            self.server.port = self.port
-            self.db.commit()
         return (self.ip or '127.0.0.1', self.port)
 
     async def poll(self):
@@ -1429,8 +1704,11 @@ class LocalProcessSpawner(Spawner):
         if self.proc is not None:
             status = self.proc.poll()
             if status is not None:
-                # clear state if the process is done
-                self.clear_state()
+                # handle SIGCHILD to avoid zombie processes
+                # and also close stdout/stderr file descriptors
+                with self.proc:
+                    # clear state if the process is done
+                    self.clear_state()
             return status
 
         # if we resumed from stored state,
@@ -1440,9 +1718,11 @@ class LocalProcessSpawner(Spawner):
             self.clear_state()
             return 0
 
-        # send signal 0 to check if PID exists
-        # this doesn't work on Windows, but that's okay because we don't support Windows.
-        alive = await self._signal(0)
+        # We use pustil.pid_exists on windows
+        if os.name == 'nt':
+            alive = psutil.pid_exists(self.pid)
+        else:
+            alive = await self._signal(0)
         if not alive:
             self.clear_state()
             return 0
@@ -1458,11 +1738,10 @@ class LocalProcessSpawner(Spawner):
         """
         try:
             os.kill(self.pid, sig)
+        except ProcessLookupError:
+            return False  # process is gone
         except OSError as e:
-            if e.errno == errno.ESRCH:
-                return False  # process is gone
-            else:
-                raise
+            raise  # Can be EPERM or EINVAL
         return True  # process exists
 
     async def stop(self, now=False):
@@ -1549,5 +1828,5 @@ class SimpleLocalProcessSpawner(LocalProcessSpawner):
         return env
 
     def move_certs(self, paths):
-        """No-op for installing certs"""
+        """No-op for installing certs."""
         return paths

@@ -6,59 +6,27 @@ Currently GET-only, no actions can be taken to modify services.
 # Distributed under the terms of the Modified BSD License.
 import json
 
-from tornado import web
-
-from .. import orm
-from ..utils import admin_only
+from ..scopes import Scope, needs_scope
 from .base import APIHandler
 
 
-def service_model(service):
-    """Produce the model for a service"""
-    return {
-        'name': service.name,
-        'admin': service.admin,
-        'url': service.url,
-        'prefix': service.server.base_url if service.server else '',
-        'command': service.command,
-        'pid': service.proc.pid if service.proc else 0,
-        'info': service.info,
-    }
-
-
 class ServiceListAPIHandler(APIHandler):
-    @admin_only
+    @needs_scope('list:services')
     def get(self):
-        data = {name: service_model(service) for name, service in self.services.items()}
+        data = {}
+        service_scope = self.parsed_scopes['list:services']
+        for name, service in self.services.items():
+            if service_scope == Scope.ALL or name in service_scope.get("service", {}):
+                model = self.service_model(service)
+                data[name] = model
         self.write(json.dumps(data))
 
 
-def admin_or_self(method):
-    """Decorator for restricting access to either the target service or admin"""
-
-    def decorated_method(self, name):
-        current = self.current_user
-        if current is None:
-            raise web.HTTPError(403)
-        if not current.admin:
-            # not admin, maybe self
-            if not isinstance(current, orm.Service):
-                raise web.HTTPError(403)
-            if current.name != name:
-                raise web.HTTPError(403)
-        # raise 404 if not found
-        if name not in self.services:
-            raise web.HTTPError(404)
-        return method(self, name)
-
-    return decorated_method
-
-
 class ServiceAPIHandler(APIHandler):
-    @admin_or_self
-    def get(self, name):
-        service = self.services[name]
-        self.write(json.dumps(service_model(service)))
+    @needs_scope('read:services', 'read:services:name', 'read:roles:services')
+    def get(self, service_name):
+        service = self.services[service_name]
+        self.write(json.dumps(self.service_model(service)))
 
 
 default_handlers = [

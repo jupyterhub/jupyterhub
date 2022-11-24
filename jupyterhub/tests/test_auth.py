@@ -1,19 +1,19 @@
 """Tests for PAM authentication"""
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
-import os
+import logging
 from unittest import mock
+from urllib.parse import urlparse
 
 import pytest
 from requests import HTTPError
+from traitlets import Any
+from traitlets.config import Config
 
-from .mocking import MockPAMAuthenticator
-from .mocking import MockStructGroup
-from .mocking import MockStructPasswd
-from .utils import add_user
-from jupyterhub import auth
-from jupyterhub import crypto
-from jupyterhub import orm
+from jupyterhub import auth, crypto, orm
+
+from .mocking import MockPAMAuthenticator, MockStructGroup, MockStructPasswd
+from .utils import add_user, async_requests, get_page, public_url
 
 
 async def test_pam_auth():
@@ -137,8 +137,8 @@ async def test_pam_auth_admin_groups():
     assert authorized['admin'] is False
 
 
-async def test_pam_auth_whitelist():
-    authenticator = MockPAMAuthenticator(whitelist={'wash', 'kaylee'})
+async def test_pam_auth_allowed():
+    authenticator = MockPAMAuthenticator(allowed_users={'wash', 'kaylee'})
     authorized = await authenticator.get_authenticated_user(
         None, {'username': 'kaylee', 'password': 'kaylee'}
     )
@@ -155,11 +155,11 @@ async def test_pam_auth_whitelist():
     assert authorized is None
 
 
-async def test_pam_auth_group_whitelist():
+async def test_pam_auth_allowed_groups():
     def getgrnam(name):
         return MockStructGroup('grp', ['kaylee'])
 
-    authenticator = MockPAMAuthenticator(group_whitelist={'group'})
+    authenticator = MockPAMAuthenticator(allowed_groups={'group'})
 
     with mock.patch.object(authenticator, '_getgrnam', getgrnam):
         authorized = await authenticator.get_authenticated_user(
@@ -174,7 +174,7 @@ async def test_pam_auth_group_whitelist():
     assert authorized is None
 
 
-async def test_pam_auth_blacklist():
+async def test_pam_auth_blocked():
     # Null case compared to next case
     authenticator = MockPAMAuthenticator()
     authorized = await authenticator.get_authenticated_user(
@@ -183,33 +183,33 @@ async def test_pam_auth_blacklist():
     assert authorized['name'] == 'wash'
 
     # Blacklist basics
-    authenticator = MockPAMAuthenticator(blacklist={'wash'})
+    authenticator = MockPAMAuthenticator(blocked_users={'wash'})
     authorized = await authenticator.get_authenticated_user(
         None, {'username': 'wash', 'password': 'wash'}
     )
     assert authorized is None
 
-    # User in both white and blacklists: default deny.  Make error someday?
+    # User in both allowed and blocked: default deny.  Make error someday?
     authenticator = MockPAMAuthenticator(
-        blacklist={'wash'}, whitelist={'wash', 'kaylee'}
+        blocked_users={'wash'}, allowed_users={'wash', 'kaylee'}
     )
     authorized = await authenticator.get_authenticated_user(
         None, {'username': 'wash', 'password': 'wash'}
     )
     assert authorized is None
 
-    # User not in blacklist can log in
+    # User not in blocked set can log in
     authenticator = MockPAMAuthenticator(
-        blacklist={'wash'}, whitelist={'wash', 'kaylee'}
+        blocked_users={'wash'}, allowed_users={'wash', 'kaylee'}
     )
     authorized = await authenticator.get_authenticated_user(
         None, {'username': 'kaylee', 'password': 'kaylee'}
     )
     assert authorized['name'] == 'kaylee'
 
-    # User in whitelist, blacklist irrelevent
+    # User in allowed, blocked irrelevent
     authenticator = MockPAMAuthenticator(
-        blacklist={'mal'}, whitelist={'wash', 'kaylee'}
+        blocked_users={'mal'}, allowed_users={'wash', 'kaylee'}
     )
     authorized = await authenticator.get_authenticated_user(
         None, {'username': 'wash', 'password': 'wash'}
@@ -218,15 +218,16 @@ async def test_pam_auth_blacklist():
 
     # User in neither list
     authenticator = MockPAMAuthenticator(
-        blacklist={'mal'}, whitelist={'wash', 'kaylee'}
+        blocked_users={'mal'}, allowed_users={'wash', 'kaylee'}
     )
     authorized = await authenticator.get_authenticated_user(
         None, {'username': 'simon', 'password': 'simon'}
     )
     assert authorized is None
 
-    # blacklist == {}
-    authenticator = MockPAMAuthenticator(blacklist=set(), whitelist={'wash', 'kaylee'})
+    authenticator = MockPAMAuthenticator(
+        blocked_users=set(), allowed_users={'wash', 'kaylee'}
+    )
     authorized = await authenticator.get_authenticated_user(
         None, {'username': 'kaylee', 'password': 'kaylee'}
     )
@@ -253,7 +254,7 @@ async def test_deprecated_signatures():
 
 
 async def test_pam_auth_no_such_group():
-    authenticator = MockPAMAuthenticator(group_whitelist={'nosuchcrazygroup'})
+    authenticator = MockPAMAuthenticator(allowed_groups={'nosuchcrazygroup'})
     authorized = await authenticator.get_authenticated_user(
         None, {'username': 'kaylee', 'password': 'kaylee'}
     )
@@ -262,7 +263,7 @@ async def test_pam_auth_no_such_group():
 
 async def test_wont_add_system_user():
     user = orm.User(name='lioness4321')
-    authenticator = auth.PAMAuthenticator(whitelist={'mal'})
+    authenticator = auth.PAMAuthenticator(allowed_users={'mal'})
     authenticator.create_system_users = False
     with pytest.raises(KeyError):
         await authenticator.add_user(user)
@@ -270,7 +271,7 @@ async def test_wont_add_system_user():
 
 async def test_cant_add_system_user():
     user = orm.User(name='lioness4321')
-    authenticator = auth.PAMAuthenticator(whitelist={'mal'})
+    authenticator = auth.PAMAuthenticator(allowed_users={'mal'})
     authenticator.add_user_cmd = ['jupyterhub-fake-command']
     authenticator.create_system_users = True
 
@@ -296,7 +297,7 @@ async def test_cant_add_system_user():
 
 async def test_add_system_user():
     user = orm.User(name='lioness4321')
-    authenticator = auth.PAMAuthenticator(whitelist={'mal'})
+    authenticator = auth.PAMAuthenticator(allowed_users={'mal'})
     authenticator.create_system_users = True
     authenticator.add_user_cmd = ['echo', '/home/USERNAME']
 
@@ -317,13 +318,13 @@ async def test_add_system_user():
 
 async def test_delete_user():
     user = orm.User(name='zoe')
-    a = MockPAMAuthenticator(whitelist={'mal'})
+    a = MockPAMAuthenticator(allowed_users={'mal'})
 
-    assert 'zoe' not in a.whitelist
+    assert 'zoe' not in a.allowed_users
     await a.add_user(user)
-    assert 'zoe' in a.whitelist
+    assert 'zoe' in a.allowed_users
     a.delete_user(user)
-    assert 'zoe' not in a.whitelist
+    assert 'zoe' not in a.allowed_users
 
 
 def test_urls():
@@ -461,3 +462,132 @@ async def test_post_auth_hook():
     )
 
     assert authorized['testkey'] == 'testvalue'
+
+
+class MyAuthenticator(auth.Authenticator):
+    def check_whitelist(self, username, authentication=None):
+        return username == "subclass-allowed"
+
+
+def test_deprecated_config(caplog):
+    cfg = Config()
+    cfg.Authenticator.whitelist = {'user'}
+    log = logging.getLogger("testlog")
+    authenticator = auth.Authenticator(config=cfg, log=log)
+    assert caplog.record_tuples == [
+        (
+            log.name,
+            logging.WARNING,
+            'Authenticator.whitelist is deprecated in JupyterHub 1.2, use '
+            'Authenticator.allowed_users instead',
+        )
+    ]
+    assert authenticator.allowed_users == {'user'}
+
+
+def test_deprecated_methods():
+    cfg = Config()
+    cfg.Authenticator.whitelist = {'user'}
+    authenticator = auth.Authenticator(config=cfg)
+
+    assert authenticator.check_allowed("user")
+    with pytest.deprecated_call():
+        assert authenticator.check_whitelist("user")
+    assert not authenticator.check_allowed("otheruser")
+    with pytest.deprecated_call():
+        assert not authenticator.check_whitelist("otheruser")
+
+
+def test_deprecated_config_subclass():
+    cfg = Config()
+    cfg.MyAuthenticator.whitelist = {'user'}
+    with pytest.deprecated_call():
+        authenticator = MyAuthenticator(config=cfg)
+    assert authenticator.allowed_users == {'user'}
+
+
+def test_deprecated_methods_subclass():
+    with pytest.deprecated_call():
+        authenticator = MyAuthenticator()
+
+    assert authenticator.check_allowed("subclass-allowed")
+    assert authenticator.check_whitelist("subclass-allowed")
+    assert not authenticator.check_allowed("otheruser")
+    assert not authenticator.check_whitelist("otheruser")
+
+
+async def test_nullauthenticator(app):
+    with mock.patch.dict(
+        app.tornado_settings, {"authenticator": auth.NullAuthenticator(parent=app)}
+    ):
+        r = await async_requests.get(public_url(app))
+    assert urlparse(r.url).path.endswith("/hub/login")
+    assert r.status_code == 403
+
+
+class MockGroupsAuthenticator(auth.Authenticator):
+    authenticated_groups = Any()
+    refresh_groups = Any()
+
+    manage_groups = True
+
+    def authenticate(self, handler, data):
+        return {
+            "name": data["username"],
+            "groups": self.authenticated_groups,
+        }
+
+    async def refresh_user(self, user, handler):
+        return {
+            "name": user.name,
+            "groups": self.refresh_groups,
+        }
+
+
+@pytest.mark.parametrize(
+    "authenticated_groups, refresh_groups",
+    [
+        (None, None),
+        (["auth1"], None),
+        (None, ["auth1"]),
+        (["auth1"], ["auth1", "auth2"]),
+        (["auth1", "auth2"], ["auth1"]),
+        (["auth1", "auth2"], ["auth3"]),
+        (["auth1", "auth2"], ["auth3"]),
+    ],
+)
+async def test_auth_managed_groups(
+    app, user, group, authenticated_groups, refresh_groups
+):
+
+    authenticator = MockGroupsAuthenticator(
+        parent=app,
+        authenticated_groups=authenticated_groups,
+        refresh_groups=refresh_groups,
+    )
+
+    user.groups.append(group)
+    app.db.commit()
+    before_groups = [group.name]
+    if authenticated_groups is None:
+        expected_authenticated_groups = before_groups
+    else:
+        expected_authenticated_groups = authenticated_groups
+    if refresh_groups is None:
+        expected_refresh_groups = expected_authenticated_groups
+    else:
+        expected_refresh_groups = refresh_groups
+
+    with mock.patch.dict(app.tornado_settings, {"authenticator": authenticator}):
+        cookies = await app.login_user(user.name)
+        assert not app.db.dirty
+        groups = sorted(g.name for g in user.groups)
+        assert groups == expected_authenticated_groups
+
+        # force refresh_user on next request
+        user._auth_refreshed -= 10 + app.authenticator.auth_refresh_age
+        r = await get_page('home', app, cookies=cookies, allow_redirects=False)
+        assert r.status_code == 200
+        assert not app.db.dirty
+        groups = sorted(g.name for g in user.groups)
+        assert groups == expected_refresh_groups
