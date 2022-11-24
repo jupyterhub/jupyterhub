@@ -24,7 +24,7 @@ Hub via the REST API.
 
 ## API Token basics
 
-### Create an API token
+### Step 1: Generate an API token
 
 To run such an external service, an API token must be created and
 provided to the service.
@@ -43,12 +43,12 @@ generating an API token is available from the JupyterHub user interface:
 
 ![API TOKEN success page](../images/token-request-success.png)
 
-### Pass environment variable with token to the Hub
+### Step 2: Pass environment variable with token to the Hub
 
 In the case of `cull_idle_servers`, it is passed as the environment
 variable called `JUPYTERHUB_API_TOKEN`.
 
-### Use API tokens for services and tasks that require external access
+### Step 3: Use API tokens for services and tasks that require external access
 
 While API tokens are often associated with a specific user, API tokens
 can be used by services that require external access for activities
@@ -62,12 +62,12 @@ c.JupyterHub.services = [
 ]
 ```
 
-### Restart JupyterHub
+### Step 4: Restart JupyterHub
 
 Upon restarting JupyterHub, you should see a message like below in the
 logs:
 
-```
+```none
 Adding API token for <username>
 ```
 
@@ -78,16 +78,15 @@ single-user servers, and only cookies can be used for authentication.
 0.8 supports using JupyterHub API tokens to authenticate to single-user
 servers.
 
-## Configure the idle culler to run as a Hub-Managed Service
+## How to configure the idle culler to run as a Hub-Managed Service
 
-Install the idle culler:
+### Step 1: Install the idle culler:
 
 ```
 pip install jupyterhub-idle-culler
 ```
 
-In `jupyterhub_config.py`, add the following dictionary for the
-`idle-culler` Service to the `c.JupyterHub.services` list:
+### Step 2: In `jupyterhub_config.py`, add the following dictionary for the `idle-culler` Service to the `c.JupyterHub.services` list:
 
 ```python
 c.JupyterHub.services = [
@@ -127,7 +126,7 @@ It now needs the scopes:
 - `admin:servers` to start/stop servers
 ```
 
-## Run `cull-idle` manually as a standalone script
+## How to run `cull-idle` manually as a standalone script
 
 Now you can run your script by providing it
 the API token and it will authenticate through the REST API to

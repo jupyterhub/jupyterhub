@@ -1,5 +1,4 @@
 import os
-from os.path import join
 
 from pytablewriter import RstSimpleTableWriter
 from pytablewriter.style import Style

@@ -96,8 +96,8 @@ const EditUser = (props) => {
                                   .then(() => history.push("/"))
                                   .catch(() =>
                                     setErrorAlert(
-                                      `Could not update users list.`
-                                    )
+                                      `Could not update users list.`,
+                                    ),
                                   )
                               : setErrorAlert(`Failed to edit user.`);
                           })
@@ -129,7 +129,7 @@ const EditUser = (props) => {
                       editUser(
                         username,
                         updatedUsername != "" ? updatedUsername : username,
-                        admin
+                        admin,
                       )
                         .then((data) => {
                           data.status < 300
@@ -137,7 +137,7 @@ const EditUser = (props) => {
                                 .then((data) => dispatchPageChange(data, 0))
                                 .then(() => history.push("/"))
                                 .catch(() =>
-                                  setErrorAlert(`Could not update users list.`)
+                                  setErrorAlert(`Could not update users list.`),
                                 )
                             : setErrorAlert(`Failed to edit user.`);
                         })

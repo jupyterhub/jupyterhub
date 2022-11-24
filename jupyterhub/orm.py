@@ -35,7 +35,6 @@ from sqlalchemy.orm import (
     sessionmaker,
 )
 from sqlalchemy.pool import StaticPool
-from sqlalchemy.sql.expression import bindparam
 from sqlalchemy.types import LargeBinary, Text, TypeDecorator
 from tornado.log import app_log
 
@@ -996,7 +995,6 @@ def check_db_revision(engine):
     ).first()[0]
     if alembic_revision == head:
         app_log.debug("database schema version found: %s", alembic_revision)
-        pass
     else:
         raise DatabaseSchemaMismatch(
             "Found database schema version {found} != {head}. "

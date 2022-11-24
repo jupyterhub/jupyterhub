@@ -1,6 +1,6 @@
 # Configuration Basics
 
-The section contains basic information about configuring settings for a JupyterHub
+This section contains basic information about configuring settings for a JupyterHub
 deployment. The [Technical Reference](../reference/index)
 documentation provides additional details.
 
@@ -49,7 +49,7 @@ that Jupyter uses.
 
 ## Configure using command line options
 
-To display all command line options that are available for configuration:
+To display all command line options that are available for configuration run the following command:
 
 ```bash
     jupyterhub --help-all
@@ -77,11 +77,11 @@ jupyterhub --Spawner.notebook_dir='~/assignments'
 ## Configure for various deployment environments
 
 The default authentication and process spawning mechanisms can be replaced, and
-specific [authenticators](./authenticators-users-basics) and
-[spawners](./spawners-basics) can be set in the configuration file.
+specific [authenticators](authenticators-users-basics) and
+[spawners](spawners-basics) can be set in the configuration file.
 This enables JupyterHub to be used with a variety of authentication methods or
 process control and deployment environments. [Some examples](../reference/config-examples),
-meant as illustration, are:
+meant as illustrations, are:
 
 - Using GitHub OAuth instead of PAM with [OAuthenticator](https://github.com/jupyterhub/oauthenticator)
 - Spawning single-user servers with Docker, using the [DockerSpawner](https://github.com/jupyterhub/dockerspawner)
