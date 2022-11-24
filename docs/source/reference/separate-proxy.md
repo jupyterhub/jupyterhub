@@ -13,8 +13,8 @@ because the proxy is automatically managed by the hub. This is great
 for getting started and even most use-cases, although, everytime you restart the
 hub, all user connections are also restarted. However, it is also simple to
 run the proxy as a service separate from the hub, so that you are free
-to reconfigure the hub while only interrupting users who are currently
-actively starting the hub.
+to reconfigure the hub while only interrupting users who are waiting for their notebook server to start.
+starting their notebook server.
 
 The default JupyterHub proxy is
 [configurable-http-proxy](https://github.com/jupyterhub/configurable-http-proxy). If you are using a different proxy, such

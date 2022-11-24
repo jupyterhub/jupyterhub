@@ -69,7 +69,8 @@ Cmnd_Alias JUPYTER_CMD = /usr/local/bin/sudospawner
 rhea ALL=(JUPYTER_USERS) NOPASSWD:JUPYTER_CMD
 ```
 
-It might be useful to modify `secure_path` to add commands in path.
+It might be useful to modify `secure_path` to add commands in path. (Search for
+`secure_path` in the [sudo docs](https://www.sudo.ws/man/1.8.14/sudoers.man.html)
 
 As an alternative to adding every user to the `/etc/sudoers` file, you can
 use a group in the last line above, instead of `JUPYTER_USERS`:
@@ -158,6 +159,7 @@ sudo setcap 'cap_net_bind_service=+ep' /usr/bin/node
 ```
 
 However, you may want to further understand the consequences of this.
+([Further reading](http://man7.org/linux/man-pages/man7/capabilities.7.html))
 
 You may also be interested in limiting the amount of CPU any process can use
 on your server. `cpulimit` is a useful tool that is available for many Linux
@@ -167,7 +169,8 @@ instructions](http://ubuntuforums.org/showthread.php?t=992706).
 
 ### Shadow group (FreeBSD)
 
-**NOTE:** This has not been tested and may not work as expected.
+**NOTE:** This has not been tested on FreeBSD and may not work as expected on
+the FreeBSD platform. _Do not use in production without verifying that it works properly!_
 
 ```bash
 $ ls -l /etc/spwd.db /etc/master.passwd
