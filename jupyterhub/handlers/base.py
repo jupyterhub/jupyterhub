@@ -542,8 +542,6 @@ class BaseHandler(RequestHandler):
             '_xsrf',
             **clear_xsrf_cookie_kwargs,
         )
-        # Reset _jupyterhub_user
-        self._jupyterhub_user = None
 
     def _set_cookie(self, key, value, encrypted=True, **overrides):
         """Setting any cookie should go through here
