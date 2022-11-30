@@ -2708,7 +2708,7 @@ class JupyterHub(Application):
             statsd=self.statsd,
             implicit_spawn_seconds=self.implicit_spawn_seconds,
             allow_named_servers=self.allow_named_servers,
-            default_server_name=self._default_server_name,
+            default_server_name=self.default_server_name,
             named_server_limit_per_user=self.named_server_limit_per_user,
             oauth_provider=self.oauth_provider,
             oauth_no_confirm_list=oauth_no_confirm_list,
