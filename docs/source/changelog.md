@@ -754,6 +754,22 @@ A few fully backward-compatible features have been backported from 2.0.
 
 [ghsa-cw7p-q79f-m2v7]: https://github.com/jupyterhub/jupyterhub/security/advisories/GHSA-cw7p-q79f-m2v7
 
+### 1.5.1 2022-12-05
+
+This is a patch release, improving db resiliency when certain errors occur, without requiring a jupyterhub restart.
+
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/1.5.0...1.5.1))
+
+#### Merged PRs
+
+- Backport db rollback fixes to 1.x [#4076](https://github.com/jupyterhub/jupyterhub/pull/4076) ([@mriedem](https://github.com/mriedem), [@minrk](https://github.com/minrk)), [@nsshah1288](https://github.com/nsshah1288)
+
+#### Contributors to this release
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2022-09-09&to=2022-11-30&type=c))
+
+[@mriedem](https://github.com/mriedem) | [@minrk](https://github.com/minrk) | [@nsshah1288](https://github.com/nsshah1288)
+
 ### [1.5.0] 2021-11-04
 
 ([full changelog](https://github.com/jupyterhub/jupyterhub/compare/1.4.2...1.5.0))
