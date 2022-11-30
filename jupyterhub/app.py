@@ -1159,7 +1159,7 @@ class JupyterHub(Application):
         Setting this can limit the total resources a user can consume.
 
         If set to 0, no limit is enforced.
-        
+
         Can be an integer or a callable/awaitable based on the handler object:
 
         ::
@@ -1505,13 +1505,20 @@ class JupyterHub(Application):
 
     extra_handlers = List(
         help="""
-        Register extra tornado Handlers for jupyterhub.
+        DEPRECATED.
 
-        Should be of the form ``("<regex>", Handler)``
-
-        The Hub prefix will be added, so `/my-page` will be served at `/hub/my-page`.
+        If you need to register additional HTTP endpoints
+        please use services instead.
         """
     ).tag(config=True)
+
+    @observe("extra_handlers")
+    def _extra_handlers_changed(self, change):
+        if change.new:
+            self.log.warning(
+                "JupyterHub.extra_handlers is deprecated in JupyterHub 3.1."
+                " Please use JupyterHub services to register additional HTTP endpoints."
+            )
 
     default_url = Union(
         [Unicode(), Callable()],
