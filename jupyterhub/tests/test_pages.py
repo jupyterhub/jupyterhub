@@ -942,6 +942,14 @@ async def test_auto_login_logout(app):
     logout_url = public_host(app) + app.tornado_settings['logout_url']
     assert r.url == logout_url
     assert r.cookies == {}
+    # don't include logged-out user in page:
+    try:
+        idx = r.text.index(name)
+    except ValueError:
+        # not found, good!
+        pass
+    else:
+        assert name not in r.text[idx - 100 : idx + 100]
 
 
 async def test_logout(app):
