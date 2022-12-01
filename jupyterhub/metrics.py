@@ -56,10 +56,6 @@ ACTIVE_USERS = Gauge(
     ['period'],
 )
 
-MONTHLY_ACTIVE_USERS = Gauge(
-    'jupyterhub_monthly_active_users', 'number of users who were active in the last 30d'
-)
-
 CHECK_ROUTES_DURATION_SECONDS = Histogram(
     'jupyterhub_check_routes_duration_seconds',
     'Time taken to validate all routes in proxy',
