@@ -1180,8 +1180,8 @@ class JupyterHub(Application):
         If named servers are enabled, default name of server to spawn or open
         when no server is specified, e.g. by user-redirect.
 
-        Note: has no effect if named servers are not enabled,
-        and does _not_ change existence or behavior of the 'default' `name=''` server.
+        Note: This has no effect if named servers are not enabled,
+        and does _not_ change the existence or behavior of the default server named `''` (the empty string).
         This only affects which named server is launched when no server is specified,
         e.g. by links to `/hub/user-redirect/lab/tree/mynotebook.ipynb`.
         """,
