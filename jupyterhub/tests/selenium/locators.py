@@ -97,7 +97,8 @@ class TokenPageLocators:
         '1 Week': '604800',
         'Never': '',
     }
-    """displayed option :the value in sec"""
+    """'1 Hour': '3600','1 Day': '86400','1 Week': '604800','Never': ''
+    displayed options: the values in sec"""
 
     NEVER_EXP = (By.XPATH, '//*[@id="token-expiration-seconds"]/option[4]')
     HOUR1 = (By.CSS_SELECTOR, "option[value='3600']")

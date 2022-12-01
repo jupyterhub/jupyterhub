@@ -4,7 +4,7 @@ from selenium.webdriver.firefox.options import Options as FirefoxOptions
 
 
 @pytest.fixture()
-def browser():
+def browser(cleanup_after):
     options = webdriver.FirefoxOptions()
     options.headless = True
     driver = webdriver.Firefox(options=options)
