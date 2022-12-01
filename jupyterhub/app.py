@@ -1176,7 +1176,15 @@ class JupyterHub(Application):
 
     default_server_name = Unicode(
         "",
-        help="If named servers are enabled, default name of server to spawn or open, e.g. by user-redirect.",
+        help="""
+        If named servers are enabled, default name of server to spawn or open
+        when no server is specified, e.g. by user-redirect.
+
+        Note: This has no effect if named servers are not enabled,
+        and does _not_ change the existence or behavior of the default server named `''` (the empty string).
+        This only affects which named server is launched when no server is specified,
+        e.g. by links to `/hub/user-redirect/lab/tree/mynotebook.ipynb`.
+        """,
     ).tag(config=True)
     # Ensure that default_server_name doesn't do anything if named servers aren't allowed
     _default_server_name = Unicode(
@@ -1188,6 +1196,11 @@ class JupyterHub(Application):
         if self.allow_named_servers:
             return self.default_server_name
         else:
+            if self.default_server_name:
+                self.log.warning(
+                    f"Ignoring `JupyterHub.default_server_name = {self.default_server_name!r}` config"
+                    " without `JupyterHub.allow_named_servers = True`."
+                )
             return ""
 
     # class for spawning single-user servers
