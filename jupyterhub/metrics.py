@@ -19,7 +19,7 @@ them manually here.
 
     added ``jupyterhub_`` prefix to metric names.
 """
-from datetime import datetime, timedelta
+from datetime import timedelta
 from enum import Enum
 
 from prometheus_client import Gauge, Histogram
@@ -28,6 +28,7 @@ from traitlets import Any, Bool, Integer
 from traitlets.config import LoggingConfigurable
 
 from . import orm
+from .utils import utcnow
 
 REQUEST_DURATION_SECONDS = Histogram(
     'jupyterhub_request_duration_seconds',
@@ -265,7 +266,7 @@ class PeriodicMetricsCollector(LoggingConfigurable):
         # All the metrics should be based off a cutoff from a *fixed* point, so we calculate
         # the fixed point here - and then calculate the individual cutoffs in relation to this
         # fixed point.
-        now = datetime.utcnow()
+        now = utcnow()
         cutoffs = {
             ActiveUserPeriods.twenty_four_hours: now - timedelta(hours=24),
             ActiveUserPeriods.seven_days: now - timedelta(days=7),
