@@ -234,21 +234,21 @@ class PeriodicMetricsCollector(LoggingConfigurable):
     Collect metrics to be calculated periodically
     """
 
-    active_users_metrics_enabled = Bool(
+    active_users_enabled = Bool(
         True,
         help="""
-        Enable active_users prometheus metric
+        Enable active_users prometheus metric.
 
-        Populates an `active_users` prometheus metric, with a label `period` that counts the time period
-        over which these many users were active. Defaults to 24h (24 hours), 7d (7 days) and 30d (30 days).
+        Populates a `jupyterhub_active_users` prometheus metric, with a label `period` that counts the time period
+        over which these many users were active. Periods are 24h (24 hours), 7d (7 days) and 30d (30 days).
         """,
         config=True,
     )
 
-    active_users_metrics_update_period = Integer(
+    active_users_update_interval = Integer(
         60 * 60,
         help="""
-        Number of seconds between updating active_users.
+        Number of seconds between updating active_users metrics.
 
         To avoid extra load on the database, this is only calculated periodically rather than
         at per-minute intervals. Defaults to once an hour.
@@ -256,12 +256,10 @@ class PeriodicMetricsCollector(LoggingConfigurable):
         config=True,
     )
 
-    db = Any(help="SQLAlchemy db to use for performing queries")
+    db = Any(help="SQLAlchemy db session to use for performing queries")
 
-    def update(self):
-        """
-        Update all these metrics!
-        """
+    def update_active_users(self):
+        """Update active users metrics."""
 
         # All the metrics should be based off a cutoff from a *fixed* point, so we calculate
         # the fixed point here - and then calculate the individual cutoffs in relation to this
@@ -284,12 +282,14 @@ class PeriodicMetricsCollector(LoggingConfigurable):
         """
         Start the periodic update process
         """
-        if self.active_users_metrics_enabled:
+        if self.active_users_enabled:
             # Setup periodic refresh of the metric
             pc = PeriodicCallback(
-                self.update, self.active_users_metrics_update_period * 1000, jitter=0.01
+                self.update_active_users,
+                self.active_users_update_interval * 1000,
+                jitter=0.01,
             )
             pc.start()
 
             # Update the metrics once on startup too
-            self.update()
+            self.update_active_users()

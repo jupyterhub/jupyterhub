@@ -80,7 +80,7 @@ async def test_metrics_auth(
 async def test_active_users(app):
     db = app.db
     collector = metrics.PeriodicMetricsCollector(db=db)
-    collector.update()
+    collector.update_active_users()
     now = utcnow()
 
     def collect():
@@ -123,7 +123,7 @@ async def test_active_users(app):
         assert counts[period] == baseline[period]
 
     # collect after updates, check updated counts
-    collector.update()
+    collector.update_active_users()
     counts = collect()
     assert (
         counts[metrics.ActiveUserPeriods.twenty_four_hours]
