@@ -35,7 +35,9 @@ def generate_old_db(env_dir, hub_version, db_url):
     check_call([env_py, populate_db, db_url])
 
 
-@pytest.mark.parametrize('hub_version', ['1.0.0', "1.2.2", "1.3.0", "1.5.0", "2.1.1"])
+# changes to this version list must also be reflected
+# in ci/init-db.sh
+@pytest.mark.parametrize('hub_version', ["1.1.0", "1.2.2", "1.3.0", "1.5.0", "2.1.1"])
 async def test_upgrade(tmpdir, hub_version):
     db_url = os.getenv('JUPYTERHUB_TEST_DB_URL')
     if db_url:
