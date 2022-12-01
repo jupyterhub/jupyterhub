@@ -74,6 +74,7 @@ from .metrics import (
     INIT_SPAWNERS_DURATION_SECONDS,
     RUNNING_SERVERS,
     TOTAL_USERS,
+    PeriodicMetricsCollector,
 )
 from .oauth.provider import make_provider
 from .objects import Hub, Server
@@ -2914,6 +2915,8 @@ class JupyterHub(Application):
                 await self.proxy.check_routes(self.users, self._service_map)
 
             asyncio.ensure_future(finish_init_spawners())
+        metrics_updater = PeriodicMetricsCollector(parent=self, db=self.db)
+        metrics_updater.start()
 
     async def cleanup(self):
         """Shutdown managed services and various subprocesses. Cleanup runtime files."""
