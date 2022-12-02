@@ -297,7 +297,7 @@ Additional variables can be specified via the `Spawner.environment` configuratio
 
 The process environment is returned by `Spawner.get_env`, which specifies the following environment variables:
 
-- JUPYTERHUB*SERVICE_URL - the \_bind* URL where the server should launch its HTTP server (`http://127.0.0.1:12345`).
+- JUPYTERHUB_SERVICE_URL - the \_bind* URL where the server should launch its HTTP server (`http://127.0.0.1:12345`).
   This includes `Spawner.ip` and `Spawner.port`; _new in 2.0, prior to 2.0 IP, port were on the command-line and only if specified_
 - JUPYTERHUB_SERVICE_PREFIX - the URL prefix the service will run on (e.g. `/user/name/`)
 - JUPYTERHUB_USER - the JupyterHub user's username
@@ -315,7 +315,7 @@ The process environment is returned by `Spawner.get_env`, which specifies the fo
 
 Optional environment variables, depending on configuration:
 
-- JUPYTERHUB*SSL*[KEYFILE|CERTFILE|CLIENT_CI] - SSL configuration, when `internal_ssl` is enabled
+- JUPYTERHUB_SSL_[KEYFILE|CERTFILE|CLIENT_CI] - SSL configuration, when `internal_ssl` is enabled
 - JUPYTERHUB_ROOT_DIR - the root directory of the server (notebook directory), when `Spawner.notebook_dir` is defined (new in 2.0)
 - JUPYTERHUB_DEFAULT_URL - the default URL for the server (for redirects from `/user/:name/`),
   if `Spawner.default_url` is defined
@@ -326,7 +326,7 @@ Optional environment variables, depending on configuration:
   sets maximum log level when `Spawner.debug` is True (new in 2.0,
   previously passed via CLI)
 
-- JUPYTERHUB*[MEM|CPU]*[LIMIT_GUARANTEE] - the values of CPU and memory limits and guarantees.
+- JUPYTERHUB_[MEM|CPU]_[LIMIT_GUARANTEE] - the values of CPU and memory limits and guarantees.
   These are not expected to be enforced by the process,
   but are made available as a hint,
   e.g. for resource monitoring extensions.
