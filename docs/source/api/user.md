@@ -18,3 +18,4 @@
 ```{eval-rst}
 .. autoclass:: User
    :members:
+```
