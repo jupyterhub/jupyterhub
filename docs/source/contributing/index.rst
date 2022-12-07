@@ -18,4 +18,5 @@ helps keep our community welcoming to as many people as possible.
    docs
    tests
    roadmap
+   layout
    security

@@ -35,7 +35,7 @@ is_repo = os.path.exists(pjoin(here, '.git'))
 
 
 def get_data_files():
-    """Get data files in share/jupyter"""
+    """Get data files in share/jupyterhub"""
 
     data_files = []
     for (d, dirs, filenames) in os.walk(share_jupyterhub):

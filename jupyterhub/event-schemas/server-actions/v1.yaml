@@ -32,7 +32,7 @@ properties:
 
       This is a required field.
 
-      Possibl Values:
+      Possible Values:
 
       1. start
          A user's server was successfully started
