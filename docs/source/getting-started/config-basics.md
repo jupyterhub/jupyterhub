@@ -11,6 +11,8 @@ This section will help you learn how to:
 - configure JupyterHub using command line options
 - find information and examples for some common deployments
 
+(generate-config-file)=
+
 ## Generate a default config file
 
 On startup, JupyterHub will look by default for a configuration file,

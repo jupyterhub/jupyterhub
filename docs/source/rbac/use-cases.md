@@ -3,7 +3,7 @@
 To determine which scopes a role should have, one can follow these steps:
 
 1. Determine what actions the role holder should have/have not access to
-2. Match the actions against the [JupyterHub's APIs](../reference/rest-api.rst)
+2. Match the actions against the [JupyterHub's APIs](../reference/rest-api.md)
 3. Check which scopes are required to access the APIs
 4. Combine scopes and subscopes if applicable
 5. Customize the scopes with filters if needed

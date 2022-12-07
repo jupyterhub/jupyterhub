@@ -2,7 +2,7 @@
 
 A scope has a syntax-based design that reveals which resources it provides access to. Resources are objects with a type, associated data, relationships to other resources, and a set of methods that operate on them (see [RESTful API](https://restful-api-design.readthedocs.io/en/latest/resources.html) documentation for more information).
 
-`<resource>` in the RBAC scope design refers to the resource name in the [JupyterHub's API](../reference/rest-api.rst) endpoints in most cases. For instance, `<resource>` equal to `users` corresponds to JupyterHub's API endpoints beginning with _/users_.
+`<resource>` in the RBAC scope design refers to the resource name in the [JupyterHub's API](../reference/rest-api.md) endpoints in most cases. For instance, `<resource>` equal to `users` corresponds to JupyterHub's API endpoints beginning with _/users_.
 
 (scope-conventions-target)=
 
@@ -298,6 +298,6 @@ Custom scope _filters_ are NOT supported.
 
 ### Scopes and APIs
 
-The scopes are also listed in the [](../reference/rest-api.rst) documentation. Each API endpoint has a list of scopes which can be used to access the API; if no scopes are listed, the API is not authenticated and can be accessed without any permissions (i.e., no scopes).
+The scopes are also listed in the [](../reference/rest-api.md) documentation. Each API endpoint has a list of scopes which can be used to access the API; if no scopes are listed, the API is not authenticated and can be accessed without any permissions (i.e., no scopes).
 
 Listed scopes by each API endpoint reflect the "lowest" permissions required to gain any access to the corresponding API. For example, posting user's activity (_POST /users/:name/activity_) needs `users:activity` scope. If scope `users` is passed during the request, the access will be granted as the required scope is a subscope of the `users` scope. If, on the other hand, `read:users:activity` scope is passed, the access will be denied.
