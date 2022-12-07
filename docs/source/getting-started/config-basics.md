@@ -46,7 +46,7 @@ jupyterhub -f /etc/jupyterhub/jupyterhub_config.py
 ```
 
 The IPython documentation provides additional information on the
-[config system](http://ipython.readthedocs.io/en/stable/development/config.html)
+[config system](https://ipython.readthedocs.io/en/stable/development/config.html)
 that Jupyter uses.
 
 ## Configure using command line options

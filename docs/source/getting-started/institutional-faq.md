@@ -132,7 +132,7 @@ users.
 - For security considerations in the base JupyterHub application,
   [see the JupyterHub security page](https://jupyterhub.readthedocs.io/en/stable/reference/websecurity.html).
 - For security considerations when deploying JupyterHub on Kubernetes, see the
-  [JupyterHub on Kubernetes security page](https://zero-to-jupyterhub.readthedocs.io/en/latest/security.html).
+  [JupyterHub on Kubernetes security page](https://z2jh.jupyter.org/en/latest/security.html).
 
 The longer answer: it depends on your deployment. Because JupyterHub is very flexible, it can be used
 in a variety of deployment setups. This often entails connecting your JupyterHub to **other** infrastructure

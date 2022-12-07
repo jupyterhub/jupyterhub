@@ -68,7 +68,7 @@ but which are **less predictable**.
 
 [the-littlest-jupyterhub]: https://the-littlest-jupyterhub.readthedocs.io
 
-[zero-to-jupyterhub]: https://zero-to-jupyterhub.readthedocs.io
+[zero-to-jupyterhub]: https://z2jh.jupyter.org
 
 (limits-requests)=
 
@@ -299,10 +299,10 @@ There are lots of other resources for cost and capacity planning that may be spe
 
 Here are some useful links to other resources
 
-- [Zero to JupyterHub](https://zero-to-jupyterhub.readthedocs.io) documentation on
-  - [projecting costs](https://zero-to-jupyterhub.readthedocs.io/en/latest/administrator/cost.html)
-  - [configuring user resources](https://zero-to-jupyterhub.readthedocs.io/en/latest/jupyterhub/customizing/user-resources.html)
+- [Zero to JupyterHub](https://z2jh.jupyter.org) documentation on
+  - [projecting costs](https://z2jh.jupyter.org/en/latest/administrator/cost.html)
+  - [configuring user resources](https://z2jh.jupyter.org/en/latest/jupyterhub/customizing/user-resources.html)
 - Cloud platform cost calculators:
   - [Google Cloud](https://cloud.google.com/products/calculator/)
-  - [Amazon AWS](https://calculator.s3.amazonaws.com)
+  - [Amazon AWS](https://calculator.aws)
   - [Microsoft Azure](https://azure.microsoft.com/en-us/pricing/calculator/)

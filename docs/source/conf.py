@@ -188,12 +188,12 @@ linkcheck_ignore = [
     r"https://github.com/[^/]*$",  # too many github usernames / searches in changelog
     "https://github.com/jupyterhub/jupyterhub/pull/",  # too many PRs in changelog
     "https://github.com/jupyterhub/jupyterhub/compare/",  # too many comparisons in changelog
+    r"https?://(localhost|127.0.0.1).*",  # ignore localhost references in auto-links
 ]
 linkcheck_anchors_ignore = [
     "/#!",
     "/#%21",
 ]
-
 
 # -- Intersphinx -------------------------------------------------------------
 # ref: https://www.sphinx-doc.org/en/master/usage/extensions/intersphinx.html#configuration

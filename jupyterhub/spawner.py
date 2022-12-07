@@ -1118,7 +1118,7 @@ class Spawner(LoggingConfigurable):
     ssl_alt_names_include_local = Bool(
         True,
         config=True,
-        help="""Whether to include DNS:localhost, IP:127.0.0.1 in alt names""",
+        help="""Whether to include `DNS:localhost`, `IP:127.0.0.1` in alt names""",
     )
 
     async def create_certs(self):

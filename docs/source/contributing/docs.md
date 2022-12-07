@@ -7,7 +7,7 @@ you get set up on how to contribute to JupyterHub's documentation.
 
 ## Building documentation locally
 
-We use [sphinx](http://sphinx-doc.org) to build our documentation. It takes
+We use [sphinx](https://www.sphinx-doc.org) to build our documentation. It takes
 our documentation source files (written in [markdown](https://daringfireball.net/projects/markdown/) or [reStructuredText](https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html) &
 stored under the `docs/source` directory) and converts it into various
 formats for people to read. To make sure the documentation you write or

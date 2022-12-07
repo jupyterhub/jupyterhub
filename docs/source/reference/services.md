@@ -405,7 +405,7 @@ and an example of its configuration is found [here](https://github.com/jupyter/n
 nbviewer can also be run as a Hub-Managed Service as described [nbviewer README][nbviewer example]
 section on securing the notebook viewer.
 
-[requests]: http://docs.python-requests.org/en/master/
+[requests]: https://docs.python-requests.org/en/master/
 [services_auth]: ../api/services.auth.html
 [nbviewer example]: https://github.com/jupyter/nbviewer#securing-the-notebook-viewer
 [fastapi example]: https://github.com/jupyterhub/jupyterhub/tree/HEAD/examples/service-fastapi
