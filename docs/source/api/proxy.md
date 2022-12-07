@@ -1,22 +1,25 @@
-=======
-Proxies
-=======
+# Proxies
 
-Module: :mod:`jupyterhub.proxy`
-===============================
+## Module: {mod}`jupyterhub.proxy`
 
+```{eval-rst}
 .. automodule:: jupyterhub.proxy
+```
 
+```{eval-rst}
 .. currentmodule:: jupyterhub.proxy
+```
 
-:class:`Proxy`
---------------
+### {class}`Proxy`
 
+```{eval-rst}
 .. autoconfigurable:: Proxy
     :members:
+```
 
-:class:`ConfigurableHTTPProxy`
-------------------------------
+### {class}`ConfigurableHTTPProxy`
 
+```{eval-rst}
 .. autoconfigurable:: ConfigurableHTTPProxy
     :members: debug, auth_token, check_running_interval, api_url, command
+```

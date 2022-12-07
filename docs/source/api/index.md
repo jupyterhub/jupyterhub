@@ -1,14 +1,14 @@
-.. _api-index:
+---
+Date: "{{ today }}"
+Release: "{{ release }}"
+---
 
-##############
-JupyterHub API
-##############
+(api-index)=
 
-:Release: |release|
-:Date: |today|
+# JupyterHub API
 
 JupyterHub also provides a REST API for administration of the Hub and users.
-The documentation on `Using JupyterHub's REST API <../reference/rest.html>`_ provides
+The documentation on [Using JupyterHub's REST API](../reference/rest.html) provides
 information on:
 
 - what you can do with the API
@@ -19,15 +19,14 @@ information on:
 
 JupyterHub API Reference:
 
-.. toctree::
+```{toctree}
+app
+auth
+spawner
+proxy
+user
+service
+services.auth
+```
 
-    app
-    auth
-    spawner
-    proxy
-    user
-    service
-    services.auth
-
-
-.. _OpenAPI Initiative: https://www.openapis.org/
+[openapi initiative]: https://www.openapis.org/

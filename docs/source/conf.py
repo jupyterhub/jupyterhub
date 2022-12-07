@@ -39,7 +39,7 @@ extensions = [
     "myst_parser",
 ]
 root_doc = "index"
-source_suffix = [".md", ".rst"]
+source_suffix = [".md"]
 # default_role let's use use `foo` instead of ``foo`` in rST
 default_role = "literal"
 
