@@ -31,10 +31,12 @@
 
 ```{eval-rst}
 .. autoclass:: HubOAuthenticated
+   :members:
 ```
 
 ### {class}`HubOAuthCallbackHandler`
 
 ```{eval-rst}
 .. autoclass:: HubOAuthCallbackHandler
+   :members:
 ```
