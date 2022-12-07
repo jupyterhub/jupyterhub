@@ -14,8 +14,7 @@ development.
 JupyterHub is written in the [Python](https://python.org) programming language and
 requires you have at least version 3.6 installed locally. If you haven’t
 installed Python before, the recommended way to install it is to use
-[Miniconda](https://conda.io/miniconda.html). Remember to get the ‘Python 3’ version,
-and **not** the ‘Python 2’ version!
+[Miniforge](https://github.com/conda-forge/miniforge#download).
 
 ### Install nodejs
 

@@ -16,7 +16,7 @@ minor Windows compatibility issues (such as basic installation) **may** be accep
 however. For Windows-based systems, we would recommend running JupyterHub in a
 docker container or Linux VM.
 
-[Additional Reference:](http://www.tornadoweb.org/en/stable/#installation)
+[Additional Reference:](https://www.tornadoweb.org/en/stable/#installation)
 Tornado's documentation on Windows platform support
 
 ## Planning your installation
@@ -28,7 +28,7 @@ Prior to beginning installation, it's helpful to consider some of the following:
 - Spawner of singleuser notebook servers (Docker, Batch, etc.)
 - Services (nbgrader, etc.)
 - JupyterHub database (default SQLite; traditional RDBMS such as PostgreSQL,)
-  MySQL, or other databases supported by [SQLAlchemy](http://www.sqlalchemy.org))
+  MySQL, or other databases supported by [SQLAlchemy](https://www.sqlalchemy.org))
 
 ## Folders and File Locations
 

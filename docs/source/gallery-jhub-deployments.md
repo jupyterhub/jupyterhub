@@ -20,13 +20,13 @@ Please submit pull requests to update information or to add new institutions or 
 
   - [GitHub organization](https://github.com/data-8)
 
-- [NERSC](http://www.nersc.gov/)
+- [NERSC](https://www.nersc.gov/)
 
-  - [Press release on Jupyter and Cori](http://www.nersc.gov/news-publications/nersc-news/nersc-center-news/2016/jupyter-notebooks-will-open-up-new-possibilities-on-nerscs-cori-supercomputer/)
+  - [Press release on Jupyter and Cori](https://www.nersc.gov/news-publications/nersc-news/nersc-center-news/2016/jupyter-notebooks-will-open-up-new-possibilities-on-nerscs-cori-supercomputer/)
   - [Moving and sharing data](https://www.nersc.gov/assets/Uploads/03-MovingAndSharingData-Cholia.pdf)
 
-- [Research IT](http://research-it.berkeley.edu)
-  - [JupyterHub server supports campus research computation](http://research-it.berkeley.edu/blog/17/01/24/free-fully-loaded-jupyterhub-server-supports-campus-research-computation)
+- [Research IT](https://research-it.berkeley.edu)
+  - [JupyterHub server supports campus research computation](https://research-it.berkeley.edu/blog/17/01/24/free-fully-loaded-jupyterhub-server-supports-campus-research-computation)
 
 ### University of California Davis
 
@@ -71,25 +71,21 @@ easy to do with RStudio too.
 ### Clemson University
 
 - Advanced Computing
-  - [Palmetto cluster and JupyterHub](http://citi.sites.clemson.edu/2016/08/18/JupyterHub-for-Palmetto-Cluster.html)
+  - [Palmetto cluster and JupyterHub](https://citi.sites.clemson.edu/2016/08/18/JupyterHub-for-Palmetto-Cluster.html)
 
 ### University of Colorado Boulder
 
 - (CU Research Computing) CURC
 
-  - [JupyterHub User Guide](https://www.rc.colorado.edu/support/user-guide/jupyterhub.html)
+  - [JupyterHub User Guide](https://curc.readthedocs.io/en/latest/gateways/jupyterhub.html)
     - Slurm job dispatched on Crestone compute cluster
     - log troubleshooting
     - Profiles in IPython Clusters tab
-  - [Parallel Processing with JupyterHub tutorial](https://www.rc.colorado.edu/support/examples-and-tutorials/parallel-processing-with-jupyterhub.html)
-  - [Parallel Programming with JupyterHub document](https://www.rc.colorado.edu/book/export/html/833)
-
-- Earth Lab at CU
-  - [Tutorial on Parallel R on JupyterHub](https://earthdatascience.org/tutorials/parallel-r-on-jupyterhub/)
+  - [Parallel Processing with JupyterHub tutorial](https://curc.readthedocs.io/en/latest/gateways/parallel-programming-jupyter.html)
 
 ### George Washington University
 
-- [Jupyter Hub](http://go.gwu.edu/jupyter) with university single-sign-on. Deployed early 2017.
+- [JupyterHub](https://go.gwu.edu/jupyter) with university single-sign-on. Deployed early 2017.
 
 ### HTCondor
 
@@ -101,7 +97,7 @@ easy to do with RStudio too.
 
 ### IllustrisTNG Simulation Project
 
-- [JupyterHub/Lab-based analysis platform, part of the TNG public data release](http://www.tng-project.org/data/)
+- [JupyterHub/Lab-based analysis platform, part of the TNG public data release](https://www.tng-project.org/data/)
 
 ### MIT and Lincoln Labs
 
@@ -121,16 +117,12 @@ easy to do with RStudio too.
 
 ### Paderborn University
 
-- [Data Science (DICE) group](https://dice.cs.uni-paderborn.de/)
+- [Data Science (DICE) group](https://dice-research.org)
   - [nbgraderutils](https://github.com/dice-group/nbgraderutils): Use JupyterHub + nbgrader + iJava kernel for online Java exercises. Used in lecture Statistical Natural Language Processing.
 
 ### Penn State University
 
 - [Press release](https://news.psu.edu/story/523093/2018/05/24/new-open-source-web-apps-available-students-and-faculty): "New open-source web apps available for students and faculty"
-
-### University of Rochester CIRC
-
-- [JupyterHub Userguide](https://info.circ.rochester.edu/Web_Applications/JupyterHub.html) - Slurm, beehive
 
 ### University of California San Diego
 
@@ -144,7 +136,7 @@ easy to do with RStudio too.
   - [Sample deployment of Jupyterhub in HPC on SDSC Comet](https://zonca.github.io/2017/02/sample-deployment-jupyterhub-hpc.html)
 
 - Educational Technology Services - Paul Jamason
-  - [jupyterhub.ucsd.edu](https://jupyterhub.ucsd.edu)
+  - [datahub.ucsd.edu](https://datahub.ucsd.edu)
 
 ### TACC University of Texas
 
@@ -180,7 +172,7 @@ easy to do with RStudio too.
 ### Rackspace Carina
 
 - https://getcarina.com/blog/learning-how-to-whale/
-- http://carolynvanslyck.com/talk/carina/jupyterhub/#/ (but carolynvanslyck is currently down; checked 10/26/22)
+- https://carolynvanslyck.com/talk/carina/jupyterhub/#/ (but carolynvanslyck is currently down; checked 10/26/22)
 
 ### Hadoop
 
@@ -189,12 +181,12 @@ easy to do with RStudio too.
 ## Miscellaneous
 
 - https://medium.com/@ybarraud/setting-up-jupyterhub-with-sudospawner-and-anaconda-844628c0dbee#.rm3yt87e1
-- [Mailing list UT deployment](https://groups.google.com/forum/#!topic/jupyter/nkPSEeMr8c0)
+- [Mailing list UT deployment](https://groups.google.com/g/jupyter/c/nkPSEeMr8c0)
 - [JupyterHub setup on Centos](https://gist.github.com/johnrc/604971f7d41ebf12370bf5729bf3e0a4)
-- [Deploy JupyterHub to Docker Swarm](https://jupyterhub.surge.sh/#/welcome)
-- http://www.laketide.com/building-your-lab-part-3/
-- http://estrellita.hatenablog.com/entry/2015/07/31/083202
-- http://www.walkingrandomly.com/?p=5734
+- [Deploy JupyterHub to Docker Swarm](https://jupyterhub.surge.sh)
+- https://www.laketide.com/building-your-lab-part-3/
+- https://estrellita.hatenablog.com/entry/2015/07/31/083202
+- https://www.walkingrandomly.com/?p=5734
 - https://wrdrd.com/docs/consulting/education-technology
 - https://bitbucket.org/jackhale/fenics-jupyter
 - [LinuxCluster blog](https://linuxcluster.wordpress.com/category/application/jupyterhub/)

@@ -99,7 +99,7 @@ Refer to the [pytest fixtures documentation](https://pytest.readthedocs.io/en/la
 
 ### All the tests are failing
 
-Make sure you have completed all the steps in {ref}`contributing/setup` successfully, and are able to access JupyterHub from your browser at <http://localhost:8000> after starting `jupyterhub` in your command line.
+Make sure you have completed all the steps in {ref}`contributing/setup` successfully, and are able to access JupyterHub from your browser at http://localhost:8000 after starting `jupyterhub` in your command line.
 
 ## Code formatting and linting
 

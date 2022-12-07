@@ -62,4 +62,4 @@ The created accounts will be used for authentication in JupyterHub's default
 configuration.
 
 [docker]: https://www.docker.com/
-[zero to jupyterhub]: https://zero-to-jupyterhub.readthedocs.io/en/latest/
+[zero to jupyterhub]: https://z2jh.jupyter.org/en/latest/
