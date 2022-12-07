@@ -2,10 +2,12 @@
 
 # JupyterHub API
 
-```{eval-rst}
-:Date: |today|
-:Release: |release|
-```
+<!--
+    Below is a MyST field list, using MyST substitution, as supported
+    by enabling the respective MyST extensions in docs/source/conf.py.
+-->
+:Date: {{ date }}
+:Release: {{ version }}
 
 JupyterHub also provides a REST API for administration of the Hub and users.
 The documentation on [Using JupyterHub's REST API](../reference/rest.md) provides
