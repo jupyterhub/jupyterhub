@@ -1,14 +1,14 @@
----
-Date: "{{ today }}"
-Release: "{{ release }}"
----
-
 (api-index)=
 
 # JupyterHub API
 
+```{eval-rst}
+:Date: |today|
+:Release: |release|
+```
+
 JupyterHub also provides a REST API for administration of the Hub and users.
-The documentation on [Using JupyterHub's REST API](../reference/rest.html) provides
+The documentation on [Using JupyterHub's REST API](../reference/rest.md) provides
 information on:
 
 - what you can do with the API

@@ -7,7 +7,7 @@ installation version, as the output of this command may change between versions.
 
 ## JupyterHub configuration
 
-As explained in the [Configuration Basics](../getting-started/config-basics.html#generate-a-default-config-file)
+As explained in the [Configuration Basics](generate-config-file)
 section, the `jupyterhub_config.py` can be automatically generated via
 
 > ```bash

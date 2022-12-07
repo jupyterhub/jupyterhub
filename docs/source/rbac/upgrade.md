@@ -11,7 +11,7 @@ No other database records are affected.
 ## Upgrade steps
 
 1. All running **servers must be stopped** before proceeding with the upgrade.
-2. To upgrade the Hub, follow the [Upgrading JupyterHub](../admin/upgrading.rst) instructions.
+2. To upgrade the Hub, follow the [Upgrading JupyterHub](../admin/upgrading.md) instructions.
    ```{attention}
    We advise against defining any new roles in the `jupyterhub.config.py` file right after the upgrade is completed and JupyterHub restarted for the first time. This preserves the 'current' state of the Hub. You can define and assign new roles on any other following startup.
    ```
@@ -45,7 +45,7 @@ OAuth token is issued by the Hub to a single-user server when the user logs in. 
 
 API token is issued by the Hub to a single-user server when launched and is used to communicate with the Hub's APIs such as posting activity or completing the OAuth flow. This token has no expiry by default.
 
-API tokens can also be issued to users via API ([_/hub/token_](../reference/urls.md) or [_POST /users/:username/tokens_](../reference/rest-api.rst)) and services via `jupyterhub_config.py` to perform API requests.
+API tokens can also be issued to users via API ([_/hub/token_](../reference/urls.md) or [_POST /users/:username/tokens_](../reference/rest-api.md)) and services via `jupyterhub_config.py` to perform API requests.
 
 ### With RBAC
 

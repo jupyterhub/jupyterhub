@@ -34,7 +34,7 @@ The output is a file, `"event.log"`, with events recorded as JSON data.
 ```{toctree}
 :maxdepth: 2
 
-server-actions.rst
+server-actions
 ```
 
 [json schemas]: https://json-schema.org/

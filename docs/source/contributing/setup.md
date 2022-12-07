@@ -1,4 +1,4 @@
-(contributing-setup)=
+(contributing/setup)=
 
 # Setting up a development install
 
