@@ -6,31 +6,25 @@
 .. automodule:: jupyterhub.services.auth
 ```
 
-```{eval-rst}
-.. currentmodule:: jupyterhub.services.auth
-
-```
-
 ### {class}`HubAuth`
 
 ```{eval-rst}
 .. autoconfigurable:: HubAuth
-    :members:
+   :members:
 ```
 
 ### {class}`HubOAuth`
 
 ```{eval-rst}
 .. autoconfigurable:: HubOAuth
-    :members:
-
+   :members:
 ```
 
 ### {class}`HubAuthenticated`
 
 ```{eval-rst}
 .. autoclass:: HubAuthenticated
-    :members:
+   :members:
 ```
 
 ### {class}`HubOAuthenticated`

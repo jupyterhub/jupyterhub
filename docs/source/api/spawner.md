@@ -6,15 +6,11 @@
 .. automodule:: jupyterhub.spawner
 ```
 
-```{eval-rst}
-.. currentmodule:: jupyterhub.spawner
-```
-
 ### {class}`Spawner`
 
 ```{eval-rst}
 .. autoconfigurable:: Spawner
-    :members: options_from_form, poll, start, stop, get_args, get_env, get_state, template_namespace, format_string, create_certs, move_certs
+   :members: options_from_form, poll, start, stop, get_args, get_env, get_state, template_namespace, format_string, create_certs, move_certs
 ```
 
 ### {class}`LocalProcessSpawner`

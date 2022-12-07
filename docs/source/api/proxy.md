@@ -6,20 +6,16 @@
 .. automodule:: jupyterhub.proxy
 ```
 
-```{eval-rst}
-.. currentmodule:: jupyterhub.proxy
-```
-
 ### {class}`Proxy`
 
 ```{eval-rst}
 .. autoconfigurable:: Proxy
-    :members:
+   :members:
 ```
 
 ### {class}`ConfigurableHTTPProxy`
 
 ```{eval-rst}
 .. autoconfigurable:: ConfigurableHTTPProxy
-    :members: debug, auth_token, check_running_interval, api_url, command
+   :members: debug, auth_token, check_running_interval, api_url, command
 ```

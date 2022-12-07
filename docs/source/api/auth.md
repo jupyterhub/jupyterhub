@@ -6,22 +6,18 @@
 .. automodule:: jupyterhub.auth
 ```
 
-```{eval-rst}
-.. currentmodule:: jupyterhub.auth
-```
-
 ### {class}`Authenticator`
 
 ```{eval-rst}
 .. autoconfigurable:: Authenticator
-    :members:
+   :members:
 ```
 
 ### {class}`LocalAuthenticator`
 
 ```{eval-rst}
 .. autoconfigurable:: LocalAuthenticator
-    :members:
+   :members:
 ```
 
 ### {class}`PAMAuthenticator`

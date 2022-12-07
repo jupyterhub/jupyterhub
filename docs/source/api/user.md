@@ -6,34 +6,29 @@
 .. automodule:: jupyterhub.user
 ```
 
-```{eval-rst}
-.. currentmodule:: jupyterhub.user
-```
-
 ### {class}`UserDict`
 
 ```{eval-rst}
 .. autoclass:: UserDict
-    :members:
-
+   :members:
 ```
 
 ### {class}`User`
 
 ```{eval-rst}
 .. autoclass:: User
-    :members: escaped_name
+   :members: escaped_name
 
-    .. attribute:: name
+   .. attribute:: name
 
       The user's name
 
-    .. attribute:: server
+   .. attribute:: server
 
-        The user's Server data object if running, None otherwise.
-        Has ``ip``, ``port`` attributes.
+      The user's Server data object if running, None otherwise.
+      Has ``ip``, ``port`` attributes.
 
-    .. attribute:: spawner
+   .. attribute:: spawner
 
-        The user's :class:`~.Spawner` instance.
+      The user's :class:`~.Spawner` instance.
 ```

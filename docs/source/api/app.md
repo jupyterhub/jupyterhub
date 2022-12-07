@@ -6,10 +6,6 @@
 .. automodule:: jupyterhub.app
 ```
 
-```{eval-rst}
-.. currentmodule:: jupyterhub.app
-```
-
 ### {class}`JupyterHub`
 
 ```{eval-rst}
