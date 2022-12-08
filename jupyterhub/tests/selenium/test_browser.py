@@ -475,9 +475,7 @@ async def open_token_page(app, browser, user):
 
     token_page = url_escape(app.base_url) + "hub/token"
     await open_url(app, browser, path="/login?next=" + token_page)
-    print("login")
     await login(browser, user.name, pass_w=str(user.name))
-    print("logged in")
     await webdriver_wait(browser, EC.url_contains('/hub/token'))
 
 
@@ -659,7 +657,9 @@ async def test_token_request_form_and_panel(app, browser, cleanup_after, user):
         browser.find_element(*TokenPageLocators.INPUT_TOKEN).get_attribute('value')
         == ""
     )
-    await asyncio.sleep(0.01)
+    # need to wait for js events to be registered
+    # before click does the right thing
+    await asyncio.sleep(0.5)
     await click(browser, TokenPageLocators.BUTTON_API_REQ)
     await webdriver_wait(
         browser, EC.visibility_of_element_located(TokenPageLocators.PANEL_AREA)

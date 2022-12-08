@@ -83,7 +83,10 @@ class TokenPageLocators:
 
     # Request the token
     BUTTON_API_REQ_NAME = 'Request new API token'
-    BUTTON_API_REQ = (By.XPATH, '//*[@id="request-token-form"]/div[1]/button')
+    BUTTON_API_REQ = (
+        By.XPATH,
+        '//form[@id="request-token-form"]//button[@type="submit"]',
+    )
     INPUT_TOKEN = (By.ID, "token-note")
     """<input id="token-note" class="form-control" placeholder="note to identify your new token">"""
 
