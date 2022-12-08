@@ -14,6 +14,7 @@ from selenium.common.exceptions import (
 )
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
+
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.select import Select
 from selenium.webdriver.support.ui import WebDriverWait
@@ -117,7 +118,6 @@ def elements_name(browser, by_locator, text):
 
 # LOGIN PAGE
 
-
 async def login(browser, username, pass_w):
     """filling the login form by user and pass_w parameters and iniate the login"""
 
@@ -210,11 +210,12 @@ async def test_open_url_login(
         assert next_url.endswith("spawn?param=value")
         assert f"user/{user.name}/" not in next_url
     else:
-        # u = app.users[orm.User.find(app.db, user)]
-        while not user.spawner.ready:
-            await webdriver_wait(browser, EC.url_changes(next_url))
-        assert f"/{user.name}" in next_url
-        assert f"/{params}" not in next_url
+        if not next_url.endswith(f"/user/{user}/"):
+            await webdriver_wait(
+                browser, EC.url_to_be(ujoin(public_url(app), f"/user/{user}/"))
+            )
+            next_url = browser.current_url
+        assert next_url.endswith(f"/user/{user}/")
 
 
 @pytest.mark.parametrize(

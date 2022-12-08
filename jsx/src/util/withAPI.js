@@ -41,10 +41,7 @@ const withAPI = withProps(() => ({
     jhapiRequest("/users/" + username, "GET")
       .then((data) => data.status)
       .then((data) => (data > 200 ? false : true)),
-  // Temporarily Unused
-  failRegexEvent: () => {
-    return null;
-  },
+
   noChangeEvent: () => {
     return null;
   },

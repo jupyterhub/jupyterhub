@@ -67,7 +67,7 @@ c.JupyterHub.services = [
 Upon restarting JupyterHub, you should see a message like below in the
 logs:
 
-```
+```none
 Adding API token for <username>
 ```
 

@@ -170,7 +170,6 @@ EditUser.propTypes = {
   }),
   editUser: PropTypes.func,
   deleteUser: PropTypes.func,
-  failRegexEvent: PropTypes.func,
   noChangeEvent: PropTypes.func,
   updateUsers: PropTypes.func,
 };

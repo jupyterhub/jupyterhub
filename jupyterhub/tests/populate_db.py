@@ -4,7 +4,6 @@ Run with old versions of jupyterhub to test upgrade/downgrade
 
 used in test_db.py
 """
-import os
 from datetime import datetime
 from functools import partial
 

@@ -250,14 +250,12 @@ class Proxy(LoggingConfigurable):
         The proxy implementation should also have a way to associate the fact that a
         route came from JupyterHub.
         """
-        pass
 
     async def delete_route(self, routespec):
         """Delete a route with a given routespec if it exists.
 
         **Subclasses must define this method**
         """
-        pass
 
     async def get_all_routes(self):
         """Fetch and return all the routes associated by JupyterHub from the
@@ -274,7 +272,6 @@ class Proxy(LoggingConfigurable):
             'data': the attached data dict for this route (as specified in add_route)
           }
         """
-        pass
 
     async def get_route(self, routespec):
         """Return the route info for a given routespec.
@@ -683,7 +680,6 @@ class ConfigurableHTTPProxy(Proxy):
             os.remove(self.pid_file)
         except FileNotFoundError:
             self.log.debug("PID file %s already removed", self.pid_file)
-            pass
 
     def _get_ssl_options(self):
         """List of cmd proxy options to use internal SSL"""

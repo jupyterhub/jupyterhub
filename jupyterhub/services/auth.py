@@ -35,7 +35,6 @@ import string
 import time
 import uuid
 import warnings
-from functools import partial
 from http import HTTPStatus
 from unittest import mock
 from urllib.parse import urlencode

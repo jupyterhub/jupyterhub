@@ -84,6 +84,9 @@ class LogoutHandler(BaseHandler):
         """
         await self.default_handle_logout()
         await self.handle_logout()
+        # clear jupyterhub user before rendering logout page
+        # ensures the login button is shown instead of logout
+        self._jupyterhub_user = None
         await self.render_logout_page()
 
 

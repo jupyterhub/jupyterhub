@@ -3,7 +3,6 @@
 
 import sys
 import tarfile
-from tarfile import TarFile
 
 expected_files = [
     "docs/requirements.txt",

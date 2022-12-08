@@ -19,9 +19,16 @@ them manually here.
 
     added ``jupyterhub_`` prefix to metric names.
 """
+from datetime import timedelta
 from enum import Enum
 
 from prometheus_client import Gauge, Histogram
+from tornado.ioloop import PeriodicCallback
+from traitlets import Any, Bool, Integer
+from traitlets.config import LoggingConfigurable
+
+from . import orm
+from .utils import utcnow
 
 REQUEST_DURATION_SECONDS = Histogram(
     'jupyterhub_request_duration_seconds',
@@ -43,6 +50,12 @@ RUNNING_SERVERS = Gauge(
 )
 
 TOTAL_USERS = Gauge('jupyterhub_total_users', 'total number of users')
+
+ACTIVE_USERS = Gauge(
+    'jupyterhub_active_users',
+    'number of users who were active in the given time period',
+    ['period'],
+)
 
 CHECK_ROUTES_DURATION_SECONDS = Histogram(
     'jupyterhub_check_routes_duration_seconds',
@@ -179,6 +192,20 @@ for s in ProxyDeleteStatus:
     PROXY_DELETE_DURATION_SECONDS.labels(status=s)
 
 
+class ActiveUserPeriods(Enum):
+    """
+    Possible values for 'period' label of ACTIVE_USERS
+    """
+
+    twenty_four_hours = '24h'
+    seven_days = '7d'
+    thirty_days = '30d'
+
+
+for s in ActiveUserPeriods:
+    ACTIVE_USERS.labels(period=s.value)
+
+
 def prometheus_log_method(handler):
     """
     Tornado log handler for recording RED metrics.
@@ -200,3 +227,69 @@ def prometheus_log_method(handler):
         handler=f'{handler.__class__.__module__}.{type(handler).__name__}',
         code=handler.get_status(),
     ).observe(handler.request.request_time())
+
+
+class PeriodicMetricsCollector(LoggingConfigurable):
+    """
+    Collect metrics to be calculated periodically
+    """
+
+    active_users_enabled = Bool(
+        True,
+        help="""
+        Enable active_users prometheus metric.
+
+        Populates a `jupyterhub_active_users` prometheus metric, with a label `period` that counts the time period
+        over which these many users were active. Periods are 24h (24 hours), 7d (7 days) and 30d (30 days).
+        """,
+        config=True,
+    )
+
+    active_users_update_interval = Integer(
+        60 * 60,
+        help="""
+        Number of seconds between updating active_users metrics.
+
+        To avoid extra load on the database, this is only calculated periodically rather than
+        at per-minute intervals. Defaults to once an hour.
+        """,
+        config=True,
+    )
+
+    db = Any(help="SQLAlchemy db session to use for performing queries")
+
+    def update_active_users(self):
+        """Update active users metrics."""
+
+        # All the metrics should be based off a cutoff from a *fixed* point, so we calculate
+        # the fixed point here - and then calculate the individual cutoffs in relation to this
+        # fixed point.
+        now = utcnow()
+        cutoffs = {
+            ActiveUserPeriods.twenty_four_hours: now - timedelta(hours=24),
+            ActiveUserPeriods.seven_days: now - timedelta(days=7),
+            ActiveUserPeriods.thirty_days: now - timedelta(days=30),
+        }
+        for period, cutoff in cutoffs.items():
+            value = (
+                self.db.query(orm.User).filter(orm.User.last_activity >= cutoff).count()
+            )
+
+            self.log.info(f'Found {value} active users in the last {period}')
+            ACTIVE_USERS.labels(period=period.value).set(value)
+
+    def start(self):
+        """
+        Start the periodic update process
+        """
+        if self.active_users_enabled:
+            # Setup periodic refresh of the metric
+            pc = PeriodicCallback(
+                self.update_active_users,
+                self.active_users_update_interval * 1000,
+                jitter=0.01,
+            )
+            pc.start()
+
+            # Update the metrics once on startup too
+            self.update_active_users()

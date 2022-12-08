@@ -27,7 +27,6 @@ Fixtures to add functionality or spawning behavior
 # Distributed under the terms of the Modified BSD License.
 import asyncio
 import copy
-import inspect
 import os
 import sys
 from functools import partial
@@ -36,7 +35,6 @@ from subprocess import TimeoutExpired
 from unittest import mock
 
 from pytest import fixture, raises
-from tornado import ioloop
 from tornado.httpclient import HTTPError
 from tornado.platform.asyncio import AsyncIOMainLoop
 

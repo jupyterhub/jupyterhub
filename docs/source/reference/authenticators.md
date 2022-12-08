@@ -31,8 +31,7 @@ popular services:
 - Okpy
 - OpenShift
 
-A generic implementation, which you can use for OAuth authentication
-with any provider, is also available.
+A [generic implementation](https://github.com/jupyterhub/oauthenticator/blob/master/oauthenticator/generic.py), which you can use for OAuth authentication with any provider, is also available.
 
 ## The Dummy Authenticator
 
@@ -165,7 +164,7 @@ setup(
 ```
 
 If you have added this metadata to your package,
-users can select your authenticator with the configuration:
+admins can select your authenticator with the configuration:
 
 ```python
 c.JupyterHub.authenticator_class = 'myservice'
@@ -298,7 +297,7 @@ all group-management via the API is disabled.
 
 ## pre_spawn_start and post_spawn_stop hooks
 
-Authenticators uses two hooks, {meth}`.Authenticator.pre_spawn_start` and
+Authenticators use two hooks, {meth}`.Authenticator.pre_spawn_start` and
 {meth}`.Authenticator.post_spawn_stop(user, spawner)` to add pass additional state information
 between the authenticator and a spawner. These hooks are typically used auth-related
 startup, i.e. opening a PAM session, and auth-related cleanup, i.e. closing a
