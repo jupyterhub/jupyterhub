@@ -34,7 +34,7 @@ change renders correctly, it is good practice to test it locally.
    along with the filename / line number in which they occurred. Fix them,
    and re-run the `make html` command to re-render the documentation.
 
-4. View the rendered documentation by opening `build/html/index.html` in
+4. View the rendered documentation by opening `_build/html/index.html` in
    a web browser.
 
    :::{tip}
