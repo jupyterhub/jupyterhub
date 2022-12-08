@@ -4,7 +4,6 @@ import asyncio
 from functools import partial
 
 import pytest
-from pyparsing import empty
 from selenium.common.exceptions import (
     NoSuchElementException,
     StaleElementReferenceException,
@@ -655,7 +654,7 @@ async def test_token_request_form_and_panel(app, browser, cleanup_after, user):
     # verify that field for input notes is empty by default
     assert (
         browser.find_element(*TokenPageLocators.INPUT_TOKEN).get_attribute('value')
-        == empty
+        == ""
     )
     await asyncio.sleep(0.01)
     click(browser, TokenPageLocators.BUTTON_API_REQ)
@@ -671,7 +670,7 @@ async def test_token_request_form_and_panel(app, browser, cleanup_after, user):
         browser.find_element(*TokenPageLocators.PANEL_TOKEN).text
         == TokenPageLocators.PANEL_TOKEN_TITLE
     )
-    assert browser.find_element(*TokenPageLocators.RESULT_TOKEN) is not empty
+    assert browser.find_element(*TokenPageLocators.RESULT_TOKEN)
     # refresh the page
     await in_thread(browser.get, browser.current_url)
     # verify that "Your new API Token" panel is hidden after refresh the page
@@ -736,7 +735,7 @@ async def test_request_token_with_diff_duration(
                 browser.find_element(*TokenPageLocators.INPUT_TOKEN).get_attribute(
                     'value'
                 )
-                == empty
+                == ""
             )
         await asyncio.sleep(0.1)
         click(browser, TokenPageLocators.BUTTON_API_REQ)
