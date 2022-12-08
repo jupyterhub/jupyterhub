@@ -204,12 +204,12 @@ async def test_open_url_login(
         assert next_url.endswith("spawn?param=value")
         assert f"user/{user.name}/" not in next_url
     else:
-        if not next_url.endswith(f"/user/{user}/"):
+        if not next_url.endswith(f"/user/{user.name}/"):
             await webdriver_wait(
-                browser, EC.url_to_be(ujoin(public_url(app), f"/user/{user}/"))
+                browser, EC.url_to_be(ujoin(public_url(app), f"/user/{user.name}/"))
             )
             next_url = browser.current_url
-        assert next_url.endswith(f"/user/{user}/")
+        assert next_url.endswith(f"/user/{user.name}/")
 
 
 @pytest.mark.parametrize(
