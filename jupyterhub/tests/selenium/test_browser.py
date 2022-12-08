@@ -1,20 +1,15 @@
 """Tests for the Selenium WebDriver"""
 
 import asyncio
-import datetime
-import time
 from functools import partial
 
 import pytest
 from pyparsing import empty
-from selenium import webdriver
 from selenium.common.exceptions import (
     NoSuchElementException,
     StaleElementReferenceException,
 )
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.select import Select
 from selenium.webdriver.support.ui import WebDriverWait
@@ -31,9 +26,8 @@ from jupyterhub.tests.selenium.locators import (
 from jupyterhub.utils import exponential_backoff
 
 from ... import orm
-from ...user import User
 from ...utils import url_path_join
-from ..utils import get_page, public_host, public_url, ujoin
+from ..utils import public_host, public_url, ujoin
 
 pytestmark = pytest.mark.selenium
 
@@ -117,6 +111,7 @@ def elements_name(browser, by_locator, text):
 
 
 # LOGIN PAGE
+
 
 async def login(browser, username, pass_w):
     """filling the login form by user and pass_w parameters and iniate the login"""
