@@ -23,6 +23,8 @@ information on:
 JupyterHub API Reference:
 
 ```{toctree}
+:maxdepth: 3
+
 app
 auth
 spawner
