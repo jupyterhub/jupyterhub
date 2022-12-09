@@ -253,6 +253,7 @@ async def open_spawn_pending(app, browser, user):
     )
     await in_thread(browser.get, url_spawn)
     await webdriver_wait(browser, EC.url_to_be(url_spawn))
+    await wait_for_ready(browser)
 
 
 async def test_spawn_pending_server_not_started(app, browser, slow_spawn, user):
@@ -293,7 +294,7 @@ async def test_spawn_pending_server_start_pending(app, browser, slow_spawn, user
     await click(browser, SpawningPageLocators.BUTTON_START_SERVER)
     while is_displayed(browser, SpawningPageLocators.BUTTON_START_SERVER):
         # Wait for the server button to disappear and progress bar to show (2sec is too much)
-        await asyncio.sleep(0.001)
+        await asyncio.sleep(0.01)
     while '/spawn-pending/' in browser.current_url and is_displayed(
         browser, SpawningPageLocators.PROGRESS_BAR
     ):
@@ -351,7 +352,7 @@ async def test_spawn_pending_server_start_pending(app, browser, slow_spawn, user
         except (NoSuchElementException, StaleElementReferenceException):
             break
         # Wait for the server button to disappear and progress bar to show (2sec is too much)
-        await asyncio.sleep(0.001)
+        await asyncio.sleep(0.01)
 
 
 async def test_spawn_pending_server_ready(app, browser, user):
@@ -374,6 +375,17 @@ async def test_spawn_pending_server_ready(app, browser, user):
 # HOME PAGE
 
 
+async def wait_for_ready(browser):
+    """Wait for javascript on the page to finish loading
+
+    otherwise, click events may not do anything
+    """
+    await webdriver_wait(
+        browser,
+        lambda driver: driver.execute_script("return window._jupyterhub_page_loaded;"),
+    )
+
+
 async def open_home_page(app, browser, user):
     """function to open the home page"""
 
@@ -381,6 +393,7 @@ async def open_home_page(app, browser, user):
     await open_url(app, browser, path="/login?next=" + home_page)
     await login(browser, user.name, pass_w=str(user.name))
     await webdriver_wait(browser, EC.url_contains('/hub/home'))
+    await wait_for_ready(browser)
 
 
 async def test_start_button_server_not_started(app, browser, user):
@@ -404,6 +417,7 @@ async def test_start_button_server_not_started(app, browser, user):
     await click(browser, HomePageLocators.BUTTON_START_SERVER)
     next_url = url_path_join(public_host(app), app.base_url, '/hub/home')
     await in_thread(browser.get, next_url)
+    await wait_for_ready(browser)
     assert is_displayed(browser, HomePageLocators.BUTTON_START_SERVER)
     assert is_displayed(browser, HomePageLocators.BUTTON_STOP_SERVER)
     # verify that 2 buttons are displayed on the home page
@@ -436,6 +450,7 @@ async def test_stop_button(app, browser, user):
     """verify that the stop button after stoping a server is not shown
     the start button is displayed with new name"""
     await open_home_page(app, browser, user)
+
     if is_displayed(browser, HomePageLocators.BUTTON_START_SERVER):
         await click(browser, HomePageLocators.BUTTON_START_SERVER)
     next_url = url_path_join(public_host(app), app.base_url, '/hub/home')
@@ -477,6 +492,8 @@ async def open_token_page(app, browser, user):
     await open_url(app, browser, path="/login?next=" + token_page)
     await login(browser, user.name, pass_w=str(user.name))
     await webdriver_wait(browser, EC.url_contains('/hub/token'))
+    # wait for javascript to finish loading
+    await wait_for_ready(browser)
 
 
 def elements_API_tokens_table(browser):
@@ -657,9 +674,6 @@ async def test_token_request_form_and_panel(app, browser, cleanup_after, user):
         browser.find_element(*TokenPageLocators.INPUT_TOKEN).get_attribute('value')
         == ""
     )
-    # need to wait for js events to be registered
-    # before click does the right thing
-    await asyncio.sleep(0.5)
     await click(browser, TokenPageLocators.BUTTON_API_REQ)
     await webdriver_wait(
         browser, EC.visibility_of_element_located(TokenPageLocators.PANEL_AREA)

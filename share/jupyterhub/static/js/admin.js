@@ -293,4 +293,7 @@ require(["jquery", "moment", "jhapi", "utils"], function (
         servers: servers,
       });
     });
+
+  // signal that page has finished loading
+  window._jupyterhub_page_loaded = true;
 });
