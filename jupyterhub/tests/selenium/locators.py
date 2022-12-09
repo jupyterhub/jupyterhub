@@ -123,7 +123,6 @@ class TokenPageLocators:
     TABLE_API_ROWS = (By.TAG_NAME, 'tr')
     TABLE_API_ROWS_BY_CLASS = (By.CLASS_NAME, 'token-row')
     TABLE_API_COLUMNS = (By.TAG_NAME, 'td')
-    TEXT_WOUT_NOTE = "Requested via token page"
     BUTTON_REVOKE = (By.XPATH, '//tr/td[5]/button')
 
     # Authorized Applications

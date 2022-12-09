@@ -24,7 +24,6 @@ from jupyterhub.tests.selenium.locators import (
 )
 from jupyterhub.utils import exponential_backoff
 
-from ... import orm
 from ...utils import url_path_join
 from ..utils import public_host, public_url, ujoin
 
@@ -455,11 +454,12 @@ async def test_stop_button(app, browser, user):
         await click(browser, HomePageLocators.BUTTON_START_SERVER)
     next_url = url_path_join(public_host(app), app.base_url, '/hub/home')
     await in_thread(browser.get, next_url)
+    await wait_for_ready(browser)
     buttons = browser.find_elements(*HomePageLocators.BUTTONS_SERVER)
     if len(buttons) != 2:
         await webdriver_wait(browser, EC.visibility_of_all_elements_located(buttons))
     while not user.spawner.ready:
-        # added this stop click event is registred in JS to verify that the poccess is not still pending
+        # added this stop click event is registered in JS to verify that the process is not still pending
         await asyncio.sleep(0.1)
     # Stop server via clicking on the Stop button
     await click(browser, HomePageLocators.BUTTON_STOP_SERVER)
@@ -494,6 +494,8 @@ async def open_token_page(app, browser, user):
     await webdriver_wait(browser, EC.url_contains('/hub/token'))
     # wait for javascript to finish loading
     await wait_for_ready(browser)
+    # wait for moment.js to format
+    await asyncio.sleep(0.1)
 
 
 def elements_API_tokens_table(browser):
@@ -563,84 +565,7 @@ async def table_dict_columns(browser):
         )
         for j in range(len(columns_body)):
             Dict_body_columns[j] = columns_body[j].text
-            # wait for convert ISO datestamps to nice momentjs ones
-            await asyncio.sleep(0.1)
     return Dict_body_columns
-
-
-async def table_dict_columns_time(browser):
-    """function to insert table elements into table dictionaryby by columns
-    converted the columns that include time to format yyyy-mm-dd hh:mm:ss.milliseconds"""
-    Dict_body_columns_time = {}
-    for i in range(len(elements_API_tokens_row_body(browser))):
-        columns_body = elements_API_tokens_row_body(browser)[i].find_elements(
-            *TokenPageLocators.TABLE_API_COLUMNS
-        )
-        for j in range(len(columns_body)):
-            Dict_body_columns_time[j] = columns_body[j].text
-            if (j == 2 or j == 3) and columns_body[j].text != None:
-                Dict_body_columns_time[j] = str(columns_body[j].text[0:26]).replace(
-                    "T", " "
-                )
-    return Dict_body_columns_time
-
-
-def token_from_db(app):
-    """getting the token information from the database by user id"""
-    result_from_db = (
-        app.db.query(orm.APIToken)
-        .with_entities(
-            orm.APIToken.id,
-            orm.APIToken.prefix,
-            orm.APIToken.user_id,
-            orm.APIToken.expires_at,
-            orm.APIToken.note,
-            orm.User.name,
-        )
-        .filter_by(user_id=orm.User.id)
-        .all()
-    )
-    for from_db in result_from_db:
-        from_db.id, from_db.prefix, from_db.expires_at, from_db.note, from_db.name
-    return from_db
-
-
-def token_prefix_from_db(app):
-    """getting the token prexix from the database by user id"""
-    return token_from_db(app).prefix
-
-
-def token_note_from_db(app):
-    """getting the note from the database by user id"""
-    return token_from_db(app).note
-
-
-def token_expires_from_db(app):
-    """getting the expiraton date from the database by user id"""
-    return token_from_db(app).expires_at
-
-
-def token_name_from_db(app):
-    """getting the user name from the database by user id"""
-    return token_from_db(app).name
-
-
-def count_tokens_by_user_from_db(app):
-    """getting the number of tokens from the database by user id"""
-    result_from_db = (
-        app.db.query(orm.APIToken)
-        .with_entities(
-            orm.APIToken.id,
-            orm.APIToken.prefix,
-            orm.APIToken.user_id,
-            orm.APIToken.expires_at,
-            orm.APIToken.note,
-            orm.User.name,
-        )
-        .filter_by(user_id=orm.User.id)
-        .all()
-    )
-    return len(result_from_db)
 
 
 async def test_token_request_form_and_panel(app, browser, cleanup_after, user):
@@ -704,22 +629,16 @@ async def test_token_request_form_and_panel(app, browser, cleanup_after, user):
 @pytest.mark.parametrize(
     "token_opt, note",
     [
-        ("1 Hour", True),
-        ("1 Hour", False),
-        ("1 Day", True),
+        ("1 Hour", 'some note'),
         ("1 Day", False),
-        ("1 Week", True),
         ("1 Week", False),
-        ("Never", True),
-        ("Never", False),
-        # "server_up" tokens type is not from the list in the token requst form:
+        ("Never", 'some note'),
+        # "server_up" token type is not from the list in the token request form:
         # when the server started it shows on the API Tokens table
         ("server_up", False),
     ],
 )
-async def test_request_token_with_diff_duration(
-    app, browser, token_opt, note, cleanup_after, user, note_value="test_text"
-):
+async def test_request_token_expiration(app, browser, token_opt, note, user):
     """verify request token with the different options"""
     if token_opt == "server_up":
         await open_home_page(app, browser, user)
@@ -740,12 +659,12 @@ async def test_request_token_with_diff_duration(
             select.select_by_visible_text(token_opt)
             break
         if note:
-            send_text(browser, TokenPageLocators.INPUT_TOKEN, note_value)
+            send_text(browser, TokenPageLocators.INPUT_TOKEN, note)
             assert (
                 browser.find_element(*TokenPageLocators.INPUT_TOKEN).get_attribute(
                     'value'
                 )
-                == note_value
+                == note
             )
         else:
             assert (
@@ -760,16 +679,17 @@ async def test_request_token_with_diff_duration(
             browser, EC.visibility_of_element_located(TokenPageLocators.PANEL_AREA)
         )
         # getting the token_id
-        token_ids = browser.find_element(*TokenPageLocators.RESULT_TOKEN).text
-        prefix_token_ids = str(token_ids[0:4])
+        token = browser.find_element(*TokenPageLocators.RESULT_TOKEN).text
         # refresh the page
         await in_thread(browser.get, browser.current_url)
+        # wait for javascript, moment.js to format
+        await wait_for_ready(browser)
     # API Tokens table: verify that elements are displayed
     assert is_displayed(browser, TokenPageLocators.TABLE_API)
     assert is_displayed(browser, TokenPageLocators.TABLE_API_HEAD)
     assert is_displayed(browser, TokenPageLocators.TABLE_API_BODY)
-    assert int(len(elements_API_tokens_row_head(browser))) == 1
-    assert int(len(elements_API_tokens_row_body(browser))) == 1
+    assert len(elements_API_tokens_row_head(browser)) == 1
+    assert len(elements_API_tokens_row_body(browser)) == 1
     List_rows_head = []
     List_col_head = []
     # verify head of table rows
@@ -784,120 +704,47 @@ async def test_request_token_with_diff_duration(
             List_col_head.append(j)
     assert List_col_head == TokenPageLocators.TABLE_API_HEAD_LIST
     # verify the body of the API table
-    Dict_body_columns_time = await table_dict_columns_time(browser)
     Dict_body_columns = await table_dict_columns(browser)
     assert is_displayed(browser, TokenPageLocators.TABLE_API_COLUMNS)
     assert int(len(columns_head)) == 4
     assert int(len(Dict_body_columns)) == 5
     # getting values from DB to compare with values on UI
-    assert count_tokens_by_user_from_db(app) == 1
-    if token_opt != "server_up":
-        assert prefix_token_ids == token_prefix_from_db(app)
-    assert user.name == token_name_from_db(app)
+    assert len(user.api_tokens) == 1
+    orm_token = user.api_tokens[-1]
+
+    if token_opt == "server_up":
+        expected_note = "Server at " + ujoin(app.base_url, f"/user/{user.name}/")
+    elif note:
+        expected_note = note
+    else:
+        expected_note = "Requested via token page"
+
+    assert orm_token.note == expected_note
+    note_on_page = Dict_body_columns.get(0)
+    assert note_on_page == expected_note
+    expires_at_text = Dict_body_columns.get(3)
+    last_used_text = Dict_body_columns.get(1)
+    assert last_used_text == "Never"
+
     if token_opt == "Never":
-        assert Dict_body_columns.get(3) == "Never"
-        assert token_expires_from_db(app) == None
-        if note:
-            assert note_value == token_note_from_db(app)
-        else:
-            assert Dict_body_columns.get(0) == TokenPageLocators.TEXT_WOUT_NOTE
-            assert token_note_from_db(app) == TokenPageLocators.TEXT_WOUT_NOTE
+        assert orm_token.expires_at is None
+        assert expires_at_text == "Never"
     elif token_opt == "1 Hour":
-        assert Dict_body_columns.get(3) == "in an hour"
-        assert Dict_body_columns_time.get(3) == str(token_expires_from_db(app))
-        if note:
-            assert note_value == token_note_from_db(app)
-        else:
-            assert Dict_body_columns.get(0) == TokenPageLocators.TEXT_WOUT_NOTE
-            assert token_note_from_db(app) == TokenPageLocators.TEXT_WOUT_NOTE
+        assert expires_at_text == "in an hour"
+
     elif token_opt == "1 Day":
-        assert Dict_body_columns.get(3) == "in a day"
-        assert Dict_body_columns_time.get(3) == str(token_expires_from_db(app))
-        if note:
-            assert note_value == token_note_from_db(app)
-        else:
-            assert Dict_body_columns.get(0) == TokenPageLocators.TEXT_WOUT_NOTE
-            assert token_note_from_db(app) == TokenPageLocators.TEXT_WOUT_NOTE
+        assert expires_at_text == "in a day"
     elif token_opt == "1 Week":
-        assert Dict_body_columns.get(3) == "in 7 days"
-        assert Dict_body_columns_time.get(3) == str(token_expires_from_db(app))
-        if note:
-            assert note_value == token_note_from_db(app)
-        else:
-            assert Dict_body_columns.get(0) == TokenPageLocators.TEXT_WOUT_NOTE
-            assert token_note_from_db(app) == TokenPageLocators.TEXT_WOUT_NOTE
+        assert expires_at_text == "in 7 days"
     elif token_opt == "server_up":
-        note = Dict_body_columns.get(0)
-        last_used = Dict_body_columns.get(1)
-        expires_at = Dict_body_columns.get(3)
-        assert note == "Server at " + ujoin(app.base_url, f"/user/{user.name}/")
-        assert (last_used and expires_at) == "Never"
-        # verify that the token added to database
-        assert note == token_note_from_db(app)
-        assert token_expires_from_db(app) == None
+        assert orm_token.expires_at is None
+        assert expires_at_text == "Never"
+
     # verify that the button for revoke is presented
-    buttons = elements_API_tokens_table_body(browser).find_elements(
+    revoke_button = elements_API_tokens_table_body(browser).find_elements(
         *TokenPageLocators.BUTTON_REVOKE
-    )
-    for button in buttons:
-        button = button.text
-    assert button == Dict_body_columns.get(4)
-    assert int(len(buttons)) == 1
-
-
-@pytest.mark.parametrize(
-    "token_opt, note",
-    [
-        ("1 Hour", True),
-        ("1 Hour", False),
-        ("1 Day", True),
-        ("1 Day", False),
-        ("1 Week", True),
-        ("1 Week", False),
-        ("Never", True),
-        ("Never", False),
-    ],
-)
-async def test_revoke_token_with_diff_duration(
-    app, browser, token_opt, note, cleanup_after, user, note_value="test_text"
-):
-    """verify revoke token with the different options"""
-    await open_token_page(app, browser, user)
-    is_displayed(browser, TokenPageLocators.LIST_EXP_TOKEN_FIELD)
-    select_element = browser.find_element(*TokenPageLocators.LIST_EXP_TOKEN_FIELD)
-    while token_opt != ("Never" and "server_up"):
-        select = Select(select_element)
-        select.select_by_visible_text(token_opt)
-        break
-    if note:
-        send_text(browser, TokenPageLocators.INPUT_TOKEN, note_value)
-    await asyncio.sleep(0.1)
-    await click(browser, TokenPageLocators.BUTTON_API_REQ)
-    # refresh the page
-    await in_thread(browser.get, browser.current_url)
-    # verify the body of the API table
-    Dict_body_rows = await table_dict_row(browser)
-    assert is_displayed(browser, TokenPageLocators.TABLE_API_COLUMNS)
-    # getting values from DB to compare with values on UI
-    assert int(len(Dict_body_rows)) == 1
-    assert count_tokens_by_user_from_db(app) == 1
-    assert user.name == token_name_from_db(app)
-    buttons = elements_API_tokens_table_body(browser).find_elements(
-        *TokenPageLocators.BUTTON_REVOKE
-    )
-    assert len(buttons) == 1
-    await asyncio.sleep(0.1)
-    await click(browser, TokenPageLocators.BUTTON_REVOKE)
-    await webdriver_wait(
-        browser,
-        EC.none_of(
-            EC.visibility_of_all_elements_located(
-                TokenPageLocators.TABLE_API_ROWS_BY_CLASS
-            )
-        ),
-    )
-    assert len(elements_API_tokens_row_body(browser)) == 0
-    assert count_tokens_by_user_from_db(app) == 0
+    )[0]
+    revoke_button.text == "revoke"
 
 
 @pytest.mark.parametrize(
@@ -908,7 +755,7 @@ async def test_revoke_token_with_diff_duration(
         ("both"),
     ],
 )
-async def test_revoke_token(app, browser, token_type, cleanup_after, user):
+async def test_revoke_token(app, browser, token_type, user):
     """verify API Tokens table contant in case the server is started"""
 
     await open_home_page(app, browser, user)
@@ -929,6 +776,7 @@ async def test_revoke_token(app, browser, token_type, cleanup_after, user):
         )
         # refresh the page
         await in_thread(browser.get, browser.current_url)
+    await wait_for_ready(browser)
     buttons = elements_API_tokens_table_body(browser).find_elements(
         *TokenPageLocators.BUTTON_REVOKE
     )
@@ -936,10 +784,9 @@ async def test_revoke_token(app, browser, token_type, cleanup_after, user):
         browser, EC.visibility_of_all_elements_located(TokenPageLocators.BUTTON_REVOKE)
     )
     # verify that the token revoked from UI and the database
-    if token_type == "server_up" or token_type == "request_by_user":
-        assert int(len(buttons)) == 1
-        assert count_tokens_by_user_from_db(app) == 1
-        await asyncio.sleep(0.1)
+    if token_type in {"server_up", "request_by_user"}:
+        assert len(buttons) == 1
+        assert len(user.api_tokens) == 1
         await click(browser, TokenPageLocators.BUTTON_REVOKE)
         await webdriver_wait(
             browser,
@@ -957,24 +804,21 @@ async def test_revoke_token(app, browser, token_type, cleanup_after, user):
         assert (
             int(len(elements_API_tokens_row_body(browser))) and int(len(buttons))
         ) == 0
-        assert count_tokens_by_user_from_db(app) == 0
+        assert len(user.api_tokens) == 0
     if token_type == "both":
         # verify that both tokens are revoked from UI and the database
         assert int(len(buttons)) == 2
-        assert count_tokens_by_user_from_db(app) == 2
+        assert len(user.api_tokens) == 2
         while int(len(buttons)) != 0:
-            await asyncio.sleep(0.1)
             await click(browser, TokenPageLocators.BUTTON_REVOKE)
             # wait for the row with revoked token disappears
             await asyncio.sleep(0.1)
             buttons = elements_API_tokens_table_body(browser).find_elements(
                 *TokenPageLocators.BUTTON_REVOKE
             )
-            if int(len(buttons)) == 1:
-                assert count_tokens_by_user_from_db(app) == 1
             assert int(len(buttons)) == int(len(elements_API_tokens_row_body(browser)))
         assert int(len(buttons)) == 0
-        assert count_tokens_by_user_from_db(app) == 0
+        assert len(user.api_tokens) == 0
 
 
 # MENU BAR
