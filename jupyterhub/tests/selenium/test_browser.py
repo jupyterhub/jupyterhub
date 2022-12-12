@@ -297,6 +297,9 @@ async def test_spawn_pending_server_start_pending(app, browser, slow_spawn, user
     while '/spawn-pending/' in browser.current_url and is_displayed(
         browser, SpawningPageLocators.PROGRESS_BAR
     ):
+        progress_messages = browser.find_element(
+            *SpawningPageLocators.PROGRESS_MESSAGE
+        ).text
         # checking text messages that the server is starting to up
         texts = browser.find_elements(*SpawningPageLocators.TEXT_SERVER)
         texts_list = []
@@ -309,49 +312,42 @@ async def test_spawn_pending_server_start_pending(app, browser, slow_spawn, user
         logs_list = []
         try:
             progress_bar = browser.find_element(*SpawningPageLocators.PROGRESS_BAR)
-            progress = browser.find_elements(*SpawningPageLocators.PROGRESS_MESSAGE)
+            progress = browser.find_element(*SpawningPageLocators.PROGRESS_MESSAGE)
             logs = browser.find_elements(*SpawningPageLocators.PROGRESS_LOG)
-            for status_message in progress:
-                progress_messages = status_message.text
-                percent = (
-                    progress_bar.get_attribute('style')
-                    .split(';')[0]
-                    .split(':')[1]
-                    .strip()
-                )
-                for i in range(len(logs)):
-                    progress_log = logs[i].text
-                    logs_list.append(progress_log)
-                if progress_messages == "":
-                    assert percent == "0%"
-                    assert int(len(logs_list)) == 0
-                if progress_messages == "Server requested":
-                    assert percent == "0%"
-                    assert int(len(logs_list)) == 1
-                    assert str(logs_list[0]) == "Server requested"
-                if progress_messages == "Spawning server...":
-                    assert percent == "50%"
-                    assert int(len(logs_list)) == 2
-                    assert str(logs_list[0]) == "Server requested"
-                    assert str(logs_list[1]) == "Spawning server..."
-                if "Server ready at" in progress_messages:
-                    assert (
-                        f"Server ready at {app.base_url}user/{user.name}/"
-                        in progress_messages
-                    )
-                    assert percent == "100%"
-                    assert int(len(logs_list)) == 3
-                    assert str(logs_list[0]) == "Server requested"
-                    assert str(logs_list[1]) == "Spawning server..."
-                    assert (
-                        str(logs_list[2])
-                        == f"Server ready at {app.base_url}user/{user.name}/"
-                    )
-                    assert str(logs_list[2]) == progress_messages
+            percent = (
+                progress_bar.get_attribute('style').split(';')[0].split(':')[1].strip()
+            )
+            for i in range(len(logs)):
+                progress_log = logs[i].text
+                logs_list.append(progress_log)
         except (NoSuchElementException, StaleElementReferenceException):
             break
         # Wait for the server button to disappear and progress bar to show (2sec is too much)
         await asyncio.sleep(0.01)
+        if progress_messages == "":
+            assert percent == "0%"
+            assert len(logs_list) == 0
+        elif progress_messages == "Server requested":
+            assert percent == "0%"
+            assert len(logs_list) == 1
+            assert str(logs_list[0]) == "Server requested"
+        elif progress_messages == "Spawning server...":
+            assert percent == "50%"
+            assert len(logs_list) == 2
+            assert str(logs_list[0]) == "Server requested"
+            assert str(logs_list[1]) == "Spawning server..."
+        elif "Server ready at" in progress_messages:
+            assert (
+                f"Server ready at {app.base_url}user/{user.name}/" in progress_messages
+            )
+            assert percent == "100%"
+            assert len(logs_list) == 3
+            assert str(logs_list[0]) == "Server requested"
+            assert str(logs_list[1]) == "Spawning server..."
+            assert (
+                str(logs_list[2]) == f"Server ready at {app.base_url}user/{user.name}/"
+            )
+            assert str(logs_list[2]) == progress_messages
 
 
 async def test_spawn_pending_server_ready(app, browser, user):
@@ -550,22 +546,22 @@ def elements_API_tokens_row_head(browser):
 
 async def table_dict_row(browser):
     """function to insert table elements into table dictionary by rows"""
-    Dict_body_rows = {}
+    dict_body_rows = {}
     for i in range(len(elements_API_tokens_row_body(browser))):
-        Dict_body_rows[i] = elements_API_tokens_row_body(browser)[i].text
-    return Dict_body_rows
+        dict_body_rows[i] = elements_API_tokens_row_body(browser)[i].text
+    return dict_body_rows
 
 
 async def table_dict_columns(browser):
     """function to insert table elements into table dictionary by columns"""
-    Dict_body_columns = {}
+    dict_body_columns = {}
     for i in range(len(elements_API_tokens_row_body(browser))):
         columns_body = elements_API_tokens_row_body(browser)[i].find_elements(
             *TokenPageLocators.TABLE_API_COLUMNS
         )
         for j in range(len(columns_body)):
-            Dict_body_columns[j] = columns_body[j].text
-    return Dict_body_columns
+            dict_body_columns[j] = columns_body[j].text
+    return dict_body_columns
 
 
 async def test_token_request_form_and_panel(app, browser, cleanup_after, user):
@@ -590,10 +586,10 @@ async def test_token_request_form_and_panel(app, browser, cleanup_after, user):
     assert newer_element.text == "Never"
     assert newer_element.is_selected()
     # verify that dropdown list contains expected items
-    Dict_opt_list = {}
+    dict_opt_list = {}
     for option in option_elements:
-        Dict_opt_list[option.text] = option.get_attribute('value')
-    assert Dict_opt_list == TokenPageLocators.LIST_EXP_TOKEN_OPT_DICT
+        dict_opt_list[option.text] = option.get_attribute('value')
+    assert dict_opt_list == TokenPageLocators.LIST_EXP_TOKEN_OPT_DICT
     # verify that field for input notes is empty by default
     assert (
         browser.find_element(*TokenPageLocators.INPUT_TOKEN).get_attribute('value')
@@ -704,10 +700,10 @@ async def test_request_token_expiration(app, browser, token_opt, note, user):
             List_col_head.append(j)
     assert List_col_head == TokenPageLocators.TABLE_API_HEAD_LIST
     # verify the body of the API table
-    Dict_body_columns = await table_dict_columns(browser)
+    dict_body_columns = await table_dict_columns(browser)
     assert is_displayed(browser, TokenPageLocators.TABLE_API_COLUMNS)
-    assert int(len(columns_head)) == 4
-    assert int(len(Dict_body_columns)) == 5
+    assert len(columns_head) == 4
+    assert len(dict_body_columns) == 5
     # getting values from DB to compare with values on UI
     assert len(user.api_tokens) == 1
     orm_token = user.api_tokens[-1]
@@ -720,10 +716,10 @@ async def test_request_token_expiration(app, browser, token_opt, note, user):
         expected_note = "Requested via token page"
 
     assert orm_token.note == expected_note
-    note_on_page = Dict_body_columns.get(0)
+    note_on_page = dict_body_columns.get(0)
     assert note_on_page == expected_note
-    expires_at_text = Dict_body_columns.get(3)
-    last_used_text = Dict_body_columns.get(1)
+    expires_at_text = dict_body_columns.get(3)
+    last_used_text = dict_body_columns.get(1)
     assert last_used_text == "Never"
 
     if token_opt == "Never":
@@ -800,24 +796,23 @@ async def test_revoke_token(app, browser, token_type, user):
             *TokenPageLocators.BUTTON_REVOKE
         )
         assert is_displayed(browser, TokenPageLocators.TABLE_API_HEAD)
-        assert int(len(elements_API_tokens_row_head(browser))) == 1
-        assert (
-            int(len(elements_API_tokens_row_body(browser))) and int(len(buttons))
-        ) == 0
+        assert len(elements_API_tokens_row_head(browser)) == 1
+        assert len(elements_API_tokens_row_body(browser)) == 0
+        assert len(buttons) == 0
         assert len(user.api_tokens) == 0
     if token_type == "both":
         # verify that both tokens are revoked from UI and the database
-        assert int(len(buttons)) == 2
+        assert len(buttons) == 2
         assert len(user.api_tokens) == 2
-        while int(len(buttons)) != 0:
+        while len(buttons) != 0:
             await click(browser, TokenPageLocators.BUTTON_REVOKE)
             # wait for the row with revoked token disappears
             await asyncio.sleep(0.1)
             buttons = elements_API_tokens_table_body(browser).find_elements(
                 *TokenPageLocators.BUTTON_REVOKE
             )
-            assert int(len(buttons)) == int(len(elements_API_tokens_row_body(browser)))
-        assert int(len(buttons)) == 0
+            assert len(buttons) == len(elements_API_tokens_row_body(browser))
+        assert len(buttons) == 0
         assert len(user.api_tokens) == 0
 
 
@@ -865,7 +860,6 @@ async def test_menu_bar(app, browser, page, logged_in, user):
         links_bar_url = links_bar[index].get_attribute('href')
         links_bar_title = links_bar[index].text
         await in_thread(links_bar[index].click)
-        await in_thread(browser.get, links_bar_url)
         # verify that links on the topbar work, checking the titles of links
         if index == 0:
             assert links_bar_url.endswith("/hub/")
@@ -874,10 +868,15 @@ async def test_menu_bar(app, browser, page, logged_in, user):
                     f"hub/login?next={url_escape(app.base_url)}" in browser.current_url
                 )
             else:
-                if not f"/user/{user.name}/" in browser.current_url:
-                    await webdriver_wait(browser, EC.url_changes(browser.current_url))
+                while not f"/user/{user.name}/" in browser.current_url:
+                    await webdriver_wait(
+                        browser, EC.url_contains(f"/user/{user.name}/")
+                    )
                 assert f"/user/{user.name}/" in browser.current_url
                 browser.back()
+                privious_page = ujoin(public_url(app), page)
+                while not page in browser.current_url:
+                    await webdriver_wait(browser, EC.url_to_be(privious_page))
                 assert page in browser.current_url
         elif index == 1:
             assert "/hub/home" in browser.current_url
@@ -916,7 +915,8 @@ async def test_user_logout(app, browser, url, user):
         browser, EC.presence_of_all_elements_located(BarLocators.LINK_HOME_BAR)
     )
     await click(browser, BarLocators.BUTTON_LOGOUT)
-    await webdriver_wait(browser, EC.url_changes(browser.current_url))
+    if 'hub/login' not in browser.current_url:
+        await webdriver_wait(browser, EC.url_changes(browser.current_url))
     # checking url changing to login url and login form is displayed
     assert 'hub/login' in browser.current_url
     assert is_displayed(browser, LoginPageLocators.FORM_LOGIN)
