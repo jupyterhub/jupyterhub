@@ -10,4 +10,7 @@ require(["jquery", "utils"], function ($, utils) {
     var current_spawn_url = el.attr("href");
     el.attr("href", current_spawn_url + hash);
   }
+
+  // signal that page has finished loading (mostly for tests)
+  window._jupyterhub_page_loaded = true;
 });

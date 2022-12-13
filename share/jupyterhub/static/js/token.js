@@ -55,4 +55,7 @@ require(["jquery", "jhapi", "moment"], function ($, JHAPI, moment) {
       },
     });
   });
+
+  // signal that page has finished loading (mostly for tests)
+  window._jupyterhub_page_loaded = true;
 });
