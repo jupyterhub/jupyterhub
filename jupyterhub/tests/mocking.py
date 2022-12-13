@@ -96,7 +96,7 @@ class MockSpawner(SimpleLocalProcessSpawner):
 class SlowSpawner(MockSpawner):
     """A spawner that takes a few seconds to start"""
 
-    delay = 2
+    delay = 5
     _start_future = None
 
     async def start(self):

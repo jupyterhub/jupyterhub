@@ -25,7 +25,7 @@ from jupyterhub.tests.selenium.locators import (
 from jupyterhub.utils import exponential_backoff
 
 from ...utils import url_path_join
-from ..utils import public_host, public_url, ujoin
+from ..utils import api_request, public_host, public_url, ujoin
 
 pytestmark = pytest.mark.selenium
 
@@ -244,7 +244,13 @@ async def test_login_with_invalid_credantials(app, browser, username, pass_w):
 
 
 async def open_spawn_pending(app, browser, user):
-    url = url_path_join(public_host(app), app.hub.base_url, "/login?next=/hub/spawn")
+    url = url_path_join(
+        public_host(app),
+        url_concat(
+            url_path_join(app.base_url, "login"),
+            {"next": url_path_join(app.base_url, "hub/home")},
+        ),
+    )
     await in_thread(browser.get, url)
     await login(browser, user.name, pass_w=str(user.name))
     url_spawn = url_path_join(
@@ -255,11 +261,13 @@ async def open_spawn_pending(app, browser, user):
     await wait_for_ready(browser)
 
 
-async def test_spawn_pending_server_not_started(app, browser, slow_spawn, user):
+async def test_spawn_pending_server_not_started(
+    app, browser, slow_spawn, no_patience, user
+):
     # first request, no spawn is pending
     # spawn-pending shows button linking to spawn
     await open_spawn_pending(app, browser, user)
-    # on the page verify tbe button and expexted information
+    # on the page verify the button and expected information
     assert is_displayed(browser, SpawningPageLocators.BUTTON_START_SERVER)
 
     buttons = browser.find_elements(*SpawningPageLocators.BUTTONS_SERVER)
@@ -285,19 +293,28 @@ async def test_spawn_pending_server_not_started(app, browser, slow_spawn, user):
     assert href_launch.endswith(f"/hub/spawn/{user.name}")
 
 
-async def test_spawn_pending_server_start_pending(app, browser, slow_spawn, user):
+async def test_spawn_pending_progress(app, browser, slow_spawn, no_patience, user):
     """verify that the server process messages are showing up to the user
     when the server is going to start up"""
-
+    # begin starting the server
+    await api_request(app, f"/users/{user.name}/server", method="post")
+    # visit the spawn-pending page
     await open_spawn_pending(app, browser, user)
-    await click(browser, SpawningPageLocators.BUTTON_START_SERVER)
-    while is_displayed(browser, SpawningPageLocators.BUTTON_START_SERVER):
-        # Wait for the server button to disappear and progress bar to show (2sec is too much)
-        await asyncio.sleep(0.01)
-    while '/spawn-pending/' in browser.current_url and is_displayed(
-        browser, SpawningPageLocators.PROGRESS_BAR
-    ):
-        progress_messages = browser.find_element(
+    assert '/spawn-pending/' in browser.current_url
+
+    # wait for progress _or_ url change
+    # so we aren't waiting forever if the next page is already loaded
+    def wait_for_progress(browser):
+        vis = EC.visibility_of_element_located(SpawningPageLocators.PROGRESS_BAR)(
+            browser
+        ).is_displayed()
+        return vis or '/spawn-pending/' not in browser.current_url
+
+    await webdriver_wait(browser, wait_for_progress)
+    # make sure we're still on the spawn-pending page
+    assert '/spawn-pending/' in browser.current_url
+    while '/spawn-pending/' in browser.current_url:
+        progress_message = browser.find_element(
             *SpawningPageLocators.PROGRESS_MESSAGE
         ).text
         # checking text messages that the server is starting to up
@@ -317,37 +334,41 @@ async def test_spawn_pending_server_start_pending(app, browser, slow_spawn, user
             percent = (
                 progress_bar.get_attribute('style').split(';')[0].split(':')[1].strip()
             )
-            for i in range(len(logs)):
-                progress_log = logs[i].text
-                logs_list.append(progress_log)
+            for log in logs:
+                # only include non-empty log messages
+                # avoid partially-created elements
+                if log.text:
+                    logs_list.append(log.text)
         except (NoSuchElementException, StaleElementReferenceException):
             break
-        # Wait for the server button to disappear and progress bar to show (2sec is too much)
-        await asyncio.sleep(0.01)
-        if progress_messages == "":
+
+        expected_messages = [
+            "Server requested",
+            "Spawning server...",
+            f"Server ready at {app.base_url}user/{user.name}/",
+        ]
+
+        if progress_message:
+            assert progress_message in expected_messages
+        if logs_list:
+            # race condition: progress_message _should_
+            # be the last log message, but it _may_ be the next one
+            assert progress_message
+
+        if len(logs_list) < 2:
             assert percent == "0%"
-            assert len(logs_list) == 0
-        elif progress_messages == "Server requested":
-            assert percent == "0%"
-            assert len(logs_list) == 1
-            assert str(logs_list[0]) == "Server requested"
-        elif progress_messages == "Spawning server...":
+        elif len(logs_list) == 2:
             assert percent == "50%"
-            assert len(logs_list) == 2
-            assert str(logs_list[0]) == "Server requested"
-            assert str(logs_list[1]) == "Spawning server..."
-        elif "Server ready at" in progress_messages:
-            assert (
-                f"Server ready at {app.base_url}user/{user.name}/" in progress_messages
-            )
+        elif len(logs_list) >= 3:
             assert percent == "100%"
-            assert len(logs_list) == 3
-            assert str(logs_list[0]) == "Server requested"
-            assert str(logs_list[1]) == "Spawning server..."
-            assert (
-                str(logs_list[2]) == f"Server ready at {app.base_url}user/{user.name}/"
-            )
-            assert str(logs_list[2]) == progress_messages
+
+        assert logs_list == expected_messages[: len(logs_list)]
+
+        # Wait for the server button to disappear and progress bar to show (2sec is too much)
+        await asyncio.sleep(0.2)
+
+    # after spawn-pending redirect
+    assert f'/user/{user.name}' in browser.current_url
 
 
 async def test_spawn_pending_server_ready(app, browser, user):
