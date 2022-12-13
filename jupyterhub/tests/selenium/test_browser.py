@@ -293,6 +293,8 @@ async def test_spawn_pending_server_not_started(
     assert href_launch.endswith(f"/hub/spawn/{user.name}")
 
 
+# this test is flaky on CI, but runs reliably locally
+@pytest.mark.xfail(reason="flaky on CI")
 async def test_spawn_pending_progress(app, browser, slow_spawn, no_patience, user):
     """verify that the server process messages are showing up to the user
     when the server is going to start up"""
@@ -314,6 +316,8 @@ async def test_spawn_pending_progress(app, browser, slow_spawn, no_patience, use
     # make sure we're still on the spawn-pending page
     assert '/spawn-pending/' in browser.current_url
     while '/spawn-pending/' in browser.current_url:
+        # FIXME: reliability may be due to page changing between `find_element` calls
+        # maybe better if we get HTML once and parse with beautifulsoup
         progress_message = browser.find_element(
             *SpawningPageLocators.PROGRESS_MESSAGE
         ).text
