@@ -16,3 +16,6 @@ c.JupyterHub.authenticator_class = DummyAuthenticator
 from jupyterhub.spawner import SimpleLocalProcessSpawner
 
 c.JupyterHub.spawner_class = SimpleLocalProcessSpawner
+
+# only listen on localhost for testing
+c.JupyterHub.bind_url = 'http://127.0.0.1:8000'
