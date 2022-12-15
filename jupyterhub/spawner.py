@@ -6,7 +6,7 @@ Contains base Spawner class & default implementation
 import ast
 import json
 import os
-import pipes
+import shlex
 import shutil
 import signal
 import sys
@@ -1667,9 +1667,9 @@ class LocalProcessSpawner(Spawner):
         if self.shell_cmd:
             # using shell_cmd (e.g. bash -c),
             # add our cmd list as the last (single) argument:
-            cmd = self.shell_cmd + [' '.join(pipes.quote(s) for s in cmd)]
+            cmd = self.shell_cmd + [' '.join(shlex.quote(s) for s in cmd)]
 
-        self.log.info("Spawning %s", ' '.join(pipes.quote(s) for s in cmd))
+        self.log.info("Spawning %s", ' '.join(shlex.quote(s) for s in cmd))
 
         popen_kwargs = dict(
             preexec_fn=self.make_preexec_fn(self.user.name),

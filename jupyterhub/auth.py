@@ -2,8 +2,8 @@
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 import inspect
-import pipes
 import re
+import shlex
 import sys
 import warnings
 from concurrent.futures import ThreadPoolExecutor
@@ -958,7 +958,7 @@ class LocalAuthenticator(Authenticator):
         except KeyError:
             self.log.debug("No UID for user %s" % name)
         cmd += [name]
-        self.log.info("Creating user: %s", ' '.join(map(pipes.quote, cmd)))
+        self.log.info("Creating user: %s", ' '.join(map(shlex.quote, cmd)))
         p = Popen(cmd, stdout=PIPE, stderr=STDOUT)
         p.wait()
         if p.returncode:
