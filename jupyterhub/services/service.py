@@ -41,7 +41,7 @@ A hub-managed service with no URL::
 import asyncio
 import copy
 import os
-import pipes
+import shlex
 import shutil
 from subprocess import Popen
 
@@ -130,7 +130,7 @@ class _ServiceSpawner(LocalProcessSpawner):
             env['SYSTEMROOT'] = os.environ['SYSTEMROOT']
         cmd = self.cmd
 
-        self.log.info("Spawning %s", ' '.join(pipes.quote(s) for s in cmd))
+        self.log.info("Spawning %s", ' '.join(shlex.quote(s) for s in cmd))
         try:
             self.proc = Popen(
                 self.cmd,
