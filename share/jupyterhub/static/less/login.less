@@ -19,7 +19,6 @@
     vertical-align: middle;
     margin: auto auto 20% auto;
     width: 350px;
-    font-size: large;
   }
 
   .input-group,
@@ -50,11 +49,17 @@
     color: #fff;
     background: @jupyter-orange;
     border-radius: @border-radius-large @border-radius-large 0 0;
+    font-size: large;
+  }
+
+  .auth-form-header > h1 {
+    font-size: inherit;
+    font-weight: inherit;
+    margin: 0;
   }
 
   .auth-form-body {
     padding: 20px;
-    font-size: 14px;
     border: thin silver solid;
     border-top: none;
     border-radius: 0 0 @border-radius-large @border-radius-large;
