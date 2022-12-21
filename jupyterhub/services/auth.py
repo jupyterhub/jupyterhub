@@ -243,7 +243,6 @@ class HubAuth(SingletonConfigurable):
             return 'http://127.0.0.1:8081' + url_path_join(self.hub_prefix, 'api')
 
     api_token = Unicode(
-        os.getenv('JUPYTERHUB_API_TOKEN', ''),
         help="""API key for accessing Hub API.
 
         Default: $JUPYTERHUB_API_TOKEN
@@ -252,6 +251,10 @@ class HubAuth(SingletonConfigurable):
         Will be auto-generated for hub-managed services.
         """,
     ).tag(config=True)
+
+    @default("api_token")
+    def _default_api_token(self):
+        return os.getenv('JUPYTERHUB_API_TOKEN', '')
 
     hub_prefix = Unicode(
         '/hub/',

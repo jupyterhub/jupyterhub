@@ -14,8 +14,18 @@ from traitlets import import_item
 
 from .mixins import make_singleuser_app
 
-JUPYTERHUB_SINGLEUSER_APP = os.environ.get("JUPYTERHUB_SINGLEUSER_APP")
+JUPYTERHUB_SINGLEUSER_APP = os.environ.get("JUPYTERHUB_SINGLEUSER_APP", "")
 
+# allow shortcut references
+_app_shortcuts = {
+    "notebook": "notebook.notebookapp.NotebookApp",
+    "jupyter-server": "jupyter_server.serverapp.ServerApp",
+    "extension": "jupyter_server.serverapp.ServerApp",
+}
+
+JUPYTERHUB_SINGLEUSER_APP = _app_shortcuts.get(
+    JUPYTERHUB_SINGLEUSER_APP.replace("_", "-"), JUPYTERHUB_SINGLEUSER_APP
+)
 
 if JUPYTERHUB_SINGLEUSER_APP:
     App = import_item(JUPYTERHUB_SINGLEUSER_APP)

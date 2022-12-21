@@ -55,6 +55,7 @@ def get_package_data():
         'alembic/*',
         'alembic/versions/*',
         'event-schemas/*/*.yaml',
+        'jupyterhub/singleuser/templates/*.html',
     ]
     return package_data
 

@@ -18,6 +18,7 @@ import sys
 import warnings
 from datetime import timezone
 from importlib import import_module
+from pathlib import Path
 from textwrap import dedent
 from urllib.parse import urlparse
 
@@ -168,65 +169,12 @@ flags = {
 }
 
 
-page_template = """
-{% extends "templates/page.html" %}
-
-{% block header_buttons %}
-{{super()}}
-
-<span>
-    <a href='{{hub_control_panel_url}}'
-       id='jupyterhub-control-panel-link'
-       class='btn btn-default btn-sm navbar-btn pull-right'
-       style='margin-right: 4px; margin-left: 2px;'>
-        Control Panel
-    </a>
-</span>
-{% endblock %}
-
-{% block logo %}
-<img src='{{logo_url}}' alt='Jupyter Notebook'/>
-{% endblock logo %}
-
-{% block script %}
-{{ super() }}
-<script type='text/javascript'>
-  function _remove_redirects_param() {
-    // remove ?redirects= param from URL so that
-    // successful page loads don't increment the redirect loop counter
-    if (window.location.search.length <= 1) {
-      return;
-    }
-    var search_parameters = window.location.search.slice(1).split('&');
-    for (var i = 0; i < search_parameters.length; i++) {
-      if (search_parameters[i].split('=')[0] === 'redirects') {
-        // remote token from search parameters
-        search_parameters.splice(i, 1);
-        var new_search = '';
-        if (search_parameters.length) {
-          new_search = '?' + search_parameters.join('&');
-        }
-        var new_url = window.location.origin +
-                      window.location.pathname +
-                      new_search +
-                      window.location.hash;
-        window.history.replaceState({}, "", new_url);
-        return;
-      }
-    }
-  }
-  _remove_redirects_param();
-</script>
-{% endblock script %}
-"""
-
-
 def _exclude_home(path_list):
     """Filter out any entries in a path list that are in my home directory.
 
     Used to disable per-user configuration.
     """
-    home = os.path.expanduser('~')
+    home = os.path.expanduser('~/')
     for p in path_list:
         if not p.startswith(home):
             yield p
@@ -624,6 +572,21 @@ class SingleUserNotebookAppMixin(Configurable):
                     f"Extending {cls.__module__}.{cls.__name__} from {module_name} {mod_version}"
                 )
 
+    # load test extension, if we're testing
+    def init_server_extension_config(self):
+        # classic notebook server (notebook < 7)
+        super().init_server_extension_config()
+        if os.getenv("JUPYTERHUB_SINGLEUSER_TEST_EXTENSION") == "1":
+            self.log.warning("Enabling jupyterhub test extension, classic edition")
+            self.nbserver_extensions["jupyterhub.tests.extension"] = True
+
+    def find_server_extensions(self):
+        # jupyter-server (lab or notebook >=7)
+        super().find_server_extensions()
+        if os.getenv("JUPYTERHUB_SINGLEUSER_TEST_EXTENSION") == "1":
+            self.log.warning("Enabling jupyterhub test extension")
+            self.jpserver_extensions["jupyterhub.tests.extension"] = True
+
     def initialize(self, argv=None):
         # disable trash by default
         # this can be re-enabled by config
@@ -785,6 +748,10 @@ class SingleUserNotebookAppMixin(Configurable):
                 jinja_envs.append(settings[env_name])
 
         # patch jinja env loading to get modified template, only for base page.html
+        template_dir = Path(__file__).resolve().parent.joinpath("templates")
+        with template_dir.joinpath("page.html").open() as f:
+            page_template = f.read()
+
         def get_page(name):
             if name == 'page.html':
                 return page_template
@@ -935,11 +902,18 @@ def make_singleuser_app(App):
     log = empty_parent_app.log
 
     # detect base classes
-    LoginHandler = empty_parent_app.login_handler_class
-    LogoutHandler = empty_parent_app.logout_handler_class
+    if not getattr(empty_parent_app, "login_handler_class", None) and hasattr(
+        empty_parent_app, "identity_provider_class"
+    ):
+        has_handlers = empty_parent_app.identity_provider_class(parent=empty_parent_app)
+    else:
+        has_handlers = empty_parent_app
+    LoginHandler = has_handlers.login_handler_class
+    LogoutHandler = has_handlers.logout_handler_class
     BaseHandler = _patch_app_base_handlers(empty_parent_app)
 
     # create Handler classes from mixins + bases
+
     class JupyterHubLoginHandler(JupyterHubLoginHandlerMixin, LoginHandler):
         pass
 
