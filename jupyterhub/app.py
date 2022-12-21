@@ -2393,7 +2393,7 @@ class JupyterHub(Application):
                     proto=parsed.scheme,
                     ip=parsed.hostname,
                     port=port,
-                    cookie_name='jupyterhub-services',
+                    cookie_name=service.oauth_client_id,
                     base_url=service.prefix,
                 )
                 self.db.add(server)
