@@ -518,7 +518,7 @@ def token_table_body_as_dict(browser, table_locator):
     # return dict contains elements in row and column
     return [
         [element.text for element in row.find_elements(By.TAG_NAME, 'td')]
-        for row in body.find_elements(By.CLASS_NAME, 'token-row')
+        for row in body.find_elements(By.TAG_NAME, 'tr')
     ]
 
 
