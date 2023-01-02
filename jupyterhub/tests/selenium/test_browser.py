@@ -24,6 +24,7 @@ from jupyterhub.tests.selenium.locators import (
 )
 from jupyterhub.utils import exponential_backoff
 
+from ... import orm, roles
 from ...utils import url_path_join
 from ..utils import api_request, public_host, public_url, ujoin
 
@@ -854,3 +855,109 @@ async def test_user_logout(app, browser, url, user):
     while f"/user/{user.name}/" not in browser.current_url:
         await webdriver_wait(browser, EC.url_matches(f"/user/{user.name}/"))
     assert f"/user/{user.name}" in browser.current_url
+
+
+# OAUTH confirmation page
+
+
+@pytest.mark.parametrize(
+    "user_scopes",
+    [
+        (
+            [
+                'self',
+                'read:users!user=gawain',
+                'read:tokens',
+                'read:groups!group=mythos',
+            ]
+        ),
+    ],
+)
+async def test_oauth_page_1(
+    app,
+    browser,
+    mockservice_url,
+    create_temp_role,
+    create_user_with_scopes,
+    user_scopes,
+):
+    service_role = create_temp_role(user_scopes)
+
+    service = mockservice_url
+    user = create_user_with_scopes("access:services")
+    roles.grant_role(app.db, user, service_role)
+    oauth_client = (
+        app.db.query(orm.OAuthClient)
+        .filter_by(identifier=service.oauth_client_id)
+        .one()
+    )
+    oauth_client.allowed_scopes = sorted(roles.roles_to_scopes([service_role]))
+    app.db.commit()
+
+    url = url_path_join(public_url(app, service) + 'owhoami/?arg=x')
+    await in_thread(browser.get, (url))
+    print(browser.current_url)
+    expected_client_id = service.name
+    expected_redirect_url = app.base_url + f"servises/{service.name}/oauth_callback"
+    assert expected_client_id, expected_redirect_url in browser.current_url
+
+    # login user
+    await login(browser, user.name, pass_w=str(user.name))
+    auth_button = browser.find_element(
+        By.XPATH, '//input[@type="submit" and @value="Authorize"]'
+    )
+    if not auth_button.is_displayed():
+        await webdriver_wait(
+            browser,
+            EC.visibility_of_element_located(
+                (By.XPATH, '//input[@type="submit" and @value="Authorize"]')
+            ),
+        )
+    print(browser.page_source)
+    # verify that user can see the service name and oauth URL
+    text_permission = browser.find_element(
+        By.XPATH, './/h1[text()="Authorize access"]//following::p'
+    ).text
+    assert f"JupyterHub service {service.name}", (
+        f"oauth URL: {expected_redirect_url}" in text_permission
+    )
+
+    # permissions check
+    form = browser.find_element(By.TAG_NAME, "form")
+    scopes_elements = form.find_elements(
+        By.XPATH, '//input[@type="hidden" and @name="scopes"]'
+    )
+    scope_list = []
+    for scopes_element in scopes_elements:
+        # check that scopes are invisible on the page
+        assert not scopes_element.is_displayed()
+        scope_value = scopes_element.get_attribute("value")
+        scope_list.append(scope_value)
+        print(scope_value)
+    # check that all scopes granded to user are presented in POST form (scope_list)
+    assert all(x in scope_list for x in user_scopes)
+    assert f"access:services!service={service.name}" in scope_list
+
+    check_boxes = form.find_elements(
+        By.XPATH, '//input[@type="checkbox" and @name="raw-scopes"]'
+    )
+    for check_box in check_boxes:
+        # check that user cannot uncheck the checkbox
+        assert not check_box.is_enabled()
+        assert check_box.get_attribute("disabled")
+        assert check_box.get_attribute("title") == "This authorization is required"
+
+    discriptions = form.find_elements(By.TAG_NAME, 'span')
+    for discription in discriptions:
+        d_text = discription.get_attribute("innerHTML")
+        print(d_text)
+        # check that d_text in scopes.scope_definitions
+        # to be done
+
+    await click(browser, (By.XPATH, '//input[@type="submit" and @value="Authorize"]'))
+    # check that user returned to servise page
+    assert browser.current_url == url_path_join(
+        public_url(app, service) + 'owhoami/?arg=x'
+    )
+
+    # check the scope (to be done)
