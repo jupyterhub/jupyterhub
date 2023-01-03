@@ -9,6 +9,7 @@ import random
 import re
 import time
 import uuid
+import warnings
 from datetime import datetime, timedelta
 from http.client import responses
 from urllib.parse import parse_qs, parse_qsl, urlencode, urlparse, urlunparse
@@ -526,6 +527,8 @@ class BaseHandler(RequestHandler):
         # clear hub cookie
         self.clear_cookie(self.hub.cookie_name, path=self.hub.base_url, **kwargs)
         # clear services cookie
+        # FIXME: remove when we haven't been setting this in a while
+        # (stopped setting it in 3.2)
         self.clear_cookie(
             'jupyterhub-services',
             path=url_path_join(self.base_url, 'services'),
@@ -542,8 +545,6 @@ class BaseHandler(RequestHandler):
             '_xsrf',
             **clear_xsrf_cookie_kwargs,
         )
-        # Reset _jupyterhub_user
-        self._jupyterhub_user = None
 
     def _set_cookie(self, key, value, encrypted=True, **overrides):
         """Setting any cookie should go through here
@@ -599,12 +600,10 @@ class BaseHandler(RequestHandler):
 
     def set_service_cookie(self, user):
         """set the login cookie for services"""
-        self._set_user_cookie(
-            user,
-            orm.Server(
-                cookie_name='jupyterhub-services',
-                base_url=url_path_join(self.base_url, 'services'),
-            ),
+        warnings.warn(
+            "set_service_cookie is deprecated in JupyterHub 2.0. Not setting jupyterhub-services cookie.",
+            DeprecationWarning,
+            stacklevel=2,
         )
 
     def set_hub_cookie(self, user):
@@ -619,10 +618,6 @@ class BaseHandler(RequestHandler):
                 self.request.host,
                 self.domain,
             )
-
-        # set single cookie for services
-        if self.db.query(orm.Service).filter(orm.Service.server != None).first():
-            self.set_service_cookie(user)
 
         if not self.get_session_cookie():
             self.set_session_cookie()

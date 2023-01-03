@@ -74,6 +74,7 @@ from .metrics import (
     INIT_SPAWNERS_DURATION_SECONDS,
     RUNNING_SERVERS,
     TOTAL_USERS,
+    PeriodicMetricsCollector,
 )
 from .oauth.provider import make_provider
 from .objects import Hub, Server
@@ -1163,7 +1164,7 @@ class JupyterHub(Application):
         Setting this can limit the total resources a user can consume.
 
         If set to 0, no limit is enforced.
-        
+
         Can be an integer or a callable/awaitable based on the handler object:
 
         ::
@@ -1180,7 +1181,15 @@ class JupyterHub(Application):
 
     default_server_name = Unicode(
         "",
-        help="If named servers are enabled, default name of server to spawn or open, e.g. by user-redirect.",
+        help="""
+        If named servers are enabled, default name of server to spawn or open
+        when no server is specified, e.g. by user-redirect.
+
+        Note: This has no effect if named servers are not enabled,
+        and does _not_ change the existence or behavior of the default server named `''` (the empty string).
+        This only affects which named server is launched when no server is specified,
+        e.g. by links to `/hub/user-redirect/lab/tree/mynotebook.ipynb`.
+        """,
     ).tag(config=True)
     # Ensure that default_server_name doesn't do anything if named servers aren't allowed
     _default_server_name = Unicode(
@@ -1192,6 +1201,11 @@ class JupyterHub(Application):
         if self.allow_named_servers:
             return self.default_server_name
         else:
+            if self.default_server_name:
+                self.log.warning(
+                    f"Ignoring `JupyterHub.default_server_name = {self.default_server_name!r}` config"
+                    " without `JupyterHub.allow_named_servers = True`."
+                )
             return ""
 
     # class for spawning single-user servers
@@ -1509,13 +1523,20 @@ class JupyterHub(Application):
 
     extra_handlers = List(
         help="""
-        Register extra tornado Handlers for jupyterhub.
+        DEPRECATED.
 
-        Should be of the form ``("<regex>", Handler)``
-
-        The Hub prefix will be added, so `/my-page` will be served at `/hub/my-page`.
+        If you need to register additional HTTP endpoints
+        please use services instead.
         """
     ).tag(config=True)
+
+    @observe("extra_handlers")
+    def _extra_handlers_changed(self, change):
+        if change.new:
+            self.log.warning(
+                "JupyterHub.extra_handlers is deprecated in JupyterHub 3.1."
+                " Please use JupyterHub services to register additional HTTP endpoints."
+            )
 
     default_url = Union(
         [Unicode(), Callable()],
@@ -2383,7 +2404,7 @@ class JupyterHub(Application):
                     proto=parsed.scheme,
                     ip=parsed.hostname,
                     port=port,
-                    cookie_name='jupyterhub-services',
+                    cookie_name=service.oauth_client_id,
                     base_url=service.prefix,
                 )
                 self.db.add(server)
@@ -2905,6 +2926,8 @@ class JupyterHub(Application):
                 await self.proxy.check_routes(self.users, self._service_map)
 
             asyncio.ensure_future(finish_init_spawners())
+        metrics_updater = PeriodicMetricsCollector(parent=self, db=self.db)
+        metrics_updater.start()
 
     async def cleanup(self):
         """Shutdown managed services and various subprocesses. Cleanup runtime files."""

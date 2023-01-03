@@ -7,7 +7,7 @@ environment in a custom way.
 Since the `jupyterhub-singleuser` server extends the standard Jupyter notebook
 server, most configuration and documentation that applies to Jupyter Notebook
 applies to the single-user environments. Configuration of user environments
-typically does not occur through JupyterHub itself, but rather through the system-wide
+typically does not occur through JupyterHub itself, but rather through system-wide
 configuration of Jupyter, which is inherited by `jupyterhub-singleuser`.
 
 **Tip:** When searching for configuration tips for JupyterHub user environments, you might want to remove JupyterHub from your search because there are a lot more people out there configuring Jupyter than JupyterHub and the configuration is the same.
@@ -37,7 +37,11 @@ sudo python3 -m pip install numpy
 to install the numpy package in the default Python 3 environment on your system
 (typically `/usr/local`).
 
-Alternatively, You may also use conda to install packages. To do this, ensure that the conda environment has appropriate users permissions needed to run Python code in the environment.
+You may also use conda to install packages. If you do, you should make sure
+that the conda environment has appropriate permissions for users to be able to
+run Python code in the env. The env must be _readable and executable_ by all
+users. Additionally it must be _writeable_ if you want users to install
+additional packages.
 
 ## Configuring Jupyter and IPython
 
@@ -52,6 +56,24 @@ The typical locations for these config files are:
 
 - **system-wide** in `/etc/{jupyter|ipython}`
 - **env-wide** (environment wide) in `{sys.prefix}/etc/{jupyter|ipython}`.
+
+### Jupyter environment configuration priority
+
+When Jupyter runs in an environment (conda or virtualenv), it prefers to load configuration from the environment over each user's own configuration (e.g. in `~/.jupyter`).
+This may cause issues if you use a _shared_ conda environment or virtualenv for users, because e.g. jupyterlab may try to write information like workspaces or settings to the environment instead of the user's own directory.
+This could fail with something like `Permission denied: $PREFIX/etc/jupyter/lab`.
+
+To avoid this issue, set `JUPYTER_PREFER_ENV_PATH=0` in the user environment:
+
+```python
+c.Spawner.environment.update(
+    {
+        "JUPYTER_PREFER_ENV_PATH": "0",
+    }
+)
+```
+
+which tells Jupyter to prefer _user_ configuration paths (e.g. in `~/.jupyter`) to configuration set in the environment.
 
 ### Example: Enable an extension system-wide
 

@@ -2,8 +2,8 @@
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 import inspect
-import pipes
 import re
+import shlex
 import sys
 import warnings
 from concurrent.futures import ThreadPoolExecutor
@@ -776,8 +776,6 @@ def _deprecated_method(old_name, new_name, version):
     return deprecated
 
 
-import types
-
 # deprecate white/blacklist method names
 for _old_name, _new_name, _version in [
     ("check_whitelist", "check_allowed", "1.2"),
@@ -960,7 +958,7 @@ class LocalAuthenticator(Authenticator):
         except KeyError:
             self.log.debug("No UID for user %s" % name)
         cmd += [name]
-        self.log.info("Creating user: %s", ' '.join(map(pipes.quote, cmd)))
+        self.log.info("Creating user: %s", ' '.join(map(shlex.quote, cmd)))
         p = Popen(cmd, stdout=PIPE, stderr=STDOUT)
         p.wait()
         if p.returncode:

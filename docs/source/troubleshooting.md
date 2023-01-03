@@ -113,9 +113,9 @@ If everything is working, the response logged will be similar to this:
 
 You should see a similar 200 message, as above, in the Hub log when you first
 visit your single-user notebook server. If you don't see this message in the log, it
-may mean that your single-user notebook server isn't connecting to your Hub.
+may mean that your single-user notebook server is not connecting to your Hub.
 
-If you see 403 (forbidden) like this, it's likely a token problem:
+If you see 403 (forbidden) like this, it is likely a token problem:
 
 ```
 403 GET /hub/api/authorizations/cookie/jupyterhub-token-name/[secret] (@10.0.1.4) 4.14ms
@@ -175,7 +175,7 @@ If possible, try to run the Jupyter Notebook as an externally managed service wi
 
 Standard JupyterHub installations include a [jupyterhub-singleuser](https://github.com/jupyterhub/jupyterhub/blob/9fdab027daa32c9017845572ad9d5ba1722dbc53/setup.py#L116) command which is built from the `jupyterhub.singleuser:main` method. The `jupyterhub-singleuser` command is the default command when JupyterHub launches single-user Jupyter Notebooks. One of the goals of this command is to make sure the version of JupyterHub installed within the Jupyter Notebook coincides with the version of the JupyterHub server itself.
 
-If you launch a Jupyter Notebook with the `jupyterhub-singleuser` command directly from the command line the Jupyter Notebook won't have access to the `JUPYTERHUB_API_TOKEN` and will return:
+If you launch a Jupyter Notebook with the `jupyterhub-singleuser` command directly from the command line, the Jupyter Notebook won't have access to the `JUPYTERHUB_API_TOKEN` and will return:
 
 ```
     JUPYTERHUB_API_TOKEN env is required to run jupyterhub-singleuser.
@@ -203,7 +203,7 @@ With a docker container, pass in the environment variable with the run command:
 Some certificate providers, i.e. Entrust, may provide you with a chained
 certificate that contains multiple files. If you are using a chained
 certificate you will need to concatenate the individual files by appending the
-chain cert and root cert to your host cert:
+chained cert and root cert to your host cert:
 
     cat your_host.crt chain.crt root.crt > your_host-chained.crt
 
@@ -359,7 +359,8 @@ Use `docker logs <container>` where `<container>` is the container name defined 
 
     docker logs hub
 
-By default, the user's notebook server is named `jupyter-<username>` where `username` is the user's username within JupyterHub's db. So if you wanted to see the logs for user `foo` you would use:
+By default, the user's notebook server is named `jupyter-<username>` where `username` is the user's username within JupyterHub's database.
+So if you wanted to see the logs for user `foo` you would use:
 
     docker logs jupyter-foo
 

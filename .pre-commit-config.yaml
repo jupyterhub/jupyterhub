@@ -8,24 +8,38 @@
 # - Run on all files:   pre-commit run --all-files
 # - Register git hooks: pre-commit install --install-hooks
 #
+
+ci:
+  # pre-commit.ci will open PRs updating our hooks once a month
+  autoupdate_schedule: monthly
+
 repos:
   # Autoformat: Python code, syntax patterns are modernized
   - repo: https://github.com/asottile/pyupgrade
-    rev: v3.2.0
+    rev: v3.3.1
     hooks:
       - id: pyupgrade
         args:
-          - --py36-plus
+          - --py37-plus
+
+  # Autoformat: Python code
+  - repo: https://github.com/PyCQA/autoflake
+    rev: v2.0.0
+    hooks:
+      - id: autoflake
+        # args ref: https://github.com/PyCQA/autoflake#advanced-usage
+        args:
+          - --in-place
 
   # Autoformat: Python code
   - repo: https://github.com/pycqa/isort
-    rev: 5.10.1
+    rev: 5.11.4
     hooks:
       - id: isort
 
   # Autoformat: Python code
   - repo: https://github.com/psf/black
-    rev: 22.10.0
+    rev: 22.12.0
     hooks:
       - id: black
 
@@ -37,7 +51,7 @@ repos:
 
   # Autoformat and linting, misc. details
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.3.0
+    rev: v4.4.0
     hooks:
       - id: end-of-file-fixer
         exclude: share/jupyterhub/static/js/admin-react.js
@@ -47,6 +61,6 @@ repos:
 
   # Linting: Python code (see the file .flake8)
   - repo: https://github.com/PyCQA/flake8
-    rev: "5.0.4"
+    rev: "6.0.0"
     hooks:
       - id: flake8

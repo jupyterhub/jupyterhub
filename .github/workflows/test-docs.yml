@@ -55,8 +55,20 @@ jobs:
 
       - name: Install requirements
         run: |
-          pip install -r docs/requirements.txt pytest -e .
+          pip install -r docs/requirements.txt pytest
 
       - name: pytest docs/
         run: |
           pytest docs/
+
+      # readthedocs doesn't halt on warnings,
+      # so raise any warnings here
+      - name: build docs
+        run: |
+          cd docs
+          make html
+
+      - name: check links
+        run: |
+          cd docs
+          make linkcheck

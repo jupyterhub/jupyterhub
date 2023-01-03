@@ -11,9 +11,9 @@ from tornado.httputil import url_concat
 
 from .. import orm
 from ..utils import url_escape_path, url_path_join
-from .mocking import FormSpawner, public_url
+from .mocking import FormSpawner
 from .test_api import TIMESTAMP, add_user, api_request, fill_user, normalize_user
-from .utils import async_requests, get_page
+from .utils import async_requests, get_page, public_url
 
 
 @pytest.fixture

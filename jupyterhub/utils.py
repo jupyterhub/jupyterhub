@@ -527,7 +527,6 @@ def print_stacks(file=sys.stderr):
     """
     # local imports because these will not be used often,
     # no need to add them to startup
-    import asyncio
     import traceback
 
     from .log import coroutine_frames

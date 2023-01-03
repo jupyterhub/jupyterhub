@@ -72,7 +72,7 @@ To solve that problem, the `oauth_redirect_uri` value in the service initializat
 
 FastAPI has a concept of a [dependency injection](https://fastapi.tiangolo.com/tutorial/dependencies) using a `Depends` object (and a subclass `Security`) that is automatically instantiated/executed when it is a parameter for your endpoint routes. You can utilize a `Depends` object for re-useable common parameters or authentication mechanisms like the [`get_user`](https://fastapi.tiangolo.com/tutorial/security/get-current-user) pattern.
 
-JupyterHub OAuth has three ways to authenticate: a `token` url parameter; a `Authorization: Bearer <token>` header; and a (deprecated) `jupyterhub-services` cookie. FastAPI has helper functions that let us create `Security` (dependency injection) objects for each of those. When you need to allow multiple / optional authentication dependencies (`Security` objects), then you can use the argument `auto_error=False` and it will return `None` instead of raising an `HTTPException`.
+JupyterHub OAuth uses a token, which can be passed in two places: a `token` url parameter, or an `Authorization: Bearer <token>` header. FastAPI has helper functions that let us create `Security` (dependency injection) objects for each of those. When you need to allow multiple / optional authentication dependencies (`Security` objects), then you can use the argument `auto_error=False` and it will return `None` instead of raising an `HTTPException`.
 
 Endpoints that need authentication (`/me` and `/debug` in this example) can leverage the `get_user` pattern and effectively pull the user model from the Hub API when a request has authenticated with cookie / token / header all using the simple syntax,
 

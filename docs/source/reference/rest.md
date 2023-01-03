@@ -193,7 +193,7 @@ r.json()
 
 The same API token can also authorize access to the [Jupyter Notebook REST API][]
 
-provided by notebook servers managed by JupyterHub if it has the necessary `access:users:servers` scope.
+provided by notebook servers managed by JupyterHub if it has the necessary `access:servers` scope.
 
 (api-pagination)=
 
@@ -294,7 +294,7 @@ First you must enable named-servers by including the following setting in the `j
 
 If you are using the [zero-to-jupyterhub-k8s](https://github.com/jupyterhub/zero-to-jupyterhub-k8s) set-up to run JupyterHub,
 then instead of editing the `jupyterhub_config.py` file directly, you could pass
-the following as part of the `config.yaml` file, as per the [tutorial](https://zero-to-jupyterhub.readthedocs.io/en/latest/):
+the following as part of the `config.yaml` file, as per the [tutorial](https://z2jh.jupyter.org/en/latest/):
 
 ```bash
 hub:

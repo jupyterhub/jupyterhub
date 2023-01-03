@@ -19,8 +19,15 @@ from ..objects import Server
 from ..utils import url_path_join as ujoin
 from ..utils import utcnow
 from .conftest import new_username
-from .mocking import public_host, public_url
-from .utils import add_user, api_request, async_requests, auth_header, find_user
+from .utils import (
+    add_user,
+    api_request,
+    async_requests,
+    auth_header,
+    find_user,
+    public_host,
+    public_url,
+)
 
 # --------------------
 # Authentication tests

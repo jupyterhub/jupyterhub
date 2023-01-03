@@ -61,7 +61,7 @@ If a service is also to be managed by the Hub, it has a few extra options:
 A **Hub-Managed Service** is started by the Hub, and the Hub is responsible
 for the Service's actions. A Hub-Managed Service can only be a local
 subprocess of the Hub. The Hub will take care of starting the process and
-restarts it if it stops.
+restart the service if the service stops.
 
 While Hub-Managed Services share some similarities with notebook Spawners,
 there are no plans for Hub-Managed Services to support the same spawning
@@ -234,8 +234,17 @@ There are two levels of authentication with the Hub:
 - {class}`.HubOAuth` - For services that should use oauth to authenticate with the Hub.
   This should be used for any service that serves pages that should be visited with a browser.
 
-To use HubAuth, you must set the `.api_token`, either programmatically when constructing the class,
-or via the `JUPYTERHUB_API_TOKEN` environment variable.
+To use HubAuth, you must set the `.api_token` instance variable. This can be
+done either programmatically when constructing the class, or via the
+`JUPYTERHUB_API_TOKEN` environment variable. A number of the examples in the
+root of the jupyterhub git repository set the `JUPYTERHUB_API_TOKEN` variable
+so consider having a look at those for futher reading
+([cull-idle](https://github.com/jupyterhub/jupyterhub/tree/master/examples/cull-idle),
+[external-oauth](https://github.com/jupyterhub/jupyterhub/tree/master/examples/external-oauth),
+[service-notebook](https://github.com/jupyterhub/jupyterhub/tree/master/examples/service-notebook)
+and [service-whoiami](https://github.com/jupyterhub/jupyterhub/tree/master/examples/service-whoami))
+
+(TODO: Where is this API TOKen set?)
 
 Most of the logic for authentication implementation is found in the
 {meth}`.HubAuth.user_for_token` methods,
@@ -249,7 +258,7 @@ which makes a request of the Hub, and returns:
     "name": "username",
     "groups": ["list", "of", "groups"],
     "scopes": [
-        "access:users:servers!server=username/",
+        "access:servers!server=username/",
     ],
   }
   ```
@@ -391,12 +400,12 @@ in which case the `scopes` field in this model should be checked on each access.
 The default required scopes for access are available from `hub_auth.oauth_scopes` or `$JUPYTERHUB_OAUTH_ACCESS_SCOPES`.
 
 An example of using an Externally-Managed Service and authentication is
-in [nbviewer README][nbviewer example] section on securing the notebook viewer,
+in the [nbviewer README][nbviewer example] section on securing the notebook viewer,
 and an example of its configuration is found [here](https://github.com/jupyter/nbviewer/blob/ed942b10a52b6259099e2dd687930871dc8aac22/nbviewer/providers/base.py#L95).
 nbviewer can also be run as a Hub-Managed Service as described [nbviewer README][nbviewer example]
 section on securing the notebook viewer.
 
-[requests]: http://docs.python-requests.org/en/master/
+[requests]: https://docs.python-requests.org/en/master/
 [services_auth]: ../api/services.auth.html
 [nbviewer example]: https://github.com/jupyter/nbviewer#securing-the-notebook-viewer
 [fastapi example]: https://github.com/jupyterhub/jupyterhub/tree/HEAD/examples/service-fastapi

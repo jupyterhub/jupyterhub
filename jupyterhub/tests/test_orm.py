@@ -7,7 +7,6 @@ from datetime import datetime, timedelta
 from unittest import mock
 
 import pytest
-from tornado import gen
 
 from .. import crypto, objects, orm, roles
 from ..emptyclass import EmptyClass

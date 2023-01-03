@@ -13,7 +13,6 @@ from ..scopes import (
     _check_scopes_exist,
     _resolve_requested_scopes,
     access_scopes,
-    expand_scopes,
     identify_scopes,
 )
 from ..utils import compare_token, hash_token

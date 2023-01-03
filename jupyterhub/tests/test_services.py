@@ -6,8 +6,6 @@ from subprocess import Popen
 
 from async_generator import asynccontextmanager
 
-from .. import orm
-from ..roles import roles_to_scopes
 from ..utils import (
     exponential_backoff,
     maybe_future,

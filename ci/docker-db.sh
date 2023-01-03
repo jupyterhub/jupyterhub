@@ -22,7 +22,7 @@ if [[ "$DB" == "mysql" ]]; then
     # ref server: https://hub.docker.com/_/mysql/
     # ref client: https://dev.mysql.com/doc/refman/5.7/en/setting-environment-variables.html
     #
-    DOCKER_RUN_ARGS="-p 3306:3306 --env MYSQL_ALLOW_EMPTY_PASSWORD=1 mysql:5.7"
+    DOCKER_RUN_ARGS="-p 3306:3306 --env MYSQL_ALLOW_EMPTY_PASSWORD=1 mysql:8.0"
     READINESS_CHECK="mysql --user root --execute \q"
 elif [[ "$DB" == "postgres" ]]; then
     # Environment variables can influence both the postgresql server in the
@@ -36,7 +36,7 @@ elif [[ "$DB" == "postgres" ]]; then
     # used by the postgresql client psql, so we configure the user based on how
     # we want to connect.
     #
-    DOCKER_RUN_ARGS="-p 5432:5432 --env "POSTGRES_USER=${PGUSER}" --env "POSTGRES_PASSWORD=${PGPASSWORD}" postgres:9.5"
+    DOCKER_RUN_ARGS="-p 5432:5432 --env "POSTGRES_USER=${PGUSER}" --env "POSTGRES_PASSWORD=${PGPASSWORD}" postgres:15.1"
     READINESS_CHECK="psql --command \q"
 else
     echo '$DB must be mysql or postgres'

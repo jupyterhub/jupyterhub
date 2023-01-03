@@ -224,7 +224,7 @@ When `Spawner.start` is called, this dictionary is accessible as `self.user_opti
 
 ## Writing a custom spawner
 
-If you are interested in building a custom spawner, you can read [this tutorial](http://jupyterhub-tutorial.readthedocs.io/en/latest/spawners.html).
+If you are interested in building a custom spawner, you can read [this tutorial](https://jupyterhub-tutorial.readthedocs.io/en/latest/spawners.html).
 
 ### Registering custom Spawners via entry points
 
@@ -297,36 +297,36 @@ Additional variables can be specified via the `Spawner.environment` configuratio
 
 The process environment is returned by `Spawner.get_env`, which specifies the following environment variables:
 
-- JUPYTERHUB*SERVICE_URL - the \_bind* URL where the server should launch its HTTP server (`http://127.0.0.1:12345`).
+- `JUPYTERHUB_SERVICE_URL` - the _bind_ URL where the server should launch its HTTP server (`http://127.0.0.1:12345`).
   This includes `Spawner.ip` and `Spawner.port`; _new in 2.0, prior to 2.0 IP, port were on the command-line and only if specified_
-- JUPYTERHUB_SERVICE_PREFIX - the URL prefix the service will run on (e.g. `/user/name/`)
-- JUPYTERHUB_USER - the JupyterHub user's username
-- JUPYTERHUB_SERVER_NAME - the server's name, if using named servers (default server has an empty name)
-- JUPYTERHUB_API_URL - the full URL for the JupyterHub API (http://17.0.0.1:8001/hub/api)
-- JUPYTERHUB_BASE_URL - the base URL of the whole jupyterhub deployment, i.e. the bit before `hub/` or `user/`,
+- `JUPYTERHUB_SERVICE_PREFIX` - the URL prefix the service will run on (e.g. `/user/name/`)
+- `JUPYTERHUB_USER` - the JupyterHub user's username
+- `JUPYTERHUB_SERVER_NAME` - the server's name, if using named servers (default server has an empty name)
+- `JUPYTERHUB_API_URL` - the full URL for the JupyterHub API (http://17.0.0.1:8001/hub/api)
+- `JUPYTERHUB_BASE_URL` - the base URL of the whole jupyterhub deployment, i.e. the bit before `hub/` or `user/`,
   as set by `c.JupyterHub.base_url` (default: `/`)
-- JUPYTERHUB_API_TOKEN - the API token the server can use to make requests to the Hub.
+- `JUPYTERHUB_API_TOKEN` - the API token the server can use to make requests to the Hub.
   This is also the OAuth client secret.
-- JUPYTERHUB_CLIENT_ID - the OAuth client ID for authenticating visitors.
-- JUPYTERHUB_OAUTH_CALLBACK_URL - the callback URL to use in OAuth, typically `/user/:name/oauth_callback`
-- JUPYTERHUB_OAUTH_ACCESS_SCOPES - the scopes required to access the server (called JUPYTERHUB_OAUTH_SCOPES prior to 3.0)
-- JUPYTERHUB_OAUTH_CLIENT_ALLOWED_SCOPES - the scopes the service is allowed to request.
+- `JUPYTERHUB_CLIENT_ID` - the OAuth client ID for authenticating visitors.
+- `JUPYTERHUB_OAUTH_CALLBACK_URL` - the callback URL to use in OAuth, typically `/user/:name/oauth_callback`
+- `JUPYTERHUB_OAUTH_ACCESS_SCOPES` - the scopes required to access the server (called `JUPYTERHUB_OAUTH_SCOPES` prior to 3.0)
+- `JUPYTERHUB_OAUTH_CLIENT_ALLOWED_SCOPES` - the scopes the service is allowed to request.
   If no scopes are requested explicitly, these scopes will be requested.
 
 Optional environment variables, depending on configuration:
 
-- JUPYTERHUB*SSL*[KEYFILE|CERTFILE|CLIENT_CI] - SSL configuration, when `internal_ssl` is enabled
-- JUPYTERHUB_ROOT_DIR - the root directory of the server (notebook directory), when `Spawner.notebook_dir` is defined (new in 2.0)
-- JUPYTERHUB_DEFAULT_URL - the default URL for the server (for redirects from `/user/:name/`),
+- `JUPYTERHUB_SSL_[KEYFILE|CERTFILE|CLIENT_CI]` - SSL configuration, when `internal_ssl` is enabled
+- `JUPYTERHUB_ROOT_DIR` - the root directory of the server (notebook directory), when `Spawner.notebook_dir` is defined (new in 2.0)
+- `JUPYTERHUB_DEFAULT_URL` - the default URL for the server (for redirects from `/user/:name/`),
   if `Spawner.default_url` is defined
   (new in 2.0, previously passed via CLI)
-- JUPYTERHUB_DEBUG=1 - generic debug flag, sets maximum log level when `Spawner.debug` is True
+- `JUPYTERHUB_DEBUG=1` - generic debug flag, sets maximum log level when `Spawner.debug` is True
   (new in 2.0, previously passed via CLI)
-- JUPYTERHUB_DISABLE_USER_CONFIG=1 - disable loading user config,
+- `JUPYTERHUB_DISABLE_USER_CONFIG=1` - disable loading user config,
   sets maximum log level when `Spawner.debug` is True (new in 2.0,
   previously passed via CLI)
 
-- JUPYTERHUB*[MEM|CPU]*[LIMIT_GUARANTEE] - the values of CPU and memory limits and guarantees.
+- `JUPYTERHUB_[MEM|CPU]_[LIMIT_GUARANTEE]` - the values of CPU and memory limits and guarantees.
   These are not expected to be enforced by the process,
   but are made available as a hint,
   e.g. for resource monitoring extensions.
@@ -340,7 +340,8 @@ discover these resource limits and guarantees, such as for memory and CPU.
 For the limits and guarantees to be useful, **the spawner must implement
 support for them**. For example, `LocalProcessSpawner`, the default
 spawner, does not support limits and guarantees. One of the spawners
-that supports limits and guarantees is the `systemdspawner`.
+that supports limits and guarantees is the
+[`systemdspawner`](https://github.com/jupyterhub/systemdspawner).
 
 ### Memory Limits & Guarantees
 
@@ -400,9 +401,10 @@ container `ip` prior to starting and pass that to `.create_certs` (TODO: edit).
 In general though, this method will not need to be changed and the default
 `ip`/`dns` (localhost) info will suffice.
 
-When `.create_certs` is run, it will `.create_certs` in a default, central
-location specified by `c.JupyterHub.internal_certs_location`. For `Spawners`
-that need access to these certs elsewhere (i.e. on another host altogether),
-the `.move_certs` method can be overridden to move the certs appropriately.
-Again, using `DockerSpawner` as an example, this would entail moving certs
-to a directory that will get mounted into the container this spawner starts.
+When `.create_certs` is run, it will create the certificates in a default,
+central location specified by `c.JupyterHub.internal_certs_location`. For
+`Spawners` that need access to these certs elsewhere (i.e. on another host
+altogether), the `.move_certs` method can be overridden to move the certs
+appropriately. Again, using `DockerSpawner` as an example, this would entail
+moving certs to a directory that will get mounted into the container this
+spawner starts.

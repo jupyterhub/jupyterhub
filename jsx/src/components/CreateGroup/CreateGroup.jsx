@@ -108,7 +108,6 @@ const CreateGroup = (props) => {
 CreateGroup.propTypes = {
   createGroup: PropTypes.func,
   updateGroups: PropTypes.func,
-  failRegexEvent: PropTypes.func,
   history: PropTypes.shape({
     push: PropTypes.func,
   }),

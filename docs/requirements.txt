@@ -1,12 +1,21 @@
--r ../requirements.txt
+# We install the jupyterhub package to help autodoc-traits inspect it and
+# generate documentation.
+#
+# FIXME: If there is a way for this requirements.txt file to pass a flag that
+#        the build system can intercept to not build the javascript artifacts,
+#        then do so so. That would mean that installing the documentation can
+#        avoid needing node/npm installed.
+#
+--editable .
 
-alabaster_jupyterhub
 autodoc-traits
 myst-parser
 pre-commit
 pydata-sphinx-theme
 pytablewriter>=0.56
 ruamel.yaml
-sphinx>=1.7
+sphinx>=4
 sphinx-copybutton
 sphinx-jsonschema
+sphinxext-opengraph
+sphinxext-rediraffe
