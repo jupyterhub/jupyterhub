@@ -33,7 +33,7 @@ repos:
 
   # Autoformat: Python code
   - repo: https://github.com/pycqa/isort
-    rev: 5.11.1
+    rev: 5.11.4
     hooks:
       - id: isort
 
