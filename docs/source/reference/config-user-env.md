@@ -202,6 +202,14 @@ This can be useful for quota service implementations. The example above limits t
 
 If `named_server_limit_per_user` is set to `0`, no limit is enforced.
 
+When using a spawner such as `DockerSpawner`, it is necessary to customize the name template to include the server name. Failing to do so can result in server errors when attempting to launch subsequent servers. 
+
+The following configuration should be added to address this:
+
+```python
+c.DockerSpawner.name_template = '{prefix}-{username}-{servername}'
+```
+
 (classic-notebook-ui)=
 
 ## Switching back to the classic notebook
