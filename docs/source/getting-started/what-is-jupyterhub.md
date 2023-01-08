@@ -1,4 +1,4 @@
-# What is Jupyter and JupyterHub?
+# JupyterHub: A conceptual overview
 
 JupyterHub is not what you think it is.  Most things you think are
 part of JupyterHub are actually handled by some other component, for
@@ -24,12 +24,12 @@ should make sense.
 
 
 
-## Just what is Jupyter?
+## What is Jupyter?
 
 Before we get too far, let's remember what our end goal is.  A
-**Jupyter Notebook** is really nothing more than a Python(&) process
+**Jupyter Notebook** is nothing more than a Python(&) process
 which is getting commands from a web browser and displaying the output
-via that browser.  What the process actually sees can roughly like
+via that browser.  What the process actually sees is roughly like
 getting commands on standard input(&) and writing to standard
 output(&).  There is nothing intrinsically special about this process
 - it can do anything a normal Python process can do, and nothing more.
@@ -38,7 +38,7 @@ such as graphics to a form usable by the browser.
 
 Everything we explain below is building up to this, going through many
 different layers which give you many ways of customizing how this
-process runs.  But this process is not *too* special.
+process runs.
 
 
 
@@ -47,13 +47,13 @@ process runs.  But this process is not *too* special.
 **JupyterHub** is the central piece that provides multi-user
 login capabilities. Despite this, the end user only briefly interacts with
 JupyterHub and most of the actual Jupyter session does not relate to
-the hub at all: the hub mainly handles authentication and creating (jargon: spawning) the
+the hub at all: the hub mainly handles authentication and creating (JupyterHub calls it "spawning") the
 single-user server.  In short, anything which is related to *starting*
 the user's workspace/environment is about JupyterHub, anything about
 *running* usually isn't.
 
 If you have problems connecting the authentication, spawning, and the
-proxy (explained below), the issues is usually with JupyterHub.  To
+proxy (explained below), the issue is usually with JupyterHub.  To
 debug, JupyterHub has extensive logs which get printed to its console
 and can be used to discover most problems.
 
@@ -64,7 +64,7 @@ The main pieces of JupyterHub are:
 JupyterHub itself doesn't actually manage your users.  It has a
 database of users, but it is usually connected with some other system
 that manages the usernames and passwords.  When someone tries to log
-in to JupyteHub, it just asks the
+in to JupyteHub, it asks the
 **authenticator**([basics](authenticators-users-basics),
 [reference](../reference/authenticators)) if the
 username/password is valid(&).  The authenticator returns a username(&),
@@ -83,7 +83,7 @@ The following authenticators are included with JupyterHub:
   machine.
 
 
-But those are fairly limited, and thus there are [plenty of others to
+There are [plenty of others to
 choose
 from](https://github.com/jupyterhub/jupyterhub/wiki/Authenticators).
 You can connect to almost any other existing service to manage your
@@ -122,19 +122,19 @@ The **spawner** ([basics](spawners-basics),
 JupyterHub: when someone wants a notebook server, the spawner allocates
 resources and starts the server.  The notebook server could run on the
 same machine as JupyterHub, on another machine, on some cloud service,
-or even more.  They can limit resources (CPU, memory) or isolate users
+or more.  Administrators can limit resources (CPU, memory) or isolate users
 from each other - if the spawner supports it.  They can also do no
 limiting and allow any user to access any other user's files if they
 are not configured properly.
 
-Some basic spawners included in JupyterHub is:
+Some basic spawners included in JupyterHub are:
 
-- **LocalProcessSpawner** is build into JupyterHub and basically tries
-  to switch user to the given username (`su` (&)) and start the
+- **LocalProcessSpawner** is built into JupyterHub. Upon launch it tries
+  to switch users to the given username (`su` (&)) and start the
   notebook server.  It requires that the hub be run as root (because
   only root has permission to start processes as other user IDs).
   LocalProcessSpawner is no different than a user logging in with
-  something like `ssh` and running something.  PAMAuthenticator and
+  something like `ssh` and running `jupyter notebook`.  PAMAuthenticator and
   LocalProcessSpawner is the most basic way of using JupyterHub (and
   what it does out of the box) and makes the hub not too dissimilar to
   an advanced ssh server.
@@ -191,15 +191,13 @@ the `kubectl` API).
 
 ### Proxy
 
-Previously, we said that the hub is between the user's web browser and
-the user's notebook servers.  It actually isn't directly between,
-because the JupyterHub **proxy** relays connections between the users
+The JupyterHub **proxy** relays connections between the users
 and their single-user notebook servers.  What this basically means is
 that the hub itself can shut down and the proxy can continue to
 allow users to communicate with their notebook servers.  (This
 further emphasizes that the hub is responsible for starting, not
 running, the notebooks).  By default, the hub starts the proxy
-automatically (so that you don't realize there is a separate proxy)
+automatically
 and stops the proxy when the hub stops (so that connections get
 interrupted).  But when you [configure the proxy to run
 separately](../reference/separate-proxy),
@@ -255,12 +253,11 @@ coupled and running as a service provides convenience of
 authentication - it could be just as well run some other way, with a
 manually provided API token.
 
-Another example of an often-requested question of *sharing files using
-hubshare* as an example.  Hubshare would work as an external service
+Another example is *sharing files using hubshare*.  Hubshare would work as an external service
 which user notebooks talk to and use Hub authentication, but otherwise
 it isn't directly a matter of the hub.  You could equally well share
 files by other extensions to the single-user notebook servers or
-configuring the spawners to access shared storage spaces.  In order to
+configure the spawners to access shared storage spaces.  In order to
 use something such as hubshare, the difficulty is not modifying
 JupyterHub: it is modifying the notebook servers to speak to some
 service, and making that service.
@@ -295,8 +292,7 @@ environment variables like `JUPYTERHUB_API_TOKEN` and
 back to the hub in order to say that it's ready.
 
 The single-user server options are **JupyterLab** and **classic
-Jupyter Notebook**.  Really, there isn't that much difference between
-them, they run through the same backend server process and the web
+Jupyter Notebook**.  They both run through the same backend server process--the web
 frontend is an option when it is starting.  The spawner can choose the
 command line when it starts the single-user server.  Extensions are a
 property of the single-user server (in two parts: there can be a part
@@ -306,8 +302,7 @@ javascript in lab or notebook).
 If one wants to install software for users, it is not a matter of
 "installing it for JupyerHub" - it's a matter of installing it for the
 single-user server, which might be the same environment as the hub,
-but not necessarily.  (Actually, see below - it's a matter of the
-kernels!)
+but not necessarily.  (see below - it's a matter of the kernels!)
 
 After the single-user notebook server is started, any errors are only
 an issue of the single-user notebook server.  Sometimes, it seems like
@@ -357,10 +352,7 @@ shared by both.
 
 ## Kernel
 
-Normally, our tour of the Jupyter ecosystem would stop here.  But,
-since if you've read this far you probably need to know every last
-bit, let's go further and talk about the kernels.  The commands you
-run in the notebook session are not executed in the same process as
+The commands you run in the notebook session are not executed in the same process as
 the notebook itself, but in a separate **Jupyter kernel**.  There are [many
 kernels
 available](https://github.com/jupyter/jupyter/wiki/Jupyter-kernels).
@@ -395,14 +387,14 @@ A kernel doesn't just execute it's language - cell magics such as `%`,
 IPython kernel commands and don't necessarily work in any other
 kernel unless they specifically support them.
 
-What does this mean?  There is yet *another* layer of configurability.
+Kernels are yet *another* layer of configurability.
 Each kernel can run a different programming language, with different
 software, and so on.  By default, they would run in the same
 environment as the single-user notebook server, and the most common
 other way they are configured is by
 running in different Python virtual environments or conda
 environments.  They can be started and killed independently (there is
-normally one per notebook you have open).  The kernels is what uses
+normally one per notebook you have open).  The kernel uses
 most of your memory and CPU when running Jupyter - the rest of the web
 interface has a small footprint.
 
@@ -413,7 +405,7 @@ automatically made by the kernels, but can be edited as needed.  [The
 spec](https://jupyter-client.readthedocs.io/en/stable/kernels.html)
 tells you even more.
 
-The normally has to be reachable by the single-user notebook server
+The kernel normally has to be reachable by the single-user notebook server
 but the gateways mentioned above can get around that limitation.
 
 If you get problems with "Kernel died" or some other error in a single
@@ -444,17 +436,9 @@ may become hard to adapt them to your requirements.
   using SystemdSpawner and NativeAuthenticator (which manages users
   itself).
 
-* [**JupyterHub the hard
-  way**](https://jupyterhub.readthedocs.io/en/stable/installation-guide-hard.html)
+* [**JupyterHub the hard way**](https://github.com/jupyterhub/jupyterhub-the-hard-way/blob/master/docs/installation-guide-hard.md)
   takes you through everything yourself.  It is a natural companion to
   this guide, since you get to experience every little bit.
-
-
-
-## I want to...
-
-TODO: answers to common cross-layer questions.
-
 
 ## What's next?
 
