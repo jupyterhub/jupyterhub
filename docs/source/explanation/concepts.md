@@ -16,7 +16,9 @@ Jupyter.
 In this document, we occasionally leave things out or bend the truth
 where it helps in explanation, and give our explanations in terms of
 Python even though Jupyter itself is language-neutral.  The "(&)"
-symbol highlights important points where there is more.
+symbol highlights important points where this page leaves out or bends
+the truth for simplification of explanation, but there is more if you
+dig deeper.
 
 This guide is long, but after reading it you will be know of all major
 components in the Jupyter ecosystem and everything else you read
@@ -83,18 +85,16 @@ The following authenticators are included with JupyterHub:
   machine.
 
 
-There are [plenty of others to
-choose
-from](https://github.com/jupyterhub/jupyterhub/wiki/Authenticators).
+There are [plenty of others to choose from](https://github.com/jupyterhub/jupyterhub/wiki/Authenticators).
 You can connect to almost any other existing service to manage your
 users.  You either use all users from this other service (e.g. your
-company), or whitelist only the allowed users (e.g. your group's
+company), or enable only the allowed users (e.g. your group's
 Github usernames).  Some other popular authenticators include:
 
 - **OAuthenticator** uses the standard OAuth protocol to verify users.
   For example, you can easily use Github to authenticate your users -
   people have a "click to login with Github" button.  This is often
-  done with a whitelist to only allow certain users.
+  done with a allowlist to only allow certain users.
 
 - **NativeAuthenticator** actually stores and validates its own
   usernames and passwords, unlike most other authenticators.  Thus,
@@ -139,7 +139,8 @@ Some basic spawners included in JupyterHub are:
   what it does out of the box) and makes the hub not too dissimilar to
   an advanced ssh server.
 
-There are many more advanced spawners:
+There are [many more advanced spawners](/reference/spawners), and to
+show the diversity of spawning strategys some are listed below:
 
 - **SudoSpawner** is like LocalProcessSpawner but lets you run
   JupyterHub without root.  `sudo` has to be configured to allow the
@@ -204,8 +205,8 @@ separately](../reference/separate-proxy),
 user's connections will continue to work even without the hub.
 
 The default proxy is **ConfigurableHttpProxy** which is simple but
-effective.  A more advanced option is the **Traefik Proxy**, which
-gives you redundancy and high-availability.
+effective.  A more advanced option is the [**Traefik Proxy**](https://blog.jupyter.org/introducing-traefikproxy-a-new-jupyterhub-proxy-based-on-traefik-4839e972faf6),
+which gives you redundancy and high-availability.
 
 When users "connect to JupyterHub", they *always* first connect to the
 proxy and the proxy relays the connection to the hub.  Thus, the proxy
@@ -220,7 +221,7 @@ single-user servers.
 The proxy always runs as a separate process to JupyterHub (even though
 JupyterHub can start it for you).  JupyterHub has one set of
 configuration options for the proxy addresses (`bind_url`) and one for
-the hub (`bind_url`).  If `bind_url` is given, it is just passed to
+the hub (`hub_bind_url`).  If `bind_url` is given, it is just passed to
 the automatic proxy to tell it what to do.
 
 If you have problems after users are redirected to their single-user
@@ -313,7 +314,8 @@ start it correctly or fix the environment).  This can happen, for
 example, if the spawner doesn't set an environment variable or doesn't
 provide storage.
 
-The single-user server's logs are handled by the spawner, so if you
+The single-user server's logs are printed to stdout/stderr, and the
+spawer decides where those streams are directed, so if you
 notice problems at this phase you need to check your spawner for
 instructions for accessing the single-user logs.  For example, the
 LocalProcessSpawner logs are just outputted to the same JupyterHub
@@ -324,15 +326,9 @@ the normal output places of batch jobs and is an explicit
 configuration option of the spawner.
 
 
-### Notebook
-
 **(Jupyter) Notebook** is the classic interface, where each notebook
 opens in a separate tab.  It is traditionally started by `jupyter
-notebook`.
-
-Does anything need to be said here?
-
-### Lab
+notebook`.  Does anything need to be said here?
 
 **JupyterLab** is the new interface, where multiple notebooks are
 openable in the same tab in an IDE-like environment.  It is
