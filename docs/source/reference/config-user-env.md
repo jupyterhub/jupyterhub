@@ -202,13 +202,7 @@ This can be useful for quota service implementations. The example above limits t
 
 If `named_server_limit_per_user` is set to `0`, no limit is enforced.
 
-When using a spawner such as `DockerSpawner`, it is necessary to customize the name template to include the server name. Failing to do so can result in server errors when attempting to launch subsequent servers.
-
-The following configuration should be added to address this:
-
-```python
-c.DockerSpawner.name_template = '{prefix}-{username}-{servername}'
-```
+When using named servers, Spawners may need additional configuration to take the `servername` into account. Whilst `KubeSpawner` takes the `servername` into account by default in [`pod_name_template`](https://jupyterhub-kubespawner.readthedocs.io/en/latest/spawner.html#kubespawner.KubeSpawner.pod_name_template), other Spawners may not. Check the documentation for the specific Spawner to see how singleuser servers are named, for example in `DockerSpawner` this involves modifying the [`name_template`](https://jupyterhub-dockerspawner.readthedocs.io/en/latest/api/index.html) setting to include `servername`, eg. `"{prefix}-{username}-{servername}"`.
 
 (classic-notebook-ui)=
 
