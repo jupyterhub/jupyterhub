@@ -2063,6 +2063,12 @@ class JupyterHub(Application):
                 self.log.info(f"Creating group {name}")
                 group = orm.Group(name=name)
                 db.add(group)
+            if isinstance(contents, list):
+                self.log.warning(
+                    "group config `'groupname': [usernames]` config format is deprecated in JupyterHub 3.2,"
+                    " use `'groupname': {'users': [usernames], ...}`"
+                )
+                contents = {"users": contents}
             if 'users' in contents:
                 for username in contents['users']:
                     username = self.authenticator.normalize_username(username)
