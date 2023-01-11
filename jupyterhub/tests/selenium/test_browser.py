@@ -1,6 +1,7 @@
 """Tests for the Selenium WebDriver"""
 
 import asyncio
+import json
 from functools import partial
 
 import pytest
@@ -15,6 +16,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from tornado.escape import url_escape
 from tornado.httputil import url_concat
 
+from jupyterhub import scopes
 from jupyterhub.tests.selenium.locators import (
     BarLocators,
     HomePageLocators,
@@ -863,17 +865,28 @@ async def test_user_logout(app, browser, url, user):
 @pytest.mark.parametrize(
     "user_scopes",
     [
-        (
+        ([]),  # no scopes
+        (  # user has just access to own resources
             [
                 'self',
+            ]
+        ),
+        (  # user has access to all groups resources
+            [
+                'read:groups',
+                'groups',
+            ]
+        ),
+        (  # user has access to specific users/groups/services resources
+            [
                 'read:users!user=gawain',
-                'read:tokens',
                 'read:groups!group=mythos',
+                'read:services!service=test',
             ]
         ),
     ],
 )
-async def test_oauth_page_1(
+async def test_oauth_page(
     app,
     browser,
     mockservice_url,
@@ -881,8 +894,8 @@ async def test_oauth_page_1(
     create_user_with_scopes,
     user_scopes,
 ):
+    # create user with appropriate access permissions
     service_role = create_temp_role(user_scopes)
-
     service = mockservice_url
     user = create_user_with_scopes("access:services")
     roles.grant_role(app.db, user, service_role)
@@ -893,10 +906,9 @@ async def test_oauth_page_1(
     )
     oauth_client.allowed_scopes = sorted(roles.roles_to_scopes([service_role]))
     app.db.commit()
-
-    url = url_path_join(public_url(app, service) + 'owhoami/?arg=x')
-    await in_thread(browser.get, (url))
-    print(browser.current_url)
+    # open the service url in the browser
+    service_url = url_path_join(public_url(app, service) + 'owhoami/?arg=x')
+    await in_thread(browser.get, (service_url))
     expected_client_id = service.name
     expected_redirect_url = app.base_url + f"servises/{service.name}/oauth_callback"
     assert expected_client_id, expected_redirect_url in browser.current_url
@@ -913,7 +925,6 @@ async def test_oauth_page_1(
                 (By.XPATH, '//input[@type="submit" and @value="Authorize"]')
             ),
         )
-    print(browser.page_source)
     # verify that user can see the service name and oauth URL
     text_permission = browser.find_element(
         By.XPATH, './/h1[text()="Authorize access"]//following::p'
@@ -921,43 +932,90 @@ async def test_oauth_page_1(
     assert f"JupyterHub service {service.name}", (
         f"oauth URL: {expected_redirect_url}" in text_permission
     )
-
     # permissions check
-    form = browser.find_element(By.TAG_NAME, "form")
-    scopes_elements = form.find_elements(
+    oauth_form = browser.find_element(By.TAG_NAME, "form")
+    scopes_elements = oauth_form.find_elements(
         By.XPATH, '//input[@type="hidden" and @name="scopes"]'
     )
-    scope_list = []
+    scope_list_oauth_page = []
     for scopes_element in scopes_elements:
-        # check that scopes are invisible on the page
+        # checking that scopes are invisible on the page
         assert not scopes_element.is_displayed()
         scope_value = scopes_element.get_attribute("value")
-        scope_list.append(scope_value)
-        print(scope_value)
-    # check that all scopes granded to user are presented in POST form (scope_list)
-    assert all(x in scope_list for x in user_scopes)
-    assert f"access:services!service={service.name}" in scope_list
+        scope_list_oauth_page.append(scope_value)
 
-    check_boxes = form.find_elements(
+    # checking that all scopes granded to user are presented in POST form (scope_list)
+    assert all(x in scope_list_oauth_page for x in user_scopes)
+    assert f"access:services!service={service.name}" in scope_list_oauth_page
+
+    check_boxes = oauth_form.find_elements(
         By.XPATH, '//input[@type="checkbox" and @name="raw-scopes"]'
     )
     for check_box in check_boxes:
-        # check that user cannot uncheck the checkbox
+        # checking that user cannot uncheck the checkbox
         assert not check_box.is_enabled()
         assert check_box.get_attribute("disabled")
         assert check_box.get_attribute("title") == "This authorization is required"
 
-    discriptions = form.find_elements(By.TAG_NAME, 'span')
-    for discription in discriptions:
-        d_text = discription.get_attribute("innerHTML")
-        print(d_text)
-        # check that d_text in scopes.scope_definitions
-        # to be done
-
+    # checking that appropriete descriptions are displayed depending of scopes
+    descriptions = oauth_form.find_elements(By.TAG_NAME, 'span')
+    desc_list = [
+        description.get_attribute("innerHTML").strip().replace('\n', '')
+        for description in descriptions
+    ]
+    scope_sub = set()
+    for scope in user_scopes:
+        base_scope, _, filter_ = scope.partition('!')
+        scope_def = scopes.scope_definitions[base_scope]
+        scope_def_subs = scopes.scope_definitions[base_scope].get('subscopes')
+        assert any(scope_def['description'] in x for x in desc_list)
+        # group/user mentioned in scopes is displayed in the description
+        if filter_:
+            kind, _, name = filter_.partition('=')
+            if kind == "group":
+                assert any(f"Applies to users in {kind} {name}" in y for y in desc_list)
+            if kind in ("user", "service"):
+                assert any(f"Applies to {kind} {name}" in y for y in desc_list)
+        # find subscopes for user_scopes
+        if "!" in scope:
+            for scope_def_sub in scope_def_subs:
+                if filter_:
+                    kind, _, name = filter_.partition('=')
+                    scope_sub.add(scope_def_sub + f"!{kind}={name}")
+        elif "!" not in scope:
+            if scope_def_subs is not None:
+                for scope_def_sub in scope_def_subs:
+                    scope_def_subs = scopes.scope_definitions[scope_def_sub].get(
+                        'subscopes'
+                    )
+                    scope_sub.add(scope_def_sub)
+    # click on the Authorize button
     await click(browser, (By.XPATH, '//input[@type="submit" and @value="Authorize"]'))
-    # check that user returned to servise page
-    assert browser.current_url == url_path_join(
-        public_url(app, service) + 'owhoami/?arg=x'
-    )
+    # check that user returned to service page
+    assert browser.current_url == service_url
 
-    # check the scope (to be done)
+    # check the scope on the service page
+    # getting the scopes from the page
+    text = browser.find_element(By.TAG_NAME, "body").get_attribute("innerHTML")
+    obj = json.loads(text)
+    list_of_scopes_service_page = obj["scopes"]
+
+    # default scopes when user has "access:services"
+    default_scopes_expected = [
+        f"access:services!service={service.name}",
+        f"read:users:name!user={user.name}",
+        f"read:users:groups!user={user.name}",
+    ]
+    if "self" in user_scopes:
+        itself_scope_expected = list(scopes._expand_self_scope(user.name))
+        scope_with_sub = list(filter(lambda x: (x != "self"), user_scopes)) + list(
+            scope_sub
+        )
+        expected_scope_list = list(
+            set(scope_with_sub + default_scopes_expected + itself_scope_expected)
+        )
+        assert sorted(list_of_scopes_service_page) == sorted(expected_scope_list)
+    else:
+        scope_with_sub = user_scopes + list(scope_sub)
+        expected_scope_list = list(set(scope_with_sub + default_scopes_expected))
+        assert sorted(list_of_scopes_service_page) == sorted(expected_scope_list)
