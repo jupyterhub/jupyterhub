@@ -7,7 +7,6 @@ import os
 import re
 import sys
 import time
-from distutils.version import LooseVersion as V
 from subprocess import PIPE, Popen, check_output
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 from unittest.mock import patch
