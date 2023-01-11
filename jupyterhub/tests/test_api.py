@@ -1895,6 +1895,60 @@ async def test_group_add_delete_users(app):
     assert sorted(u.name for u in group.users) == sorted(names[2:])
 
 
+@mark.parametrize(
+    "properties",
+    [
+        "",
+        "str",
+        5,
+        ["list"],
+    ],
+)
+@mark.group
+async def test_group_properties_invalid(app, group, properties):
+    if properties:
+        json_properties = json.dumps(properties)
+    else:
+        json_properties = ""
+    have_properties = {"a": 5}
+    group.properties = have_properties
+    app.db.commit()
+    r = await api_request(
+        app, f"groups/{group.name}/properties", method='put', data=json_properties
+    )
+    assert r.status_code == 400
+    # invalid requests didn't change properties
+    assert group.properties == have_properties
+
+
+@mark.group
+async def test_group_properties(app, group):
+    db = app.db
+    # must specify properties
+    properties = {
+        "str": "x",
+        "int": 5,
+        "list": ["a"],
+    }
+    r = await api_request(
+        app,
+        f"groups/{group.name}/properties",
+        method='put',
+        data=json.dumps(properties),
+    )
+    r.raise_for_status()
+    assert group.properties == properties
+
+    r = await api_request(
+        app,
+        f"groups/{group.name}/properties",
+        method='put',
+        data="{}",
+    )
+    r.raise_for_status()
+    assert group.properties == {}
+
+
 @mark.group
 async def test_auth_managed_groups(request, app, group, user):
     group.users.append(user)
