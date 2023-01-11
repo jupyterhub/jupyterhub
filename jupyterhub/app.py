@@ -299,11 +299,17 @@ class JupyterHub(Application):
 
     load_groups = Dict(
         Dict(),
-        help="""Dict of {'group': {'users':['usernames'], properties : {}}  to load at startup.
+        help="""
+        Dict of `{'group': {'users':['usernames'], properties : {}}`  to load at startup.
 
-        Example:
+        Example::
 
-            load_groups = {'groupname':{'users':[usernames], 'properties':{'key':'value'}}}
+            c.JupyterHub.load_groups = {
+                'groupname': {
+                    'users': ['usernames'],
+                    'properties': {'key': 'value'},
+                },
+            }
 
         This strictly *adds* groups, users and properties to groups.
 
@@ -312,7 +318,7 @@ class JupyterHub(Application):
         That must be done through the API.
 
         .. versionchanged:: 3.2
-        Changed format of group from list of usernames to dict
+          Changed format of group from list of usernames to dict
         """,
     ).tag(config=True)
 
