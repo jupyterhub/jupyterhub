@@ -568,9 +568,9 @@ async def test_load_roles_services(tmpdir, request, preserve_scopes):
 async def test_load_roles_groups(tmpdir, request):
     """Test loading predefined roles for groups in app.py"""
     groups_to_load = {
-        'group1': ['gandalf'],
-        'group2': ['bilbo', 'gargamel'],
-        'group3': ['cyclops'],
+        'group1': {'users': ['gandalf'], 'properties': {}},
+        'group2': {'users': ['bilbo', 'gargamel'], 'properties': {}},
+        'group3': {'users': ['cyclops'], 'properties': {}},
     }
     roles_to_load = [
         {

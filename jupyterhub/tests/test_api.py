@@ -1701,8 +1701,20 @@ async def test_groups_list(app):
     r.raise_for_status()
     reply = r.json()
     assert reply == [
-        {'kind': 'group', 'name': 'alphaflight', 'users': [], 'roles': []},
-        {'kind': 'group', 'name': 'betaflight', 'users': [], 'roles': []},
+        {
+            'kind': 'group',
+            'name': 'alphaflight',
+            'users': [],
+            'roles': [],
+            'properties': {},
+        },
+        {
+            'kind': 'group',
+            'name': 'betaflight',
+            'users': [],
+            'roles': [],
+            'properties': {},
+        },
     ]
 
     # Test offset for pagination
@@ -1710,7 +1722,15 @@ async def test_groups_list(app):
     r.raise_for_status()
     reply = r.json()
     assert r.status_code == 200
-    assert reply == [{'kind': 'group', 'name': 'betaflight', 'users': [], 'roles': []}]
+    assert reply == [
+        {
+            'kind': 'group',
+            'name': 'betaflight',
+            'users': [],
+            'roles': [],
+            'properties': {},
+        }
+    ]
 
     r = await api_request(app, "groups?offset=10")
     r.raise_for_status()
@@ -1722,13 +1742,29 @@ async def test_groups_list(app):
     r.raise_for_status()
     reply = r.json()
     assert r.status_code == 200
-    assert reply == [{'kind': 'group', 'name': 'alphaflight', 'users': [], 'roles': []}]
+    assert reply == [
+        {
+            'kind': 'group',
+            'name': 'alphaflight',
+            'users': [],
+            'roles': [],
+            'properties': {},
+        }
+    ]
 
     # 0 is rounded up to 1
     r = await api_request(app, "groups?limit=0")
     r.raise_for_status()
     reply = r.json()
-    assert reply == [{'kind': 'group', 'name': 'alphaflight', 'users': [], 'roles': []}]
+    assert reply == [
+        {
+            'kind': 'group',
+            'name': 'alphaflight',
+            'users': [],
+            'roles': [],
+            'properties': {},
+        }
+    ]
 
 
 @mark.group
@@ -1771,6 +1807,7 @@ async def test_group_get(app):
         'name': 'alphaflight',
         'users': ['sasquatch'],
         'roles': [],
+        'properties': {},
     }
 
 
@@ -1856,6 +1893,60 @@ async def test_group_add_delete_users(app):
 
     group = orm.Group.find(db, name='alphaflight')
     assert sorted(u.name for u in group.users) == sorted(names[2:])
+
+
+@mark.parametrize(
+    "properties",
+    [
+        "",
+        "str",
+        5,
+        ["list"],
+    ],
+)
+@mark.group
+async def test_group_properties_invalid(app, group, properties):
+    if properties:
+        json_properties = json.dumps(properties)
+    else:
+        json_properties = ""
+    have_properties = {"a": 5}
+    group.properties = have_properties
+    app.db.commit()
+    r = await api_request(
+        app, f"groups/{group.name}/properties", method='put', data=json_properties
+    )
+    assert r.status_code == 400
+    # invalid requests didn't change properties
+    assert group.properties == have_properties
+
+
+@mark.group
+async def test_group_properties(app, group):
+    db = app.db
+    # must specify properties
+    properties = {
+        "str": "x",
+        "int": 5,
+        "list": ["a"],
+    }
+    r = await api_request(
+        app,
+        f"groups/{group.name}/properties",
+        method='put',
+        data=json.dumps(properties),
+    )
+    r.raise_for_status()
+    assert group.properties == properties
+
+    r = await api_request(
+        app,
+        f"groups/{group.name}/properties",
+        method='put',
+        data="{}",
+    )
+    r.raise_for_status()
+    assert group.properties == {}
 
 
 @mark.group
