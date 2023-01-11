@@ -110,6 +110,7 @@ const GroupEdit = (props) => {
             data-testid="submit"
             className="btn btn-primary"
             onClick={() => {
+              // check for changes
               let new_users = selected.filter(
                 (e) => !group_data.users.includes(e),
               );

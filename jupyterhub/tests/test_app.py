@@ -30,7 +30,7 @@ def test_help_all():
     assert '--JupyterHub.ip' in out
 
 
-@pytest.mark.skipif(V(traitlets.__version__) < V('5'), reason="requires traitlets 5")
+@pytest.mark.skipif(traitlets.version_info < (5,), reason="requires traitlets 5")
 def test_show_config(tmpdir):
     tmpdir.chdir()
     p = Popen(

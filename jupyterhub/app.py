@@ -310,6 +310,9 @@ class JupyterHub(Application):
         Loading one set of groups, then starting JupyterHub again with a different
         set will not remove users or groups from previous launches.
         That must be done through the API.
+
+        .. versionchanged:: 3.2
+        Changed format of group from list of usernames to dict
         """,
     ).tag(config=True)
 
