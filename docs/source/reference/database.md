@@ -14,7 +14,7 @@ A lot of the operations in JupyterHub are also **relationships**, which is exact
 For example:
 
 - Given an API token, what user is making the request?
-- Which users who don't have running servers?
+- Which users don't have running servers?
 - Which servers belong to user X?
 - Which users have not been active in the last 24 hours?
 
@@ -52,7 +52,7 @@ Database operations are also synchronous, so while JupyterHub is waiting on a da
 This allows us to avoid complex locking mechanisms, because transaction races can only occur during an `await`, so we only need to make sure we've completed any given transaction before the next `await` in a given request.
 
 :::{note}
-We are slowing working to remove these assumptions, and moving to a more traditional db session per-request pattern.
+We are slowly working to remove these assumptions, and moving to a more traditional db session per-request pattern.
 This will enable multiple Hub instances and enable scaling JupyterHub, but will significantly reduce the number of active users a single Hub instance can serve.
 :::
 
