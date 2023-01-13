@@ -189,6 +189,7 @@ linkcheck_ignore = [
     "https://github.com/jupyterhub/jupyterhub/pull/",  # too many PRs in changelog
     "https://github.com/jupyterhub/jupyterhub/compare/",  # too many comparisons in changelog
     r"https?://(localhost|127.0.0.1).*",  # ignore localhost references in auto-links
+    r"https://jupyter.chameleoncloud.org",  # FIXME: ignore (presumably) short-term SSL issue
 ]
 linkcheck_anchors_ignore = [
     "/#!",
