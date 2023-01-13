@@ -865,7 +865,7 @@ async def test_user_logout(app, browser, url, user):
 @pytest.mark.parametrize(
     "user_scopes",
     [
-        ([]),  # no scopes
+        (['(no_scope)']),  # no scopes
         (  # user has just access to own resources
             [
                 'self',
@@ -915,15 +915,11 @@ async def test_oauth_page(
 
     # login user
     await login(browser, user.name, pass_w=str(user.name))
-    auth_button = browser.find_element(
-        By.XPATH, '//input[@type="submit" and @value="Authorize"]'
-    )
+    auth_button = browser.find_element(By.XPATH, '//input[@type="submit"]')
     if not auth_button.is_displayed():
         await webdriver_wait(
             browser,
-            EC.visibility_of_element_located(
-                (By.XPATH, '//input[@type="submit" and @value="Authorize"]')
-            ),
+            EC.visibility_of_element_located((By.XPATH, '//input[@type="submit"]')),
         )
     # verify that user can see the service name and oauth URL
     text_permission = browser.find_element(
@@ -959,63 +955,50 @@ async def test_oauth_page(
 
     # checking that appropriete descriptions are displayed depending of scopes
     descriptions = oauth_form.find_elements(By.TAG_NAME, 'span')
-    desc_list = [
-        description.get_attribute("innerHTML").strip().replace('\n', '')
+    desc_list_UI = [
+        description.get_attribute("innerHTML")
+        .strip()
+        .replace('  ', '')
+        .replace('\n', '')
         for description in descriptions
     ]
-    scope_sub = set()
-    for scope in user_scopes:
-        base_scope, _, filter_ = scope.partition('!')
-        scope_def = scopes.scope_definitions[base_scope]
-        scope_def_subs = scopes.scope_definitions[base_scope].get('subscopes')
-        assert any(scope_def['description'] in x for x in desc_list)
-        # group/user mentioned in scopes is displayed in the description
-        if filter_:
-            kind, _, name = filter_.partition('=')
-            if kind == "group":
-                assert any(f"Applies to users in {kind} {name}" in y for y in desc_list)
-            if kind in ("user", "service"):
-                assert any(f"Applies to {kind} {name}" in y for y in desc_list)
-        # find subscopes for user_scopes
-        if "!" in scope:
-            for scope_def_sub in scope_def_subs:
-                if filter_:
-                    kind, _, name = filter_.partition('=')
-                    scope_sub.add(scope_def_sub + f"!{kind}={name}")
-        elif "!" not in scope:
-            if scope_def_subs is not None:
-                for scope_def_sub in scope_def_subs:
-                    scope_def_subs = scopes.scope_definitions[scope_def_sub].get(
-                        'subscopes'
-                    )
-                    scope_sub.add(scope_def_sub)
+    # getting descriptions from scopes.py to compare them with descriptions on UI
+    scope_def = scopes.describe_raw_scopes(user_scopes, user.name)
+    list_of_desc_for_comparing = []
+    for scope_def in scope_def:
+        if "description" in scope_def:
+            text_desc_scope = scope_def.get("description")
+            text_filter = scope_def.get("filter")
+            if text_filter == "":
+                list_of_desc_for_comparing.append(text_desc_scope)
+            elif text_filter != "":
+                list_of_desc_for_comparing.append(
+                    text_desc_scope + f"Applies to {text_filter}."
+                )
+    assert sorted(desc_list_UI) == sorted(list_of_desc_for_comparing)
+
     # click on the Authorize button
-    await click(browser, (By.XPATH, '//input[@type="submit" and @value="Authorize"]'))
+    await click(browser, (By.XPATH, '//input[@type="submit"]'))
     # check that user returned to service page
     assert browser.current_url == service_url
 
     # check the scope on the service page
-    # getting the scopes from the page
+    # getting the scopes from the service page
     text = browser.find_element(By.TAG_NAME, "body").get_attribute("innerHTML")
     obj = json.loads(text)
     list_of_scopes_service_page = obj["scopes"]
 
-    # default scopes when user has "access:services"
-    default_scopes_expected = [
-        f"access:services!service={service.name}",
-        f"read:users:name!user={user.name}",
-        f"read:users:groups!user={user.name}",
-    ]
-    if "self" in user_scopes:
-        itself_scope_expected = list(scopes._expand_self_scope(user.name))
-        scope_with_sub = list(filter(lambda x: (x != "self"), user_scopes)) + list(
-            scope_sub
-        )
-        expected_scope_list = list(
-            set(scope_with_sub + default_scopes_expected + itself_scope_expected)
-        )
-        assert sorted(list_of_scopes_service_page) == sorted(expected_scope_list)
-    else:
-        scope_with_sub = user_scopes + list(scope_sub)
-        expected_scope_list = list(set(scope_with_sub + default_scopes_expected))
-        assert sorted(list_of_scopes_service_page) == sorted(expected_scope_list)
+    # finnalize the scopes which have user
+    expected_scopes_with_subscopes = scopes.expand_scopes(
+        user_scopes, owner=user.orm_user
+    )
+    expected_access_scopes = scopes.access_scopes(oauth_client)
+    expected_ident_scopes = scopes.identify_scopes(user.orm_user)
+
+    expected_scope_list = set()
+    expected_scope_list.update(expected_access_scopes)
+    expected_scope_list.update(expected_ident_scopes)
+    expected_scope_list.update(expected_scopes_with_subscopes)
+
+    # compare the scopes on the service page with the expected scope list
+    assert sorted(list_of_scopes_service_page) == sorted(list(expected_scope_list))
