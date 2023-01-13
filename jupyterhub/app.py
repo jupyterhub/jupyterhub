@@ -298,9 +298,9 @@ class JupyterHub(Application):
         return classes
 
     load_groups = Dict(
-        Dict(),
+        Union([Dict(), List()]),
         help="""
-        Dict of `{'group': {'users':['usernames'], properties : {}}`  to load at startup.
+        Dict of `{'group': {'users':['usernames'], 'properties': {}}`  to load at startup.
 
         Example::
 
@@ -311,7 +311,8 @@ class JupyterHub(Application):
                 },
             }
 
-        This strictly *adds* groups, users and properties to groups.
+        This strictly *adds* groups and users to groups.
+        Properties, if defined, replace all existing properties.
 
         Loading one set of groups, then starting JupyterHub again with a different
         set will not remove users or groups from previous launches.
@@ -2079,12 +2080,18 @@ class JupyterHub(Application):
                 for username in contents['users']:
                     username = self.authenticator.normalize_username(username)
                     user = await self._get_or_create_user(username)
-                    self.log.debug(f"Adding user {username} to group {name}")
-                    group.users.append(user)
+                    if group not in user.groups:
+                        self.log.debug(f"Adding user {username} to  group {name}")
+                        group.users.append(user)
+
             if 'properties' in contents:
                 group_properties = contents['properties']
-                self.log.debug(f"Adding properties {group_properties} to group {name}")
-                group.properties = group_properties
+                if group.properties != group_properties:
+                    # add equality check to avoid no-op db transactions
+                    self.log.debug(
+                        f"Adding properties to group {name}: {group_properties}"
+                    )
+                    group.properties = group_properties
 
         db.commit()
 
