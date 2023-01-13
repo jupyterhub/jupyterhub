@@ -190,5 +190,4 @@ easy to do with RStudio too.
 - https://wrdrd.com/docs/consulting/education-technology
 - https://bitbucket.org/jackhale/fenics-jupyter
 - [LinuxCluster blog](https://linuxcluster.wordpress.com/category/application/jupyterhub/)
-- [Network Technology](https://arnesund.com/tag/jupyterhub/)
 - [Spark Cluster on OpenStack with Multi-User Jupyter Notebook](https://arnesund.com/2015/09/21/spark-cluster-on-openstack-with-multi-user-jupyter-notebook/)
