@@ -865,7 +865,7 @@ async def test_user_logout(app, browser, url, user):
 @pytest.mark.parametrize(
     "user_scopes",
     [
-        (['(no_scope)']),  # no scopes
+        ([]),  # no scopes
         (  # user has just access to own resources
             [
                 'self',
@@ -955,50 +955,38 @@ async def test_oauth_page(
 
     # checking that appropriete descriptions are displayed depending of scopes
     descriptions = oauth_form.find_elements(By.TAG_NAME, 'span')
-    desc_list_UI = [
-        description.get_attribute("innerHTML")
-        .strip()
-        .replace('  ', '')
-        .replace('\n', '')
-        for description in descriptions
-    ]
+    desc_list_form = [description.text.strip() for description in descriptions]
     # getting descriptions from scopes.py to compare them with descriptions on UI
-    scope_def = scopes.describe_raw_scopes(user_scopes, user.name)
-    list_of_desc_for_comparing = []
-    for scope_def in scope_def:
-        if "description" in scope_def:
-            text_desc_scope = scope_def.get("description")
-            text_filter = scope_def.get("filter")
-            if text_filter == "":
-                list_of_desc_for_comparing.append(text_desc_scope)
-            elif text_filter != "":
-                list_of_desc_for_comparing.append(
-                    text_desc_scope + f"Applies to {text_filter}."
-                )
-    assert sorted(desc_list_UI) == sorted(list_of_desc_for_comparing)
+    scope_descriptions = scopes.describe_raw_scopes(
+        user_scopes or ['(no_scope)'], user.name
+    )
+    desc_list_expected = []
+    for scope_description in scope_descriptions:
+        description = scope_description.get("description")
+        text_filter = scope_description.get("filter")
+        if text_filter:
+            description = f"{description} Applies to {text_filter}."
+        desc_list_expected.append(description)
+
+    assert sorted(desc_list_form) == sorted(desc_list_expected)
 
     # click on the Authorize button
     await click(browser, (By.XPATH, '//input[@type="submit"]'))
     # check that user returned to service page
     assert browser.current_url == service_url
 
-    # check the scope on the service page
-    # getting the scopes from the service page
-    text = browser.find_element(By.TAG_NAME, "body").get_attribute("innerHTML")
-    obj = json.loads(text)
-    list_of_scopes_service_page = obj["scopes"]
+    # check the granted permissions by
+    # getting the scopes from the service page,
+    # which contains the JupyterHub user model
+    text = browser.find_element(By.TAG_NAME, "body").text
+    user_model = json.loads(text)
+    authorized_scopes = user_model["scopes"]
 
-    # finnalize the scopes which have user
-    expected_scopes_with_subscopes = scopes.expand_scopes(
-        user_scopes, owner=user.orm_user
-    )
-    expected_access_scopes = scopes.access_scopes(oauth_client)
-    expected_ident_scopes = scopes.identify_scopes(user.orm_user)
-
-    expected_scope_list = set()
-    expected_scope_list.update(expected_access_scopes)
-    expected_scope_list.update(expected_ident_scopes)
-    expected_scope_list.update(expected_scopes_with_subscopes)
+    # resolve the expected expanded scopes
+    # authorized for the service
+    expected_scopes = scopes.expand_scopes(user_scopes, owner=user.orm_user)
+    expected_scopes |= scopes.access_scopes(oauth_client)
+    expected_scopes |= scopes.identify_scopes(user.orm_user)
 
     # compare the scopes on the service page with the expected scope list
-    assert sorted(list_of_scopes_service_page) == sorted(list(expected_scope_list))
+    assert sorted(authorized_scopes) == sorted(expected_scopes)
