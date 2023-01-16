@@ -1,29 +1,120 @@
 # The Hub's Database
 
-JupyterHub uses a database to store information about users, services, and other
-data needed for operating the Hub.
+JupyterHub uses a database to store information about users, services, and other data needed for operating the Hub.
+This is the **state** of the Hub.
 
-## Default SQLite database
+## Why does JupyterHub have a database?
 
-The default database for JupyterHub is a [SQLite](https://sqlite.org) database.
-We have chosen SQLite as JupyterHub's default for its lightweight simplicity
-in certain uses such as testing, small deployments and workshops.
+JupyterHub is a **stateful** application (more on that 'state' later).
+Updating JupyterHub's configuration or upgrading the version of JupyterHub requires restarting the JupyterHub process to apply the changes.
+We want to minimize the disruption caused by restarting the Hub process, so it can be a mundane, frequent, routine activity.
+Storing state information outside the process for later retrieval is necessary for this, and one of the main thing databases are for.
+
+A lot of the operations in JupyterHub are also **relationships**, which is exactly what SQL databases are great at.
+For example:
+
+- Given an API token, what user is making the request?
+- Which users don't have running servers?
+- Which servers belong to user X?
+- Which users have not been active in the last 24 hours?
+
+Finally, a database allows us to have more information stored without needing it all loaded in memory,
+e.g. supporting a large number (several thousands) of inactive users.
+
+## What's in the database?
+
+The short answer of what's in the JupyterHub database is "everything."
+JupyterHub's **state** lives in the database.
+That is, everything JupyterHub needs to be aware of to function that _doesn't_ come from the configuration files, such as
+
+- users, roles, role assignments
+- state, urls of running servers
+- Hashed API tokens
+- Short-lived state related to OAuth flow
+- Timestamps for when users, tokens, and servers were last used
+
+### What's _not_ in the database
+
+Not _quite_ all of JupyterHub's state is in the database.
+This mostly involves transient state, such as the 'pending' transitions of Spawners (starting, stopping, etc.).
+Anything not in the database must be reconstructed on Hub restart, and the only sources of information to do that are the database and JupyterHub configuration file(s).
+
+## How does JupyterHub use the database?
+
+JupyterHub makes some _unusual_ choices in how it connects to the database.
+These choices represent trade-offs favoring single-process simplicity and performance at the expense of horizontal scalability (multiple Hub instances).
+
+We often say that the Hub 'owns' the database.
+This ownership means that we assume the Hub is the only process that will talk to the database.
+This assumption enables us to make several caching optimizations that dramatically improve JupyterHub's performance (i.e. data written recently to the database can be read from memory instead of fetched again from the database) that would not work if multiple processes could be interacting with the database at the same time.
+
+Database operations are also synchronous, so while JupyterHub is waiting on a database operation, it cannot respond to other requests.
+This allows us to avoid complex locking mechanisms, because transaction races can only occur during an `await`, so we only need to make sure we've completed any given transaction before the next `await` in a given request.
+
+:::{note}
+We are slowly working to remove these assumptions, and moving to a more traditional db session per-request pattern.
+This will enable multiple Hub instances and enable scaling JupyterHub, but will significantly reduce the number of active users a single Hub instance can serve.
+:::
+
+### Database performance in a typical request
+
+Most authenticated requests to JupyterHub involve a few database transactions:
+
+1. look up the authenticated user (e.g. look up token by hash, then resolve owner and permissions)
+2. record activity
+3. perform any relevant changes involved in processing the request (e.g. create the records for a running server when starting one)
+
+This means that the database is involved in almost every request, but only in quite small, simple queries, e.g.:
+
+- lookup one token by hash
+- lookup one user by name
+- list tokens or servers for one user (typically 1-10)
+- etc.
+
+### The database as a limiting factor
+
+As a result of the above transactions in most requests, database performance is the _leading_ factor in JupyterHub's baseline requests-per-second performance, but that cost does not scale significantly with the number of users, active or otherwise.
+However, the database is _rarely_ a limiting factor in JupyterHub performance in a practical sense, because the main thing JupyterHub does is start, stop, and monitor whole servers, which take far more time than any small database transaction, no matter how many records you have or how slow your database is (within reason).
+Additionally, there is usually _very_ little load on the database itself.
+
+By far the most taxing activity on the database is the 'list all users' endpoint, primarily used by the [idle-culling service](https://github.com/jupyterhub/jupyterhub-idle-culler).
+Database-based optimizations have been added to make even these operations feasible for large numbers of users:
+
+1. State filtering on [GET /users](./rest-api.md) with `?state=active`,
+   which limits the number of results in the query to only the relevant subset (added in JupyterHub 1.3), rather than all users.
+2. [Pagination](api-pagination) of all list endpoints, allowing the request of a large number of resources to be more fairly balanced with other Hub activities across multiple requests (added in 2.0).
+
+:::{note}
+It's important to note when discussing performance and limiting factors and that all of this only applies to requests to `/hub/...`.
+The Hub and its database are not involved in most requests to single-user servers (`/user/...`), which is by design, and largely motivated by the fact that the Hub itself doesn't _need_ to be fast because its operations are infrequent and large.
+:::
+
+## Database backends
+
+JupyterHub supports a variety of database backends via [SQLAlchemy][].
+The default is sqlite, which works great for many cases, but you should be able to use many backends supported by SQLAlchemy.
+Usually, this will mean PostgreSQL or MySQL, both of which are well tested with JupyterHub.
+
+[sqlalchemy]: https://www.sqlalchemy.org
+
+### Default backend: SQLite
+
+The default database backend for JupyterHub is [SQLite](https://sqlite.org).
+We have chosen SQLite as JupyterHub's default because it's simple (the 'database' is a single file) and ubiquitous (it is in the Python standard library).
+It works very well for testing, small deployments, and workshops.
 
 For production systems, SQLite has some disadvantages when used with JupyterHub:
 
-- `upgrade-db` may not work, and you may need to start with a fresh database
+- `upgrade-db` may not always work, and you may need to start with a fresh database
 - `downgrade-db` **will not** work if you want to rollback to an earlier
   version, so backup the `jupyterhub.sqlite` file before upgrading
 
 The sqlite documentation provides a helpful page about [when to use SQLite and
 where traditional RDBMS may be a better choice](https://sqlite.org/whentouse.html).
 
-## Using an RDBMS (PostgreSQL, MySQL)
+### Picking your database backend (PostgreSQL, MySQL)
 
-When running a long term deployment or a production system, we recommend using
-a traditional RDBMS database, such as [PostgreSQL](https://www.postgresql.org)
-or [MySQL](https://www.mysql.com), that supports the SQL `ALTER TABLE`
-statement.
+When running a long term deployment or a production system, we recommend using a full-fledged relational database, such as [PostgreSQL](https://www.postgresql.org) or [MySQL](https://www.mysql.com), that supports the SQL `ALTER TABLE` statement.
 
 ## Notes and Tips
 
