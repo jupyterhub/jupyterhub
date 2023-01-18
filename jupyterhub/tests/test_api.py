@@ -444,11 +444,12 @@ async def test_get_self(app):
     db.add(oauth_client)
     db.commit()
     oauth_token = orm.APIToken(
-        user=u.orm_user,
-        oauth_client=oauth_client,
         token=token,
     )
     db.add(oauth_token)
+    oauth_token.user = u.orm_user
+    oauth_token.oauth_client = oauth_client
+
     db.commit()
     r = await api_request(
         app,
@@ -2131,13 +2132,13 @@ def test_shutdown(app):
 
     def stop():
         stop.called = True
-        loop.call_later(1, real_stop)
+        loop.call_later(2, real_stop)
 
     real_cleanup = app.cleanup
 
     def cleanup():
         cleanup.called = True
-        return real_cleanup()
+        loop.call_later(1, real_cleanup)
 
     app.cleanup = cleanup
 

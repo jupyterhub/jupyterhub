@@ -1962,9 +1962,9 @@ class JupyterHub(Application):
             user = orm.User.find(db, name)
             if user is None:
                 user = orm.User(name=name, admin=True)
+                db.add(user)
                 roles.assign_default_roles(self.db, entity=user)
                 new_users.append(user)
-                db.add(user)
             else:
                 user.admin = True
         # the admin_users config variable will never be used after this point.
@@ -2376,6 +2376,7 @@ class JupyterHub(Application):
             if orm_service is None:
                 # not found, create a new one
                 orm_service = orm.Service(name=name)
+                self.db.add(orm_service)
                 if spec.get('admin', False):
                     self.log.warning(
                         f"Service {name} sets `admin: True`, which is deprecated in JupyterHub 2.0."
@@ -2384,7 +2385,6 @@ class JupyterHub(Application):
                         "the Service admin flag will be ignored."
                     )
                     roles.update_roles(self.db, entity=orm_service, roles=['admin'])
-                self.db.add(orm_service)
             orm_service.admin = spec.get('admin', False)
             self.db.commit()
             service = Service(
