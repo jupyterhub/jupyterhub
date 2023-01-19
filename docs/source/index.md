@@ -48,6 +48,18 @@ follows the Jupyter [Community Guides](https://jupyter.readthedocs.io/en/latest/
 
 ## Contents
 
+Documentation sections (reorganization in-progress)
+
+```{toctree}
+:maxdepth: 1
+
+faq/index.md
+tutorial/index.md
+howto/index.md
+explanation/index.md
+reference/index.md
+```
+
 (index/distributions)=
 
 ### Distributions
