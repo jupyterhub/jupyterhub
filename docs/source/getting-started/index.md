@@ -8,6 +8,7 @@ own JupyterHub.
 ```{toctree}
 :maxdepth: 2
 
+what-is-jupyterhub
 config-basics
 networking-basics
 security-basics
