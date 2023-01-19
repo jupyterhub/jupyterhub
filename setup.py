@@ -50,7 +50,12 @@ def get_package_data():
     (mostly alembic config)
     """
     package_data = {}
-    package_data['jupyterhub'] = ['alembic.ini', 'alembic/*', 'alembic/versions/*']
+    package_data['jupyterhub'] = [
+        'alembic.ini',
+        'alembic/*',
+        'alembic/versions/*',
+        'event-schemas/*/*.yaml',
+    ]
     return package_data
 
 
