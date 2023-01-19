@@ -101,19 +101,19 @@ system's UNIX users.
 JupyterHub's [OAuthenticator][] currently supports the following
 popular services:
 
-- [Auth0](https://oauthenticator.readthedocs.io/en/latest/api/gen/oauthenticator.auth0.html#module-oauthenticator.auth0)
-- [Azure AD](https://oauthenticator.readthedocs.io/en/latest/api/gen/oauthenticator.azuread.html#module-oauthenticator.azuread)
-- [Bitbucket](https://oauthenticator.readthedocs.io/en/latest/api/gen/oauthenticator.bitbucket.html#module-oauthenticator.bitbucket)
-- [CILogon](https://oauthenticator.readthedocs.io/en/latest/api/gen/oauthenticator.cilogon.html#module-oauthenticator.cilogon)
-- [GitHub](https://oauthenticator.readthedocs.io/en/latest/api/gen/oauthenticator.github.html#module-oauthenticator.github)
-- [GitLab](https://oauthenticator.readthedocs.io/en/latest/api/gen/oauthenticator.gitlab.html#module-oauthenticator.gitlab)
-- [Globus](https://oauthenticator.readthedocs.io/en/latest/api/gen/oauthenticator.globus.html#module-oauthenticator.globus)
-- [Google](https://oauthenticator.readthedocs.io/en/latest/api/gen/oauthenticator.google.html#module-oauthenticator.google)
-- [MediaWiki](https://oauthenticator.readthedocs.io/en/latest/api/gen/oauthenticator.mediawiki.html#module-oauthenticator.mediawiki)
-- [Okpy](https://oauthenticator.readthedocs.io/en/latest/api/gen/oauthenticator.okpy.html#module-oauthenticator.okpy)
-- [OpenShift](https://oauthenticator.readthedocs.io/en/latest/api/gen/oauthenticator.openshift.html#module-oauthenticator.openshift)
+- [Auth0](https://oauthenticator.readthedocs.io/en/latest/reference/api/gen/oauthenticator.auth0.html)
+- [Azure AD](https://oauthenticator.readthedocs.io/en/latest/reference/api/gen/oauthenticator.azuread.html)
+- [Bitbucket](https://oauthenticator.readthedocs.io/en/latest/reference/api/gen/oauthenticator.bitbucket.html)
+- [CILogon](https://oauthenticator.readthedocs.io/en/latest/reference/api/gen/oauthenticator.cilogon.html)
+- [GitHub](https://oauthenticator.readthedocs.io/en/latest/reference/api/gen/oauthenticator.github.html)
+- [GitLab](https://oauthenticator.readthedocs.io/en/latest/reference/api/gen/oauthenticator.gitlab.html)
+- [Globus](https://oauthenticator.readthedocs.io/en/latest/reference/api/gen/oauthenticator.globus.html)
+- [Google](https://oauthenticator.readthedocs.io/en/latest/reference/api/gen/oauthenticator.google.html)
+- [MediaWiki](https://oauthenticator.readthedocs.io/en/latest/reference/api/gen/oauthenticator.mediawiki.html)
+- [Okpy](https://oauthenticator.readthedocs.io/en/latest/reference/api/gen/oauthenticator.okpy.html)
+- [OpenShift](https://oauthenticator.readthedocs.io/en/latest/reference/api/gen/oauthenticator.openshift.html)
 
-A [generic implementation](https://oauthenticator.readthedocs.io/en/latest/api/gen/oauthenticator.generic.html#module-oauthenticator.generic), which you can use for OAuth authentication
+A [generic implementation](https://oauthenticator.readthedocs.io/en/latest/reference/api/gen/oauthenticator.generic.html), which you can use for OAuth authentication
 with any provider, is also available.
 
 ## Use DummyAuthenticator for testing
