@@ -1,6 +1,6 @@
-# Security settings
-
 (security-basics)=
+
+# Security settings
 
 :::{important}
 You should not run JupyterHub without SSL encryption on a public network.
