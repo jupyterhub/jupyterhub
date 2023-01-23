@@ -51,13 +51,13 @@ follows the Jupyter [Community Guides](https://jupyter.readthedocs.io/en/latest/
 Documentation sections (reorganization in-progress)
 
 ```{toctree}
-:maxdepth: 1
+:maxdepth: 2
 
-faq/index.md
 tutorial/index.md
 howto/index.md
 explanation/index.md
 reference/index.md
+faq/index.md
 ```
 
 (index/distributions)=
@@ -80,14 +80,6 @@ Today, you can find two main use cases:
 
 _It is important to evaluate these distributions before you can continue with the
 configuration of JupyterHub_.
-
-### Installation Guide
-
-```{toctree}
-:maxdepth: 2
-
-installation-guide
-```
 
 ### Getting Started
 

@@ -1,3 +1,5 @@
+(security-basics)=
+
 # Security settings
 
 :::{important}
