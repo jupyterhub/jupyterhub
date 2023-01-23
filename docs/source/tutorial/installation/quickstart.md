@@ -27,7 +27,7 @@ Before installing JupyterHub, you will need:
     if your system package manager only has an old version of Node.js (e.g. 10 or older).
 
 - A [pluggable authentication module (PAM)](https://en.wikipedia.org/wiki/Pluggable_authentication_module)
-  to use the [default Authenticator](authenticators-users-basics).
+  to use the [default Authenticator](authenticators).
   PAM is often available by default on most distributions, if this is not the case it can be installed by
   using the operating system's package manager.
 - TLS certificate and key for HTTPS communication
