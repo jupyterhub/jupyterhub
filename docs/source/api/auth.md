@@ -24,10 +24,12 @@
 
 ```{eval-rst}
 .. autoconfigurable:: PAMAuthenticator
+   :members:
 ```
 
 ### {class}`DummyAuthenticator`
 
 ```{eval-rst}
 .. autoconfigurable:: DummyAuthenticator
+   :members:
 ```

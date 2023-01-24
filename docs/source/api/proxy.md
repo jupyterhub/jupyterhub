@@ -17,5 +17,5 @@
 
 ```{eval-rst}
 .. autoconfigurable:: ConfigurableHTTPProxy
-   :members: debug, auth_token, check_running_interval, api_url, command
+   :members:
 ```
