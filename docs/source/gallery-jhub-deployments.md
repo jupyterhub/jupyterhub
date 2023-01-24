@@ -1,3 +1,5 @@
+(gallery-of-deployments)=
+
 # A Gallery of JupyterHub Deployments
 
 **A JupyterHub Community Resource**

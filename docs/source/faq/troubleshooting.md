@@ -1,3 +1,5 @@
+(troubleshooting)=
+
 # Troubleshooting
 
 When troubleshooting, you may see unexpected behaviors or receive an error
