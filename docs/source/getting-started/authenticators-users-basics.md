@@ -3,12 +3,12 @@
 # Authentication and User Basics
 
 The default Authenticator uses [PAM][] (Pluggable Authentication Module) to authenticate system users with
-their username and password. With the default Authenticator, any user
+their usernames and passwords. With the default Authenticator, any user
 with an account and password on the system will be allowed to login.
 
 ## Create a set of allowed users (`allowed_users`)
 
-You can restrict which users are allowed to login with a set,
+You can restrict which users are allowed to login with a set
 `Authenticator.allowed_users`:
 
 ```python
@@ -90,7 +90,7 @@ file is:
 c.LocalAuthenticator.create_system_users = True
 ```
 
-Adding a user to the Hub that doesn't already exist on the system will
+Adding a user to the Hub that doesn't exist already on the system will
 result in the Hub creating that user via the system `adduser` command
 line tool. This option is typically used on hosted deployments of
 JupyterHub to avoid the need to manually create all your users before
