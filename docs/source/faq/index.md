@@ -5,4 +5,7 @@ Find answers to some of the most frequently-asked questions around JupyterHub an
 ```{toctree}
 :maxdepth: 2
 
+faq
+institutional-faq
+troubleshooting
 ```
