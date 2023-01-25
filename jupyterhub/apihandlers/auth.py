@@ -383,8 +383,6 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
     @web.authenticated
     def post(self):
         uri, http_method, body, headers = self.extract_oauth_params()
-        # TODO: per-page xsrf token to verify origin on this page!
-
         # The scopes the user actually authorized, i.e. checkboxes
         # that were selected.
         scopes = self.get_arguments('scopes')
