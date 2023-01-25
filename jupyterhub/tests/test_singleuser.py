@@ -114,7 +114,7 @@ async def test_singleuser_auth(
         return
     r.raise_for_status()
     # submit the oauth form to complete authorization
-    r = await s.post(r.url, data={'scopes': ['identify']}, headers={'Referer': r.url})
+    r = await s.post(r.url, data={'scopes': ['identify'], '_xsrf': s.cookies['_xsrf']})
     final_url = urlparse(r.url).path.rstrip('/')
     final_path = url_path_join(
         '/user/', user.name, spawner.name, spawner.default_url or "/tree"

@@ -2728,6 +2728,16 @@ class JupyterHub(Application):
                 )
                 oauth_no_confirm_list.add(service.oauth_client_id)
 
+        # configure xsrf cookie
+        # (user xsrf_cookie_kwargs works as override)
+        xsrf_cookie_kwargs = self.tornado_settings.setdefault("xsrf_cookie_kwargs", {})
+        if not xsrf_cookie_kwargs:
+            # default to cookie_options
+            xsrf_cookie_kwargs.update(self.tornado_settings.get("cookie_options", {}))
+
+        # restrict xsrf cookie to hub base path
+        xsrf_cookie_kwargs["path"] = self.hub.base_url
+
         settings = dict(
             log_function=log_request,
             config=self.config,
@@ -2781,6 +2791,7 @@ class JupyterHub(Application):
             shutdown_on_logout=self.shutdown_on_logout,
             eventlog=self.eventlog,
             app=self,
+            xsrf_cookies=True,
         )
         # allow configured settings to have priority
         settings.update(self.tornado_settings)

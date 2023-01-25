@@ -2,6 +2,7 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import json
+import warnings
 from functools import lru_cache
 from http.client import responses
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
@@ -12,7 +13,7 @@ from tornado import web
 from .. import orm
 from ..handlers import BaseHandler
 from ..scopes import get_scopes_for
-from ..utils import get_browser_protocol, isoformat, url_escape_path, url_path_join
+from ..utils import isoformat, url_escape_path, url_path_join
 
 PAGINATION_MEDIA_TYPE = "application/jupyterhub-pagination+json"
 
@@ -23,7 +24,6 @@ class APIHandler(BaseHandler):
     Differences from page handlers:
 
     - JSON responses and errors
-    - strict referer checking for Cookie-authenticated requests
     - strict content-security-policy
     - methods for REST API models
     """
@@ -49,48 +49,12 @@ class APIHandler(BaseHandler):
         return PAGINATION_MEDIA_TYPE in accepts
 
     def check_referer(self):
-        """Check Origin for cross-site API requests.
-
-        Copied from WebSocket with changes:
-
-        - allow unspecified host/referer (e.g. scripts)
-        """
-        host_header = self.app.forwarded_host_header or "Host"
-        host = self.request.headers.get(host_header)
-        if host and "," in host:
-            host = host.split(",", 1)[0].strip()
-        referer = self.request.headers.get("Referer")
-
-        # If no header is provided, assume it comes from a script/curl.
-        # We are only concerned with cross-site browser stuff here.
-        if not host:
-            self.log.warning("Blocking API request with no host")
-            return False
-        if not referer:
-            self.log.warning("Blocking API request with no referer")
-            return False
-
-        proto = get_browser_protocol(self.request)
-
-        full_host = f"{proto}://{host}{self.hub.base_url}"
-        host_url = urlparse(full_host)
-        referer_url = urlparse(referer)
-        # resolve default ports for http[s]
-        referer_port = referer_url.port or (
-            443 if referer_url.scheme == 'https' else 80
+        """DEPRECATED"""
+        warnings.warn(
+            "check_referer is deprecated in JupyterHub 3.2 and always returns True",
+            DeprecationWarning,
+            stacklevel=2,
         )
-        host_port = host_url.port or (443 if host_url.scheme == 'https' else 80)
-        if (
-            referer_url.scheme != host_url.scheme
-            or referer_url.hostname != host_url.hostname
-            or referer_port != host_port
-            or not (referer_url.path + "/").startswith(host_url.path)
-        ):
-            self.log.warning(
-                f"Blocking Cross Origin API request.  Referer: {referer},"
-                f" {host_header}: {host}, Host URL: {full_host}",
-            )
-            return False
         return True
 
     def check_post_content_type(self):
@@ -111,6 +75,25 @@ class APIHandler(BaseHandler):
 
         return True
 
+    async def prepare(self):
+        await super().prepare()
+        # tornado only checks xsrf on non-GET
+        # we also check xsrf on GETs to API endpoints
+        # make sure this runs after auth, which happens in super().prepare()
+        if self.request.method not in {"HEAD", "OPTIONS"} and self.settings.get(
+            "xsrf_cookies"
+        ):
+            self.check_xsrf_cookie()
+
+    def check_xsrf_cookie(self):
+        if not hasattr(self, '_jupyterhub_user'):
+            # called too early to check if we're token-authenticated
+            return
+        if getattr(self, '_token_authenticated', False):
+            # if token-authenticated, ignore XSRF
+            return
+        return super().check_xsrf_cookie()
+
     def get_current_user_cookie(self):
         """Extend get_user_cookie to add checks for CORS"""
         cookie_user = super().get_current_user_cookie()
@@ -119,8 +102,6 @@ class APIHandler(BaseHandler):
         # avoiding misleading "Blocking Cross Origin" messages
         # when there's no cookie set anyway.
         if cookie_user:
-            if not self.check_referer():
-                return None
             if (
                 self.request.method.upper() == 'POST'
                 and not self.check_post_content_type()
@@ -517,6 +498,9 @@ class API404(APIHandler):
 
     Ensures JSON 404 errors for malformed URLs
     """
+
+    def check_xsrf_cookie(self):
+        pass
 
     async def prepare(self):
         await super().prepare()

@@ -51,6 +51,9 @@ class ShutdownAPIHandler(APIHandler):
 
 
 class RootAPIHandler(APIHandler):
+    def check_xsrf_cookie(self):
+        return
+
     def get(self):
         """GET /api/ returns info about the Hub and its API.
 

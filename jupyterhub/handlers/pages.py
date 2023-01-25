@@ -99,7 +99,9 @@ class SpawnHandler(BaseHandler):
             auth_state=auth_state,
             spawner_options_form=spawner_options_form,
             error_message=message,
-            url=self.request.uri,
+            url=url_concat(
+                self.request.uri, {"_xsrf": self.xsrf_token.decode('ascii')}
+            ),
             spawner=for_user.spawner,
         )
 
@@ -404,7 +406,9 @@ class SpawnPendingHandler(BaseHandler):
                 page,
                 user=user,
                 spawner=spawner,
-                progress_url=spawner._progress_url,
+                progress_url=url_concat(
+                    spawner._progress_url, {"_xsrf": self.xsrf_token.decode('ascii')}
+                ),
                 auth_state=auth_state,
             )
             self.finish(html)

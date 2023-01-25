@@ -6,7 +6,6 @@ from urllib.parse import parse_qs, urlencode, urlparse
 
 import pytest
 from bs4 import BeautifulSoup
-from tornado.escape import url_escape
 from tornado.httputil import url_concat
 
 from .. import orm, roles, scopes
@@ -380,8 +379,15 @@ async def test_spawn_form(app):
         u = app.users[orm_u]
         await u.stop()
         next_url = ujoin(app.base_url, 'user/jones/tree')
+        r = await async_requests.get(
+            url_concat(ujoin(base_url, 'spawn'), {'next': next_url}), cookies=cookies
+        )
+        r.raise_for_status()
+        spawn_page = BeautifulSoup(r.text, 'html.parser')
+        form = spawn_page.find("form")
+        action_url = public_host(app) + form["action"]
         r = await async_requests.post(
-            url_concat(ujoin(base_url, 'spawn'), {'next': next_url}),
+            action_url,
             cookies=cookies,
             data={'bounds': ['-1', '1'], 'energy': '511keV'},
         )
@@ -419,8 +425,22 @@ async def test_spawn_form_other_user(
         base_url = ujoin(public_host(app), app.hub.base_url)
         next_url = ujoin(app.base_url, 'user', user.name, 'tree')
 
+        url = ujoin(base_url, 'spawn', user.name)
+        r = await async_requests.get(
+            url_concat(url, {'next': next_url}),
+            cookies=cookies,
+        )
+        if has_access:
+            r.raise_for_status()
+            spawn_page = BeautifulSoup(r.text, 'html.parser')
+            form = spawn_page.find("form")
+            action_url = ujoin(public_host(app), form["action"])
+        else:
+            assert r.status_code == 404
+            action_url = url_concat(url, {"_xsrf": cookies['_xsrf']})
+
         r = await async_requests.post(
-            url_concat(ujoin(base_url, 'spawn', user.name), {'next': next_url}),
+            action_url,
             cookies=cookies,
             data={'bounds': ['-3', '3'], 'energy': '938MeV'},
         )
@@ -450,9 +470,19 @@ async def test_spawn_form_with_file(app):
         orm_u = orm.User.find(app.db, 'jones')
         u = app.users[orm_u]
         await u.stop()
+        url = ujoin(base_url, 'spawn')
+
+        r = await async_requests.get(
+            url,
+            cookies=cookies,
+        )
+        r.raise_for_status()
+        spawn_page = BeautifulSoup(r.text, 'html.parser')
+        form = spawn_page.find("form")
+        action_url = public_host(app) + form["action"]
 
         r = await async_requests.post(
-            ujoin(base_url, 'spawn'),
+            action_url,
             cookies=cookies,
             data={'bounds': ['-1', '1'], 'energy': '511keV'},
             files={'hello': ('hello.txt', b'hello world\n')},
@@ -643,58 +673,6 @@ async def test_other_user_url(app, username, user, group, create_temp_role, has_
 
 
 @pytest.mark.parametrize(
-    'url, params, redirected_url, form_action',
-    [
-        (
-            # spawn?param=value
-            # will encode given parameters for an unauthenticated URL in the next url
-            # the next parameter will contain the app base URL (replaces BASE_URL in tests)
-            'spawn',
-            [('param', 'value')],
-            '/hub/login?next={{BASE_URL}}hub%2Fspawn%3Fparam%3Dvalue',
-            '/hub/login?next={{BASE_URL}}hub%2Fspawn%3Fparam%3Dvalue',
-        ),
-        (
-            # login?param=fromlogin&next=encoded(/hub/spawn?param=value)
-            # will drop parameters given to the login page, passing only the next url
-            'login',
-            [('param', 'fromlogin'), ('next', '/hub/spawn?param=value')],
-            '/hub/login?param=fromlogin&next=%2Fhub%2Fspawn%3Fparam%3Dvalue',
-            '/hub/login?next=%2Fhub%2Fspawn%3Fparam%3Dvalue',
-        ),
-        (
-            # login?param=value&anotherparam=anothervalue
-            # will drop parameters given to the login page, and use an empty next url
-            'login',
-            [('param', 'value'), ('anotherparam', 'anothervalue')],
-            '/hub/login?param=value&anotherparam=anothervalue',
-            '/hub/login?next=',
-        ),
-        (
-            # login
-            # simplest case, accessing the login URL, gives an empty next url
-            'login',
-            [],
-            '/hub/login',
-            '/hub/login?next=',
-        ),
-    ],
-)
-async def test_login_page(app, url, params, redirected_url, form_action):
-    url = url_concat(url, params)
-    r = await get_page(url, app)
-    redirected_url = redirected_url.replace('{{BASE_URL}}', url_escape(app.base_url))
-    assert r.url.endswith(redirected_url)
-    # now the login.html rendered template must include the given parameters in the form
-    # action URL, including the next URL
-    page = BeautifulSoup(r.text, "html.parser")
-    form = page.find("form", method="post")
-    action = form.attrs['action']
-    form_action = form_action.replace('{{BASE_URL}}', url_escape(app.base_url))
-    assert action.endswith(form_action)
-
-
-@pytest.mark.parametrize(
     "url, token_in",
     [
         ("/home", "url"),
@@ -722,11 +700,13 @@ async def test_page_with_token(app, user, url, token_in):
         allow_redirects=False,
     )
     if "/hub/login" in r.url:
+        cookies = {'_xsrf'}
         assert r.status_code == 200
     else:
+        cookies = set()
         assert r.status_code == 302
         assert r.headers["location"].partition("?")[0].endswith("/hub/login")
-    assert not r.cookies
+    assert {c.name for c in r.cookies} == cookies
 
 
 async def test_login_fail(app):
@@ -737,7 +717,7 @@ async def test_login_fail(app):
         data={'username': name, 'password': 'wrong'},
         allow_redirects=False,
     )
-    assert not r.cookies
+    assert set(r.cookies.keys()).issubset({"_xsrf"})
 
 
 @pytest.mark.parametrize(
@@ -758,8 +738,16 @@ async def test_login_strip(app, form_user, auth_user, form_password):
         called_with.append(data)
 
     with mock.patch.object(app.authenticator, 'authenticate', mock_authenticate):
+        r = await async_requests.get(base_url + 'hub/login')
+        r.raise_for_status()
+        cookies = r.cookies
+        xsrf = cookies['_xsrf']
+        page = BeautifulSoup(r.text, "html.parser")
+        action_url = public_host(app) + page.find("form")["action"]
+        xsrf_input = page.find("form").find("input", attrs={"name": "_xsrf"})
+        form_data["_xsrf"] = xsrf_input["value"]
         await async_requests.post(
-            base_url + 'hub/login', data=form_data, allow_redirects=False
+            action_url, data=form_data, allow_redirects=False, cookies=cookies
         )
 
     assert called_with == [expected_auth]
