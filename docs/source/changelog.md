@@ -581,7 +581,7 @@ and consider assigning only the necessary roles and scopes.
 [rbac]: ./rbac/index.md
 
 JupyterHub 2.0 requires an update to the database schema,
-so **make sure to [read the upgrade documentation and backup your database](admin/upgrading)
+so **make sure to [read the upgrade documentation and backup your database](upgrading-jupyterhub)
 before upgrading**.
 
 :::{admonition} stop all servers before upgrading

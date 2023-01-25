@@ -1,3 +1,5 @@
+(upgrading-jupyterhub)=
+
 # Upgrading JupyterHub
 
 JupyterHub offers easy upgrade pathways between minor versions. This

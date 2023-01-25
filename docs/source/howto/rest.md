@@ -19,7 +19,7 @@ Hub.
 
 ## What you can do with the API
 
-Using the [JupyterHub REST API][], you can perform actions on the Hub,
+Using the [JupyterHub REST API](jupyterhub-rest-api), you can perform actions on the Hub,
 such as:
 
 - Checking which users are active
@@ -320,7 +320,7 @@ or kubernetes pods.
 
 ## Learn more about the API
 
-You can see the full [JupyterHub REST API][] for more details.
+You can see the full [JupyterHub REST API](jupyterhub-rest-api) for more details.
 
 [openapi initiative]: https://www.openapis.org/
 [jupyterhub rest api]: ./rest-api
