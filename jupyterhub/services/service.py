@@ -123,6 +123,8 @@ class _ServiceSpawner(LocalProcessSpawner):
 
     def start(self):
         """Start the process"""
+        if self.port == 0:
+            self.port = random_port()
         env = self.get_env()
         # no activity url for services
         env.pop('JUPYTERHUB_ACTIVITY_URL', None)
