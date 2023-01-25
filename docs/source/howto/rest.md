@@ -1,4 +1,4 @@
-(rest-api)=
+(using-jupyterhub-rest-api)=
 
 # Using JupyterHub's REST API
 
@@ -19,7 +19,7 @@ Hub.
 
 ## What you can do with the API
 
-Using the [JupyterHub REST API](jupyterhub-rest-api), you can perform actions on the Hub,
+Using the [JupyterHub REST API](jupyterhub-rest-API), you can perform actions on the Hub,
 such as:
 
 - Checking which users are active
