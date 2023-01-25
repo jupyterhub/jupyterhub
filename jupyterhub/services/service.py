@@ -62,7 +62,7 @@ from .. import orm
 from ..objects import Server
 from ..spawner import LocalProcessSpawner, set_user_setuid
 from ..traitlets import Command
-from ..utils import url_path_join
+from ..utils import random_port, url_path_join
 
 
 class _MockUser(HasTraits):
