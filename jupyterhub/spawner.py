@@ -994,6 +994,9 @@ class Spawner(LoggingConfigurable):
             # this should only occur in mock/testing scenarios
             base_url = '/'
 
+        if self.port < 1 or self.port > 65535:
+            raise ValueError("Port must be between 1 and 65535")
+
         proto = 'https' if self.internal_ssl else 'http'
         bind_url = f"{proto}://{self.ip}:{self.port}{base_url}"
         env["JUPYTERHUB_SERVICE_URL"] = bind_url
