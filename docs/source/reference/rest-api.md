@@ -1,3 +1,5 @@
+(jupyterhub-rest-API)=
+
 # JupyterHub REST API
 
 Below is an interactive view of JupyterHub's OpenAPI specification.
