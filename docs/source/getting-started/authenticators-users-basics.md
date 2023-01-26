@@ -3,7 +3,7 @@
 # Authentication and User Basics
 
 The default Authenticator uses [PAM][] (Pluggable Authentication Module) to authenticate system users with
-their username and password. With the default Authenticator, any user
+their usernames and passwords. With the default Authenticator, any user
 with an account and password on the system will be allowed to login.
 
 ## Create a set of allowed users (`allowed_users`)
