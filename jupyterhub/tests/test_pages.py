@@ -1033,11 +1033,10 @@ async def test_oauth_token_page(app):
     user = app.users[orm.User.find(app.db, name)]
     client = orm.OAuthClient(identifier='token')
     app.db.add(client)
-    oauth_token = orm.APIToken(
-        oauth_client=client,
-        user=user,
-    )
+    oauth_token = orm.APIToken()
     app.db.add(oauth_token)
+    oauth_token.oauth_client = client
+    oauth_token.user = user
     app.db.commit()
     r = await get_page('token', app, cookies=cookies)
     r.raise_for_status()

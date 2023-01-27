@@ -6,12 +6,27 @@ from concurrent.futures import ThreadPoolExecutor
 import pytest
 import requests
 from certipy import Certipy
+from sqlalchemy import text
 from tornado.httputil import url_concat
 
 from jupyterhub import metrics, orm
 from jupyterhub.objects import Server
 from jupyterhub.roles import assign_default_roles, update_roles
 from jupyterhub.utils import url_path_join as ujoin
+
+try:
+    from sqlalchemy.exc import RemovedIn20Warning
+except ImportError:
+
+    class RemovedIn20Warning(DeprecationWarning):
+        """
+        I only exist so I can be used in warnings filters in pytest.ini
+
+        I will never be displayed.
+
+        sqlalchemy 1.4 introduces RemovedIn20Warning,
+        but we still test against older sqlalchemy.
+        """
 
 
 class _AsyncRequests:
@@ -85,8 +100,8 @@ def check_db_locks(func):
         def _check(_=None):
             temp_session = app.session_factory()
             try:
-                temp_session.execute('CREATE TABLE dummy (foo INT)')
-                temp_session.execute('DROP TABLE dummy')
+                temp_session.execute(text('CREATE TABLE dummy (foo INT)'))
+                temp_session.execute(text('DROP TABLE dummy'))
             finally:
                 temp_session.close()
 
