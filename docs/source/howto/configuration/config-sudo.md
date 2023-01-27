@@ -6,7 +6,7 @@ Only do this if you are very sure you must.
 
 ## Overview
 
-There are many [Authenticators](../getting-started/authenticators-users-basics) and [Spawners](../getting-started/spawners-basics) available for JupyterHub. Some, such
+There are many [Authenticators](authenticators) and [Spawners](spawners) available for JupyterHub. Some, such
 as [DockerSpawner](https://github.com/jupyterhub/dockerspawner) or [OAuthenticator](https://github.com/jupyterhub/oauthenticator), do not need any elevated permissions. This
 document describes how to get the full default behavior of JupyterHub while
 running notebook servers as real system users on a shared system, without

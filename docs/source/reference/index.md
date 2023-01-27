@@ -17,11 +17,6 @@ server-api
 monitoring
 database
 ../events/index
-config-user-env
-config-examples
-config-ghoauth
-config-proxy
-config-sudo
 config-reference
 oauth
 ```

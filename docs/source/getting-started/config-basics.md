@@ -82,7 +82,7 @@ The default authentication and process spawning mechanisms can be replaced, and
 specific [authenticators](authenticators-users-basics) and
 [spawners](spawners-basics) can be set in the configuration file.
 This enables JupyterHub to be used with a variety of authentication methods or
-process control and deployment environments. [Some examples](../reference/config-examples),
+process control and deployment environments. [Some examples](config-examples),
 meant as illustrations, are:
 
 - Using GitHub OAuth instead of PAM with [OAuthenticator](https://github.com/jupyterhub/oauthenticator)
