@@ -94,8 +94,9 @@ class GroupListAPIHandler(_GroupAPIHandler):
             # create the group
             self.log.info("Creating new group %s with %i users", name, len(users))
             self.log.debug("Users: %s", usernames)
-            group = orm.Group(name=name, users=users)
+            group = orm.Group(name=name)
             self.db.add(group)
+            group.users = users
             self.db.commit()
             created.append(group)
         self.write(json.dumps([self.group_model(group) for group in created]))
@@ -131,8 +132,9 @@ class GroupAPIHandler(_GroupAPIHandler):
         # create the group
         self.log.info("Creating new group %s with %i users", group_name, len(users))
         self.log.debug("Users: %s", usernames)
-        group = orm.Group(name=group_name, users=users)
+        group = orm.Group(name=group_name)
         self.db.add(group)
+        group.users = users
         self.db.commit()
         self.write(json.dumps(self.group_model(group)))
         self.set_status(201)

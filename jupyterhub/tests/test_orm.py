@@ -323,7 +323,9 @@ def test_spawner_delete_cascade(db):
     db.add(user)
     db.commit()
 
-    spawner = orm.Spawner(user=user)
+    spawner = orm.Spawner()
+    db.add(spawner)
+    spawner.user = user
     db.commit()
     spawner.server = server = orm.Server()
     db.commit()
@@ -350,16 +352,19 @@ def test_user_delete_cascade(db):
     # these should all be deleted automatically when the user goes away
     user.new_api_token()
     api_token = user.api_tokens[0]
-    spawner = orm.Spawner(user=user)
+    spawner = orm.Spawner()
+    db.add(spawner)
+    spawner.user = user
     db.commit()
     spawner.server = server = orm.Server()
-    oauth_code = orm.OAuthCode(client=oauth_client, user=user)
+    oauth_code = orm.OAuthCode()
     db.add(oauth_code)
-    oauth_token = orm.APIToken(
-        oauth_client=oauth_client,
-        user=user,
-    )
+    oauth_code.client = oauth_client
+    oauth_code.user = user
+    oauth_token = orm.APIToken()
     db.add(oauth_token)
+    oauth_token.oauth_client = oauth_client
+    oauth_token.user = user
     db.commit()
 
     # record all of the ids
@@ -390,13 +395,14 @@ def test_oauth_client_delete_cascade(db):
 
     # create a bunch of objects that reference the User
     # these should all be deleted automatically when the user goes away
-    oauth_code = orm.OAuthCode(client=oauth_client, user=user)
+    oauth_code = orm.OAuthCode()
     db.add(oauth_code)
-    oauth_token = orm.APIToken(
-        oauth_client=oauth_client,
-        user=user,
-    )
+    oauth_code.client = oauth_client
+    oauth_code.user = user
+    oauth_token = orm.APIToken()
     db.add(oauth_token)
+    oauth_token.oauth_client = oauth_client
+    oauth_token.user = user
     db.commit()
     assert user.api_tokens == [oauth_token]
 
@@ -517,11 +523,11 @@ def test_expiring_oauth_token(app, user):
     db.add(client)
     orm_token = orm.APIToken(
         token=token,
-        oauth_client=client,
-        user=user,
         expires_at=now() + timedelta(seconds=30),
     )
     db.add(orm_token)
+    orm_token.oauth_client = client
+    orm_token.user = user
     db.commit()
 
     found = orm.APIToken.find(db, token)

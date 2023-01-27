@@ -29,6 +29,7 @@ env:
   # UTF-8 content may be interpreted as ascii and causes errors without this.
   LANG: C.UTF-8
   PYTEST_ADDOPTS: "--verbose --color=yes"
+  SQLALCHEMY_WARN_20: "1"
 
 permissions:
   contents: read
@@ -140,7 +141,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           pip install --upgrade pip
-          pip install ".[test]"
+          pip install -e ".[test]"
 
           if [ "${{ matrix.oldest_dependencies }}" != "" ]; then
             # take any dependencies in requirements.txt such as tornado>=5.0
@@ -152,6 +153,7 @@ jobs:
 
           if [ "${{ matrix.main_dependencies }}" != "" ]; then
               pip install git+https://github.com/ipython/traitlets#egg=traitlets --force
+              pip install --upgrade --pre sqlalchemy
           fi
           if [ "${{ matrix.legacy_notebook }}" != "" ]; then
               pip uninstall jupyter_server --yes

@@ -257,16 +257,16 @@ class JupyterHubRequestValidator(RequestValidator):
             raise ValueError("No such client: %s" % client_id)
 
         orm_code = orm.OAuthCode(
-            client=orm_client,
             code=code['code'],
             # oauth has 5 minutes to complete
             expires_at=int(orm.OAuthCode.now() + 300),
             scopes=list(request.scopes),
-            user=request.user.orm_user,
             redirect_uri=orm_client.redirect_uri,
             session_id=request.session_id,
         )
         self.db.add(orm_code)
+        orm_code.client = orm_client
+        orm_code.user = request.user.orm_user
         self.db.commit()
 
     def get_authorization_code_scopes(self, client_id, code, redirect_uri, request):
