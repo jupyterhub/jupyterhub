@@ -171,11 +171,11 @@ c.JupyterHub.allow_named_servers = True
 Named servers were implemented in the REST API in JupyterHub 0.8,
 and JupyterHub 1.0 introduces UI for managing named servers via the user home page:
 
-![named servers on the home page](../images/named-servers-home.png)
+![named servers on the home page](/images/named-servers-home.png)
 
 as well as the admin page:
 
-![named servers on the admin page](../images/named-servers-admin.png)
+![named servers on the admin page](/images/named-servers-admin.png)
 
 Named servers can be accessed, created, started, stopped, and deleted
 from these pages. Activity tracking is now per server as well.

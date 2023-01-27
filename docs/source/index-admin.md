@@ -7,6 +7,5 @@ well as other information relevant to running your own JupyterHub over time.
 :maxdepth: 2
 
 admin/capacity-planning
-admin/log-messages
 changelog
 ```
