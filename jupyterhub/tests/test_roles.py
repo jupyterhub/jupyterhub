@@ -3,9 +3,11 @@
 # Distributed under the terms of the Modified BSD License.
 import json
 import os
+import warnings
 
 import pytest
 from pytest import mark
+from sqlalchemy.exc import SADeprecationWarning
 from tornado.log import app_log
 
 from .. import orm, roles
@@ -343,7 +345,13 @@ async def test_creating_roles(app, role, role_def, response_type, response):
     # make sure no warnings/info logged when the role exists and its definition hasn't been changed
     elif response_type == 'no-log':
         with pytest.warns(response) as record:
+            # don't catch already-suppressed sqlalchemy warnings
+            warnings.simplefilter("ignore", SADeprecationWarning)
             roles.create_role(db, role_def)
+
+        for warning in record.list:
+            # show warnings for debugging
+            print("Unexpected warning", warning)
         assert not record.list
         role = orm.Role.find(db, role_def['name'])
         assert role is not None

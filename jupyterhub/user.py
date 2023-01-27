@@ -416,9 +416,10 @@ class User:
                 yield orm_spawner
 
     def _new_orm_spawner(self, server_name):
-        """Creat the low-level orm Spawner object"""
-        orm_spawner = orm.Spawner(user=self.orm_user, name=server_name)
+        """Create the low-level orm Spawner object"""
+        orm_spawner = orm.Spawner(name=server_name)
         self.db.add(orm_spawner)
+        orm_spawner.user = self.orm_user
         self.db.commit()
         assert server_name in self.orm_spawners
         return orm_spawner
