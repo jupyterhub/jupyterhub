@@ -8,6 +8,17 @@ command line for details.
 
 ## 3.1
 
+### 3.1.1 - 2023-01-27
+
+3.1.1 has only tiny bugfixes, enabling compatibility with the latest sqlalchemy 2.0 release, and fixing some metadata files that were not being included in wheel installs.
+
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/3.1.0...3.1.1))
+
+#### Bugs fixed
+
+- Backport PR #4303 on branch 3.x: make sure event-schemas are installed [#4317](https://github.com/jupyterhub/jupyterhub/pull/4317) ([@minrk](https://github.com/minrk))
+- Backport PR #4302 on branch 3.x: sqlalchemy 2 compatibility [#4315](https://github.com/jupyterhub/jupyterhub/pull/4315) ([@minrk](https://github.com/minrk))
+
 ### 3.1.0 - 2022-12-05
 
 3.1.0 is a small release, fixing various bugs and introducing some small new features and metrics.
