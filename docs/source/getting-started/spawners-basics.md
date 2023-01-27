@@ -1,3 +1,5 @@
+(spawners)=
+
 # Spawners and single-user notebook servers
 
 A Spawner starts each single-user notebook server. Since the single-user server is an instance of `jupyter notebook`, an entire separate
