@@ -1,6 +1,7 @@
 """Tests for the Selenium WebDriver"""
 
 import asyncio
+import json
 from functools import partial
 
 import pytest
@@ -15,6 +16,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from tornado.escape import url_escape
 from tornado.httputil import url_concat
 
+from jupyterhub import scopes
 from jupyterhub.tests.selenium.locators import (
     BarLocators,
     HomePageLocators,
@@ -24,6 +26,7 @@ from jupyterhub.tests.selenium.locators import (
 )
 from jupyterhub.utils import exponential_backoff
 
+from ... import orm, roles
 from ...utils import url_path_join
 from ..utils import api_request, public_host, public_url, ujoin
 
@@ -854,3 +857,136 @@ async def test_user_logout(app, browser, url, user):
     while f"/user/{user.name}/" not in browser.current_url:
         await webdriver_wait(browser, EC.url_matches(f"/user/{user.name}/"))
     assert f"/user/{user.name}" in browser.current_url
+
+
+# OAUTH confirmation page
+
+
+@pytest.mark.parametrize(
+    "user_scopes",
+    [
+        ([]),  # no scopes
+        (  # user has just access to own resources
+            [
+                'self',
+            ]
+        ),
+        (  # user has access to all groups resources
+            [
+                'read:groups',
+                'groups',
+            ]
+        ),
+        (  # user has access to specific users/groups/services resources
+            [
+                'read:users!user=gawain',
+                'read:groups!group=mythos',
+                'read:services!service=test',
+            ]
+        ),
+    ],
+)
+async def test_oauth_page(
+    app,
+    browser,
+    mockservice_url,
+    create_temp_role,
+    create_user_with_scopes,
+    user_scopes,
+):
+    # create user with appropriate access permissions
+    service_role = create_temp_role(user_scopes)
+    service = mockservice_url
+    user = create_user_with_scopes("access:services")
+    roles.grant_role(app.db, user, service_role)
+    oauth_client = (
+        app.db.query(orm.OAuthClient)
+        .filter_by(identifier=service.oauth_client_id)
+        .one()
+    )
+    oauth_client.allowed_scopes = sorted(roles.roles_to_scopes([service_role]))
+    app.db.commit()
+    # open the service url in the browser
+    service_url = url_path_join(public_url(app, service) + 'owhoami/?arg=x')
+    await in_thread(browser.get, (service_url))
+    expected_client_id = service.name
+    expected_redirect_url = app.base_url + f"servises/{service.name}/oauth_callback"
+    assert expected_client_id, expected_redirect_url in browser.current_url
+
+    # login user
+    await login(browser, user.name, pass_w=str(user.name))
+    auth_button = browser.find_element(By.XPATH, '//input[@type="submit"]')
+    if not auth_button.is_displayed():
+        await webdriver_wait(
+            browser,
+            EC.visibility_of_element_located((By.XPATH, '//input[@type="submit"]')),
+        )
+    # verify that user can see the service name and oauth URL
+    text_permission = browser.find_element(
+        By.XPATH, './/h1[text()="Authorize access"]//following::p'
+    ).text
+    assert f"JupyterHub service {service.name}", (
+        f"oauth URL: {expected_redirect_url}" in text_permission
+    )
+    # permissions check
+    oauth_form = browser.find_element(By.TAG_NAME, "form")
+    scopes_elements = oauth_form.find_elements(
+        By.XPATH, '//input[@type="hidden" and @name="scopes"]'
+    )
+    scope_list_oauth_page = []
+    for scopes_element in scopes_elements:
+        # checking that scopes are invisible on the page
+        assert not scopes_element.is_displayed()
+        scope_value = scopes_element.get_attribute("value")
+        scope_list_oauth_page.append(scope_value)
+
+    # checking that all scopes granded to user are presented in POST form (scope_list)
+    assert all(x in scope_list_oauth_page for x in user_scopes)
+    assert f"access:services!service={service.name}" in scope_list_oauth_page
+
+    check_boxes = oauth_form.find_elements(
+        By.XPATH, '//input[@type="checkbox" and @name="raw-scopes"]'
+    )
+    for check_box in check_boxes:
+        # checking that user cannot uncheck the checkbox
+        assert not check_box.is_enabled()
+        assert check_box.get_attribute("disabled")
+        assert check_box.get_attribute("title") == "This authorization is required"
+
+    # checking that appropriete descriptions are displayed depending of scopes
+    descriptions = oauth_form.find_elements(By.TAG_NAME, 'span')
+    desc_list_form = [description.text.strip() for description in descriptions]
+    # getting descriptions from scopes.py to compare them with descriptions on UI
+    scope_descriptions = scopes.describe_raw_scopes(
+        user_scopes or ['(no_scope)'], user.name
+    )
+    desc_list_expected = []
+    for scope_description in scope_descriptions:
+        description = scope_description.get("description")
+        text_filter = scope_description.get("filter")
+        if text_filter:
+            description = f"{description} Applies to {text_filter}."
+        desc_list_expected.append(description)
+
+    assert sorted(desc_list_form) == sorted(desc_list_expected)
+
+    # click on the Authorize button
+    await click(browser, (By.XPATH, '//input[@type="submit"]'))
+    # check that user returned to service page
+    assert browser.current_url == service_url
+
+    # check the granted permissions by
+    # getting the scopes from the service page,
+    # which contains the JupyterHub user model
+    text = browser.find_element(By.TAG_NAME, "body").text
+    user_model = json.loads(text)
+    authorized_scopes = user_model["scopes"]
+
+    # resolve the expected expanded scopes
+    # authorized for the service
+    expected_scopes = scopes.expand_scopes(user_scopes, owner=user.orm_user)
+    expected_scopes |= scopes.access_scopes(oauth_client)
+    expected_scopes |= scopes.identify_scopes(user.orm_user)
+
+    # compare the scopes on the service page with the expected scope list
+    assert sorted(authorized_scopes) == sorted(expected_scopes)

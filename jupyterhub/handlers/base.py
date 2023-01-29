@@ -233,6 +233,16 @@ class BaseHandler(RequestHandler):
     # Login and cookie-related
     # ---------------------------------------------------------------
 
+    def check_xsrf_cookie(self):
+        try:
+            return super().check_xsrf_cookie()
+        except Exception as e:
+            # ensure _juptyerhub_user is defined on rejected requests
+            if not hasattr(self, "_jupyterhub_user"):
+                self._jupyterhub_user = None
+            self._resolve_roles_and_scopes()
+            raise
+
     @property
     def admin_users(self):
         return self.settings.setdefault('admin_users', set())
@@ -379,6 +389,10 @@ class BaseHandler(RequestHandler):
                 recorded = self._record_activity(orm_token.user, now) or recorded
         if recorded:
             self.db.commit()
+
+        # record that we've been token-authenticated
+        # XSRF checks are skipped when using token auth
+        self._token_authenticated = True
 
         if orm_token.service:
             return orm_token.service
@@ -717,7 +731,7 @@ class BaseHandler(RequestHandler):
         if not next_url_from_param:
             # when a request made with ?next=... assume all the params have already been encoded
             # otherwise, preserve params from the current request across the redirect
-            next_url = self.append_query_parameters(next_url, exclude=['next'])
+            next_url = self.append_query_parameters(next_url, exclude=['next', '_xsrf'])
         return next_url
 
     def append_query_parameters(self, url, exclude=None):
@@ -1257,6 +1271,7 @@ class BaseHandler(RequestHandler):
         """
         template_ns = {}
         template_ns.update(self.template_namespace)
+        template_ns["xsrf_token"] = self.xsrf_token.decode("ascii")
         template_ns.update(ns)
         template = self.get_template(name, sync)
         if sync:
@@ -1279,6 +1294,7 @@ class BaseHandler(RequestHandler):
             services=self.get_accessible_services(user),
             parsed_scopes=self.parsed_scopes,
             expanded_scopes=self.expanded_scopes,
+            xsrf=self.xsrf_token.decode('ascii'),
         )
         if self.settings['template_vars']:
             ns.update(self.settings['template_vars'])

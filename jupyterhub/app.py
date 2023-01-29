@@ -298,14 +298,28 @@ class JupyterHub(Application):
         return classes
 
     load_groups = Dict(
-        List(Unicode()),
-        help="""Dict of 'group': ['usernames'] to load at startup.
+        Union([Dict(), List()]),
+        help="""
+        Dict of `{'group': {'users':['usernames'], 'properties': {}}`  to load at startup.
+
+        Example::
+
+            c.JupyterHub.load_groups = {
+                'groupname': {
+                    'users': ['usernames'],
+                    'properties': {'key': 'value'},
+                },
+            }
 
         This strictly *adds* groups and users to groups.
+        Properties, if defined, replace all existing properties.
 
         Loading one set of groups, then starting JupyterHub again with a different
         set will not remove users or groups from previous launches.
         That must be done through the API.
+
+        .. versionchanged:: 3.2
+          Changed format of group from list of usernames to dict
         """,
     ).tag(config=True)
 
@@ -1948,9 +1962,9 @@ class JupyterHub(Application):
             user = orm.User.find(db, name)
             if user is None:
                 user = orm.User(name=name, admin=True)
+                db.add(user)
                 roles.assign_default_roles(self.db, entity=user)
                 new_users.append(user)
-                db.add(user)
             else:
                 user.admin = True
         # the admin_users config variable will never be used after this point.
@@ -2049,17 +2063,36 @@ class JupyterHub(Application):
 
         if self.authenticator.manage_groups and self.load_groups:
             raise ValueError("Group management has been offloaded to the authenticator")
-        for name, usernames in self.load_groups.items():
+        for name, contents in self.load_groups.items():
             group = orm.Group.find(db, name)
+
             if group is None:
                 self.log.info(f"Creating group {name}")
                 group = orm.Group(name=name)
                 db.add(group)
-            for username in usernames:
-                username = self.authenticator.normalize_username(username)
-                user = await self._get_or_create_user(username)
-                self.log.debug(f"Adding user {username} to group {name}")
-                group.users.append(user)
+            if isinstance(contents, list):
+                self.log.warning(
+                    "group config `'groupname': [usernames]` config format is deprecated in JupyterHub 3.2,"
+                    " use `'groupname': {'users': [usernames], ...}`"
+                )
+                contents = {"users": contents}
+            if 'users' in contents:
+                for username in contents['users']:
+                    username = self.authenticator.normalize_username(username)
+                    user = await self._get_or_create_user(username)
+                    if group not in user.groups:
+                        self.log.debug(f"Adding user {username} to  group {name}")
+                        group.users.append(user)
+
+            if 'properties' in contents:
+                group_properties = contents['properties']
+                if group.properties != group_properties:
+                    # add equality check to avoid no-op db transactions
+                    self.log.debug(
+                        f"Adding properties to group {name}: {group_properties}"
+                    )
+                    group.properties = group_properties
+
         db.commit()
 
     async def init_role_creation(self):
@@ -2343,6 +2376,7 @@ class JupyterHub(Application):
             if orm_service is None:
                 # not found, create a new one
                 orm_service = orm.Service(name=name)
+                self.db.add(orm_service)
                 if spec.get('admin', False):
                     self.log.warning(
                         f"Service {name} sets `admin: True`, which is deprecated in JupyterHub 2.0."
@@ -2351,7 +2385,6 @@ class JupyterHub(Application):
                         "the Service admin flag will be ignored."
                     )
                     roles.update_roles(self.db, entity=orm_service, roles=['admin'])
-                self.db.add(orm_service)
             orm_service.admin = spec.get('admin', False)
             self.db.commit()
             service = Service(
@@ -2695,6 +2728,16 @@ class JupyterHub(Application):
                 )
                 oauth_no_confirm_list.add(service.oauth_client_id)
 
+        # configure xsrf cookie
+        # (user xsrf_cookie_kwargs works as override)
+        xsrf_cookie_kwargs = self.tornado_settings.setdefault("xsrf_cookie_kwargs", {})
+        if not xsrf_cookie_kwargs:
+            # default to cookie_options
+            xsrf_cookie_kwargs.update(self.tornado_settings.get("cookie_options", {}))
+
+        # restrict xsrf cookie to hub base path
+        xsrf_cookie_kwargs["path"] = self.hub.base_url
+
         settings = dict(
             log_function=log_request,
             config=self.config,
@@ -2748,6 +2791,7 @@ class JupyterHub(Application):
             shutdown_on_logout=self.shutdown_on_logout,
             eventlog=self.eventlog,
             app=self,
+            xsrf_cookies=True,
         )
         # allow configured settings to have priority
         settings.update(self.tornado_settings)

@@ -14,6 +14,4 @@ security-basics
 authenticators-users-basics
 spawners-basics
 services-basics
-faq
-institutional-faq
 ```

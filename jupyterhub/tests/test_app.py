@@ -233,9 +233,16 @@ def test_cookie_secret_string_():
 
 
 async def test_load_groups(tmpdir, request):
+
     to_load = {
-        'blue': ['cyclops', 'rogue', 'wolverine'],
-        'gold': ['storm', 'jean-grey', 'colossus'],
+        'blue': {
+            'users': ['cyclops', 'rogue', 'wolverine'],
+        },
+        'gold': {
+            'users': ['storm', 'jean-grey', 'colossus'],
+            'properties': {'setting3': 'three', 'setting4': 'four'},
+        },
+        'deprecated_list': ['jubilee', 'magik'],
     }
     kwargs = {'load_groups': to_load}
     ssl_enabled = getattr(request.module, "ssl_enabled", False)
@@ -243,16 +250,26 @@ async def test_load_groups(tmpdir, request):
         kwargs['internal_certs_location'] = str(tmpdir)
     hub = MockHub(**kwargs)
     hub.init_db()
+    db = hub.db
     await hub.init_role_creation()
+
     await hub.init_users()
     await hub.init_groups()
-    db = hub.db
+
     blue = orm.Group.find(db, name='blue')
     assert blue is not None
-    assert sorted(u.name for u in blue.users) == sorted(to_load['blue'])
+    assert sorted(u.name for u in blue.users) == sorted(to_load['blue']['users'])
+    assert blue.properties == {}
     gold = orm.Group.find(db, name='gold')
     assert gold is not None
-    assert sorted(u.name for u in gold.users) == sorted(to_load['gold'])
+    assert sorted(u.name for u in gold.users) == sorted(to_load['gold']['users'])
+    assert gold.properties == to_load['gold']['properties']
+    deprecated_list = orm.Group.find(db, name='deprecated_list')
+    assert deprecated_list is not None
+    assert deprecated_list.properties == {}
+    assert sorted(u.name for u in deprecated_list.users) == sorted(
+        to_load['deprecated_list']
+    )
 
 
 async def test_resume_spawners(tmpdir, request):

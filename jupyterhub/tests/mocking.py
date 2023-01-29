@@ -36,6 +36,7 @@ from unittest import mock
 from urllib.parse import urlparse
 
 from pamela import PAMError
+from tornado.httputil import url_concat
 from traitlets import Bool, Dict, default
 
 from .. import metrics, orm, roles
@@ -354,14 +355,25 @@ class MockHub(JupyterHub):
         external_ca = None
         if self.internal_ssl:
             external_ca = self.external_certs['files']['ca']
+        login_url = base_url + 'hub/login'
+        r = await async_requests.get(login_url)
+        r.raise_for_status()
+        xsrf = r.cookies['_xsrf']
+
         r = await async_requests.post(
-            base_url + 'hub/login',
+            url_concat(login_url, {"_xsrf": xsrf}),
+            cookies=r.cookies,
             data={'username': name, 'password': name},
             allow_redirects=False,
             verify=external_ca,
         )
         r.raise_for_status()
-        assert r.cookies
+        r.cookies["_xsrf"] = xsrf
+        assert sorted(r.cookies.keys()) == [
+            '_xsrf',
+            'jupyterhub-hub-login',
+            'jupyterhub-session-id',
+        ]
         return r.cookies
 
 

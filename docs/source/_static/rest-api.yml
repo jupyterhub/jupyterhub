@@ -815,6 +815,39 @@ paths:
         - oauth2:
             - groups
       x-codegen-request-body-name: body
+  /groups/{name}/properties:
+    put:
+      summary: |
+        Set the group properties.
+
+        Added in JupyterHub 3.2.
+      parameters:
+        - name: name
+          in: path
+          description: group name
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: The new group properties, as a JSON dict.
+        content:
+          application/json:
+            schema:
+              type: object
+        required: true
+      responses:
+        200:
+          description: |
+            The properties have been updated.
+            The updated group model is returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Group"
+      security:
+        - oauth2:
+            - groups
+      x-codegen-request-body-name: body
   /services:
     get:
       summary: List services
@@ -1289,6 +1322,15 @@ components:
           description: The names of users who are members of this group
           items:
             type: string
+        properties:
+          type: object
+          description: |
+            Group properties (a dictionary).
+
+            Unused by JupyterHub itself,
+            but an extension point to store information about groups.
+
+            Added in JupyterHub 3.2.
         roles:
           type: array
           description: The names of roles this group has

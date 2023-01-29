@@ -6,6 +6,7 @@ define(["jquery", "utils"], function ($, utils) {
 
   var JHAPI = function (base_url) {
     this.base_url = base_url;
+    this.xsrf_token = window.jhdata.xsrf_token;
   };
 
   var default_options = {
@@ -40,6 +41,11 @@ define(["jquery", "utils"], function ($, utils) {
       "api",
       utils.encode_uri_components(path),
     );
+    if (this.xsrf_token) {
+      // add xsrf token to url parameter
+      var sep = url.indexOf("?") === -1 ? "?" : "&";
+      url = url + sep + "_xsrf=" + this.xsrf_token;
+    }
     $.ajax(url, options);
   };
 

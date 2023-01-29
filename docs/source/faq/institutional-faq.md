@@ -71,7 +71,7 @@ Here is a sample of organizations that use JupyterHub:
 - **Computing infrastructure providers**: NERSC, San Diego Supercomputing Center, Compute Canada
 - **Companies**: Capital One, SANDVIK code, Globus
 
-See the [Gallery of JupyterHub deployments](../gallery-jhub-deployments.md) for
+See the [Gallery of JupyterHub deployments](gallery-of-deployments) for
 a more complete list of JupyterHub deployments at institutions.
 
 ### How does JupyterHub compare with hosted products, like Google Colaboratory, RStudio.cloud, or Anaconda Enterprise?

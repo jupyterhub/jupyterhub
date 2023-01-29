@@ -339,7 +339,8 @@ async def test_oauth_service_roles(
     data = {}
     if scope_values:
         data["scopes"] = scope_values
-    r = await s.post(r.url, data=data, headers={'Referer': r.url})
+    data["_xsrf"] = s.cookies["_xsrf"]
+    r = await s.post(r.url, data=data)
     r.raise_for_status()
     assert r.url == url
     # verify oauth cookie is set
@@ -436,7 +437,7 @@ async def test_oauth_access_scopes(
     assert set(r.history[0].cookies.keys()) == {'service-%s-oauth-state' % service.name}
 
     # submit the oauth form to complete authorization
-    r = await s.post(r.url, headers={'Referer': r.url})
+    r = await s.post(r.url, data={"_xsrf": s.cookies["_xsrf"]})
     r.raise_for_status()
     assert r.url == url
     # verify oauth cookie is set
@@ -549,7 +550,7 @@ async def test_oauth_cookie_collision(app, mockservice_url, create_user_with_sco
     # finish oauth 2
     # submit the oauth form to complete authorization
     r = await s.post(
-        oauth_2.url, data={'scopes': ['identify']}, headers={'Referer': oauth_2.url}
+        oauth_2.url, data={'scopes': ['identify'], "_xsrf": s.cookies["_xsrf"]}
     )
     r.raise_for_status()
     assert r.url == url
@@ -561,7 +562,7 @@ async def test_oauth_cookie_collision(app, mockservice_url, create_user_with_sco
 
     # finish oauth 1
     r = await s.post(
-        oauth_1.url, data={'scopes': ['identify']}, headers={'Referer': oauth_1.url}
+        oauth_1.url, data={'scopes': ['identify'], "_xsrf": s.cookies["_xsrf"]}
     )
     r.raise_for_status()
     assert r.url == url
@@ -606,7 +607,7 @@ async def test_oauth_logout(app, mockservice_url, create_user_with_scopes):
     r.raise_for_status()
     assert urlparse(r.url).path.endswith('oauth2/authorize')
     # submit the oauth form to complete authorization
-    r = await s.post(r.url, data={'scopes': ['identify']}, headers={'Referer': r.url})
+    r = await s.post(r.url, data={'scopes': ['identify'], "_xsrf": s.cookies["_xsrf"]})
     r.raise_for_status()
     assert r.url == url
 
@@ -631,7 +632,7 @@ async def test_oauth_logout(app, mockservice_url, create_user_with_scopes):
     r = await s.get(public_url(app, path='hub/logout'))
     r.raise_for_status()
     # verify that all cookies other than the service cookie are cleared
-    assert list(s.cookies.keys()) == [service_cookie_name]
+    assert sorted(s.cookies.keys()) == ["_xsrf", service_cookie_name]
     # verify that clearing session id invalidates service cookie
     # i.e. redirect back to login page
     r = await s.get(url)

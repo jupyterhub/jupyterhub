@@ -171,11 +171,11 @@ c.JupyterHub.allow_named_servers = True
 Named servers were implemented in the REST API in JupyterHub 0.8,
 and JupyterHub 1.0 introduces UI for managing named servers via the user home page:
 
-![named servers on the home page](../images/named-servers-home.png)
+![named servers on the home page](/images/named-servers-home.png)
 
 as well as the admin page:
 
-![named servers on the admin page](../images/named-servers-admin.png)
+![named servers on the admin page](/images/named-servers-admin.png)
 
 Named servers can be accessed, created, started, stopped, and deleted
 from these pages. Activity tracking is now per server as well.
@@ -201,6 +201,8 @@ c.JupyterHub.named_server_limit_per_user = named_server_limit_per_user_fn
 This can be useful for quota service implementations. The example above limits the number of named servers for non-admin users only.
 
 If `named_server_limit_per_user` is set to `0`, no limit is enforced.
+
+When using named servers, Spawners may need additional configuration to take the `servername` into account. Whilst `KubeSpawner` takes the `servername` into account by default in [`pod_name_template`](https://jupyterhub-kubespawner.readthedocs.io/en/latest/spawner.html#kubespawner.KubeSpawner.pod_name_template), other Spawners may not. Check the documentation for the specific Spawner to see how singleuser servers are named, for example in `DockerSpawner` this involves modifying the [`name_template`](https://jupyterhub-dockerspawner.readthedocs.io/en/latest/api/index.html) setting to include `servername`, eg. `"{prefix}-{username}-{servername}"`.
 
 (classic-notebook-ui)=
 

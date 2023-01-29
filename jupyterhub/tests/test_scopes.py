@@ -755,6 +755,7 @@ async def test_service_model_filtering(
                 'name',
                 'kind',
                 'users',
+                'properties',
             },
         ),
         (
