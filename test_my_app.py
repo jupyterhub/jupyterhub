@@ -1,5 +1,7 @@
 import re
-from playwright.sync_api import expect, Page
+
+from playwright.sync_api import Page, expect
+
 
 def test_homepage_has_JupyterHub_in_title_and_Sign_in_button(page: Page):
 
