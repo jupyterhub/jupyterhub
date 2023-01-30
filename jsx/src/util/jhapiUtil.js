@@ -8,7 +8,7 @@ export const jhapiRequest = (endpoint, method, data) => {
   if (xsrfToken) {
     // add xsrf token to url parameter
     var sep = endpoint.indexOf("?") === -1 ? "?" : "&";
-    suffix = sep + "_xsrf=" + xsrf_token;
+    suffix = sep + "_xsrf=" + xsrfToken;
   }
   return fetch(api_url + endpoint + suffix, {
     method: method,
