@@ -375,9 +375,10 @@ async def test_spawn_pending_server_ready(app, browser, user):
     await webdriver_wait(browser, EC.staleness_of(button_start))
     # checking that server is running and two butons present on the home page
     home_page = url_path_join(public_host(app), ujoin(app.base_url, "hub/home"))
-    await in_thread(browser.get, home_page)
     while not user.spawner.ready:
         await asyncio.sleep(0.01)
+    await in_thread(browser.get, home_page)
+    await wait_for_ready(browser)
     assert is_displayed(browser, (By.ID, "stop"))
     assert is_displayed(browser, (By.ID, "start"))
 
@@ -1044,12 +1045,25 @@ async def test_start_stop_all_servers_on_admin_page(
     await open_admin_page(app, browser, user_admin)
     # get total count of users from db
     users_count_db = app.db.query(orm.User).count()
+    await webdriver_wait(
+        browser,
+        lambda: is_displayed(
+            By.XPATH, '//button[@type="button" and @data-testid="start-all"]'
+        ),
+    )
+    await webdriver_wait(
+        browser,
+        lambda: is_displayed(
+            By.XPATH, '//button[@type="button" and @data-testid="stop-all"]'
+        ),
+    )
     start_all_btn = browser.find_element(
         By.XPATH, '//button[@type="button" and @data-testid="start-all"]'
     )
     stop_all_btn = browser.find_element(
         By.XPATH, '//button[@type="button" and @data-testid="stop-all"]'
     )
+
     # verify Start All and Stop All buttons are displayed
     assert start_all_btn.is_displayed(), stop_all_btn.is_displayed()
 
