@@ -16,6 +16,3 @@
 "admin/upgrading.md" "howto/upgrading.md"
 "installation-basics.md" "tutorial/installation/installation-basics.md"
 "quickstart.md" "tutorial/installation/quickstart.md"
-
-
-
