@@ -214,11 +214,28 @@ ogp_use_first_image = True
 # -- Options for the rediraffe extension -------------------------------------
 # ref: https://github.com/wpilibsuite/sphinxext-rediraffe#readme
 #
-# This extensions help us relocated content without breaking links. If a
-# document is moved internally, a redirect like should be configured below to
+# This extension helps us relocate content without breaking links. If a
+# document is moved internally, a redirect link should be configured as below to
 # help us not break links.
 #
-rediraffe_branch = "main"
+# The workflow for adding redirects can be as follows: 
+# 1. Change "rediraffe_branch" below to point to the commit/ branch you
+#   want to make the changes based off. 
+# 2. Option 1: run "make rediraffecheckdiff"
+#       a. Analyze the output of this command
+#       b. Manually add the redirect entries to the "redirects.txt" file.
+#    Option 2: run "rediraffewritediff"
+#       a. rediraffe will then automatically add the obvious redirects to redirects.txt
+#       b. Analyze the output of the command for broken links. 
+#       c. Check the "redirects.txt" file for any files that were moved/ renamed but are not listed. 
+#       d. Manually add the redirects that havebeen mised by the automatic builder to "redirects.txt"
+#    Option 3: Do not use the commands above and, instead, do everything manually - by taking 
+#    note of of the files you have moved or renamed and adding them to the "redirects.txt" file.
+#  
+# If you are basing changes off another branch/ commit, always change back
+# rediraffe_branch to main before pushing your changes upstream. 
+#
+rediraffe_branch = "main" 
 rediraffe_redirects = "redirects.txt"
 # rediraffe_redirects = {
 # "old-file": "new-folder/new-file-name",

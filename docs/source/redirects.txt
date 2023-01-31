@@ -6,3 +6,16 @@
 "reference/proxy.md" "howto/proxy.md"
 "reference/templates.md" "howto/templates.md"
 "quickstart-docker.md" "tutorial/installation/quickstart-docker.md"
+"reference/config-examples.md" "howto/index.md"
+"getting-started/institutional-faq.md" "faq/institutional-faq.md"
+"troubleshooting.md" "faq/troubleshooting.md"
+"reference/config-sudo.md" "howto/configuration/config-sudo.md"
+"reference/config-user-env.md" "howto/configuration/config-user-env.md"
+"reference/rest.md" "howto/rest.md"
+"reference/separate-proxy.md" "howto/separate-proxy.md"
+"admin/upgrading.md" "howto/upgrading.md"
+"installation-basics.md" "tutorial/installation/installation-basics.md"
+"quickstart.md" "tutorial/installation/quickstart.md"
+
+
+
