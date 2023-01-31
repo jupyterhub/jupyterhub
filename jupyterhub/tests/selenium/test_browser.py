@@ -1001,8 +1001,13 @@ async def open_admin_page(app, browser, user):
     admin_page = url_escape(app.base_url) + "hub/admin"
     await open_url(app, browser, path="/login?next=" + admin_page)
     await login(browser, user.name, pass_w=str(user.name))
-    # wait for javascript to finish loading
-    await wait_for_ready(browser)
+    # waiting for loading of admin page elements
+    await webdriver_wait(
+        browser,
+        lambda browser: is_displayed(
+            browser, (By.XPATH, '//div[@class="resets"]/div[@data-testid="container"]')
+        ),
+    )
 
 
 def create_admin_user(create_user_with_scopes):
@@ -1024,8 +1029,8 @@ def create_list_of_users(create_user_with_scopes, n):
 
 
 async def test_open_admin_page(app, browser, create_user_with_scopes):
-    user = create_admin_user(create_user_with_scopes)
-    await open_admin_page(app, browser, user)
+    admin_user = create_admin_user(create_user_with_scopes)
+    await open_admin_page(app, browser, admin_user)
     assert '/hub/admin' in browser.current_url
 
 
@@ -1045,18 +1050,7 @@ async def test_start_stop_all_servers_on_admin_page(
     await open_admin_page(app, browser, user_admin)
     # get total count of users from db
     users_count_db = app.db.query(orm.User).count()
-    await webdriver_wait(
-        browser,
-        lambda: is_displayed(
-            By.XPATH, '//button[@type="button" and @data-testid="start-all"]'
-        ),
-    )
-    await webdriver_wait(
-        browser,
-        lambda: is_displayed(
-            By.XPATH, '//button[@type="button" and @data-testid="stop-all"]'
-        ),
-    )
+
     start_all_btn = browser.find_element(
         By.XPATH, '//button[@type="button" and @data-testid="start-all"]'
     )
@@ -1153,6 +1147,7 @@ async def test_paging_on_admin_page(app, browser, create_user_with_scopes, n=60)
     )
 
     async def click_and_wait(browser, buttons_number):
+        # number 1 - previous button, number 2 - next button
         await click(
             browser,
             (
@@ -1160,8 +1155,6 @@ async def test_paging_on_admin_page(app, browser, create_user_with_scopes, n=60)
                 f'//*[@class="pagination-footer"]//button[contains(@class, "btn-light")][{buttons_number}]',
             ),
         )
-        # wait for javascript to finish loading
-        await wait_for_ready(browser)
 
     assert f"0-{min(users_count_db,50)}" in displaying.text
     if users_count_db > 50:
