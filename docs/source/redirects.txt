@@ -1,0 +1,8 @@
+"getting-started/faq.md" "faq/faq.md"
+"reference/api-only.md" "howto/api-only.md"
+"reference/config-ghoauth.md" "howto/configuration/config-ghoauth.md"
+"reference/config-proxy.md" "howto/configuration/config-proxy.md"
+"admin/log-messages.md" "howto/log-messages.md"
+"reference/proxy.md" "howto/proxy.md"
+"reference/templates.md" "howto/templates.md"
+"quickstart-docker.md" "tutorial/installation/quickstart-docker.md"
