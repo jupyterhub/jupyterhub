@@ -220,17 +220,17 @@ ogp_use_first_image = True
 #
 # The workflow for adding redirects can be as follows:
 # 1. Change "rediraffe_branch" below to point to the commit/ branch you
-#   want to make the changes based off.
+#    want to base off the changes.
 # 2. Option 1: run "make rediraffecheckdiff"
-#       a. Analyze the output of this command
+#       a. Analyze the output of this command.
 #       b. Manually add the redirect entries to the "redirects.txt" file.
-#    Option 2: run "rediraffewritediff"
-#       a. rediraffe will then automatically add the obvious redirects to redirects.txt
+#    Option 2: run "make rediraffewritediff"
+#       a. rediraffe will then automatically add the obvious redirects to redirects.txt.
 #       b. Analyze the output of the command for broken links.
 #       c. Check the "redirects.txt" file for any files that were moved/ renamed but are not listed.
-#       d. Manually add the redirects that havebeen mised by the automatic builder to "redirects.txt"
+#       d. Manually add the redirects that have been mised by the automatic builder to "redirects.txt".
 #    Option 3: Do not use the commands above and, instead, do everything manually - by taking
-#    note of of the files you have moved or renamed and adding them to the "redirects.txt" file.
+#    note of the files you have moved or renamed and adding them to the "redirects.txt" file.
 #
 # If you are basing changes off another branch/ commit, always change back
 # rediraffe_branch to main before pushing your changes upstream.
