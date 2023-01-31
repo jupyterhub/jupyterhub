@@ -220,6 +220,6 @@ ogp_use_first_image = True
 #
 rediraffe_branch = "main"
 rediraffe_redirects = "redirects.txt"
-#rediraffe_redirects = {
-    # "old-file": "new-folder/new-file-name",
-#}
+# rediraffe_redirects = {
+# "old-file": "new-folder/new-file-name",
+# }
