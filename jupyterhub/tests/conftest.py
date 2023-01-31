@@ -29,7 +29,6 @@ import asyncio
 import copy
 import os
 import sys
-from functools import partial
 from getpass import getuser
 from subprocess import TimeoutExpired
 from unittest import mock
@@ -58,7 +57,7 @@ def ssl_tmpdir(tmpdir_factory):
 
 
 @fixture(scope='module')
-def app(request, io_loop, ssl_tmpdir):
+async def app(request, io_loop, ssl_tmpdir):
     """Mock a jupyterhub app for testing"""
     mocked_app = None
     ssl_enabled = getattr(
@@ -70,10 +69,6 @@ def app(request, io_loop, ssl_tmpdir):
 
     mocked_app = MockHub.instance(**kwargs)
 
-    async def make_app():
-        await mocked_app.initialize([])
-        await mocked_app.start()
-
     def fin():
         # disconnect logging during cleanup because pytest closes captured FDs prematurely
         mocked_app.log.handlers = []
@@ -84,7 +79,8 @@ def app(request, io_loop, ssl_tmpdir):
             print("Error stopping Hub: %s" % e, file=sys.stderr)
 
     request.addfinalizer(fin)
-    io_loop.run_sync(make_app)
+    await mocked_app.initialize([])
+    await mocked_app.start()
     return mocked_app
 
 
@@ -131,7 +127,12 @@ def event_loop(request):
 
 @fixture(scope='module')
 async def io_loop(event_loop, request):
-    """Same as pytest-tornado.io_loop, but re-scoped to module-level"""
+    """Mostly obsolete fixture for tornado event loop
+
+    Main purpose is to register cleanup (close) after we're done with the loop.
+    The main reason to depend on this fixture is to ensure your cleanup
+    happens before the io_loop is closed.
+    """
     io_loop = AsyncIOMainLoop()
     assert asyncio.get_event_loop() is event_loop
     assert io_loop.asyncio_loop is event_loop
@@ -144,11 +145,13 @@ async def io_loop(event_loop, request):
 
 
 @fixture(autouse=True)
-def cleanup_after(request, io_loop):
+async def cleanup_after(request, io_loop):
     """function-scoped fixture to shutdown user servers
 
     allows cleanup of servers between tests
     without having to launch a whole new app
+
+    depends on io_loop to ensure it runs before things are closed.
     """
 
     try:
@@ -167,10 +170,10 @@ def cleanup_after(request, io_loop):
             for name, spawner in list(user.spawners.items()):
                 if spawner.active:
                     try:
-                        io_loop.run_sync(lambda: app.proxy.delete_user(user, name))
+                        await app.proxy.delete_user(user, name)
                     except HTTPError:
                         pass
-                    io_loop.run_sync(lambda: user.stop(name))
+                    await user.stop(name)
             if user.name not in {'admin', 'user'}:
                 app.users.delete(uid)
         # delete groups
@@ -260,7 +263,7 @@ class MockServiceSpawner(jupyterhub.services.service._ServiceSpawner):
 _mock_service_counter = 0
 
 
-def _mockservice(request, app, external=False, url=False):
+async def _mockservice(request, app, external=False, url=False):
     """
     Add a service to the application
 
@@ -290,7 +293,7 @@ def _mockservice(request, app, external=False, url=False):
 
         spec['oauth_redirect_uri'] = 'http://127.0.0.1:%i' % random_port()
 
-    io_loop = app.io_loop
+    event_loop = asyncio.get_running_loop()
 
     with mock.patch.object(
         jupyterhub.services.service, '_ServiceSpawner', MockServiceSpawner
@@ -308,11 +311,11 @@ def _mockservice(request, app, external=False, url=False):
             await service.start()
 
         if not external:
-            io_loop.run_sync(start)
+            await start()
 
         def cleanup():
             if not external:
-                asyncio.get_event_loop().run_until_complete(service.stop())
+                event_loop.run_until_complete(service.stop())
             app.services[:] = []
             app._service_map.clear()
 
@@ -322,26 +325,26 @@ def _mockservice(request, app, external=False, url=False):
             with raises(TimeoutExpired):
                 service.proc.wait(1)
         if url:
-            io_loop.run_sync(partial(service.server.wait_up, http=True))
+            await service.server.wait_up(http=True)
     return service
 
 
 @fixture
-def mockservice(request, app):
+async def mockservice(request, app):
     """Mock a service with no external service url"""
-    yield _mockservice(request, app, url=False)
+    yield await _mockservice(request, app, url=False)
 
 
 @fixture
-def mockservice_external(request, app):
+async def mockservice_external(request, app):
     """Mock an externally managed service (don't start anything)"""
-    yield _mockservice(request, app, external=True, url=False)
+    yield await _mockservice(request, app, external=True, url=False)
 
 
 @fixture
-def mockservice_url(request, app):
+async def mockservice_url(request, app):
     """Mock a service with its own url to test external services"""
-    yield _mockservice(request, app, url=True)
+    yield await _mockservice(request, app, url=True)
 
 
 @fixture
