@@ -194,12 +194,12 @@ This can be used to e.g. limit student/grader/instructor permissions in a gradin
 or grant instructors read-only access to their students' single-user servers starting with upcoming Jupyter Server 2.0.
 
 Further extending granular control of permissions,
-we have added `!service` and `!server` filters for scopes (:ref:`self-referencing-filters`),
+we have added `!service` and `!server` filters for scopes ({ref}`self-referencing-filters`),
 like we had for `!user`.
 
 Access to the admin UI is now governed by a dedicated `admin-ui` scope,
 rather than combined `admin:servers` and `admin:users` in 2.0.
-More info in `ref`{available-scopes-target}.
+More info in {ref}`available-scopes-target`.
 
 #### More highlights
 
