@@ -1,7 +1,7 @@
 # Configuration Basics
 
 This section contains basic information about configuring settings for a JupyterHub
-deployment. The [Technical Reference](../reference/index)
+deployment. The [Technical Reference](reference-index)
 documentation provides additional details.
 
 This section will help you learn how to:

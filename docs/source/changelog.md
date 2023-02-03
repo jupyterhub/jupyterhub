@@ -1,3 +1,5 @@
+(changelog)=
+
 # Changelog
 
 For detailed changes from the prior release, click on the version number, and

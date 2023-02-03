@@ -81,13 +81,6 @@ Today, you can find two main use cases:
 _It is important to evaluate these distributions before you can continue with the
 configuration of JupyterHub_.
 
-### Getting Started
-
-```{toctree}
-:maxdepth: 2
-
-getting-started/index
-```
 
 ### Technical Reference
 
