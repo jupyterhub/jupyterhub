@@ -1,6 +1,6 @@
 # Tutorials
 
-The _Tutorials_ provide step-by-step lessons to help you achieve a specific goal. The tutorials should be a good place to start learning about JupyterHub and how it works.
+_Tutorials_ provide step-by-step lessons to help you achieve a specific goal. They should be a good place to start learning about JupyterHub and how it works.
 
 ## Installation
 
