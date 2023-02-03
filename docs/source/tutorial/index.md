@@ -1,6 +1,6 @@
 # Tutorials
 
-The *Tutorials* provide step-by-step lessons to help you achieve a specific goal. The tutorials should be a good place to start learning about JupyterHub and how it works.
+The _Tutorials_ provide step-by-step lessons to help you achieve a specific goal. The tutorials should be a good place to start learning about JupyterHub and how it works.
 
 ## Installation
 
@@ -36,7 +36,7 @@ getting-started/spawners-basics
 
 ## Working with the JupyterHub API
 
-JupyterHub's functionalities can be accessed using its API. In this section, we cover how to use the JupyterHub API to achieve specific goals, for example, starting servers. 
+JupyterHub's functionalities can be accessed using its API. In this section, we cover how to use the JupyterHub API to achieve specific goals, for example, starting servers.
 
 ```{toctree}
 :maxdepth: 1
