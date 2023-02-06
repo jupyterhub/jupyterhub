@@ -1,8 +1,5 @@
 {
-  "extends": [
-    "plugin:react/recommended",
-    "plugin:jsx-a11y/recommended"
-  ],
+  "extends": ["plugin:react/recommended", "plugin:jsx-a11y/recommended"],
   "parserOptions": {
     "ecmaVersion": 2018,
     "sourceType": "module",
