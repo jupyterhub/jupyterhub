@@ -97,7 +97,6 @@ reference/index
 api/index
 ```
 
-
 ### Contributing
 
 We welcome you to contribute to JupyterHub in ways that are most exciting
@@ -112,7 +111,6 @@ help keep our community welcoming to as many people as possible.
 
 contributing/index
 ```
-
 
 ## Indices and tables
 
