@@ -1,3 +1,5 @@
+(reference-index)=
+
 # Technical Reference
 
 This section covers more of the details of the JupyterHub architecture, as well as
@@ -13,7 +15,6 @@ authenticators
 spawners
 services
 rest-api
-server-api
 monitoring
 database
 ../events/index
