@@ -1,3 +1,5 @@
+(jupyterhub-url)=
+
 # JupyterHub URL scheme
 
 This document describes how JupyterHub routes requests.

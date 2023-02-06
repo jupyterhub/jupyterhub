@@ -55,8 +55,8 @@ Documentation sections (reorganization in-progress)
 
 tutorial/index.md
 howto/index.md
-explanation/index.md
 reference/index.md
+background/index.md
 faq/index.md
 ```
 
@@ -89,14 +89,6 @@ configuration of JupyterHub_.
 reference/index
 ```
 
-### Administrators guide
-
-```{toctree}
-:maxdepth: 2
-
-index-admin
-```
-
 ### API Reference
 
 ```{toctree}
@@ -105,13 +97,6 @@ index-admin
 api/index
 ```
 
-### RBAC Reference
-
-```{toctree}
-:maxdepth: 2
-
-rbac/index
-```
 
 ### Contributing
 
@@ -128,13 +113,6 @@ help keep our community welcoming to as many people as possible.
 contributing/index
 ```
 
-### About JupyterHub
-
-```{toctree}
-:maxdepth: 2
-
-index-about
-```
 
 ## Indices and tables
 

@@ -1,4 +1,4 @@
-(RBAC)=
+(rbac)=
 
 # JupyterHub RBAC
 

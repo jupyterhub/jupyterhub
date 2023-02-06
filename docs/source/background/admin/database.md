@@ -1,3 +1,5 @@
+(hub-database)=
+
 # The Hub's Database
 
 JupyterHub uses a database to store information about users, services, and other data needed for operating the Hub.
@@ -80,7 +82,7 @@ Additionally, there is usually _very_ little load on the database itself.
 By far the most taxing activity on the database is the 'list all users' endpoint, primarily used by the [idle-culling service](https://github.com/jupyterhub/jupyterhub-idle-culler).
 Database-based optimizations have been added to make even these operations feasible for large numbers of users:
 
-1. State filtering on [GET /users](./rest-api.md) with `?state=active`,
+1. State filtering on [GET /users](jupyterhub-rest-API) with `?state=active`,
    which limits the number of results in the query to only the relevant subset (added in JupyterHub 1.3), rather than all users.
 2. [Pagination](api-pagination) of all list endpoints, allowing the request of a large number of resources to be more fairly balanced with other Hub activities across multiple requests (added in 2.0).
 
