@@ -14,6 +14,8 @@
     "lessc": "lessc"
   },
   "devDependencies": {
+    "eslint": "^8.33.0",
+    "eslint-plugin-jsx-a11y": "^6.7.1",
     "less": "^3.9.0",
     "less-plugin-clean-css": "^1.5.1",
     "prettier": "^1.16.4"
