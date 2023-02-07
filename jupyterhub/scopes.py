@@ -685,7 +685,7 @@ def _check_scope_access(api_handler, req_scope, **kwargs):
             req_scope,
         )
         return True
-    for (filter_, filter_value) in kwargs.items():
+    for filter_, filter_value in kwargs.items():
         if filter_ in sub_scope and filter_value in sub_scope[filter_]:
             app_log.debug("Argument-based access to %s via %s", api_name, req_scope)
             return True

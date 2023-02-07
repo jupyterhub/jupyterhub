@@ -664,7 +664,12 @@ class BaseHandler(RequestHandler):
             next_url = "//" + next_url.lstrip("/")
         parsed_next_url = urlparse(next_url)
 
-        if (next_url + '/').startswith((f'{proto}://{host}/', f'//{host}/',)) or (
+        if (next_url + '/').startswith(
+            (
+                f'{proto}://{host}/',
+                f'//{host}/',
+            )
+        ) or (
             self.subdomain_host
             and parsed_next_url.netloc
             and ("." + parsed_next_url.netloc).endswith(

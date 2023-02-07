@@ -168,7 +168,6 @@ async def test_open_url_login(
     form_action,
     user,
 ):
-
     await open_url(app, browser, path=url)
     url_new = url_path_join(public_host(app), app.hub.base_url, url_concat(url, params))
     await in_thread(browser.get, url_new)

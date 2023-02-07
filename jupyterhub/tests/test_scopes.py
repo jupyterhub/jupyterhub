@@ -971,7 +971,6 @@ def test_intersect_groups(request, db, left, right, expected, groups):
 async def test_list_users_filter(
     app, group, create_service_with_scopes, scopes, expected
 ):
-
     # create users:
     for i in (1, 2):
         user = add_user(app.db, app, name=f'in-{i}')
@@ -1028,7 +1027,6 @@ async def test_list_users_filter(
 async def test_list_groups_filter(
     request, app, create_service_with_scopes, scopes, expected
 ):
-
     # create groups:
     groups = []
     for i in (1, 2, 3):

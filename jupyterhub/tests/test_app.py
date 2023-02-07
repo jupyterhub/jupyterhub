@@ -233,7 +233,6 @@ def test_cookie_secret_string_():
 
 
 async def test_load_groups(tmpdir, request):
-
     to_load = {
         'blue': {
             'users': ['cyclops', 'rogue', 'wolverine'],
