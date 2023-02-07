@@ -56,7 +56,7 @@ Documentation sections (reorganization in-progress)
 tutorial/index.md
 howto/index.md
 reference/index.md
-background/index.md
+explanation/index.md
 faq/index.md
 ```
 
@@ -110,6 +110,14 @@ help keep our community welcoming to as many people as possible.
 :maxdepth: 2
 
 contributing/index
+```
+
+### About JupyterHub
+
+```{toctree}
+:maxdepth: 2
+
+index-about
 ```
 
 ## Indices and tables
