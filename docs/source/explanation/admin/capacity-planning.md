@@ -40,7 +40,7 @@ The rest is going to be up to your users.
 Per-user overhead from JupyterHub is typically negligible
 up to at least a few hundred concurrent active users.
 
-```{figure} ../images/mybinder-hub-components-cpu-memory.png
+```{figure} /images/mybinder-hub-components-cpu-memory.png
 JupyterHub component resource usage for mybinder.org.
 ```
 
@@ -200,7 +200,7 @@ The limit here is actually Kubernetes' pods per node, not memory _or_ CPU.
 This is likely a extreme case, as many Binder users come from clicking links on webpages
 without any actual intention of running code.
 
-```{figure} ../images/mybinder-load5.png
+```{figure} /images/mybinder-load5.png
 mybinder.org node CPU usage is low with 50-150 users sharing just 8 cores
 ```
 
@@ -277,7 +277,7 @@ showing >90% of users using less than 10% CPU and 200MB,
 but a few outliers near the limit of 1 CPU and 2GB of RAM.
 This is the kind of information you can use to tune your requests and limits.
 
-![Snapshot from JupyterHub's Grafana dashboards on mybinder.org](../images/mybinder-user-resources.png)
+![Snapshot from JupyterHub's Grafana dashboards on mybinder.org](/images/mybinder-user-resources.png)
 
 [prometheus]: https://prometheus.io
 [grafana]: https://grafana.com

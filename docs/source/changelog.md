@@ -207,7 +207,7 @@ More info in {ref}`available-scopes-target`.
 
 - The admin UI can now show more detailed info about users and their servers in a drop-down details table:
 
-  ![Details view in admin UI](./images/dropdown-details-3.0.png)
+  ![Details view in admin UI](/images/dropdown-details-3.0.png)
 
 - Several bugfixes and improvements in the new admin UI.
 - Direct access to the Hub's database is deprecated.
@@ -1355,7 +1355,7 @@ whether it was through discussion, testing, documentation, or development.
 - There is now full UI support for managing named servers.
   With named servers, each jupyterhub user may have access to more than one named server. For example, a professor may access a server named `research` and another named `teaching`.
 
-  ![named servers on the home page](./images/named-servers-home.png)
+  ![named servers on the home page](/images/named-servers-home.png)
 
 - Authenticators can now expire and refresh authentication data by implementing
   `Authenticator.refresh_user(user)`.

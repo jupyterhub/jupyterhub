@@ -103,7 +103,7 @@ a more detailed discussion.
    The default database engine is `sqlite` so if you are just trying
    to get up and running quickly for local development that should be
    available via [Python](https://docs.python.org/3.5/library/sqlite3.html).
-   See {doc}`/reference/database` for details on other supported databases.
+   See [The Hub's Database](hub-database) for details on other supported databases.
 
 6. You are now ready to start JupyterHub!
 
