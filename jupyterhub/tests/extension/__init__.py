@@ -1,6 +1,7 @@
 """Jupyter server extension for testing JupyterHub
 
-Adds endpoints for accessing whatever state we want to check about the server
+Adds a `<base_url>/jupyterhub-test-info` endpoint handler for accessing whatever
+state we want to check about the server
 """
 
 import json

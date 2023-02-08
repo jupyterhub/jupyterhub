@@ -574,14 +574,24 @@ class SingleUserNotebookAppMixin(Configurable):
 
     # load test extension, if we're testing
     def init_server_extension_config(self):
-        # classic notebook server (notebook < 7)
+        """
+        Overloads a method in classic notebook server's NotebookApp class
+        (notebook < 7) to conditionally enable a jupyterhub test extension.
+
+        ref: https://github.com/jupyter/notebook/blob/v6.5.2/notebook/notebookapp.py#L1982
+        """
         super().init_server_extension_config()
         if os.getenv("JUPYTERHUB_SINGLEUSER_TEST_EXTENSION") == "1":
             self.log.warning("Enabling jupyterhub test extension, classic edition")
             self.nbserver_extensions["jupyterhub.tests.extension"] = True
 
     def find_server_extensions(self):
-        # jupyter-server (lab or notebook >=7)
+        """
+        Overloads a method in jupyter_server's ServerApp class (lab or notebook
+        >=7) to conditionally enable a jupyterhub test extension.
+
+        ref: https://github.com/jupyter-server/jupyter_server/blob/v2.2.1/jupyter_server/serverapp.py#L2238
+        """
         super().find_server_extensions()
         if os.getenv("JUPYTERHUB_SINGLEUSER_TEST_EXTENSION") == "1":
             self.log.warning("Enabling jupyterhub test extension")
