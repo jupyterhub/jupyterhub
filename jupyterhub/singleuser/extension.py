@@ -149,6 +149,7 @@ class JupyterHubIdentityProvider(IdentityProvider):
             self.log.debug(f"Allowing user {user['name']} with scopes {scopes}")
         else:
             self.log.warning(f"Not allowing user {user['name']}")
+
             # User is authenticated, but not authorized.
             # Override redirect so if/when tornado @web.authenticated
             # tries to redirect to login URL, 403 will be raised instead.
