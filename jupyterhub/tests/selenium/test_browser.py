@@ -374,9 +374,10 @@ async def test_spawn_pending_server_ready(app, browser, user):
     await webdriver_wait(browser, EC.staleness_of(button_start))
     # checking that server is running and two butons present on the home page
     home_page = url_path_join(public_host(app), ujoin(app.base_url, "hub/home"))
-    await in_thread(browser.get, home_page)
     while not user.spawner.ready:
         await asyncio.sleep(0.01)
+    await in_thread(browser.get, home_page)
+    await wait_for_ready(browser)
     assert is_displayed(browser, (By.ID, "stop"))
     assert is_displayed(browser, (By.ID, "start"))
 
@@ -989,3 +990,344 @@ async def test_oauth_page(
 
     # compare the scopes on the service page with the expected scope list
     assert sorted(authorized_scopes) == sorted(expected_scopes)
+
+
+# ADMIN UI
+
+
+async def open_admin_page(app, browser, user):
+    """Login as `user` and open the admin page"""
+
+    admin_page = url_escape(app.base_url) + "hub/admin"
+    await open_url(app, browser, path="/login?next=" + admin_page)
+    await login(browser, user.name, pass_w=str(user.name))
+    # waiting for loading of admin page elements
+    await webdriver_wait(
+        browser,
+        lambda browser: is_displayed(
+            browser, (By.XPATH, '//div[@class="resets"]/div[@data-testid="container"]')
+        ),
+    )
+
+
+def create_list_of_users(create_user_with_scopes, n):
+    return [create_user_with_scopes(["users"]) for i in range(1, n)]
+
+
+async def test_open_admin_page(app, browser, admin_user):
+
+    await open_admin_page(app, browser, admin_user)
+    assert '/hub/admin' in browser.current_url
+
+
+def get_users_buttons(browser, class_name):
+    """returns the list of buttons in the user row(s) that match this class name"""
+
+    all_btns = browser.find_elements(
+        By.XPATH,
+        f'//*[@data-testid="user-row-server-activity"]//button[contains(@class,"{class_name}")]',
+    )
+    return all_btns
+
+
+async def click_and_wait_paging_btn(browser, buttons_number):
+    """interecrion with paging buttons, where number 1 = previous and number 2 = next"""
+    # number 1 - previous button, number 2 - next button
+    await click(
+        browser,
+        (
+            By.XPATH,
+            f'//*[@class="pagination-footer"]//button[contains(@class, "btn-light")][{buttons_number}]',
+        ),
+    )
+
+
+async def test_start_stop_all_servers_on_admin_page(app, browser, admin_user):
+
+    await open_admin_page(app, browser, admin_user)
+    # get total count of users from db
+    users_count_db = app.db.query(orm.User).count()
+
+    start_all_btn = browser.find_element(
+        By.XPATH, '//button[@type="button" and @data-testid="start-all"]'
+    )
+    stop_all_btn = browser.find_element(
+        By.XPATH, '//button[@type="button" and @data-testid="stop-all"]'
+    )
+
+    # verify Start All and Stop All buttons are displayed
+    assert start_all_btn.is_displayed() and stop_all_btn.is_displayed()
+
+    async def click_all_btns(browser, btn_type, btn_await):
+        await click(
+            browser,
+            (By.XPATH, f'//button[@type="button" and @data-testid="{btn_type}"]'),
+        )
+        await webdriver_wait(
+            browser,
+            EC.visibility_of_all_elements_located(
+                (
+                    By.XPATH,
+                    '//*[@data-testid="user-row-server-activity"]//button[contains(@class, "%s")]'
+                    % str(btn_await),
+                )
+            ),
+        )
+
+    users = browser.find_elements(By.XPATH, '//td[@data-testid="user-row-name"]')
+    # verify that all servers are not started
+    # users´numbers are the same as numbers of the start button and the Spawn page button
+    # no Stop server buttons are displayed
+    # no access buttons are displayed
+
+    class_names = ["stop-button", "primary", "start-button", "secondary"]
+    btns = {
+        class_name: get_users_buttons(browser, class_name) for class_name in class_names
+    }
+    print(btns)
+    assert (
+        len(btns["start-button"])
+        == len(btns["secondary"])
+        == len(users)
+        == users_count_db
+    )
+    assert not btns["stop-button"] and not btns["primary"]
+
+    # start all servers via the Start All
+    await click_all_btns(browser, "start-all", "stop-button")
+    # Start All and Stop All are still displayed
+    assert start_all_btn.is_displayed() and stop_all_btn.is_displayed()
+
+    # users´numbers are the same as numbers of the stop button and the Access button
+    # no Start server buttons are displayed
+    # no Spawn page buttons are displayed
+    btns = {
+        class_name: get_users_buttons(browser, class_name) for class_name in class_names
+    }
+    assert (
+        len(btns["stop-button"]) == len(btns["primary"]) == len(users) == users_count_db
+    )
+    assert not btns["start-button"] and not btns["secondary"]
+
+    # stop all servers via the Stop All
+    await click_all_btns(browser, "stop-all", "start-button")
+
+    # verify that all servers are stopped
+    # users´numbers are the same as numbers of the start button and the Spawn page button
+    # no Stop server buttons are displayed
+    # no access buttons are displayed
+    assert start_all_btn.is_displayed() and stop_all_btn.is_displayed()
+    btns = {
+        class_name: get_users_buttons(browser, class_name) for class_name in class_names
+    }
+    assert (
+        len(btns["start-button"])
+        == len(btns["secondary"])
+        == len(users)
+        == users_count_db
+    )
+    assert not btns["stop-button"] and not btns["primary"]
+
+
+@pytest.mark.parametrize("added_count_users", [10, 47, 48, 49, 110])
+async def test_paging_on_admin_page(
+    app, browser, admin_user, added_count_users, create_user_with_scopes
+):
+
+    create_list_of_users(create_user_with_scopes, added_count_users)
+    await open_admin_page(app, browser, admin_user)
+    users = browser.find_elements(By.XPATH, '//td[@data-testid="user-row-name"]')
+
+    # get total count of users from db
+    users_count_db = app.db.query(orm.User).count()
+    # get total count of users from UI page
+    users_list = [user.text for user in users]
+    displaying = browser.find_element(
+        By.XPATH, '//*[@class="pagination-footer"]//*[contains(text(),"Displaying")]'
+    )
+    btn_previous = browser.find_element(
+        By.XPATH, '//*[@class="pagination-footer"]//span[contains(text(),"Previous")]'
+    )
+    btn_next = browser.find_element(
+        By.XPATH, '//*[@class="pagination-footer"]//span[contains(text(),"Next")]'
+    )
+    assert f"0-{min(users_count_db,50)}" in displaying.text
+    if users_count_db > 50:
+        assert btn_next.get_dom_attribute("class") == "active-pagination"
+        # click on Next button
+        await click_and_wait_paging_btn(browser, buttons_number=2)
+        if users_count_db <= 100:
+            assert f"50-{users_count_db}" in displaying.text
+        else:
+            assert "50-100" in displaying.text
+            assert btn_next.get_dom_attribute("class") == "active-pagination"
+        assert btn_previous.get_dom_attribute("class") == "active-pagination"
+        # click on Previous button
+        await click_and_wait_paging_btn(browser, buttons_number=1)
+    else:
+        assert btn_previous.get_dom_attribute("class") == "inactive-pagination"
+        assert btn_next.get_dom_attribute("class") == "inactive-pagination"
+
+
+@pytest.mark.parametrize(
+    "added_count_users, search_value",
+    [
+        # the value of search is absent =>the expected result null records are found
+        (10, "not exists"),
+        # a search value is a middle part of users name (number,symbol,letter)
+        (25, "r_5"),
+        # a search value equals to number
+        (50, "1"),
+        # searching result shows on more than one page
+        (60, "user"),
+    ],
+)
+async def test_search_on_admin_page(
+    app,
+    browser,
+    admin_user,
+    create_user_with_scopes,
+    added_count_users,
+    search_value,
+):
+
+    create_list_of_users(create_user_with_scopes, added_count_users)
+    await open_admin_page(app, browser, admin_user)
+    element_search = browser.find_element(By.XPATH, '//input[@name="user_search"]')
+    element_search.send_keys(search_value)
+    await asyncio.sleep(1)
+    # get the result of the search from db
+    users_count_db_filtered = (
+        app.db.query(orm.User).filter(orm.User.name.like(f'%{search_value}%')).count()
+    )
+    filtered_list_on_page = browser.find_elements(By.XPATH, '//*[@class="user-row"]')
+    # check that count of users matches with number of users on the footer
+    displaying = browser.find_element(
+        By.XPATH, '//*[@class="pagination-footer"]//*[contains(text(),"Displaying")]'
+    )
+    # check that users names contain the search value in the filtered list
+    for element in filtered_list_on_page:
+        name = element.find_element(
+            By.XPATH,
+            '//*[@data-testid="user-row-name"]//span[contains(@data-testid, "user-name-div")]',
+        )
+        assert search_value in name.text
+    if users_count_db_filtered <= 50:
+        assert "0-" + str(users_count_db_filtered) in displaying.text
+        assert len(filtered_list_on_page) == users_count_db_filtered
+    else:
+        assert "0-50" in displaying.text
+        assert len(filtered_list_on_page) == 50
+        # click on Next button to verify that the rest part of filtered list is displayed on the next page
+        await click_and_wait_paging_btn(browser, buttons_number=2)
+        filtered_list_on_next_page = browser.find_elements(
+            By.XPATH, '//*[@class="user-row"]'
+        )
+        assert users_count_db_filtered - 50 == len(filtered_list_on_next_page)
+        for element in filtered_list_on_next_page:
+            name = element.find_element(
+                By.XPATH,
+                '//*[@data-testid="user-row-name"]//span[contains(@data-testid, "user-name-div")]',
+            )
+        assert search_value in name.text
+
+
+@pytest.mark.parametrize("added_count_users,index_user_1, index_user_2", [(5, 1, 0)])
+async def test_start_stop_server_on_admin_page(
+    app,
+    browser,
+    admin_user,
+    create_user_with_scopes,
+    added_count_users,
+    index_user_1,
+    index_user_2,
+):
+    async def start_user(browser, expected_user):
+        start_button_xpath = f'//a[contains(@href, "spawn/{expected_user[0]}")]/preceding-sibling::button[contains(@class, "start-button")]'
+        await click(browser, (By.XPATH, start_button_xpath))
+        start_btn = browser.find_element(By.XPATH, start_button_xpath)
+        await wait_for_ready(browser)
+        await webdriver_wait(browser, EC.staleness_of(start_btn))
+
+    async def spawn_user(browser, app, expected_user):
+        spawn_button_xpath = f'//a[contains(@href, "spawn/{expected_user[1]}")]/button[contains(@class, "secondary")]'
+        await click(browser, (By.XPATH, spawn_button_xpath))
+        while (
+            not app.users[1].spawner.ready
+            and f"/hub/spawn-pending/{expected_user[1]}" in browser.current_url
+        ):
+            await webdriver_wait(browser, EC.url_contains(f"/user/{expected_user[1]}/"))
+
+    async def access_srv_user(browser, expected_user):
+        access_buttons_xpath = '//*[@data-testid="user-row-server-activity"]//button[contains(@class, "primary")]'
+        for i, ex_user in enumerate(expected_user):
+            access_btn_xpath = f'//a[contains(@href, "user/{expected_user[i]}")]/button[contains(@class, "primary")]'
+            await click(browser, (By.XPATH, access_btn_xpath))
+            if not f"/user/{expected_user[i]}/" in browser.current_url:
+                await webdriver_wait(
+                    browser, EC.url_contains(f"/user/{expected_user[i]}/")
+                )
+            browser.back()
+
+    async def stop_srv_users(browser, expected_user):
+        for i, ex_user in enumerate(expected_user):
+            stop_btn_xpath = f'//a[contains(@href, "user/{expected_user[i]}")]/preceding-sibling::button[contains(@class, "stop-button")]'
+            stop_btn = browser.find_element(By.XPATH, stop_btn_xpath)
+            await click(browser, (By.XPATH, stop_btn_xpath))
+            await webdriver_wait(browser, EC.staleness_of(stop_btn))
+
+    create_list_of_users(create_user_with_scopes, added_count_users)
+    await open_admin_page(app, browser, admin_user)
+    users = browser.find_elements(By.XPATH, '//td[@data-testid="user-row-name"]')
+    users_list = [user.text for user in users]
+
+    expected_user = [users_list[index_user_1], users_list[index_user_2]]
+    spawn_page_btns = browser.find_elements(
+        By.XPATH,
+        '//*[@data-testid="user-row-server-activity"]//a[contains(@href, "spawn/")]',
+    )
+
+    for i, user in enumerate(users):
+        spawn_page_btn = spawn_page_btns[i]
+        user_from_table = user.text
+        link = spawn_page_btn.get_attribute('href')
+    assert f"/spawn/{user_from_table}" in link
+
+    # click on Start button
+    await start_user(browser, expected_user)
+    class_names = ["stop-button", "primary", "start-button", "secondary"]
+    btns = {
+        class_name: get_users_buttons(browser, class_name) for class_name in class_names
+    }
+    assert len(btns["stop-button"]) == 1
+
+    # click on Spawn page button
+    await spawn_user(browser, app, expected_user)
+    assert f"/user/{expected_user[1]}/" in browser.current_url
+
+    # open  the Admin page
+    await open_url(app, browser, "/admin")
+    # wait for javascript to finish loading
+    await wait_for_ready(browser)
+    assert "/hub/admin" in browser.current_url
+    btns = {
+        class_name: get_users_buttons(browser, class_name) for class_name in class_names
+    }
+    assert len(btns["stop-button"]) == len(btns["primary"]) == 2
+
+    # click on the Access button
+    await access_srv_user(browser, expected_user)
+
+    assert "/hub/admin" in browser.current_url
+    btns = {
+        class_name: get_users_buttons(browser, class_name) for class_name in class_names
+    }
+    assert len(btns["stop-button"]) == 2
+
+    # click on Stop button for both users
+    await stop_srv_users(browser, expected_user)
+    btns = {
+        class_name: get_users_buttons(browser, class_name) for class_name in class_names
+    }
+    assert len(btns["stop-button"]) == 0
+    assert len(btns["primary"]) == 0
