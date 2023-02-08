@@ -291,7 +291,6 @@ async def _mockservice(request, app, external=False, url=False):
             spec['url'] = 'http://127.0.0.1:%i' % random_port()
 
     if external:
-
         spec['oauth_redirect_uri'] = 'http://127.0.0.1:%i' % random_port()
 
     event_loop = asyncio.get_running_loop()

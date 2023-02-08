@@ -357,6 +357,7 @@ class Authenticator(LoggingConfigurable):
                         ),
                         DeprecationWarning,
                     )
+
                     # use old name instead of new
                     # if old name is overridden in subclass
                     def _new_calls_old(old_name, *args, **kwargs):

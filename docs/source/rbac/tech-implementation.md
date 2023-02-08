@@ -65,7 +65,7 @@ If the token's scopes are a subset of the token owner's scopes, the token is iss
 
 {ref}`Figure 1 <token-request-chart>` below illustrates the steps involved. The orange rectangles highlight where in the process the roles and scopes are resolved.
 
-```{figure} ../images/rbac-token-request-chart.png
+```{figure} /images/rbac-token-request-chart.png
 :align: center
 :name: token-request-chart
 
@@ -91,7 +91,7 @@ The passed scopes are compared to the scopes required to access the API as follo
 
 {ref}`Figure 2 <api-request-chart>` illustrates this process highlighting the steps where the role and scope resolutions as well as filtering occur in orange.
 
-```{figure} ../images/rbac-api-request-chart.png
+```{figure} /images/rbac-api-request-chart.png
 :align: center
 :name: api-request-chart
 

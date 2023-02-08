@@ -55,8 +55,8 @@ Documentation sections (reorganization in-progress)
 
 tutorial/index.md
 howto/index.md
-explanation/index.md
 reference/index.md
+explanation/index.md
 faq/index.md
 ```
 
@@ -81,14 +81,6 @@ Today, you can find two main use cases:
 _It is important to evaluate these distributions before you can continue with the
 configuration of JupyterHub_.
 
-### Getting Started
-
-```{toctree}
-:maxdepth: 2
-
-getting-started/index
-```
-
 ### Technical Reference
 
 ```{toctree}
@@ -97,28 +89,12 @@ getting-started/index
 reference/index
 ```
 
-### Administrators guide
-
-```{toctree}
-:maxdepth: 2
-
-index-admin
-```
-
 ### API Reference
 
 ```{toctree}
 :maxdepth: 2
 
 api/index
-```
-
-### RBAC Reference
-
-```{toctree}
-:maxdepth: 2
-
-rbac/index
 ```
 
 ### Contributing

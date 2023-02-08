@@ -38,7 +38,7 @@ def get_data_files():
     """Get data files in share/jupyter"""
 
     data_files = []
-    for (d, dirs, filenames) in os.walk(share_jupyterhub):
+    for d, dirs, filenames in os.walk(share_jupyterhub):
         rel_d = os.path.relpath(d, here)
         data_files.append((rel_d, [os.path.join(rel_d, f) for f in filenames]))
     return data_files
@@ -238,7 +238,7 @@ class CSS(BaseCommand):
         earliest_target = sorted(mtime(t) for t in targets)[0]
 
         # check if any .less files are newer than the generated targets
-        for (dirpath, dirnames, filenames) in os.walk(static):
+        for dirpath, dirnames, filenames in os.walk(static):
             for f in filenames:
                 if f.endswith('.less'):
                     path = pjoin(static, dirpath, f)

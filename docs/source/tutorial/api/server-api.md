@@ -252,7 +252,7 @@ data: {"progress": 100, "ready": true, "message": "Server ready at /user/test-us
 
 Here is a Python example for consuming an event stream:
 
-```{literalinclude} ../../../examples/server-api/start-stop-server.py
+```{literalinclude} ../../../../examples/server-api/start-stop-server.py
 :language: python
 :pyobject: event_stream
 ```
@@ -285,7 +285,7 @@ The only way to wait for a server to stop is to poll it and wait for the server 
 
 This Python code snippet can be used to stop a server and the wait for the process to complete:
 
-```{literalinclude} ../../../examples/server-api/start-stop-server.py
+```{literalinclude} ../../../../examples/server-api/start-stop-server.py
 :language: python
 :pyobject: stop_server
 ```
@@ -325,7 +325,7 @@ In summary, the processes involved in managing servers on behalf of users are:
 The example below demonstrates starting and stopping servers via the JupyterHub API,
 including waiting for them to start via the progress API and waiting for them to stop by polling the user model.
 
-```{literalinclude} ../../../examples/server-api/start-stop-server.py
+```{literalinclude} ../../../../examples/server-api/start-stop-server.py
 :language: python
 :start-at: def event_stream
 :end-before: def main

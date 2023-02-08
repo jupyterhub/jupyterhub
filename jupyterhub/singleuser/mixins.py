@@ -943,6 +943,7 @@ def make_singleuser_app(App):
     merged_flags = {}
     merged_flags.update(empty_parent_app.flags or {})
     merged_flags.update(flags)
+
     # create mixed-in App class, bringing it all together
     class SingleUserNotebookApp(SingleUserNotebookAppMixin, App):
         aliases = merged_aliases
