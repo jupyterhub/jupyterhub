@@ -7,6 +7,7 @@ import os
 from .mixins import HubAuthenticatedHandler, make_singleuser_app
 
 if os.environ.get("JUPYTERHUB_SINGLEUSER_EXTENSION", "") not in ("", "0"):
+    _as_extension = True
     # check for conflict in singleuser entrypoint environment variables
     if os.environ.get("JUPYTERHUB_SINGLEUSER_APP", "") not in {
         "",
@@ -21,7 +22,6 @@ if os.environ.get("JUPYTERHUB_SINGLEUSER_EXTENSION", "") not in ("", "0"):
             f"Cannot use JUPYTERHUB_SINGLEUSER_EXTENSION={ext} with JUPYTERHUB_SINGLEUSER_APP={app}."
             " Please pick one or the other."
         )
-    _as_extension = True
     from .extension import main
 else:
     _as_extension = False
