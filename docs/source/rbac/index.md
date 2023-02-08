@@ -1,3 +1,8 @@
+<!---
+RBAC docs are part of the Explanation section of the JupyterHub documentation. 
+As a result, this index file is referenced in the toctree within the explanation/index.md file.  
+--->
+
 (rbac)=
 
 # JupyterHub RBAC

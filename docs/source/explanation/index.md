@@ -19,6 +19,10 @@ admin/oauth
 
 This section covers how Role Based Access Control (RBAC) is implemented in JupyterHub to control access to Jupyterhub's API resources.
 
+<!---
+The JupyterHub RBAC source files are contained in the source/rbac folder
+--->
+
 ```{toctree}
 :maxdepth: 2
 
