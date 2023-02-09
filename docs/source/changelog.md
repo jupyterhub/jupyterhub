@@ -581,10 +581,10 @@ default 'user' role as expected.
 
 JupyterHub 2.0 is a big release!
 
-The most significant change is the addition of [roles and scopes](rbac)
+The most significant change is the addition of [roles and scopes][rbac]
 to the JupyterHub permissions model,
 allowing more fine-grained access control.
-Read more about it [in the docs](rbac).
+Read more about it [in the docs][rbac].
 
 In particular, the 'admin' level of permissions should not be needed anymore,
 and you can now grant users and services only the permissions they need, not more.

@@ -1,5 +1,3 @@
-(spawners-reference)=
-
 # Spawners
 
 A [Spawner][] starts each single-user notebook server.
@@ -177,7 +175,7 @@ This feature is enabled by setting `Spawner.options_form`, which is an HTML form
 inserted unmodified into the spawn form.
 If the `Spawner.options_form` is defined, when a user tries to start their server, they will be directed to a form page, like this:
 
-![spawn-form](/images/spawn-form.png)
+![spawn-form](../images/spawn-form.png)
 
 If `Spawner.options_form` is undefined, the user's server is spawned directly, and no spawn page is rendered.
 

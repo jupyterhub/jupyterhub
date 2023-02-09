@@ -9,4 +9,6 @@ about our community, as well as ways that you can connect and get involved.
 :maxdepth: 1
 
 contributor-list
+changelog
+gallery-jhub-deployments
 ```

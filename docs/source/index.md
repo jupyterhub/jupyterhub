@@ -81,6 +81,22 @@ Today, you can find two main use cases:
 _It is important to evaluate these distributions before you can continue with the
 configuration of JupyterHub_.
 
+### Technical Reference
+
+```{toctree}
+:maxdepth: 2
+
+reference/index
+```
+
+### API Reference
+
+```{toctree}
+:maxdepth: 2
+
+api/index
+```
+
 ### Contributing
 
 We welcome you to contribute to JupyterHub in ways that are most exciting

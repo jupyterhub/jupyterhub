@@ -290,7 +290,7 @@ service. See the `service-whoami-flask` example in the
 [JupyterHub GitHub repo](https://github.com/jupyterhub/jupyterhub/tree/HEAD/examples/service-whoami-flask)
 for more details.
 
-```{literalinclude} ../../../../../../jupyterhub/examples/service-whoami-flask/whoami-flask.py
+```{literalinclude} ../../../examples/service-whoami-flask/whoami-flask.py
 :language: python
 ```
 
@@ -352,7 +352,7 @@ You will only get to this stage if the user has the required `access:services!se
 To retrieve the user model for the token, make a request to `GET /hub/api/user` with the token in the Authorization header.
 For example, using flask:
 
-```{literalinclude} ../../../../../../jupyterhub/examples/service-whoami-flask/whoami-flask.py
+```{literalinclude} ../../../examples/service-whoami-flask/whoami-flask.py
 :language: python
 ```
 

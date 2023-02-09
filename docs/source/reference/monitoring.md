@@ -16,5 +16,5 @@ tool like [Grafana](https://grafana.com).
 ```{toctree}
 :maxdepth: 2
 
-/reference/metrics
+metrics
 ```
