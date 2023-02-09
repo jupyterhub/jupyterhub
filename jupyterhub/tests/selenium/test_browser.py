@@ -1015,7 +1015,6 @@ def create_list_of_users(create_user_with_scopes, n):
 
 
 async def test_open_admin_page(app, browser, admin_user):
-
     await open_admin_page(app, browser, admin_user)
     assert '/hub/admin' in browser.current_url
 
@@ -1043,7 +1042,6 @@ async def click_and_wait_paging_btn(browser, buttons_number):
 
 
 async def test_start_stop_all_servers_on_admin_page(app, browser, admin_user):
-
     await open_admin_page(app, browser, admin_user)
     # get total count of users from db
     users_count_db = app.db.query(orm.User).count()
@@ -1133,7 +1131,6 @@ async def test_start_stop_all_servers_on_admin_page(app, browser, admin_user):
 async def test_paging_on_admin_page(
     app, browser, admin_user, added_count_users, create_user_with_scopes
 ):
-
     create_list_of_users(create_user_with_scopes, added_count_users)
     await open_admin_page(app, browser, admin_user)
     users = browser.find_elements(By.XPATH, '//td[@data-testid="user-row-name"]')
@@ -1190,7 +1187,6 @@ async def test_search_on_admin_page(
     added_count_users,
     search_value,
 ):
-
     create_list_of_users(create_user_with_scopes, added_count_users)
     await open_admin_page(app, browser, admin_user)
     element_search = browser.find_element(By.XPATH, '//input[@name="user_search"]')
