@@ -1,3 +1,7 @@
+<!---
+This doc is part of the Technical references section of the References documentation.  
+--->
+
 # Event logging and telemetry
 
 JupyterHub can be configured to record structured events from a running server using Jupyter's [Telemetry System]. The types of events that JupyterHub emits are defined by [JSON schemas] listed at the bottom of this [page].
