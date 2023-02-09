@@ -16,7 +16,6 @@ from pathlib import Path
 from unittest import mock
 from urllib.parse import urlparse
 
-from jupyter_core import paths
 from jupyter_server.auth import Authorizer, IdentityProvider, User
 from jupyter_server.auth.logout import LogoutHandler
 from jupyter_server.extension.application import ExtensionApp
@@ -33,6 +32,8 @@ from jupyterhub.utils import (
     make_ssl_context,
     url_path_join,
 )
+
+from ._disable_user_config import _disable_user_config
 
 SINGLEUSER_TEMPLATES_DIR = str(Path(__file__).parent.resolve().joinpath("templates"))
 
@@ -245,11 +246,6 @@ def _fatal_errors(f):
     return wrapped
 
 
-# patches
-_original_jupyter_paths = None
-_jupyter_paths_without_home = None
-
-
 class JupyterHubSingleUser(ExtensionApp):
     """Jupyter Server extension entrypoint.
 
@@ -357,7 +353,7 @@ class JupyterHubSingleUser(ExtensionApp):
     async def notify_activity(self):
         """Notify jupyterhub of activity"""
         client = self.hub_http_client
-        last_activity = self.web_app.last_activity()
+        last_activity = self.serverapp.web_app.last_activity()
         if not last_activity:
             self.log.debug("No activity to send to the Hub")
             return
@@ -590,52 +586,6 @@ class JupyterHubSingleUser(ExtensionApp):
     def _defaut_disable_user_config(self):
         return _bool_env("JUPYTERHUB_DISABLE_USER_CONFIG")
 
-    @staticmethod
-    def _disable_user_config(serverapp):
-        """
-        disable user-controlled sources of configuration
-        by excluding directories in their home
-        from paths.
-
-        This _does not_ disable frontend config,
-        such as UI settings persistence.
-
-        1. Python config file paths
-        2. Search paths for extensions, etc.
-        3. import path
-        """
-
-        # config_file_paths is a property without a setter
-        # can't override on the instance
-        default_config_file_paths = serverapp.config_file_paths
-        config_file_paths = list(_exclude_home(default_config_file_paths))
-        serverapp.__class__.config_file_paths = property(
-            lambda self: config_file_paths,
-        )
-        # verify patch applied
-        assert serverapp.config_file_paths == config_file_paths
-
-        # patch jupyter_path to exclude $HOME
-        global _original_jupyter_paths, _jupyter_paths_without_home
-        _original_jupyter_paths = paths.jupyter_path()
-        _jupyter_paths_without_home = list(_exclude_home(_original_jupyter_paths))
-
-        def get_jupyter_path_without_home(*subdirs):
-            from jupyterhub.singleuser.extension import _original_jupyter_paths
-
-            paths = list(_original_jupyter_paths)
-            if subdirs:
-                paths = [os.path.join(p, *subdirs) for p in paths]
-            return paths
-
-        # patch `jupyter_path.__code__` to ensure all callers are patched,
-        # even if they've already imported
-        # this affects e.g. nbclassic.nbextension_paths
-        paths.jupyter_path.__code__ = get_jupyter_path_without_home.__code__
-
-        # prevent loading default static custom path in nbclassic
-        serverapp.config.NotebookApp.static_custom_path = []
-
     @classmethod
     def make_serverapp(cls, **kwargs):
         """Instantiate the ServerApp
@@ -645,7 +595,7 @@ class JupyterHubSingleUser(ExtensionApp):
         serverapp = super().make_serverapp(**kwargs)
         if _bool_env("JUPYTERHUB_DISABLE_USER_CONFIG"):
             # disable user-controllable config
-            cls._disable_user_config(serverapp)
+            _disable_user_config(serverapp)
 
         if _bool_env("JUPYTERHUB_SINGLEUSER_TEST_EXTENSION"):
             serverapp.log.warning("Enabling jupyterhub test extension")

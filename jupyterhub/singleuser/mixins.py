@@ -45,6 +45,7 @@ from .._version import __version__, _check_version
 from ..log import log_request
 from ..services.auth import HubOAuth, HubOAuthCallbackHandler, HubOAuthenticated
 from ..utils import exponential_backoff, isoformat, make_ssl_context, url_path_join
+from ._disable_user_config import _disable_user_config, _exclude_home
 
 
 def _bool_env(key):
@@ -167,17 +168,6 @@ flags = {
         "Disable user-controlled configuration of the notebook server.",
     )
 }
-
-
-def _exclude_home(path_list):
-    """Filter out any entries in a path list that are in my home directory.
-
-    Used to disable per-user configuration.
-    """
-    home = os.path.expanduser('~/')
-    for p in path_list:
-        if not p.startswith(home):
-            yield p
 
 
 class SingleUserNotebookAppMixin(Configurable):
@@ -598,6 +588,8 @@ class SingleUserNotebookAppMixin(Configurable):
             self.jpserver_extensions["jupyterhub.tests.extension"] = True
 
     def initialize(self, argv=None):
+        if self.disable_user_config:
+            _disable_user_config(self)
         # disable trash by default
         # this can be re-enabled by config
         self.config.FileContentsManager.delete_to_trash = False

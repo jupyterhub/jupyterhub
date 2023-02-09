@@ -176,16 +176,26 @@ async def test_disable_user_config(request, app, tmpdir, full_spawn):
     pprint.pprint(info)
     assert info['disable_user_config']
     server_config = info['config']
+    settings = info['settings']
     assert 'TestSingleUser' not in server_config
     # check config paths
     norm_home = os.path.realpath(os.path.abspath(home))
-    for path in info['config_file_paths']:
-        path = os.path.realpath(os.path.abspath(path))
-        assert not path.startswith(norm_home + os.path.sep)
 
-    # TODO: check legacy notebook config
-    # nbextensions_path
-    # static_custom_path
+    def assert_not_in_home(path, name):
+        path = os.path.realpath(os.path.abspath(path))
+        assert not path.startswith(
+            norm_home + os.path.sep
+        ), f"{name}: {path} is in home {norm_home}"
+
+    for path in info['config_file_paths']:
+        assert_not_in_home(path, 'config_file_paths')
+
+    # check every path setting for lookup in $HOME
+    # is this too much?
+    for key, setting in settings.items():
+        if 'path' in key and isinstance(setting, list):
+            for path in setting:
+                assert_not_in_home(path, key)
 
 
 def test_help_output():

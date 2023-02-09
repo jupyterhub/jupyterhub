@@ -85,6 +85,11 @@ class MockSpawner(SimpleLocalProcessSpawner):
     use_this_api_token = None
 
     def start(self):
+        # preserve any JupyterHub env in mock spawner
+        for key in os.environ:
+            if 'JUPYTERHUB' in key and key not in self.env_keep:
+                self.env_keep.append(key)
+
         if self.use_this_api_token:
             self.api_token = self.use_this_api_token
         elif self.will_resume:
