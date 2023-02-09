@@ -1,18 +1,23 @@
 (reference-index)=
 
 # Reference
-_Reference_ documentation provide technical descriptions about JupyterHub and how it works. 
-This section is divided into two broad subsections: 
+
+_Reference_ documentation provide technical descriptions about JupyterHub and how it works.
+This section is divided into two broad subsections:
+
 1. Technical reference.
-2. API reference.  
+2. API reference.
+
 ---
+
 ## Technical reference
 
 This section covers more of the details of the JupyterHub architecture, as well as
 what happens under-the-hood when you deploy and configure your JupyterHub.
 
 ### Technical overview
-Provides an overview of JupyterHub's components and how they work. 
+
+Provides an overview of JupyterHub's components and how they work.
 
 ```{toctree}
 :maxdepth: 1
@@ -22,7 +27,8 @@ technical-reference/technical-overview
 
 ### Subsystems
 
-Find details about the different JupyterHub subsystems. 
+Find details about the different JupyterHub subsystems.
+
 ```{toctree}
 :maxdepth: 1
 
@@ -32,7 +38,8 @@ technical-reference/subsystems/spawners
 
 ### Configuration
 
-Find useful information about configuring JupyterHub. 
+Find useful information about configuring JupyterHub.
+
 ```{toctree}
 :maxdepth: 1
 
@@ -43,7 +50,8 @@ technical-reference/configuration/urls
 
 ### Events
 
-Find details about JupyterHub events and how to log them. 
+Find details about JupyterHub events and how to log them.
+
 ```{toctree}
 :maxdepth: 1
 
@@ -52,7 +60,8 @@ Find details about JupyterHub events and how to log them.
 
 ### Monitoring
 
-Find details about monitoring your JupyterHub deployment. 
+Find details about monitoring your JupyterHub deployment.
+
 ```{toctree}
 :maxdepth: 1
 
@@ -61,7 +70,8 @@ technical-reference/monitoring/monitoring
 
 ### Deployments
 
-Find details about the institutions presently using JupyterHub. 
+Find details about the institutions presently using JupyterHub.
+
 ```{toctree}
 :maxdepth: 1
 
@@ -77,7 +87,9 @@ Find details about changes to JupyterHub and its various releases.
 
 technical-reference/changelog/changelog
 ```
+
 ---
+
 (api-index)=
 
 ## API reference

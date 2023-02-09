@@ -1,5 +1,5 @@
 <!---
-This doc is part of the Technical references section of the References documentation.  
+This doc is part of the Technical references section of the References documentation.
 --->
 
 # Event logging and telemetry
