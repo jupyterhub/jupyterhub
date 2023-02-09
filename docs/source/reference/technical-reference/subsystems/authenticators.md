@@ -1,3 +1,5 @@
+(authenticators-reference)=
+
 # Authenticators
 
 The {class}`.Authenticator` is the mechanism for authorizing users to use the

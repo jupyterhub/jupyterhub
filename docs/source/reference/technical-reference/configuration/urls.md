@@ -53,7 +53,7 @@ c.JupyterHub.default_url = '/services/my-landing-service'
 
 ## `/hub/home`
 
-![The Hub home page with named servers enabled](../images/named-servers-home.png)
+![The Hub home page with named servers enabled](/images/named-servers-home.png)
 
 By default, the Hub home page has just one or two buttons
 for starting and stopping the user's server.
@@ -70,14 +70,14 @@ If you have a form-based username+password login,
 such as the default [PAMAuthenticator](https://en.wikipedia.org/wiki/Pluggable_authentication_module),
 this page will render the login form.
 
-![A login form](../images/login-form.png)
+![A login form](/images/login-form.png)
 
 If login is handled by an external service,
 e.g. with OAuth, this page will have a button,
 declaring "Log in with ..." which users can click
 to log in with the chosen service.
 
-![A login redirect button](../images/login-button.png)
+![A login redirect button](/images/login-button.png)
 
 If you want to skip the user interaction and initiate login
 via the button, you can set:
@@ -145,7 +145,7 @@ If something is really wrong, this can result in a redirect loop.
 Visiting this page will never result in triggering the spawn of servers
 without additional user action (i.e. clicking the link on the page).
 
-![Visiting a URL for a server that's not running](../images/not-running.png)
+![Visiting a URL for a server that's not running](/images/not-running.png)
 
 _Version changed: 1.0_
 
@@ -204,7 +204,7 @@ If `Spawner.options_form` is used,
 this will render a form,
 and a POST request will trigger the actual spawn and redirect.
 
-![The spawn form](../images/spawn-form.png)
+![The spawn form](/images/spawn-form.png)
 
 _Version added: 1.0_
 
@@ -218,7 +218,7 @@ which was responsible for triggering spawn and rendering progress, etc.
 
 ### `/hub/spawn-pending[/:username[/:servername]]`
 
-![The spawn pending page](../images/spawn-pending.png)
+![The spawn pending page](/images/spawn-pending.png)
 
 _Version added: 1.0_ this URL is new in JupyterHub 1.0.
 
@@ -236,7 +236,7 @@ and the page will show a link back to `/hub/spawn/...`.
 
 ## `/hub/token`
 
-![The token management page](../images/token-page.png)
+![The token management page](/images/token-page.png)
 
 On this page, users can manage their JupyterHub API tokens.
 They can revoke access and request new tokens for writing scripts
@@ -244,7 +244,7 @@ against the [JupyterHub REST API](using-jupyterhub-rest-api).
 
 ## `/hub/admin`
 
-![The admin panel](../images/named-servers-admin.png)
+![The admin panel](/images/named-servers-admin.png)
 
 Administrators can take various administrative actions from this page:
 
