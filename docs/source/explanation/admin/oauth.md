@@ -255,7 +255,7 @@ To authenticate this request, the single token stored in the encrypted cookie is
 
 If the user model matches who should be allowed (e.g. Danez),
 then the request is allowed.
-See {doc}`../rbac/scopes` for how JupyterHub uses scopes to determine authorized access to servers and services.
+See [Scopes in JupyterHub](jupyterhub-scopes) for how JupyterHub uses scopes to determine authorized access to servers and services.
 
 _the end_
 

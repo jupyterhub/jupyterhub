@@ -10,14 +10,11 @@ what happens under-the-hood when you deploy and configure your JupyterHub.
 
 technical-overview
 urls
-websecurity
 authenticators
 spawners
 services
 rest-api
 monitoring
-database
 ../events/index
 config-reference
-oauth
 ```

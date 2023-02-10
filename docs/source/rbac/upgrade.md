@@ -45,7 +45,7 @@ OAuth token is issued by the Hub to a single-user server when the user logs in. 
 
 API token is issued by the Hub to a single-user server when launched and is used to communicate with the Hub's APIs such as posting activity or completing the OAuth flow. This token has no expiry by default.
 
-API tokens can also be issued to users via API ([_/hub/token_](../reference/urls.md) or [_POST /users/:username/tokens_](../reference/rest-api.md)) and services via `jupyterhub_config.py` to perform API requests.
+API tokens can also be issued to users via API ([_/hub/token_](jupyterhub-url) or [_POST /users/:username/tokens_](jupyterhub-rest-API)) and services via `jupyterhub_config.py` to perform API requests.
 
 ### With RBAC
 

@@ -83,6 +83,7 @@ def lru_cache_key(key_func, maxsize=1024):
 
     def cache_func(func):
         cache = LRUCache(maxsize=maxsize)
+
         # the actual decorated function:
         @wraps(func)
         def cached(*args, **kwargs):

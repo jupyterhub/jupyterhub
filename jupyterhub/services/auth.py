@@ -1146,6 +1146,7 @@ class HubAuthenticated:
         except UserNotAllowed as e:
             # cache None, in case get_user is called again while processing the error
             self._hub_auth_user_cache = None
+
             # Override redirect so if/when tornado @web.authenticated
             # tries to redirect to login URL, 403 will be raised instead.
             # This is not the best, but avoids problems that can be caused

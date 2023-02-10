@@ -5,6 +5,7 @@ from glob import glob
 from subprocess import check_call
 
 import pytest
+from packaging.version import parse as V
 from pytest import raises
 from traitlets.config import Config
 
@@ -25,8 +26,14 @@ def generate_old_db(env_dir, hub_version, db_url):
     env_pip = os.path.join(env_dir, 'bin', 'pip')
     env_py = os.path.join(env_dir, 'bin', 'python')
     check_call([sys.executable, '-m', 'virtualenv', env_dir])
+    pkgs = ['jupyterhub==' + hub_version]
+
     # older jupyterhub needs older sqlachemy version
-    pkgs = ['jupyterhub==' + hub_version, 'sqlalchemy<1.4']
+    if V(hub_version) < V("2"):
+        pkgs.append('sqlalchemy<1.4')
+    elif V(hub_version) < V("3.1.1"):
+        pkgs.append('sqlalchemy<2')
+
     if 'mysql' in db_url:
         pkgs.append('mysql-connector-python')
     elif 'postgres' in db_url:

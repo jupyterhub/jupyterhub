@@ -1243,7 +1243,6 @@ async def test_admin_role_respects_config():
     ],
 )
 async def test_admin_role_membership(in_db, role_users, admin_users, expected_members):
-
     load_roles = []
     if role_users is not None:
         load_roles.append({"name": "admin", "users": role_users})

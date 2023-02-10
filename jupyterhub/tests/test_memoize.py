@@ -25,7 +25,6 @@ def test_lru_cache():
 
 
 def test_lru_cache_key():
-
     call_count = 0
 
     @lru_cache_key(frozenset)
@@ -47,7 +46,6 @@ def test_lru_cache_key():
 
 
 def test_do_not_cache():
-
     call_count = 0
 
     @lru_cache_key(lambda arg: arg)
