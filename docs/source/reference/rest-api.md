@@ -1,3 +1,7 @@
+<!---
+This doc is part of the API references section of the References documentation.
+--->
+
 (jupyterhub-rest-API)=
 
 # JupyterHub REST API
