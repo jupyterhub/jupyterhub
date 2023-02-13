@@ -4,25 +4,25 @@
 name: Test
 
 on:
-  pull_request:
-    paths-ignore:
-      - "docs/**"
-      - "**.md"
-      - "**.rst"
-      - ".github/workflows/*"
-      - "!.github/workflows/test.yml"
-  push:
-    paths-ignore:
-      - "docs/**"
-      - "**.md"
-      - "**.rst"
-      - ".github/workflows/*"
-      - "!.github/workflows/test.yml"
-    branches-ignore:
-      - "dependabot/**"
-      - "pre-commit-ci-update-config"
-    tags:
-      - "**"
+  # pull_request:
+  #   paths-ignore:
+  #     - "docs/**"
+  #     - "**.md"
+  #     - "**.rst"
+  #     - ".github/workflows/*"
+  #     - "!.github/workflows/test.yml"
+  # push:
+  #   paths-ignore:
+  #     - "docs/**"
+  #     - "**.md"
+  #     - "**.rst"
+  #     - ".github/workflows/*"
+  #     - "!.github/workflows/test.yml"
+  #   branches-ignore:
+  #     - "dependabot/**"
+  #     - "pre-commit-ci-update-config"
+  #   tags:
+  #     - "**"
   workflow_dispatch:
 
 env:
