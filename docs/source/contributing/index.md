@@ -15,7 +15,6 @@ community
 setup
 docs
 tests
-pytest-asyncio
 roadmap
 security
 ```
