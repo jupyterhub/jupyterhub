@@ -57,7 +57,7 @@ jupyterhub token <username>
 This command generates a random string to use as a token and registers
 it for the given user with the Hub's database.
 
-In [version 0.8.0](../changelog.md), a token request page for
+In [version 0.8.0](changelog), a token request page for
 generating an API token is available from the JupyterHub user interface:
 
 :::{figure-md}
@@ -276,7 +276,7 @@ Pagination is enabled on the `GET /users`, `GET /groups`, and `GET /proxy` REST 
 
 ## Enabling users to spawn multiple named-servers via the API
 
-Support for multiple servers per user was introduced in JupyterHub [version 0.8.](../changelog.md)
+Support for multiple servers per user was introduced in JupyterHub [version 0.8.](changelog)
 Prior to that, each user could only launch a single default server via the API
 like this:
 
