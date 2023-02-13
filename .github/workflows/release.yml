@@ -222,5 +222,6 @@ jobs:
             JUPYTERHUB_VERSION=${{ github.ref_type == 'tag' && github.ref_name || format('git:{0}', github.sha) }}
           context: singleuser
           platforms: linux/amd64,linux/arm64
+          provenance: false
           push: true
           tags: ${{ join(fromJson(steps.singleusertags.outputs.tags)) }}
