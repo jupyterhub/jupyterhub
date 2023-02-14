@@ -1,7 +1,23 @@
 """
-Integrate JupyterHub auth with Jupyter Server as an Extension
+Integrate JupyterHub auth with Jupyter Server as a Server Extension
 
-Requires Jupyter Server 2.0, which in turn requires Python 3.7
+Instead of earlier versions, implemented via subclassing jupyter-notebook's NotebookApp.
+This code runs only in each user's Jupyter Server process.
+
+Jupyter Server 2 provides two new APIs:
+
+- IdentityProvider, which authenticates the user making the request
+- Authorizer, which determines whether an authenticated user is authorized to take a particular action
+
+This Extension implements both for resolving permissions with JupyterHub scopes.
+By default, in JupyterHub we only _authenticate_ users with sufficient `access:servers` permissions,
+therefore the JupyterHub Authorizer allows any authenticated user to take any action,
+but custom deployments may refine these permission to enable e.g. read-only access.
+
+- Jupyter Server extension documentation: https://jupyter-server.readthedocs.io/en/latest/developers/extensions.html
+- Jupyter Server authentication API documentation: https://jupyter-server.readthedocs.io/en/latest/operators/security.html
+
+Requires Jupyter Server 2.0, which in turn requires Python 3.7.
 """
 
 from __future__ import annotations
@@ -63,9 +79,9 @@ def _exclude_home(path_list):
 class JupyterHubLogoutHandler(LogoutHandler):
     def get(self):
         hub_auth = self.identity_provider.hub_auth
-        # clear single-user cookie
+        # clear token stored in single-user cookie (set by hub_auth)
         hub_auth.clear_cookie(self)
-        # redirect to hub to clear the rest
+        # redirect to hub to begin logging out of JupyterHub itself
         self.redirect(hub_auth.hub_host + url_path_join(hub_auth.hub_prefix, "logout"))
 
 
@@ -142,6 +158,11 @@ class JupyterHubIdentityProvider(IdentityProvider):
             return None
         # check access scopes - don't allow even authenticated
         # users with no access to this service past this stage.
+        # this is technically the Authorizer's job (below),
+        # but the IdentityProvider is the only protection on handlers
+        # decorated only with tornado's `@web.authenticated`,
+        # that haven't adopted the Jupyter Server 2 authorization decorators.
+        # so we check access scopes here, to be safe.
         self.log.debug(
             f"Checking user {user['name']} with scopes {user['scopes']} against {self.hub_auth.access_scopes}"
         )
@@ -203,22 +224,33 @@ class JupyterHubIdentityProvider(IdentityProvider):
 
 
 class JupyterHubAuthorizer(Authorizer):
-    """Authorizer that looks for permissions in JupyterHub scopes"""
+    """Authorizer that looks for permissions in JupyterHub scopes.
 
-    # TODO: https://github.com/jupyter-server/jupyter_server/pull/830
-    hub_auth = Instance(HubOAuth)
+    Currently only checks the `access:servers` scope(s),
+    which ought to be redundant with checks already in `JupyterHubIdentityProvider` for safety.
+    """
 
-    @default("hub_auth")
-    def _default_hub_auth(self):
-        # HubAuth gets most of its config from the environment
-        return HubOAuth(parent=self)
+    @property
+    def hub_auth(self):
+        return self.identity_provider.hub_auth
 
     def is_authorized(self, handler, user, action, resource):
-        # This is where we would implement granular scope checks,
-        # but until then,
-        # since the IdentityProvider doesn't allow users without access scopes,
-        # there's no further check to make.
-        # This scope check is redundant
+        """
+        Return whether the authenticated user has permission to perform `action` on `resource`.
+
+        Currently: action and resource are ignored,
+        and only the `access:servers` scope is checked.
+
+        This method can be overridden (in combination with custom scopes) to implement granular permissions,
+        such as read-only access or access to subsets of the server.
+        """
+
+        # This check for access scopes is redundant
+        # with the IdentityProvider above,
+        # but better to be redundant than allow unauthorized actions.
+        # If we remove a redundant check,
+        # it should be the one in the identity provider,
+        # not this one.
         have_scopes = self.hub_auth.check_scopes(
             self.hub_auth.oauth_scopes, user.hub_user
         )
@@ -570,6 +602,9 @@ class JupyterHubSingleUser(ExtensionApp):
         # add jupyterhub version header
         headers = app.web_app.settings.setdefault("headers", {})
         headers["X-JupyterHub-Version"] = __version__
+
+        # check jupyterhub version
+        app.io_loop.run_sync(self.check_hub_version)
 
         async def _start_activity():
             self._activity_task = asyncio.ensure_future(self.keep_activity_updated())
