@@ -332,11 +332,11 @@ class JupyterHubSingleUser(ExtensionApp):
         RETRIES = 5
         for i in range(1, RETRIES + 1):
             try:
-                resp = await client.fetch(self.hub_api_url)
+                resp = await client.fetch(self.hub_auth.api_url)
             except Exception:
                 self.log.exception(
                     "Failed to connect to my Hub at %s (attempt %i/%i). Is it running?",
-                    self.hub_api_url,
+                    self.hub_auth.api_url,
                     i,
                     RETRIES,
                 )
