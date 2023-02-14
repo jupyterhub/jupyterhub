@@ -79,7 +79,7 @@ jobs:
             oldest_dependencies: oldest_dependencies
             legacy_notebook: legacy_notebook
           - python: "3.8"
-            legacy_notebook: legacy_notebook
+            jupyter_server: "1.*"
           - python: "3.9"
             db: mysql
           - python: "3.10"
@@ -160,6 +160,9 @@ jobs:
           if [ "${{ matrix.legacy_notebook }}" != "" ]; then
               pip uninstall jupyter_server --yes
               pip install 'notebook<7'
+          fi
+          if [ "${{ matrix.jupyter_server }}" != "" ]; then
+              pip install "jupyter_server==${{ matrix.jupyter_server }}"
           fi
           if [ "${{ matrix.db }}" == "mysql" ]; then
               pip install mysql-connector-python
