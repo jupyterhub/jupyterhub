@@ -13,7 +13,7 @@ import jupyterhub
 
 from .. import orm
 from ..utils import url_path_join
-from .mocking import StubSingleUserSpawner, public_url
+from .mocking import public_url
 from .utils import AsyncSession, async_requests, get_page
 
 
@@ -43,11 +43,8 @@ async def test_singleuser_auth(
     access_scopes,
     server_name,
     expect_success,
+    full_spawn,
 ):
-    # use StubSingleUserSpawner to launch a single-user app in a thread
-    app.spawner_class = StubSingleUserSpawner
-    app.tornado_settings['spawner_class'] = StubSingleUserSpawner
-
     # login, start the server
     cookies = await app.login_user('nandy')
     user = app.users['nandy']
@@ -132,12 +129,10 @@ async def test_singleuser_auth(
     r = await s.get(r.url, allow_redirects=False)
     assert r.status_code == 403
     assert 'burgess' in r.text
+    await user.stop(server_name)
 
 
-async def test_disable_user_config(app):
-    # use StubSingleUserSpawner to launch a single-user app in a thread
-    app.spawner_class = StubSingleUserSpawner
-    app.tornado_settings['spawner_class'] = StubSingleUserSpawner
+async def test_disable_user_config(request, app, tmpdir, full_spawn):
     # login, start the server
     cookies = await app.login_user('nandy')
     user = app.users['nandy']
@@ -148,6 +143,16 @@ async def test_disable_user_config(app):
     # start with new config:
     user.spawner.debug = True
     user.spawner.disable_user_config = True
+    home_dir = tmpdir.join("home")
+    home_dir.mkdir()
+    # home_dir is defined on SimpleSpawner
+    user.spawner.home_dir = home = str(home_dir)
+    jupyter_config_dir = home_dir.join(".jupyter")
+    jupyter_config_dir.mkdir()
+    # verify config paths
+    with jupyter_config_dir.join("jupyter_server_config.py").open("w") as f:
+        f.write("c.TestSingleUser.jupyter_config_py = True")
+
     await user.spawn()
     await app.proxy.add_user(user)
 
@@ -160,6 +165,37 @@ async def test_disable_user_config(app):
         url_path_join('/user/nandy', user.spawner.default_url or "/tree")
     )
     assert r.status_code == 200
+
+    r = await async_requests.get(
+        url_path_join(public_url(app, user), 'jupyterhub-test-info'), cookies=cookies
+    )
+    r.raise_for_status()
+    info = r.json()
+    import pprint
+
+    pprint.pprint(info)
+    assert info['disable_user_config']
+    server_config = info['config']
+    settings = info['settings']
+    assert 'TestSingleUser' not in server_config
+    # check config paths
+    norm_home = os.path.realpath(os.path.abspath(home))
+
+    def assert_not_in_home(path, name):
+        path = os.path.realpath(os.path.abspath(path))
+        assert not path.startswith(
+            norm_home + os.path.sep
+        ), f"{name}: {path} is in home {norm_home}"
+
+    for path in info['config_file_paths']:
+        assert_not_in_home(path, 'config_file_paths')
+
+    # check every path setting for lookup in $HOME
+    # is this too much?
+    for key, setting in settings.items():
+        if 'path' in key and isinstance(setting, list):
+            for path in setting:
+                assert_not_in_home(path, key)
 
 
 def test_help_output():
@@ -199,7 +235,10 @@ def test_singleuser_app_class(JUPYTERHUB_SINGLEUSER_APP):
         have_notebook = True
 
     if JUPYTERHUB_SINGLEUSER_APP.startswith("notebook."):
-        expect_error = not have_notebook
+        expect_error = (
+            os.environ.get("JUPYTERHUB_SINGLEUSER_EXTENSION") == "1"
+            or not have_notebook
+        )
     elif JUPYTERHUB_SINGLEUSER_APP.startswith("jupyter_server."):
         expect_error = not have_server
     else:
@@ -232,11 +271,7 @@ def test_singleuser_app_class(JUPYTERHUB_SINGLEUSER_APP):
         assert '--NotebookApp.' not in out
 
 
-async def test_nbclassic_control_panel(app, user):
-    # use StubSingleUserSpawner to launch a single-user app in a thread
-    app.spawner_class = StubSingleUserSpawner
-    app.tornado_settings['spawner_class'] = StubSingleUserSpawner
-
+async def test_nbclassic_control_panel(app, user, full_spawn):
     # login, start the server
     await user.spawn()
     cookies = await app.login_user(user.name)

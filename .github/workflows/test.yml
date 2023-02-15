@@ -92,6 +92,8 @@ jobs:
             selenium: selenium
           - python: "3.11"
             main_dependencies: main_dependencies
+          - python: "3.10"
+            serverextension: serverextension
 
     steps:
       # NOTE: In GitHub workflows, environment variables are set by writing
@@ -115,8 +117,8 @@ jobs:
               echo "PGPASSWORD=hub[test/:?" >> $GITHUB_ENV
               echo "JUPYTERHUB_TEST_DB_URL=postgresql://test_user:hub%5Btest%2F%3A%3F@127.0.0.1:5432/jupyterhub" >> $GITHUB_ENV
           fi
-          if [ "${{ matrix.jupyter_server }}" != "" ]; then
-              echo "JUPYTERHUB_SINGLEUSER_APP=jupyterhub.tests.mockserverapp.MockServerApp" >> $GITHUB_ENV
+          if [ "${{ matrix.serverextension }}" != "" ]; then
+              echo "JUPYTERHUB_SINGLEUSER_EXTENSION=1" >> $GITHUB_ENV
           fi
       - uses: actions/checkout@v3
       # NOTE: actions/setup-node@v3 make use of a cache within the GitHub base
@@ -164,6 +166,9 @@ jobs:
           fi
           if [ "${{ matrix.db }}" == "postgres" ]; then
               pip install psycopg2-binary
+          fi
+          if [ "${{ matrix.serverextension }}" != "" ]; then
+            pip install 'jupyter-server>=2'
           fi
 
           pip freeze
