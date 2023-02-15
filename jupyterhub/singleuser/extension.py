@@ -475,6 +475,7 @@ class JupyterHubSingleUser(ExtensionApp):
         cfg.identity_provider_class = JupyterHubIdentityProvider
 
         # disable some single-user features
+        cfg.allow_remote_access = True
         cfg.open_browser = False
         cfg.trust_xheaders = True
         cfg.quit_button = False
