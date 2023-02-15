@@ -41,6 +41,7 @@ from tornado.web import HTTPError
 from traitlets import Any, Bool, Instance, Integer, Unicode, default
 
 from jupyterhub._version import __version__, _check_version
+from jupyterhub.log import log_request
 from jupyterhub.services.auth import HubOAuth, HubOAuthCallbackHandler
 from jupyterhub.utils import (
     exponential_backoff,
@@ -599,6 +600,7 @@ class JupyterHubSingleUser(ExtensionApp):
         app.web_app.settings[
             "page_config_hook"
         ] = app.identity_provider.page_config_hook
+        app.web_app.settings["log_function"] = log_request
         # add jupyterhub version header
         headers = app.web_app.settings.setdefault("headers", {})
         headers["X-JupyterHub-Version"] = __version__
