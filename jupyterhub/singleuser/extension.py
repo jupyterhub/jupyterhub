@@ -502,7 +502,7 @@ class JupyterHubSingleUser(ExtensionApp):
         # to make sure it has the desired effect
         cfg.default_url = self.default_url = self.get_default_url()
 
-        # load SSL configuration
+        # load internal SSL configuration
         cfg.keyfile = os.environ.get('JUPYTERHUB_SSL_KEYFILE') or ''
         cfg.certfile = os.environ.get('JUPYTERHUB_SSL_CERTFILE') or ''
         cfg.client_ca = os.environ.get('JUPYTERHUB_SSL_CLIENT_CA') or ''
