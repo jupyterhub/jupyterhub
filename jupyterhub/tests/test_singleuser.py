@@ -283,4 +283,8 @@ async def test_nbclassic_control_panel(app, user, full_spawn):
     page = BeautifulSoup(r.text, "html.parser")
     link = page.find("a", id="jupyterhub-control-panel-link")
     assert link, f"Missing jupyterhub-control-panel-link in {page}"
-    assert link["href"] == url_path_join(app.base_url, "hub/home")
+    if app.subdomain_host:
+        prefix = public_url(app)
+    else:
+        prefix = app.base_url
+    assert link["href"] == url_path_join(prefix, "hub/home")
