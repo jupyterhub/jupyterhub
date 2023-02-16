@@ -58,6 +58,7 @@ howto/index.md
 reference/index.md
 explanation/index.md
 faq/index.md
+contributing/index
 ```
 
 (index/distributions)=
@@ -80,29 +81,6 @@ Today, you can find two main use cases:
 
 _It is important to evaluate these distributions before you can continue with the
 configuration of JupyterHub_.
-
-### Contributing
-
-We welcome you to contribute to JupyterHub in ways that are most exciting
-& useful to you. We value documentation, testing, bug reporting & code equally
-and are glad to have your contributions in whatever form you wish :)
-
-Our [Code of Conduct](https://github.com/jupyter/governance/blob/HEAD/conduct/code_of_conduct.md) and [reporting guidelines](https://github.com/jupyter/governance/blob/HEAD/conduct/reporting_online.md)
-help keep our community welcoming to as many people as possible.
-
-```{toctree}
-:maxdepth: 2
-
-contributing/index
-```
-
-### About JupyterHub
-
-```{toctree}
-:maxdepth: 2
-
-index-about
-```
 
 ## Indices and tables
 
