@@ -28,7 +28,6 @@ on:
 env:
   # UTF-8 content may be interpreted as ascii and causes errors without this.
   LANG: C.UTF-8
-  PYTEST_ADDOPTS: "--verbose --color=yes"
   SQLALCHEMY_WARN_20: "1"
 
 permissions:
@@ -80,6 +79,7 @@ jobs:
             legacy_notebook: legacy_notebook
           - python: "3.8"
             jupyter_server: "1.*"
+            subset: singleuser
           - python: "3.9"
             db: mysql
           - python: "3.10"
@@ -93,9 +93,11 @@ jobs:
           - python: "3.11"
             subdomain: subdomain
             noextension: noextension
+            subset: singleuser
           - python: "3.11"
             ssl: ssl
             noextension: noextension
+            subset: singleuser
           - python: "3.11"
             selenium: selenium
           - python: "3.11"
@@ -231,7 +233,7 @@ jobs:
 
       - name: Run pytest
         run: |
-          pytest --maxfail=2 --cov=jupyterhub jupyterhub/tests
+          pytest -k "${{ matrix.subset }}" --maxfail=2 --cov=jupyterhub jupyterhub/tests
 
       - uses: codecov/codecov-action@v3
 
