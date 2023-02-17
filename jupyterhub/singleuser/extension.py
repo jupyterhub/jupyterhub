@@ -475,6 +475,7 @@ class JupyterHubSingleUser(ExtensionApp):
         cfg.identity_provider_class = JupyterHubIdentityProvider
 
         # disable some single-user features
+        cfg.allow_remote_access = True
         cfg.open_browser = False
         cfg.trust_xheaders = True
         cfg.quit_button = False
@@ -500,6 +501,13 @@ class JupyterHubSingleUser(ExtensionApp):
         # load default_url at all kinds of priority,
         # to make sure it has the desired effect
         cfg.default_url = self.default_url = self.get_default_url()
+
+        # load internal SSL configuration
+        cfg.keyfile = os.environ.get('JUPYTERHUB_SSL_KEYFILE') or ''
+        cfg.certfile = os.environ.get('JUPYTERHUB_SSL_CERTFILE') or ''
+        cfg.client_ca = os.environ.get('JUPYTERHUB_SSL_CLIENT_CA') or ''
+        if cfg.certfile:
+            self.serverapp.log.info(f"Using SSL cert {cfg.certfile}")
 
         # Jupyter Server default: config files have higher priority than extensions,
         # by:

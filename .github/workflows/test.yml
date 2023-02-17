@@ -28,7 +28,6 @@ on:
 env:
   # UTF-8 content may be interpreted as ascii and causes errors without this.
   LANG: C.UTF-8
-  PYTEST_ADDOPTS: "--verbose --color=yes"
   SQLALCHEMY_WARN_20: "1"
 
 permissions:
@@ -79,21 +78,30 @@ jobs:
             oldest_dependencies: oldest_dependencies
             legacy_notebook: legacy_notebook
           - python: "3.8"
-            legacy_notebook: legacy_notebook
+            jupyter_server: "1.*"
+            subset: singleuser
           - python: "3.9"
             db: mysql
           - python: "3.10"
             db: postgres
           - python: "3.11"
             subdomain: subdomain
+            serverextension: serverextension
           - python: "3.11"
             ssl: ssl
+            serverextension: serverextension
+          - python: "3.11"
+            subdomain: subdomain
+            noextension: noextension
+            subset: singleuser
+          - python: "3.11"
+            ssl: ssl
+            noextension: noextension
+            subset: singleuser
           - python: "3.11"
             selenium: selenium
           - python: "3.11"
             main_dependencies: main_dependencies
-          - python: "3.10"
-            serverextension: serverextension
 
     steps:
       # NOTE: In GitHub workflows, environment variables are set by writing
@@ -119,6 +127,8 @@ jobs:
           fi
           if [ "${{ matrix.serverextension }}" != "" ]; then
               echo "JUPYTERHUB_SINGLEUSER_EXTENSION=1" >> $GITHUB_ENV
+          elif [ "${{ matrix.noextension }}" != "" ]; then
+              echo "JUPYTERHUB_SINGLEUSER_EXTENSION=0" >> $GITHUB_ENV
           fi
       - uses: actions/checkout@v3
       # NOTE: actions/setup-node@v3 make use of a cache within the GitHub base
@@ -160,6 +170,9 @@ jobs:
           if [ "${{ matrix.legacy_notebook }}" != "" ]; then
               pip uninstall jupyter_server --yes
               pip install 'notebook<7'
+          fi
+          if [ "${{ matrix.jupyter_server }}" != "" ]; then
+              pip install "jupyter_server==${{ matrix.jupyter_server }}"
           fi
           if [ "${{ matrix.db }}" == "mysql" ]; then
               pip install mysql-connector-python
@@ -220,7 +233,7 @@ jobs:
 
       - name: Run pytest
         run: |
-          pytest --maxfail=2 --cov=jupyterhub jupyterhub/tests
+          pytest -k "${{ matrix.subset }}" --maxfail=2 --cov=jupyterhub jupyterhub/tests
 
       - uses: codecov/codecov-action@v3
 

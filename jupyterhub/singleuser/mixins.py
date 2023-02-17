@@ -660,6 +660,7 @@ class SingleUserNotebookAppMixin(Configurable):
             certfile=self.certfile,
             client_ca=self.client_ca,
         )
+        self.hub_host = self.hub_auth.hub_host
         # smoke check
         if not self.hub_auth.oauth_client_id:
             raise ValueError("Missing OAuth client ID")
