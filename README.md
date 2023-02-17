@@ -230,9 +230,9 @@ You can also talk with us on our JupyterHub [Gitter](https://gitter.im/jupyterhu
 
 - [Reporting Issues](https://github.com/jupyterhub/jupyterhub/issues)
 - [JupyterHub tutorial](https://github.com/jupyterhub/jupyterhub-tutorial)
-- [Documentation for JupyterHub](https://jupyterhub.readthedocs.io/en/latest/) | [PDF (latest)](https://media.readthedocs.org/pdf/jupyterhub/latest/jupyterhub.pdf) | [PDF (stable)](https://media.readthedocs.org/pdf/jupyterhub/stable/jupyterhub.pdf)
+- [Documentation for JupyterHub](https://jupyterhub.readthedocs.io/en/latest/)
 - [Documentation for JupyterHub's REST API][rest api]
-- [Documentation for Project Jupyter](http://jupyter.readthedocs.io/en/latest/index.html) | [PDF](https://media.readthedocs.org/pdf/jupyter/latest/jupyter.pdf)
+- [Documentation for Project Jupyter](http://jupyter.readthedocs.io/en/latest/index.html)
 - [Project Jupyter website](https://jupyter.org)
 - [Project Jupyter community](https://jupyter.org/community)
 
