@@ -484,3 +484,16 @@ def preserve_scopes():
     scope_definitions = copy.deepcopy(scopes.scope_definitions)
     yield scope_definitions
     scopes.scope_definitions = scope_definitions
+
+
+def pytest_terminal_summary(terminalreporter, exitstatus, config):
+    # FIXME: not for real
+    # include event-loop tick durations metric in test output
+    # so we can get a sense of its range (on a very slow CI VM)
+    from jupyterhub.metrics import EVENT_LOOP_TICK_DURATION_SECONDS
+
+    terminalreporter.ensure_newline()
+    terminalreporter.section("event loop durations", sep="-")
+    for metric in EVENT_LOOP_TICK_DURATION_SECONDS.collect():
+        for sample in metric.samples:
+            terminalreporter.line(f"{sample.name}[{sample.labels}]: {sample.value:.0f}")

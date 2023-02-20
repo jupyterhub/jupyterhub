@@ -70,6 +70,7 @@ from .emptyclass import EmptyClass
 from .handlers.static import CacheControlStaticFilesHandler, LogoHandler
 from .log import CoroutineLogFormatter, log_request
 from .metrics import (
+    EVENT_LOOP_TICK_DURATION_SECONDS,
     HUB_STARTUP_DURATION_SECONDS,
     INIT_SPAWNERS_DURATION_SECONDS,
     RUNNING_SERVERS,
@@ -2834,6 +2835,32 @@ class JupyterHub(Application):
             with open(self.pid_file, 'w') as f:
                 f.write('%i' % pid)
 
+    def init_event_loop_metric(self):
+        # TODO: add explicit opt-in
+        loop = asyncio.get_running_loop()
+        if not hasattr(loop, "_run_once"):
+            self.log.warning(
+                f"asyncio loop {loop} has no _run_once method. Disabling asyncio tick metric."
+            )
+            return
+        self.log.info("Enabling asyncio loop metric")
+        original_run_once = loop._run_once
+
+        # log when tick is longer than a threshold
+        # TODO: configurable
+        self.event_loop_log_threshold_seconds = 0.1
+
+        def observed_run_once(*args, **kwargs):
+            tic = time.perf_counter()
+            result = original_run_once(*args, **kwargs)
+            seconds = time.perf_counter() - tic
+            EVENT_LOOP_TICK_DURATION_SECONDS.observe(seconds)
+            # log if over threshold
+            if seconds > self.event_loop_log_threshold_seconds:
+                self.log.info(f"Event loop tick took {seconds:.4f}s")
+
+        loop._run_once = observed_run_once
+
     @catch_config_error
     async def initialize(self, *args, **kwargs):
         hub_startup_start_time = time.perf_counter()
@@ -2889,6 +2916,7 @@ class JupyterHub(Application):
         _log_cls("Spawner", self.spawner_class)
         _log_cls("Proxy", self.proxy_class)
 
+        self.init_event_loop_metric()
         self.init_eventlog()
         self.init_pycurl()
         self.init_secrets()

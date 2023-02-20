@@ -75,6 +75,12 @@ PROXY_POLL_DURATION_SECONDS = Histogram(
     'duration for polling all routes from proxy',
 )
 
+EVENT_LOOP_TICK_DURATION_SECONDS = Histogram(
+    'jupyterhub_event_loop_tick_duration_seconds',
+    'Duration of individual asyncio event loop iterations',
+    buckets=[1e-4, 1e-3, 1e-2, 1e-1, 1, 10, float('inf')],
+)
+
 
 class ServerSpawnStatus(Enum):
     """
