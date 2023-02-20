@@ -34,6 +34,7 @@ extensions = [
     "sphinx-jsonschema",
     "sphinxext.opengraph",
     "sphinxext.rediraffe",
+    "jupyterhub_sphinx_theme",
     "myst_parser",
 ]
 root_doc = "index"
@@ -160,12 +161,7 @@ html_theme_options = {
         {
             "name": "GitHub",
             "url": "https://github.com/jupyterhub/jupyterhub",
-            "icon": "fab fa-github-square",
-        },
-        {
-            "name": "Discourse",
-            "url": "https://discourse.jupyter.org/c/jupyterhub/10",
-            "icon": "fab fa-discourse",
+            "icon": "fa-brands fa-github",
         },
     ],
     "use_edit_page_button": True,
