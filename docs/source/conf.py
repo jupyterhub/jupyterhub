@@ -154,7 +154,7 @@ html_logo = "_static/images/logo/logo.png"
 html_favicon = "_static/images/logo/favicon.ico"
 html_static_path = ["_static"]
 
-html_theme = "pydata_sphinx_theme"
+html_theme = "jupyterhub_sphinx_theme"
 html_theme_options = {
     "icon_links": [
         {
