@@ -84,6 +84,7 @@ jobs:
 
   publish-docker:
     runs-on: ubuntu-20.04
+    timeout-minutes: 30
 
     services:
       # So that we can test this in PRs/branches

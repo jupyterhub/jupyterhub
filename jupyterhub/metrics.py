@@ -42,7 +42,7 @@ SERVER_SPAWN_DURATION_SECONDS = Histogram(
     ['status'],
     # Use custom bucket sizes, since the default bucket ranges
     # are meant for quick running processes. Spawns can take a while!
-    buckets=[0.5, 1, 2.5, 5, 10, 15, 30, 60, 120, float("inf")],
+    buckets=[0.5, 1, 2.5, 5, 10, 15, 30, 60, 120, 180, 300, 600, float("inf")],
 )
 
 RUNNING_SERVERS = Gauge(

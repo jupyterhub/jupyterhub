@@ -16,7 +16,7 @@ The steps are discussed in detail, so if you get stuck at any step you can alway
 
 ## Read the Changelog
 
-The [changelog](../changelog.md) contains information on what has
+The [changelog](changelog) contains information on what has
 changed with the new JupyterHub release and any deprecation warnings.
 Read these notes to familiarize yourself with the coming changes. There
 might be new releases of the authenticators & spawners you use, so

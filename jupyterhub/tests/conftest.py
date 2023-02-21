@@ -173,6 +173,7 @@ async def cleanup_after(request, io_loop):
                         await app.proxy.delete_user(user, name)
                     except HTTPError:
                         pass
+                    print(f"Stopping leftover server {spawner._log_name}")
                     await user.stop(name)
             if user.name not in {'admin', 'user'}:
                 app.users.delete(uid)
@@ -290,7 +291,6 @@ async def _mockservice(request, app, external=False, url=False):
             spec['url'] = 'http://127.0.0.1:%i' % random_port()
 
     if external:
-
         spec['oauth_redirect_uri'] = 'http://127.0.0.1:%i' % random_port()
 
     event_loop = asyncio.get_running_loop()
@@ -367,6 +367,15 @@ def no_patience(app):
 def slow_spawn(app):
     """Fixture enabling SlowSpawner"""
     with mock.patch.dict(app.tornado_settings, {'spawner_class': mocking.SlowSpawner}):
+        yield
+
+
+@fixture
+def full_spawn(app):
+    """Fixture enabling full instrumented server via InstrumentedSpawner"""
+    with mock.patch.dict(
+        app.tornado_settings, {'spawner_class': mocking.InstrumentedSpawner}
+    ):
         yield
 
 

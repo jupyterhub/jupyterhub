@@ -710,7 +710,7 @@ def get_accepted_mimetype(accept_header, choices=None):
     Return `None` if choices is given and no match is found,
     or nothing is specified.
     """
-    for (mime, params, q) in _parse_accept_header(accept_header):
+    for mime, params, q in _parse_accept_header(accept_header):
         if choices:
             if mime in choices:
                 return mime

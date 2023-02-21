@@ -2929,7 +2929,6 @@ class JupyterHub(Application):
         init_spawners_future.add_done_callback(log_init_time)
 
         try:
-
             # don't allow a zero timeout because we still need to be sure
             # that the Spawner objects are defined and pending
             await gen.with_timeout(

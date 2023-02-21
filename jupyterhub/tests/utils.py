@@ -14,20 +14,6 @@ from jupyterhub.objects import Server
 from jupyterhub.roles import assign_default_roles, update_roles
 from jupyterhub.utils import url_path_join as ujoin
 
-try:
-    from sqlalchemy.exc import RemovedIn20Warning
-except ImportError:
-
-    class RemovedIn20Warning(DeprecationWarning):
-        """
-        I only exist so I can be used in warnings filters in pytest.ini
-
-        I will never be displayed.
-
-        sqlalchemy 1.4 introduces RemovedIn20Warning,
-        but we still test against older sqlalchemy.
-        """
-
 
 class _AsyncRequests:
     """Wrapper around requests to return a Future from request methods

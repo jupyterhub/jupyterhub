@@ -32,6 +32,7 @@ if os.environ.get("JUPYTERHUB_OAUTH_SCOPES"):
 else:
     access_scopes = ["access:services"]
 
+
 ### For consideration: optimize performance with a cache instead of
 ### always hitting the Hub api?
 async def get_current_user(

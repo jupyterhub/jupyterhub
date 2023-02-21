@@ -8,9 +8,7 @@ from datetime import datetime, timedelta
 
 import alembic.command
 import alembic.config
-import sqlalchemy
 from alembic.script import ScriptDirectory
-from packaging.version import parse as parse_version
 from sqlalchemy import (
     Boolean,
     Column,
@@ -31,18 +29,12 @@ from sqlalchemy import (
 from sqlalchemy.orm import (
     Session,
     backref,
+    declarative_base,
     interfaces,
     object_session,
     relationship,
     sessionmaker,
 )
-
-try:
-    from sqlalchemy.orm import declarative_base
-except ImportError:
-    # sqlalchemy < 1.4
-    from sqlalchemy.ext.declarative import declarative_base
-
 from sqlalchemy.pool import StaticPool
 from sqlalchemy.types import LargeBinary, Text, TypeDecorator
 from tornado.log import app_log
@@ -912,27 +904,19 @@ def register_ping_connection(engine):
 
     @event.listens_for(engine, "engine_connect")
     def ping_connection(connection, branch=None):
-        if branch:
-            # "branch" refers to a sub-connection of a connection,
-            # we don't want to bother pinging on these.
-            return
+        # TODO: remove unused branch arg when we require sqlalchemy 2.0
 
         # turn off "close with result".  This flag is only used with
         # "connectionless" execution, otherwise will be False in any case
         save_should_close_with_result = connection.should_close_with_result
         connection.should_close_with_result = False
 
-        if parse_version(sqlalchemy.__version__) < parse_version("1.4"):
-            one = [1]
-        else:
-            one = 1
-
         try:
             # run a SELECT 1. use a core select() so that
             # the SELECT of a scalar value without a table is
             # appropriately formatted for the backend
             with connection.begin() as transaction:
-                connection.scalar(select(one))
+                connection.scalar(select(1))
         except exc.DBAPIError as err:
             # catch SQLAlchemy's DBAPIError, which is a wrapper
             # for the DBAPI's exception.  It includes a .connection_invalidated
@@ -948,7 +932,7 @@ def register_ping_connection(engine):
                 # here also causes the whole connection pool to be invalidated
                 # so that all stale connections are discarded.
                 with connection.begin() as transaction:
-                    connection.scalar(select(one))
+                    connection.scalar(select(1))
             else:
                 raise
         finally:
@@ -972,11 +956,8 @@ def check_db_revision(engine):
 
     from .dbutil import _temp_alembic_ini
 
-    if hasattr(engine.url, "render_as_string"):
-        # sqlalchemy >= 1.4
-        engine_url = engine.url.render_as_string(hide_password=False)
-    else:
-        engine_url = str(engine.url)
+    # alembic needs the password if it's in the URL
+    engine_url = engine.url.render_as_string(hide_password=False)
 
     with _temp_alembic_ini(engine_url) as ini:
         cfg = alembic.config.Config(ini)
@@ -1066,6 +1047,8 @@ def new_session_factory(
 
     elif url.startswith('mysql'):
         kwargs.setdefault('pool_recycle', 60)
+
+    kwargs.setdefault("future", True)
 
     if url.endswith(':memory:'):
         # If we're using an in-memory database, ensure that only one connection

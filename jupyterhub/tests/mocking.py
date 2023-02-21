@@ -20,7 +20,7 @@ Other components
 - MockPAMAuthenticator
 - MockHub
 - MockSingleUserServer
-- StubSingleUserSpawner
+- InstrumentedSpawner
 
 - public_host
 - public_url
@@ -29,7 +29,6 @@ Other components
 import asyncio
 import os
 import sys
-import threading
 from concurrent.futures import ThreadPoolExecutor
 from tempfile import NamedTemporaryFile
 from unittest import mock
@@ -42,7 +41,6 @@ from traitlets import Bool, Dict, default
 from .. import metrics, orm, roles
 from ..app import JupyterHub
 from ..auth import PAMAuthenticator
-from ..singleuser import SingleUserNotebookApp
 from ..spawner import SimpleLocalProcessSpawner
 from ..utils import random_port, utcnow
 from .utils import async_requests, public_url, ssl_setup
@@ -87,6 +85,11 @@ class MockSpawner(SimpleLocalProcessSpawner):
     use_this_api_token = None
 
     def start(self):
+        # preserve any JupyterHub env in mock spawner
+        for key in os.environ:
+            if 'JUPYTERHUB' in key and key not in self.env_keep:
+                self.env_keep.append(key)
+
         if self.use_this_api_token:
             self.api_token = self.use_this_api_token
         elif self.will_resume:
@@ -377,27 +380,12 @@ class MockHub(JupyterHub):
         return r.cookies
 
 
-# single-user-server mocking:
-
-
-class MockSingleUserServer(SingleUserNotebookApp):
-    """Mock-out problematic parts of single-user server when run in a thread
-
-    Currently:
-
-    - disable signal handler
+class InstrumentedSpawner(MockSpawner):
     """
+    Spawner that starts a full singleuser server
 
-    def init_signal(self):
-        pass
-
-    @default("log_level")
-    def _default_log_level(self):
-        return 10
-
-
-class StubSingleUserSpawner(MockSpawner):
-    """Spawner that starts a MockSingleUserServer in a thread."""
+    instrumented with the JupyterHub test extension.
+    """
 
     @default("default_url")
     def _default_url(self):
@@ -411,41 +399,10 @@ class StubSingleUserSpawner(MockSpawner):
         """
         return "/tree"
 
-    _thread = None
+    @default('cmd')
+    def _cmd_default(self):
+        return [sys.executable, '-m', 'jupyterhub.singleuser']
 
-    async def start(self):
-        ip = self.ip = '127.0.0.1'
-        port = self.port = random_port()
-        env = self.get_env()
-        args = self.get_args()
-        evt = threading.Event()
-        print(args, env)
-
-        def _run():
-            with mock.patch.dict(os.environ, env):
-                app = self._app = MockSingleUserServer()
-                app.initialize(args)
-                app.io_loop.add_callback(lambda: evt.set())
-                assert app.hub_auth.oauth_client_id
-                assert app.hub_auth.api_token
-                assert app.hub_auth.oauth_scopes
-                app.start()
-
-        self._thread = threading.Thread(target=_run)
-        self._thread.start()
-        ready = evt.wait(timeout=3)
-        assert ready
-        return (ip, port)
-
-    async def stop(self):
-        self._app.stop()
-        self._thread.join(timeout=30)
-        assert not self._thread.is_alive()
-
-    async def poll(self):
-        if self._thread is None:
-            return 0
-        if self._thread.is_alive():
-            return None
-        else:
-            return 0
+    def start(self):
+        self.environment["JUPYTERHUB_SINGLEUSER_TEST_EXTENSION"] = "1"
+        return super().start()
