@@ -298,7 +298,7 @@ const ServerDashboard = (props) => {
           {server.last_activity ? timeSince(server.last_activity) : "Never"}
         </td>
         <td data-testid="user-row-server-activity">
-          {server.started ? (
+          {server.ready ? (
             // Stop Single-user server
             <>
               <StopServerButton serverName={server.name} userName={user.name} />

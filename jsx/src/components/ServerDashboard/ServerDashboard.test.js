@@ -78,7 +78,19 @@ var mockAppState = () =>
         pending: null,
         created: "2020-12-07T18:46:27.115528Z",
         last_activity: "2020-12-07T20:43:51.013613Z",
-        servers: {},
+        servers: {
+          "": {
+            name: "",
+            last_activity: "2020-12-07T20:58:02.437408Z",
+            started: "2020-12-07T20:58:01.508266Z",
+            pending: null,
+            ready: false,
+            state: { pid: 12345 },
+            url: "/user/bar/",
+            user_options: {},
+            progress_url: "/hub/api/users/bar/progress",
+          },
+        },
       },
     ],
     user_page: {
