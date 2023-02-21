@@ -995,12 +995,16 @@ async def test_oauth_page(
 # ADMIN UI
 
 
-async def open_admin_page(app, browser, user):
+async def open_admin_page(app, browser, login_as=None):
     """Login as `user` and open the admin page"""
 
     admin_page = url_escape(app.base_url) + "hub/admin"
-    await open_url(app, browser, path="/login?next=" + admin_page)
-    await login(browser, user.name, pass_w=str(user.name))
+    if login_as:
+        user = login_as
+        await open_url(app, browser, path="/login?next=" + admin_page)
+        await login(browser, user.name, pass_w=str(user.name))
+    else:
+        await open_url(app, browser, admin_page)
     # waiting for loading of admin page elements
     await webdriver_wait(
         browser,
@@ -1228,7 +1232,12 @@ async def test_search_on_admin_page(
         assert search_value in name.text
 
 
-@pytest.mark.parametrize("added_count_users,index_user_1, index_user_2", [(5, 1, 0)])
+@pytest.mark.parametrize(
+    "added_count_users, index_user_1, index_user_2",
+    [
+        (5, 1, 0),
+    ],
+)
 async def test_start_stop_server_on_admin_page(
     app,
     browser,
@@ -1263,7 +1272,6 @@ async def test_start_stop_server_on_admin_page(
                 await webdriver_wait(
                     browser, EC.url_contains(f"/user/{expected_user[i]}/")
                 )
-            browser.back()
 
     async def stop_srv_users(browser, expected_user):
         for i, ex_user in enumerate(expected_user):
@@ -1314,7 +1322,9 @@ async def test_start_stop_server_on_admin_page(
     # click on the Access button
     await access_srv_user(browser, expected_user)
 
-    assert "/hub/admin" in browser.current_url
+    # go back to the admin page
+    await open_admin_page(app, browser)
+
     btns = {
         class_name: get_users_buttons(browser, class_name) for class_name in class_names
     }
