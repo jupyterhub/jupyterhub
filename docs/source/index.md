@@ -16,14 +16,13 @@ or scientific research group.
 It has two main distributions which are developed to serve the needs of each of these teams respectively.
 
 1. [The Littlest JupyterHub](https://github.com/jupyterhub/the-littlest-jupyterhub) distribution is suitable if you need a small number of users (1-100) and a single server with a simple environment.
-2. [Zero to JupyterHub with Kubernetes](https://github.com/jupyterhub/zero-to-jupyterhub-k8s) allows you to deploy dynamic servers on the cloud if you need even more users. 
-This distribution runs JupyterHub on top of [Kubernetes](https://k8s.io).
+2. [Zero to JupyterHub with Kubernetes](https://github.com/jupyterhub/zero-to-jupyterhub-k8s) allows you to deploy dynamic servers on the cloud if you need even more users.
+   This distribution runs JupyterHub on top of [Kubernetes](https://k8s.io).
 
 ```{note}
 It is important to evaluate these distributions before you can continue with the
 configuration of JupyterHub.
 ```
-
 
 ## Subsystems
 
@@ -61,8 +60,9 @@ follows the Jupyter [Community Guides](https://jupyter.readthedocs.io/en/latest/
 
 ## Documentation Contents
 
-### Tutorials 
-This section of the documentation contains step-by-step tutorials that help outline the capabilities of JupyterHub and how you can achieve specific aims, such as installing it. The tutorials are recommended if you do not have much experience with JupyterHub. 
+### Tutorials
+
+This section of the documentation contains step-by-step tutorials that help outline the capabilities of JupyterHub and how you can achieve specific aims, such as installing it. The tutorials are recommended if you do not have much experience with JupyterHub.
 
 ```{toctree}
 :maxdepth: 2
@@ -71,7 +71,8 @@ tutorial/index.md
 ```
 
 ### How-to guides
-The _How-to_ guides provide more in-depth details than the tutorials. They are recommended for those already familiar with JupyterHub and have a specific goal. The guides help answer the question _"How do I ...?"_ based on a particular topic. 
+
+The _How-to_ guides provide more in-depth details than the tutorials. They are recommended for those already familiar with JupyterHub and have a specific goal. The guides help answer the question _"How do I ...?"_ based on a particular topic.
 
 ```{toctree}
 :maxdepth: 2
@@ -80,7 +81,8 @@ howto/index.md
 ```
 
 ### Explanation
-The _Explanation_ section provides further details that can be used to better understand JupyterHub, such as how it can be used and configured. They are intended for those seeking to expand their knowledge of JupyterHub. 
+
+The _Explanation_ section provides further details that can be used to better understand JupyterHub, such as how it can be used and configured. They are intended for those seeking to expand their knowledge of JupyterHub.
 
 ```{toctree}
 :maxdepth: 2
@@ -89,6 +91,7 @@ explanation/index.md
 ```
 
 ### Reference
+
 The _Reference_ section provides technical information about JupyterHub, such as monitoring the state of your installation and working with JupyterHub's API modules and classes.
 
 ```{toctree}
@@ -98,7 +101,8 @@ reference/index.md
 ```
 
 ### Frequently asked questions
-Find answers to the most frequently asked questions about JupyterHub such as how to troubleshoot an issue. 
+
+Find answers to the most frequently asked questions about JupyterHub such as how to troubleshoot an issue.
 
 ```{toctree}
 :maxdepth: 2
@@ -107,13 +111,15 @@ faq/index.md
 ```
 
 ### Contributing
-JupyterHub welcomes all contributors, whether you are new to the project or know your way around. The _Contributing_ section provides information on how you can make your contributions.  
+
+JupyterHub welcomes all contributors, whether you are new to the project or know your way around. The _Contributing_ section provides information on how you can make your contributions.
 
 ```{toctree}
 :maxdepth: 2
 
 contributing/index
 ```
+
 ---
 
 ## Indices and tables
