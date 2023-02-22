@@ -58,7 +58,7 @@ follows the Jupyter [Community Guides](https://jupyter.readthedocs.io/en/latest/
 
 ---
 
-## Documentation Contents
+## Documentation structure
 
 ### Tutorials
 
