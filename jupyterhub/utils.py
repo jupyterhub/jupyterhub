@@ -8,11 +8,13 @@ import functools
 import hashlib
 import inspect
 import random
+import re
 import secrets
 import socket
 import ssl
 import sys
 import threading
+from typing import Iterable
 import uuid
 import warnings
 from binascii import b2a_hex
@@ -778,3 +780,21 @@ def get_browser_protocol(request):
 
     # no forwarded headers
     return request.protocol
+
+def match_regex_patterns(string: str, patterns: Iterable[str]) -> bool:
+    """Match a string against a list of regex patterns
+
+    Args:
+        string (str): The string to be checked
+        pattens (List[str]): List of regex patterns
+
+    Returns:
+        `True` if the string matches one of the patterns, `False` otherwise.
+    """
+
+    matched = False
+    for pattern in patterns:
+        if re.search(pattern, string) is not None:
+            matched = True
+            break
+    return matched

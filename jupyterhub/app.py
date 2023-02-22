@@ -1142,6 +1142,13 @@ class JupyterHub(Application):
     def _authenticator_default(self):
         return self.authenticator_class(parent=self, _deprecated_db_session=self.db)
 
+    oauth_no_confirm_list = List(
+        [],
+        help="""List of regex patterns for oath clients that do not need
+        to be confirmed manually by users.
+        """
+    ).tag(config=True)
+
     implicit_spawn_seconds = Float(
         0,
         help="""Trigger implicit spawns after this many seconds.
@@ -2719,14 +2726,14 @@ class JupyterHub(Application):
         else:
             version_hash = datetime.now().strftime("%Y%m%d%H%M%S")
 
-        oauth_no_confirm_list = set()
+        oauth_no_confirm_list = set(self.oauth_no_confirm_list)
         for service in self._service_map.values():
             if service.oauth_no_confirm:
                 self.log.warning(
                     "Allowing service %s to complete OAuth without confirmation on an authorization web page",
                     service.name,
                 )
-                oauth_no_confirm_list.add(service.oauth_client_id)
+                oauth_no_confirm_list.add(rf'^\b{service.oauth_client_id}\b$')
 
         # configure xsrf cookie
         # (user xsrf_cookie_kwargs works as override)

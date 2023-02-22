@@ -12,7 +12,7 @@ from tornado.httpserver import HTTPRequest
 from tornado.httputil import HTTPHeaders
 
 from .. import utils
-from ..utils import iterate_until
+from ..utils import iterate_until, match_regex_patterns
 
 
 async def yield_n(n, delay=0.01):
@@ -122,3 +122,17 @@ def test_browser_protocol(x_scheme, x_forwarded_proto, forwarded, expected):
 
     proto = utils.get_browser_protocol(request)
     assert proto == expected
+
+@pytest.mark.parametrize(
+    "string, patterns, expected",
+    [
+        ("foo", [], False),
+        ("bar", ["foo", "bar"], True),
+        ("foo", [r'^\bfoobar\b$'], False),
+        ("foobar", [r'^\bfoobar\b$'], True),
+        ("my-prefix", ['^(my-prefix)'], True),
+        ("not-my-prefix", ['^(my-prefix)'], False),
+    ]
+)
+def test_match_regex_patterns(string, patterns, expected):
+    assert expected == match_regex_patterns(string, patterns)

@@ -10,7 +10,7 @@ from oauthlib import oauth2
 from tornado import web
 
 from .. import orm, roles, scopes
-from ..utils import get_browser_protocol, token_authenticated
+from ..utils import get_browser_protocol, match_regex_patterns, token_authenticated
 from .base import APIHandler, BaseHandler
 
 
@@ -198,8 +198,10 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
             # it's the user's own server
             oauth_client.identifier in own_oauth_client_ids
             # or it's in the global no-confirm list
-            or oauth_client.identifier
-            in self.settings.get('oauth_no_confirm_list', set())
+            or match_regex_patterns(
+                oauth_client.identifier,
+                self.settings.get('oauth_no_confirm_list', set())
+            )
         ):
             return False
 
