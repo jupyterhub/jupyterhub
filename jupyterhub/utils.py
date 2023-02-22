@@ -14,13 +14,13 @@ import socket
 import ssl
 import sys
 import threading
-from typing import Iterable
 import uuid
 import warnings
 from binascii import b2a_hex
 from datetime import datetime, timezone
 from hmac import compare_digest
 from operator import itemgetter
+from typing import Iterable
 from urllib.parse import quote
 
 from async_generator import aclosing
@@ -780,6 +780,7 @@ def get_browser_protocol(request):
 
     # no forwarded headers
     return request.protocol
+
 
 def match_regex_patterns(string: str, patterns: Iterable[str]) -> bool:
     """Match a string against a list of regex patterns

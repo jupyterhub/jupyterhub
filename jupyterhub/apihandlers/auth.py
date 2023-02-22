@@ -200,7 +200,7 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
             # or it's in the global no-confirm list
             or match_regex_patterns(
                 oauth_client.identifier,
-                self.settings.get('oauth_no_confirm_list', set())
+                self.settings.get('oauth_no_confirm_list', set()),
             )
         ):
             return False

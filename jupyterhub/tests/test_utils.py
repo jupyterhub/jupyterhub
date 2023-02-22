@@ -123,6 +123,7 @@ def test_browser_protocol(x_scheme, x_forwarded_proto, forwarded, expected):
     proto = utils.get_browser_protocol(request)
     assert proto == expected
 
+
 @pytest.mark.parametrize(
     "string, patterns, expected",
     [
@@ -132,7 +133,7 @@ def test_browser_protocol(x_scheme, x_forwarded_proto, forwarded, expected):
         ("foobar", [r'^\bfoobar\b$'], True),
         ("my-prefix", ['^(my-prefix)'], True),
         ("not-my-prefix", ['^(my-prefix)'], False),
-    ]
+    ],
 )
 def test_match_regex_patterns(string, patterns, expected):
     assert expected == match_regex_patterns(string, patterns)

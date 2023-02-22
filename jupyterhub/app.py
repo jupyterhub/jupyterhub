@@ -1146,7 +1146,7 @@ class JupyterHub(Application):
         [],
         help="""List of regex patterns for oath clients that do not need
         to be confirmed manually by users.
-        """
+        """,
     ).tag(config=True)
 
     implicit_spawn_seconds = Float(
