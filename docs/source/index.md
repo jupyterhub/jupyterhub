@@ -6,15 +6,26 @@ it can be used in a class of students, a corporate data science group, or a scie
 research group. It is a multi-user **Hub** that spawns, manages, and proxies multiple
 instances of the single-user [Jupyter notebook] server.
 
-JupyterHub offers distributions for different use cases. As of now, you can find two main cases:
+(index/distributions)=
+
+## Distributions
+
+JupyterHub can be used in a collaborative environment by both small (0-100 users) and
+large teams (more than 100 users) such as a class of students, corporate data science group
+or scientific research group.
+It has two main distributions which are developed to serve the needs of each of these teams respectively.
 
 1. [The Littlest JupyterHub](https://github.com/jupyterhub/the-littlest-jupyterhub) distribution is suitable if you need a small number of users (1-100) and a single server with a simple environment.
-2. [Zero to JupyterHub with Kubernetes](https://github.com/jupyterhub/zero-to-jupyterhub-k8s) allows you to deploy dynamic servers on the cloud if you need even more users.
+2. [Zero to JupyterHub with Kubernetes](https://github.com/jupyterhub/zero-to-jupyterhub-k8s) allows you to deploy dynamic servers on the cloud if you need even more users. 
+This distribution runs JupyterHub on top of [Kubernetes](https://k8s.io).
 
-JupyterHub can be used in a collaborative environment by both both small (0-100 users) and
-large teams (more than 100 users) such as a class of students, corporate data science group
-or scientific research group. It has distributions which are developed to serve the needs of
-each of these teams respectively.
+```{note}
+It is important to evaluate these distributions before you can continue with the
+configuration of JupyterHub.
+```
+
+
+## Subsystems
 
 JupyterHub is made up of four subsystems:
 
@@ -46,41 +57,64 @@ JupyterHub also provides a {doc}`REST API <reference/rest-api>`.
 The JupyterHub team and Project Jupyter value our community, and JupyterHub
 follows the Jupyter [Community Guides](https://jupyter.readthedocs.io/en/latest/community/content-community.html).
 
-## Contents
+---
 
-Documentation sections (reorganization in-progress)
+## Documentation Contents
+
+### Tutorials 
+This section of the documentation contains step-by-step tutorials that help outline the capabilities of JupyterHub and how you can achieve specific aims, such as installing it. The tutorials are recommended if you do not have much experience with JupyterHub. 
 
 ```{toctree}
 :maxdepth: 2
 
 tutorial/index.md
-howto/index.md
-reference/index.md
-explanation/index.md
-faq/index.md
-contributing/index
 ```
 
-(index/distributions)=
+### How-to guides
+The _How-to_ guides provide more in-depth details than the tutorials. They are recommended for those already familiar with JupyterHub and have a specific goal. The guides help answer the question _"How do I ...?"_ based on a particular topic. 
 
-### Distributions
+```{toctree}
+:maxdepth: 2
 
-A JupyterHub **distribution** is tailored
-towards a particular set of use cases. These are generally easier
-to set up than setting up JupyterHub from scratch, assuming they fit your use case.
+howto/index.md
+```
 
-Today, you can find two main use cases:
+### Explanation
+The _Explanation_ section provides further details that can be used to better understand JupyterHub, such as how it can be used and configured. They are intended for those seeking to expand their knowledge of JupyterHub. 
 
-1. If you need a simple case for a small amount of users (0-100) and single server
-   take a look at
-   [The Littlest JupyterHub](https://github.com/jupyterhub/the-littlest-jupyterhub) distribution.
-2. If you need to allow for a larger number of machines and users,
-   a dynamic amount of servers can be used on a cloud,
-   take a look at the [Zero to JupyterHub with Kubernetes](https://github.com/jupyterhub/zero-to-jupyterhub-k8s) distribution.
-   This distribution runs JupyterHub on top of [Kubernetes](https://k8s.io).
+```{toctree}
+:maxdepth: 2
 
-_It is important to evaluate these distributions before you can continue with the
-configuration of JupyterHub_.
+explanation/index.md
+```
+
+### Reference
+The _Reference_ section provides technical information about JupyterHub, such as monitoring the state of your installation and working with JupyterHub's API modules and classes.
+
+```{toctree}
+:maxdepth: 2
+
+reference/index.md
+```
+
+### Frequently asked questions
+Find answers to the most frequently asked questions about JupyterHub such as how to troubleshoot an issue. 
+
+```{toctree}
+:maxdepth: 2
+
+faq/index.md
+```
+
+### Contributing
+JupyterHub welcomes all contributors, whether you are new to the project or know your way around. The _Contributing_ section provides information on how you can make your contributions.  
+
+```{toctree}
+:maxdepth: 2
+
+contributing/index
+```
+---
 
 ## Indices and tables
 
