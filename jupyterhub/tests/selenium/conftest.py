@@ -6,7 +6,7 @@ from selenium import webdriver
 def browser_session():
     """Re-use one browser instance for the test session"""
     options = webdriver.FirefoxOptions()
-    options.headless = True
+    options.add_argument("-headless")
     driver = webdriver.Firefox(options=options)
     yield driver
     driver.close()

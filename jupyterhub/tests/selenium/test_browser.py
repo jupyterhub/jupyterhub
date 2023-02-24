@@ -390,10 +390,21 @@ async def wait_for_ready(browser):
 
     otherwise, click events may not do anything
     """
-    await webdriver_wait(
-        browser,
-        lambda driver: driver.execute_script("return window._jupyterhub_page_loaded;"),
-    )
+    if "/hub/admin" in browser.current_url:
+        await webdriver_wait(
+            browser,
+            lambda browser: is_displayed(
+                browser,
+                (By.XPATH, '//div[@class="resets"]/div[@data-testid="container"]'),
+            ),
+        )
+    else:
+        await webdriver_wait(
+            browser,
+            lambda driver: driver.execute_script(
+                "return window._jupyterhub_page_loaded;"
+            ),
+        )
 
 
 async def open_home_page(app, browser, user):
@@ -1006,16 +1017,11 @@ async def open_admin_page(app, browser, login_as=None):
     else:
         await open_url(app, browser, admin_page)
     # waiting for loading of admin page elements
-    await webdriver_wait(
-        browser,
-        lambda browser: is_displayed(
-            browser, (By.XPATH, '//div[@class="resets"]/div[@data-testid="container"]')
-        ),
-    )
+    await wait_for_ready(browser)
 
 
 def create_list_of_users(create_user_with_scopes, n):
-    return [create_user_with_scopes(["users"]) for i in range(1, n)]
+    return [create_user_with_scopes("self") for i in range(n)]
 
 
 async def test_open_admin_page(app, browser, admin_user):
@@ -1034,7 +1040,7 @@ def get_users_buttons(browser, class_name):
 
 
 async def click_and_wait_paging_btn(browser, buttons_number):
-    """interecrion with paging buttons, where number 1 = previous and number 2 = next"""
+    """interaction with paging buttons, where number 1 = previous and number 2 = next"""
     # number 1 - previous button, number 2 - next button
     await click(
         browser,
@@ -1232,73 +1238,58 @@ async def test_search_on_admin_page(
         assert search_value in name.text
 
 
-@pytest.mark.parametrize(
-    "added_count_users, index_user_1, index_user_2",
-    [
-        (5, 1, 0),
-    ],
-)
 async def test_start_stop_server_on_admin_page(
     app,
     browser,
     admin_user,
     create_user_with_scopes,
-    added_count_users,
-    index_user_1,
-    index_user_2,
 ):
-    async def start_user(browser, expected_user):
-        start_button_xpath = f'//a[contains(@href, "spawn/{expected_user[0]}")]/preceding-sibling::button[contains(@class, "start-button")]'
+    async def click_start_server(browser, username):
+        start_button_xpath = f'//a[contains(@href, "spawn/{username}")]/preceding-sibling::button[contains(@class, "start-button")]'
         await click(browser, (By.XPATH, start_button_xpath))
         start_btn = browser.find_element(By.XPATH, start_button_xpath)
         await wait_for_ready(browser)
         await webdriver_wait(browser, EC.staleness_of(start_btn))
 
-    async def spawn_user(browser, app, expected_user):
-        spawn_button_xpath = f'//a[contains(@href, "spawn/{expected_user[1]}")]/button[contains(@class, "secondary")]'
+    async def click_spawn_page(browser, app, username):
+        spawn_button_xpath = f'//a[contains(@href, "spawn/{username}")]/button[contains(@class, "secondary")]'
         await click(browser, (By.XPATH, spawn_button_xpath))
         while (
             not app.users[1].spawner.ready
-            and f"/hub/spawn-pending/{expected_user[1]}" in browser.current_url
+            and f"/hub/spawn-pending/{username}" in browser.current_url
         ):
-            await webdriver_wait(browser, EC.url_contains(f"/user/{expected_user[1]}/"))
+            await webdriver_wait(browser, EC.url_contains(f"/user/{username}/"))
 
-    async def access_srv_user(browser, expected_user):
-        access_buttons_xpath = '//*[@data-testid="user-row-server-activity"]//button[contains(@class, "primary")]'
-        for i, ex_user in enumerate(expected_user):
-            access_btn_xpath = f'//a[contains(@href, "user/{expected_user[i]}")]/button[contains(@class, "primary")]'
-            await click(browser, (By.XPATH, access_btn_xpath))
-            if not f"/user/{expected_user[i]}/" in browser.current_url:
-                await webdriver_wait(
-                    browser, EC.url_contains(f"/user/{expected_user[i]}/")
-                )
+    async def click_access_server(browser, username):
+        access_btn_xpath = f'//a[contains(@href, "user/{username}")]/button[contains(@class, "primary")]'
+        await click(browser, (By.XPATH, access_btn_xpath))
+        await webdriver_wait(browser, EC.url_contains(f"/user/{username}/"))
 
-    async def stop_srv_users(browser, expected_user):
-        for i, ex_user in enumerate(expected_user):
-            stop_btn_xpath = f'//a[contains(@href, "user/{expected_user[i]}")]/preceding-sibling::button[contains(@class, "stop-button")]'
-            stop_btn = browser.find_element(By.XPATH, stop_btn_xpath)
-            await click(browser, (By.XPATH, stop_btn_xpath))
-            await webdriver_wait(browser, EC.staleness_of(stop_btn))
+    async def click_stop_button(browser, username):
+        stop_btn_xpath = f'//a[contains(@href, "user/{username}")]/preceding-sibling::button[contains(@class, "stop-button")]'
+        stop_btn = browser.find_element(By.XPATH, stop_btn_xpath)
+        await click(browser, (By.XPATH, stop_btn_xpath))
+        await webdriver_wait(browser, EC.staleness_of(stop_btn))
 
-    create_list_of_users(create_user_with_scopes, added_count_users)
+    user1, user2 = create_list_of_users(create_user_with_scopes, 2)
     await open_admin_page(app, browser, admin_user)
-    users = browser.find_elements(By.XPATH, '//td[@data-testid="user-row-name"]')
-    users_list = [user.text for user in users]
 
-    expected_user = [users_list[index_user_1], users_list[index_user_2]]
+    user_name_elements = browser.find_elements(
+        By.XPATH, '//td[@data-testid="user-row-name"]'
+    )
+    assert {user1.name, user2.name}.issubset({e.text for e in user_name_elements})
+
     spawn_page_btns = browser.find_elements(
         By.XPATH,
         '//*[@data-testid="user-row-server-activity"]//a[contains(@href, "spawn/")]',
     )
 
-    for i, user in enumerate(users):
-        spawn_page_btn = spawn_page_btns[i]
-        user_from_table = user.text
+    for spawn_page_btn, name_element in zip(spawn_page_btns, user_name_elements):
         link = spawn_page_btn.get_attribute('href')
-    assert f"/spawn/{user_from_table}" in link
+        assert f"/spawn/{name_element.text}" in link
 
     # click on Start button
-    await start_user(browser, expected_user)
+    await click_start_server(browser, user1.name)
     class_names = ["stop-button", "primary", "start-button", "secondary"]
     btns = {
         class_name: get_users_buttons(browser, class_name) for class_name in class_names
@@ -1306,10 +1297,10 @@ async def test_start_stop_server_on_admin_page(
     assert len(btns["stop-button"]) == 1
 
     # click on Spawn page button
-    await spawn_user(browser, app, expected_user)
-    assert f"/user/{expected_user[1]}/" in browser.current_url
+    await click_spawn_page(browser, app, user2.name)
+    assert f"/user/{user2.name}/" in browser.current_url
 
-    # open  the Admin page
+    # open the Admin page
     await open_url(app, browser, "/admin")
     # wait for javascript to finish loading
     await wait_for_ready(browser)
@@ -1320,18 +1311,15 @@ async def test_start_stop_server_on_admin_page(
     assert len(btns["stop-button"]) == len(btns["primary"]) == 2
 
     # click on the Access button
-    await access_srv_user(browser, expected_user)
+    await click_access_server(browser, user1.name)
 
     # go back to the admin page
-    await open_admin_page(app, browser)
-
-    btns = {
-        class_name: get_users_buttons(browser, class_name) for class_name in class_names
-    }
-    assert len(btns["stop-button"]) == 2
+    await open_url(app, browser, "/admin")
+    await wait_for_ready(browser)
 
     # click on Stop button for both users
-    await stop_srv_users(browser, expected_user)
+    for username in (user1.name, user2.name):
+        await click_stop_button(browser, username)
     btns = {
         class_name: get_users_buttons(browser, class_name) for class_name in class_names
     }
