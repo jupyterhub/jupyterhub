@@ -118,7 +118,7 @@ more configuration of the system.
 
 ## Configuration
 
-The [Getting Started](https://jupyterhub.readthedocs.io/en/latest/getting-started/index.html) section of the
+The [Getting Started](https://jupyterhub.readthedocs.io/en/latest/tutorial/index.html#getting-started) section of the
 documentation explains the common steps in setting up JupyterHub.
 
 The [**JupyterHub tutorial**](https://github.com/jupyterhub/jupyterhub-tutorial)
