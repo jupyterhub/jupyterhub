@@ -28,6 +28,12 @@ class ServiceAPIHandler(APIHandler):
         service = self.services[service_name]
         self.write(json.dumps(self.service_model(service)))
 
+    @needs_scope('read:services', 'read:services:name', 'read:roles:services')
+    def post(self, service_name):
+        model = self.get_json_body()
+        print('############', model)
+        self.write('ok')
+
 
 default_handlers = [
     (r"/api/services", ServiceListAPIHandler),

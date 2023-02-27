@@ -416,6 +416,9 @@ class Service(Base):
             ondelete='SET NULL',
         ),
     )
+
+    from_config = Column(Boolean, default=True)
+
     oauth_client = relationship(
         'OAuthClient',
         back_populates="service",

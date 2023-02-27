@@ -2371,7 +2371,7 @@ class JupyterHub(Application):
             orm_service = orm.Service.find(self.db, name=name)
             if orm_service is None:
                 # not found, create a new one
-                orm_service = orm.Service(name=name)
+                orm_service = orm.Service(name=name, from_config=True)
                 self.db.add(orm_service)
                 if spec.get('admin', False):
                     self.log.warning(
