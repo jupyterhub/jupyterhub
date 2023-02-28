@@ -10,8 +10,6 @@ This section is divided into two broad subsections:
 
 ---
 
-## Technical reference
-
 ```{toctree}
 :maxdepth: 1
 
@@ -25,14 +23,7 @@ event-logging
 monitoring
 gallery-jhub-deployments
 changelog
+api/index.md
 ```
 
----
 
-## API reference
-
-```{toctree}
-:maxdepth: 1
-
-reference-api/index.md
-```

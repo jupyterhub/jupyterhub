@@ -19,3 +19,4 @@
 "admin/upgrading.md" "howto/upgrading.md"
 "installation-basics.md" "tutorial/installation-basics.md"
 "quickstart.md" "tutorial/quickstart.md"
+"events/index.md" "reference/event-logging.md"
