@@ -8,6 +8,7 @@ import json
 
 from ..scopes import Scope, needs_scope
 from .base import APIHandler
+from tornado import web
 
 
 class ServiceListAPIHandler(APIHandler):
@@ -29,10 +30,23 @@ class ServiceAPIHandler(APIHandler):
         self.write(json.dumps(self.service_model(service)))
 
     @needs_scope('read:services', 'read:services:name', 'read:roles:services')
-    def post(self, service_name):
-        model = self.get_json_body()
-        print('############', model)
-        self.write('ok')
+    def post(self, service_name: str):
+        data = self.get_json_body()
+        service = self.find_service(service_name)
+
+        if service is not None:
+            raise web.HTTPError(409, f"Service {service_name} already exists")
+
+        if not data or not isinstance(data, dict):
+            raise web.HTTPError(400, "Invalid service data")
+    
+        data['name'] = service_name
+        self._check_service_model(data)
+        self.service_from_spec(data)
+        self.db.commit()
+        service = self.find_service(service_name)
+        self.write(json.dumps(self.service_model(service)))
+        self.set_status(201)
 
 
 default_handlers = [

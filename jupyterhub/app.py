@@ -21,6 +21,7 @@ from functools import partial
 from getpass import getuser
 from operator import itemgetter
 from textwrap import dedent
+from typing import Optional
 from urllib.parse import unquote, urlparse, urlunparse
 
 if sys.version_info[:2] < (3, 3):
@@ -2354,6 +2355,129 @@ class JupyterHub(Application):
         )
         pc.start()
 
+    def _service_from_spec(
+        self,
+        spec: Dict,
+        from_config=True,
+        domain: Optional[str] = None,
+        host: Optional[str] = None,
+    ) -> None:
+        if domain is None:
+            if self.domain:
+                domain = 'services.' + self.domain
+            else:
+                domain = ''
+
+        if host is None:
+            if self.domain:
+                parsed = urlparse(self.subdomain_host)
+                host = f'{parsed.scheme}://services.{parsed.netloc}'
+            else:
+                host = ''
+
+        if 'name' not in spec:
+            raise ValueError('service spec must have a name: %r' % spec)
+
+        name = spec['name']
+        # get/create orm
+        orm_service = orm.Service.find(self.db, name=name)
+        print('########### found', name, orm_service)
+        if orm_service is None:
+            # not found, create a new one
+            orm_service = orm.Service(name=name, from_config=from_config)
+            print('########### adding', name, orm_service)
+            self.db.add(orm_service)
+            if spec.get('admin', False):
+                self.log.warning(
+                    f"Service {name} sets `admin: True`, which is deprecated in JupyterHub 2.0."
+                    " You can assign now assign roles via `JupyterHub.load_roles` configuration."
+                    " If you specify services in the admin role configuration, "
+                    "the Service admin flag will be ignored."
+                )
+                roles.update_roles(self.db, entity=orm_service, roles=['admin'])
+        orm_service.admin = spec.get('admin', False)
+        print('commiting db', name)
+        self.db.commit()
+        service = Service(
+            parent=self,
+            app=self,
+            base_url=self.base_url,
+            db=self.db,
+            orm=orm_service,
+            roles=orm_service.roles,
+            domain=domain,
+            host=host,
+            hub=self.hub,
+        )
+
+        traits = service.traits(input=True)
+        for key, value in spec.items():
+            if key not in traits:
+                raise AttributeError("No such service field: %s" % key)
+            setattr(service, key, value)
+
+        if service.api_token:
+            self.service_tokens[service.api_token] = service.name
+        elif service.managed:
+            # generate new token
+            # TODO: revoke old tokens?
+            service.api_token = service.orm.new_api_token(note="generated at startup")
+
+        if service.url:
+            parsed = urlparse(service.url)
+            if parsed.port is not None:
+                port = parsed.port
+            elif parsed.scheme == 'http':
+                port = 80
+            elif parsed.scheme == 'https':
+                port = 443
+            server = service.orm.server = orm.Server(
+                proto=parsed.scheme,
+                ip=parsed.hostname,
+                port=port,
+                cookie_name=service.oauth_client_id,
+                base_url=service.prefix,
+            )
+            self.db.add(server)
+
+        else:
+            service.orm.server = None
+
+        if service.oauth_available:
+            allowed_scopes = set()
+            if service.oauth_client_allowed_scopes:
+                allowed_scopes.update(service.oauth_client_allowed_scopes)
+            if service.oauth_roles:
+                if not allowed_scopes:
+                    # DEPRECATED? It's still convenient and valid,
+                    # e.g. 'admin'
+                    allowed_roles = list(
+                        self.db.query(orm.Role).filter(
+                            orm.Role.name.in_(service.oauth_roles)
+                        )
+                    )
+                    allowed_scopes.update(roles.roles_to_scopes(allowed_roles))
+                else:
+                    self.log.warning(
+                        f"Ignoring oauth_roles for {service.name}: {service.oauth_roles},"
+                        f" using oauth_client_allowed_scopes={allowed_scopes}."
+                    )
+            oauth_client = self.oauth_provider.add_client(
+                client_id=service.oauth_client_id,
+                client_secret=service.api_token,
+                redirect_uri=service.oauth_redirect_uri,
+                description="JupyterHub service %s" % service.name,
+            )
+            service.orm.oauth_client = oauth_client
+            # add access-scopes, derived from OAuthClient itself
+            allowed_scopes.update(scopes.access_scopes(oauth_client))
+            oauth_client.allowed_scopes = sorted(allowed_scopes)
+        else:
+            if service.oauth_client:
+                self.db.delete(service.oauth_client)
+
+        self._service_map[name] = service
+
     def init_services(self):
         self._service_map.clear()
         if self.domain:
@@ -2364,106 +2488,7 @@ class JupyterHub(Application):
             domain = host = ''
 
         for spec in self.services:
-            if 'name' not in spec:
-                raise ValueError('service spec must have a name: %r' % spec)
-            name = spec['name']
-            # get/create orm
-            orm_service = orm.Service.find(self.db, name=name)
-            if orm_service is None:
-                # not found, create a new one
-                orm_service = orm.Service(name=name, from_config=True)
-                self.db.add(orm_service)
-                if spec.get('admin', False):
-                    self.log.warning(
-                        f"Service {name} sets `admin: True`, which is deprecated in JupyterHub 2.0."
-                        " You can assign now assign roles via `JupyterHub.load_roles` configuration."
-                        " If you specify services in the admin role configuration, "
-                        "the Service admin flag will be ignored."
-                    )
-                    roles.update_roles(self.db, entity=orm_service, roles=['admin'])
-            orm_service.admin = spec.get('admin', False)
-            self.db.commit()
-            service = Service(
-                parent=self,
-                app=self,
-                base_url=self.base_url,
-                db=self.db,
-                orm=orm_service,
-                roles=orm_service.roles,
-                domain=domain,
-                host=host,
-                hub=self.hub,
-            )
-
-            traits = service.traits(input=True)
-            for key, value in spec.items():
-                if key not in traits:
-                    raise AttributeError("No such service field: %s" % key)
-                setattr(service, key, value)
-
-            if service.api_token:
-                self.service_tokens[service.api_token] = service.name
-            elif service.managed:
-                # generate new token
-                # TODO: revoke old tokens?
-                service.api_token = service.orm.new_api_token(
-                    note="generated at startup"
-                )
-
-            if service.url:
-                parsed = urlparse(service.url)
-                if parsed.port is not None:
-                    port = parsed.port
-                elif parsed.scheme == 'http':
-                    port = 80
-                elif parsed.scheme == 'https':
-                    port = 443
-                server = service.orm.server = orm.Server(
-                    proto=parsed.scheme,
-                    ip=parsed.hostname,
-                    port=port,
-                    cookie_name=service.oauth_client_id,
-                    base_url=service.prefix,
-                )
-                self.db.add(server)
-
-            else:
-                service.orm.server = None
-
-            if service.oauth_available:
-                allowed_scopes = set()
-                if service.oauth_client_allowed_scopes:
-                    allowed_scopes.update(service.oauth_client_allowed_scopes)
-                if service.oauth_roles:
-                    if not allowed_scopes:
-                        # DEPRECATED? It's still convenient and valid,
-                        # e.g. 'admin'
-                        allowed_roles = list(
-                            self.db.query(orm.Role).filter(
-                                orm.Role.name.in_(service.oauth_roles)
-                            )
-                        )
-                        allowed_scopes.update(roles.roles_to_scopes(allowed_roles))
-                    else:
-                        self.log.warning(
-                            f"Ignoring oauth_roles for {service.name}: {service.oauth_roles},"
-                            f" using oauth_client_allowed_scopes={allowed_scopes}."
-                        )
-                oauth_client = self.oauth_provider.add_client(
-                    client_id=service.oauth_client_id,
-                    client_secret=service.api_token,
-                    redirect_uri=service.oauth_redirect_uri,
-                    description="JupyterHub service %s" % service.name,
-                )
-                service.orm.oauth_client = oauth_client
-                # add access-scopes, derived from OAuthClient itself
-                allowed_scopes.update(scopes.access_scopes(oauth_client))
-                oauth_client.allowed_scopes = sorted(allowed_scopes)
-            else:
-                if service.oauth_client:
-                    self.db.delete(service.oauth_client)
-
-            self._service_map[name] = service
+            self._service_from_spec(spec, from_config=True, domain=domain, host=host)
 
         # delete services from db not in service config:
         for service in self.db.query(orm.Service):
