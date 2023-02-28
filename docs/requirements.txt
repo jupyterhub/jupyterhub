@@ -9,9 +9,9 @@
 --editable .
 
 autodoc-traits
+jupyterhub-sphinx-theme
 myst-parser
 pre-commit
-pydata-sphinx-theme
 pytablewriter>=0.56
 ruamel.yaml
 sphinx>=4

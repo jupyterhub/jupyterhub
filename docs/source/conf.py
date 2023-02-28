@@ -34,6 +34,7 @@ extensions = [
     "sphinx-jsonschema",
     "sphinxext.opengraph",
     "sphinxext.rediraffe",
+    "jupyterhub_sphinx_theme",
     "myst_parser",
 ]
 root_doc = "index"
@@ -154,18 +155,13 @@ html_logo = "_static/images/logo/logo.png"
 html_favicon = "_static/images/logo/favicon.ico"
 html_static_path = ["_static"]
 
-html_theme = "pydata_sphinx_theme"
+html_theme = "jupyterhub_sphinx_theme"
 html_theme_options = {
     "icon_links": [
         {
             "name": "GitHub",
             "url": "https://github.com/jupyterhub/jupyterhub",
-            "icon": "fab fa-github-square",
-        },
-        {
-            "name": "Discourse",
-            "url": "https://discourse.jupyter.org/c/jupyterhub/10",
-            "icon": "fab fa-discourse",
+            "icon": "fa-brands fa-github",
         },
     ],
     "use_edit_page_button": True,
