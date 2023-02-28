@@ -1,5 +1,7 @@
 # Real-time collaboration without impersonation
 
+![Screenshot of JupyterLab with real-time collaboration enabled](../images/jupyterlab-rtc.png)
+
 :::{note}
 It is recommended to use at least JupyterLab 3.6 with JupyterHub >= 3.1.1 for this.
 :::
@@ -156,3 +158,5 @@ The `admin-ui` and `list:users` permissions are not strictly required, but they 
 The only built-in UI JupyterHub has to view other users' servers is the admin page.
 Users can have very limited access to the admin page to take the few actions they are allowed to do without needing any elevated permissions, so that's the quickest way to given them the buttons they need for this, but it may not be how you want to do it in the long run.
 If you provide the necessary links (e.g. `https://yourhub.example/hub/spawn/vox-collab/`) on some other page, these permissions are not necessary.
+
+![JupyterHub admin page showing only one account listed: vox-collab](../images/collaboration-admin-ui.png)

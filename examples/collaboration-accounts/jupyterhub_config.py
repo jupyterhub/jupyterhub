@@ -1,8 +1,13 @@
 c = get_config()  # noqa
 
+# toy config for example
+# you will use a real authenticator and Spawner
 c.JupyterHub.authenticator_class = "dummy"
-c.JupyterHub.spawner_class = "docker"
-
+# note: which Spawner you choose will determine some of what the collaboration account needs
+# if it's LocalProcessSpawner or systemd,
+# a real system user must be created.
+# other spawners (simple, docker, kubernetes) do not need system users to exist
+c.JupyterHub.spawner_class = "simple"
 
 c.JupyterHub.log_level = 10
 c.JupyterHub.cleanup_servers = True
