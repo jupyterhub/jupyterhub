@@ -1,6 +1,7 @@
 # This file contains rediraffe redirects as generated from the docs/source/conf.py file
 # For more information, see rediraffe configuration in the conf.py file.
 
+"changelog.md" "reference/changelog.md"
 "getting-started/faq.md" "faq/faq.md"
 "reference/api-only.md" "howto/api-only.md"
 "reference/config-ghoauth.md" "howto/configuration/config-ghoauth.md"
