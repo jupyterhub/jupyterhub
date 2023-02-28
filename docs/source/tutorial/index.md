@@ -11,9 +11,9 @@ running on your own infrastructure.
 ```{toctree}
 :maxdepth: 1
 
-installation/quickstart
-installation/installation-basics
-installation/quickstart-docker
+quickstart
+installation-basics
+quickstart-docker
 ```
 
 ## Getting Started
@@ -41,5 +41,5 @@ JupyterHub's functionalities can be accessed using its API. In this section, we 
 ```{toctree}
 :maxdepth: 1
 
-api/server-api
+server-api
 ```
