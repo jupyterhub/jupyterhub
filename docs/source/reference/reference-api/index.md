@@ -1,6 +1,7 @@
 (api-index)=
 
-# JupyterHub API Reference 
+# JupyterHub API Reference
+
 <!--
     Below is a MyST field list, using MyST substitution, as supported
     by enabling the respective MyST extensions in docs/source/conf.py.
@@ -33,4 +34,3 @@ services.auth
 ```
 
 [openapi initiative]: https://www.openapis.org/
-

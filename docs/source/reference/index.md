@@ -30,9 +30,9 @@ changelog
 ---
 
 ## API reference
+
 ```{toctree}
 :maxdepth: 1
 
 reference-api/index.md
 ```
-
