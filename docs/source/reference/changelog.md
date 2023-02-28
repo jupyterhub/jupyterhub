@@ -26,6 +26,11 @@ In addition to these, thanks to contributions from this years Outreachy interns,
 
 ([full changelog](https://github.com/jupyterhub/jupyterhub/compare/3.1.0...HEAD))
 
+#### API and Breaking Changes
+
+- require sqlalchemy 1.4 [#4319](https://github.com/jupyterhub/jupyterhub/pull/4319) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics))
+- Use XSRF tokens for cross-site checks [#4032](https://github.com/jupyterhub/jupyterhub/pull/4032) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio), [@julietKiloRomeo](https://github.com/julietKiloRomeo))
+
 #### New features added
 
 - Make singleuser server-extension default [#4354](https://github.com/jupyterhub/jupyterhub/pull/4354) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
@@ -96,11 +101,6 @@ In addition to these, thanks to contributions from this years Outreachy interns,
 - fix bracket typo in capacity figures [#4250](https://github.com/jupyterhub/jupyterhub/pull/4250) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
 - convert remaining rst files to myst [#4249](https://github.com/jupyterhub/jupyterhub/pull/4249) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
 - doc: fix formatting of spawner env-vars [#4245](https://github.com/jupyterhub/jupyterhub/pull/4245) ([@manics](https://github.com/manics), [@consideRatio](https://github.com/consideRatio), [@minrk](https://github.com/minrk))
-
-#### API and Breaking Changes
-
-- require sqlalchemy 1.4 [#4319](https://github.com/jupyterhub/jupyterhub/pull/4319) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics))
-- Use XSRF tokens for cross-site checks [#4032](https://github.com/jupyterhub/jupyterhub/pull/4032) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio), [@julietKiloRomeo](https://github.com/julietKiloRomeo))
 
 #### Contributors to this release
 
