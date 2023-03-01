@@ -1,7 +1,7 @@
 # Build as jupyterhub/singleuser
 # Run with the DockerSpawner in JupyterHub
 
-ARG BASE_IMAGE=jupyter/base-notebook:2023-01-30
+ARG BASE_IMAGE=jupyter/base-notebook
 FROM $BASE_IMAGE
 MAINTAINER Project Jupyter <jupyter@googlegroups.com>
 
