@@ -43,7 +43,7 @@ target_version = [
 github_url = "https://github.com/jupyterhub/jupyterhub"
 
 [tool.tbump.version]
-current = "3.2.0.dev"
+current = "4.0.0b1"
 
 # Example of a semver regexp.
 # Make sure this matches current_version before
