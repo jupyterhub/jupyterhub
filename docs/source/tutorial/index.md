@@ -43,3 +43,13 @@ JupyterHub's functionalities can be accessed using its API. In this section, we 
 
 server-api
 ```
+
+## Configuration
+
+Further tutorials of configuring JupyterHub for specific tasks
+
+```{toctree}
+:maxdepth: 1
+
+collaboration-users
+```
