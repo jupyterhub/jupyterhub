@@ -9,9 +9,6 @@ capacity-planning
 database
 websecurity
 oauth
+singleuser
 ../rbac/index
 ```
-
-<!---
-The JupyterHub RBAC source files are contained in the source/rbac folder
---->

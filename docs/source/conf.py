@@ -198,7 +198,9 @@ linkcheck_anchors_ignore = [
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3/", None),
     "tornado": ("https://www.tornadoweb.org/en/stable/", None),
+    "jupyter-server": ("https://jupyter-server.readthedocs.io/en/stable/", None),
 }
+
 # -- Options for the opengraph extension -------------------------------------
 # ref: https://github.com/wpilibsuite/sphinxext-opengraph#options
 #
