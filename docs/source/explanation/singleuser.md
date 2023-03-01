@@ -8,27 +8,25 @@ Each JupyterHub user gets a different one (or more than one!).
 A single-user server is a process running somewhere that is:
 
 1. accessible over http[s],
-2. authenticated via JupyterHub OAuth,
+2. authenticated via JupyterHub using OAuth 2.0,
 3. started by a [Spawner](spawners), and
 4. 'owned' by a single JupyterHub user
 
-(singleuser-auth)=
+## The single-user server command
 
-## Single-user server authentication
-
-Implementation-wise, JupyterHub single-user servers are a special-case of [](services),
-and as such use the same (oauth2) authentication mechanism (more on oauth in JupyterHub at [](oauth)).
-This is primarily implemented in the {class}`~.HubOAuth` class.
-
-The default single-user command, `jupyterhub-singleuser`, launches `jupyter-server`, the same program used when you run `jupyter lab` on your laptop.
+The Spawner's default single-user server startup command, `jupyterhub-singleuser`, launches `jupyter-server`, the same program used when you run `jupyter lab` on your laptop.
 (_It can also launch the legacy `jupyter-notebook` server_).
 That's why JupyterHub looks familiar to folks who are already using Jupyter at home or elsewhere.
 It's the same!
 `jupyterhub-singleuser` _customizes_ that program to change (approximately) one thing: **authenticate requests with JupyterHub**.
 
-`jupyter-server` allows customizing _how_ a user is authenticated when making requests to the server.
-By default, `jupyter-server` uses its own cookie to authenticate.
-If that cookie is not present, the server redirects you a login page and asks you to enter a password or token.
+(singleuser-auth)=
+
+## Single-user server authentication
+
+Implementation-wise, JupyterHub single-user servers are a special-case of {ref}`services`
+and as such use the same (OAuth) authentication mechanism (more on OAuth in JupyterHub at [](oauth)).
+This is primarily implemented in the {class}`~.HubOAuth` class.
 
 This code resides in `jupyterhub.singleuser` subpackage of JupyterHub.
 The main task of this code is to:
@@ -39,9 +37,12 @@ The main task of this code is to:
 4. after login, store OAuth tokens in a cookie only used by this single-user server
 5. implement logout to clear the cookie
 
-Most of this is implemented in the {class}`~.HubOAuth` class. `juptyerhub.singleuser` is responsible for _adapting_ the base Jupyter Server to use HubOAuth for these tasks.
+Most of this is implemented in the {class}`~.HubOAuth` class. `jupyterhub.singleuser` is responsible for _adapting_ the base Jupyter Server to use HubOAuth for these tasks.
 
 ### JupyterHub authentication extension
+
+By default, `jupyter-server` uses its own cookie to authenticate.
+If that cookie is not present, the server redirects you a login page and asks you to enter a password or token.
 
 Jupyter Server 2.0 introduces two new _APIs_ for customizing authentication: The [IdentityProvider](jupyter-server:jupyter_server.auth.IdentityProvider) and the [Authorizer](jupyter-server:jupyter_server.auth.Authorizer).
 More information can be found in the [Jupyter Server documentation](https://jupyter-server.readthedocs.io).
@@ -57,7 +58,7 @@ However, specifying a _custom_ Authorizer allows for granular permissions, such 
 
 ### JupyterHub authentication via subclass
 
-Prior to Jupyter Server 2 (i.e. Jupyter Server 1.x or legacy notebook server), JupyterHub authentication is applied via _subclass_.
+Prior to Jupyter Server 2 (i.e. Jupyter Server 1.x or the legacy `jupyter-notebook` server), JupyterHub authentication is applied via _subclass_.
 Originally a subclass of `NotebookApp`,
 this approach works with both `jupyter-server` and `jupyter-notebook`.
 Instead of using the extension mechanisms above,
@@ -90,7 +91,7 @@ which was introduced in JupyterHub 2.
 
 `jupyterhub-singleuser` makes other small customizations to how the single-user server behaves:
 
-1. logs activity on the single-user server, used in [idle-culling][].
+1. logs activity on the single-user server, used in [idle-culling](https://github.com/jupyterhub/jupyterhub-idle-culler).
 2. disables some features that don't make sense in JupyterHub (trash, retrying ports)
 3. loading options such as URLs and SSL configuration from the environment
 4. customize logging for consistency with JupyterHub logs
@@ -101,8 +102,8 @@ By default, `jupyterhub-singleuser` is the same `jupyter-server` used by Jupyter
 But technically, all JupyterHub cares about is that it is:
 
 1. an http server at the prescribed URL, accessible from the Hub and proxy, and
-2. authenticated via [oauth][] with the Hub (it doesn't even have to do this, if you want to do your own authentication, as is done in BinderHub)
+2. authenticated via [OAuth](oauth) with the Hub (it doesn't even have to do this, if you want to do your own authentication, as is done in BinderHub)
 
-which means that you can customize JupyterHub to launch _any_ web application that meets these criteria, by following the specifications in [](services).
+which means that you can customize JupyterHub to launch _any_ web application that meets these criteria, by following the specifications in {ref}`services`.
 
 Most of the time, though, it's easier to use [jupyter-server-proxy](https://jupyter-server-proxy.readthedocs.io) if you want to launch additional web applications in JupyterHub.
