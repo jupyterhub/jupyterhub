@@ -44,7 +44,7 @@ Most of this is implemented in the {class}`~.HubOAuth` class. `jupyterhub.single
 By default, `jupyter-server` uses its own cookie to authenticate.
 If that cookie is not present, the server redirects you a login page and asks you to enter a password or token.
 
-Jupyter Server 2.0 introduces two new _APIs_ for customizing authentication: The [IdentityProvider](jupyter-server:jupyter_server.auth.IdentityProvider) and the [Authorizer](jupyter-server:jupyter_server.auth.Authorizer).
+Jupyter Server 2.0 introduces two new _APIs_ for customizing authentication: the [IdentityProvider](inv:jupyter-server#jupyter_server.auth.IdentityProvider) and the [Authorizer](inv:jupyter-server#jupyter_server.auth.Authorizer).
 More information can be found in the [Jupyter Server documentation](https://jupyter-server.readthedocs.io).
 
 JupyterHub implements these APIs in `jupyterhub.singleuser.extension`.

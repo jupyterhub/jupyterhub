@@ -10,7 +10,7 @@
 
 autodoc-traits
 jupyterhub-sphinx-theme
-myst-parser
+myst-parser>=0.19
 pre-commit
 pytablewriter>=0.56
 ruamel.yaml
