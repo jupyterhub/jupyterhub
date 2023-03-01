@@ -2381,11 +2381,9 @@ class JupyterHub(Application):
         name = spec['name']
         # get/create orm
         orm_service = orm.Service.find(self.db, name=name)
-        print('########### found', name, orm_service)
         if orm_service is None:
             # not found, create a new one
             orm_service = orm.Service(name=name, from_config=from_config)
-            print('########### adding', name, orm_service)
             self.db.add(orm_service)
             if spec.get('admin', False):
                 self.log.warning(
@@ -2396,7 +2394,6 @@ class JupyterHub(Application):
                 )
                 roles.update_roles(self.db, entity=orm_service, roles=['admin'])
         orm_service.admin = spec.get('admin', False)
-        print('commiting db', name)
         self.db.commit()
         service = Service(
             parent=self,

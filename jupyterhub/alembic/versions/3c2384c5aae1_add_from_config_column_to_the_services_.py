@@ -11,8 +11,8 @@ down_revision = '0eee8c825d24'
 branch_labels = None
 depends_on = None
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 
 def upgrade():
@@ -24,6 +24,7 @@ def upgrade():
             sa.Column('from_config', sa.Boolean, nullable=False, default=True),
         )
         op.execute('UPDATE services SET from_config = true')
+
 
 def downgrade():
     op.drop_column('services', sa.Column('from_config'))

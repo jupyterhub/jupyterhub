@@ -6,9 +6,10 @@ Currently GET-only, no actions can be taken to modify services.
 # Distributed under the terms of the Modified BSD License.
 import json
 
+from tornado import web
+
 from ..scopes import Scope, needs_scope
 from .base import APIHandler
-from tornado import web
 
 
 class ServiceListAPIHandler(APIHandler):
@@ -29,7 +30,7 @@ class ServiceAPIHandler(APIHandler):
         service = self.services[service_name]
         self.write(json.dumps(self.service_model(service)))
 
-    @needs_scope('read:services', 'read:services:name', 'read:roles:services')
+    @needs_scope('admin:services')
     def post(self, service_name: str):
         data = self.get_json_body()
         service = self.find_service(service_name)
@@ -39,7 +40,7 @@ class ServiceAPIHandler(APIHandler):
 
         if not data or not isinstance(data, dict):
             raise web.HTTPError(400, "Invalid service data")
-    
+
         data['name'] = service_name
         self._check_service_model(data)
         self.service_from_spec(data)

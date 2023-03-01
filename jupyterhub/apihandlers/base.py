@@ -2,7 +2,6 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import json
-from typing import Union
 import warnings
 from functools import lru_cache
 from http.client import responses
@@ -410,7 +409,7 @@ class APIHandler(BaseHandler):
         'environment': dict,
         'user': str,
         'oauth_client_id': str,
-        'oauth_redirect_uri': str
+        'oauth_redirect_uri': str,
     }
 
     def _check_model(self, model, model_types, name):
@@ -454,7 +453,7 @@ class APIHandler(BaseHandler):
     def _check_service_model(self, model):
         """Check a request-provided service model from a REST API"""
         self._check_model(model, self._service_model_types, 'service')
-        service_name =  model.get('name')
+        service_name = model.get('name')
         if not isinstance(service_name, str):
             raise web.HTTPError(
                 400, ("Service name must be str, not %r", type(service_name))
