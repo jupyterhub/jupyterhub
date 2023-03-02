@@ -229,9 +229,10 @@ async def exponential_backoff(
         # add some random jitter to improve performance
         # this prevents overloading any single tornado loop iteration with
         # too many things
-        dt = min(max_wait, remaining, random.uniform(0, start_wait * scale))
-        if dt < max_wait:
+        limit = min(max_wait, start_wait * scale)
+        if limit < max_wait:
             scale *= scale_factor
+        dt = min(remaining, random.uniform(0, limit))
         await asyncio.sleep(dt)
     raise asyncio.TimeoutError(fail_message)
 
