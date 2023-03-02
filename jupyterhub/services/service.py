@@ -371,6 +371,11 @@ class Service(LoggingConfigurable):
         else:
             return self.server.base_url
 
+    @property
+    def from_config(self):
+        """Is the service defined from config file?"""
+        return self.orm.from_config
+
     def __repr__(self):
         return "<{cls}(name={name}{managed})>".format(
             cls=self.__class__.__name__,

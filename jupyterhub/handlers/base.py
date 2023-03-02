@@ -12,7 +12,6 @@ import uuid
 import warnings
 from datetime import datetime, timedelta
 from http.client import responses
-from typing import Optional
 from urllib.parse import parse_qs, parse_qsl, urlencode, urlparse, urlunparse
 
 from jinja2 import TemplateNotFound
@@ -1307,18 +1306,6 @@ class BaseHandler(RequestHandler):
         if self.settings['template_vars']:
             ns.update(self.settings['template_vars'])
         return ns
-
-    def service_from_spec(self, spec) -> None:
-        """Create service from api request"""
-
-        self.app._service_from_spec(spec, from_config=False)
-
-    def find_service(self, name: str) -> Optional[orm.Service]:
-        """Get a service by name
-        return None if no such service
-        """
-        orm_service = orm.Service.find(db=self.db, name=name)
-        return orm_service
 
     def get_accessible_services(self, user):
         accessible_services = []

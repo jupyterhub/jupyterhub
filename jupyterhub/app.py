@@ -2292,7 +2292,7 @@ class JupyterHub(Application):
                 if not self.authenticator.validate_username(name):
                     raise ValueError("Token user name %r is not valid" % name)
             if kind == 'service':
-                if not any(service["name"] == name for service in self.services):
+                if not any(service_name == name for service_name in self._service_map):
                     self.log.warning(
                         f"service {name} not in services, creating implicitly. It is recommended to register services using services list."
                     )
@@ -2355,13 +2355,43 @@ class JupyterHub(Application):
         )
         pc.start()
 
+    def _service_from_orm(
+        self,
+        orm_service: orm.Service,
+        domain: str,
+        host: str,
+    ):
+        name = orm_service.name
+        service = Service(
+            parent=self,
+            app=self,
+            base_url=self.base_url,
+            db=self.db,
+            orm=orm_service,
+            roles=orm_service.roles,
+            domain=domain,
+            host=host,
+            hub=self.hub,
+        )
+        traits = service.traits(input=True)
+        for key in traits:
+            value = getattr(orm_service, key, None)
+            if value is not None:
+                setattr(service, key, value)
+
+        if orm_service.oauth_client is not None:
+            service.oauth_redirect_uri = orm_service.oauth_client.redirect_uri
+        self._service_map[name] = service
+
+        return service
+
     def _service_from_spec(
         self,
         spec: Dict,
         from_config=True,
         domain: Optional[str] = None,
         host: Optional[str] = None,
-    ) -> None:
+    ) -> Optional[Service]:
         if domain is None:
             if self.domain:
                 domain = 'services.' + self.domain
@@ -2393,7 +2423,13 @@ class JupyterHub(Application):
                     "the Service admin flag will be ignored."
                 )
                 roles.update_roles(self.db, entity=orm_service, roles=['admin'])
+        else:
+            # Do nothing if the config file tries to modify a API-base service
+            # or vice versa.
+            if orm_service.from_config != from_config:
+                return
         orm_service.admin = spec.get('admin', False)
+
         self.db.commit()
         service = Service(
             parent=self,
@@ -2475,6 +2511,8 @@ class JupyterHub(Application):
 
         self._service_map[name] = service
 
+        return service
+
     def init_services(self):
         self._service_map.clear()
         if self.domain:
@@ -2487,10 +2525,15 @@ class JupyterHub(Application):
         for spec in self.services:
             self._service_from_spec(spec, from_config=True, domain=domain, host=host)
 
-        # delete services from db not in service config:
-        for service in self.db.query(orm.Service):
-            if service.name not in self._service_map:
-                self.db.delete(service)
+        for service_orm in self.db.query(orm.Service):
+            if service_orm.from_config:
+                # delete config-based services from db
+                # that are not in current config file:
+                if service_orm.name not in self._service_map:
+                    self.db.delete(service_orm)
+            else:
+                self._service_from_orm(service_orm, domain, host)
+
         self.db.commit()
 
     async def check_services_health(self):
@@ -2674,7 +2717,6 @@ class JupyterHub(Application):
         for user in self.users.values():
             for spawner in user.spawners.values():
                 oauth_client_ids.add(spawner.oauth_client_id)
-
         for i, oauth_client in enumerate(self.db.query(orm.OAuthClient)):
             if oauth_client.identifier not in oauth_client_ids:
                 self.log.warning("Deleting OAuth client %s", oauth_client.identifier)
