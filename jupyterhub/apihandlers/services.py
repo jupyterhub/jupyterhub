@@ -5,7 +5,7 @@ Currently GET-only, no actions can be taken to modify services.
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import json
-from typing import Optional
+from typing import Optional, Tuple
 
 from tornado import web
 
@@ -36,7 +36,7 @@ class ServiceAPIHandler(APIHandler):
     @needs_scope('admin:services')
     async def post(self, service_name: str):
         data = self.get_json_body()
-        service = self.find_service(service_name)
+        service, _ = self.find_service(service_name)
 
         if service is not None:
             raise web.HTTPError(409, f"Service {service_name} already exists")
@@ -65,7 +65,7 @@ class ServiceAPIHandler(APIHandler):
 
     @needs_scope('admin:services')
     async def delete(self, service_name: str):
-        service = self.find_service(service_name)
+        service, orm_service = self.find_service(service_name)
 
         if service is None:
             raise web.HTTPError(404, f"Service {service_name} does not exists")
@@ -74,30 +74,46 @@ class ServiceAPIHandler(APIHandler):
             raise web.HTTPError(
                 405, f"Service {service_name} is not modifiable at runtime"
             )
+        try:
+            await self.remove_service(service, orm_service)
+            self.services.pop(service_name)
+        except Exception:
+            msg = f"Failed to remove service {service_name}"
+            self.log.error(msg, exc_info=True)
+            raise web.HTTPError(400, msg)
+        
+        self.set_status(200)
 
+    async def remove_service(self, service: Service, orm_service: orm.Service) -> None:
+        
         if service.managed:
             await service.stop()
 
         if service.oauth_client:
             self.oauth_provider.remove_client(service.oauth_client_id)
 
-        orm_service = orm.Service.find(db=self.db, name=service_name)
-        if orm_service is not None:
-            if service.api_token is not None:
-                # Remove api token from database
-                orm_token = (
-                    self.db.query(orm.APIToken)
-                    .filter_by(service_id=orm_service.id)
-                    .first()
-                )
-                if orm_token is not None:
-                    self.db.delete(orm_token)
+        if service.api_token is not None:
+            # Remove api token from database
+            orm_token = (
+                self.db.query(orm.APIToken)
+                .filter_by(service_id=orm_service.id)
+                .first()
+            )
+            if orm_token is not None:
+                self.db.delete(orm_token)
 
-            self.services.pop(service_name)
-            self.db.delete(orm_service)
+        if orm_service._server_id is not None:
+            orm_server = (
+                self.db.query(orm.Server)
+                .filter_by(id=orm_service._server_id)
+                .first()
+            )
+            if orm_server is not None:
+                self.db.delete(orm_server)
 
+        self.db.delete(orm_service)
         self.db.commit()
-        self.set_status(200)
+        
 
     def service_from_spec(self, spec) -> Optional[Service]:
         """Create service from api request"""
@@ -105,15 +121,18 @@ class ServiceAPIHandler(APIHandler):
         self.db.commit()
         return service
 
-    def find_service(self, name: str) -> Optional[Service]:
+    def find_service(
+        self, name: str
+    ) -> Tuple[Optional[Service], Optional[orm.Service]]:
         """Get a service by name
         return None if no such service
         """
         orm_service = orm.Service.find(db=self.db, name=name)
         if orm_service is not None:
             service = self.services.get(name)
-            return service
+            return service, orm_service
 
+        return None, None
 
 default_handlers = [
     (r"/api/services", ServiceListAPIHandler),
