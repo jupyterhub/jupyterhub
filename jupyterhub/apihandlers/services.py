@@ -81,11 +81,10 @@ class ServiceAPIHandler(APIHandler):
             msg = f"Failed to remove service {service_name}"
             self.log.error(msg, exc_info=True)
             raise web.HTTPError(400, msg)
-        
+
         self.set_status(200)
 
     async def remove_service(self, service: Service, orm_service: orm.Service) -> None:
-        
         if service.managed:
             await service.stop()
 
@@ -95,25 +94,20 @@ class ServiceAPIHandler(APIHandler):
         if service.api_token is not None:
             # Remove api token from database
             orm_token = (
-                self.db.query(orm.APIToken)
-                .filter_by(service_id=orm_service.id)
-                .first()
+                self.db.query(orm.APIToken).filter_by(service_id=orm_service.id).first()
             )
             if orm_token is not None:
                 self.db.delete(orm_token)
 
         if orm_service._server_id is not None:
             orm_server = (
-                self.db.query(orm.Server)
-                .filter_by(id=orm_service._server_id)
-                .first()
+                self.db.query(orm.Server).filter_by(id=orm_service._server_id).first()
             )
             if orm_server is not None:
                 self.db.delete(orm_server)
 
         self.db.delete(orm_service)
         self.db.commit()
-        
 
     def service_from_spec(self, spec) -> Optional[Service]:
         """Create service from api request"""
@@ -133,6 +127,7 @@ class ServiceAPIHandler(APIHandler):
             return service, orm_service
 
         return None, None
+
 
 default_handlers = [
     (r"/api/services", ServiceListAPIHandler),
