@@ -2355,7 +2355,7 @@ class JupyterHub(Application):
         )
         pc.start()
 
-    def _service_from_orm(
+    def service_from_orm(
         self,
         orm_service: orm.Service,
         domain: str,
@@ -2385,7 +2385,7 @@ class JupyterHub(Application):
 
         return service
 
-    def _service_from_spec(
+    def service_from_spec(
         self,
         spec: Dict,
         from_config=True,
@@ -2523,7 +2523,7 @@ class JupyterHub(Application):
             domain = host = ''
 
         for spec in self.services:
-            self._service_from_spec(spec, from_config=True, domain=domain, host=host)
+            self.service_from_spec(spec, from_config=True, domain=domain, host=host)
 
         for service_orm in self.db.query(orm.Service):
             if service_orm.from_config:
@@ -2532,7 +2532,7 @@ class JupyterHub(Application):
                 if service_orm.name not in self._service_map:
                     self.db.delete(service_orm)
             else:
-                self._service_from_orm(service_orm, domain, host)
+                self.service_from_orm(service_orm, domain, host)
 
         self.db.commit()
 
@@ -3158,6 +3158,86 @@ class JupyterHub(Application):
 
         await self.proxy.check_routes(self.users, self._service_map, routes)
 
+    async def start_service(
+        self,
+        service_name: str,
+        service: Service,
+        ssl_context: Optional[ssl.SSLContext] = None,
+    ) -> bool:
+        """Start a managed service or poll for external service
+
+        Args:
+            service_name (str): Name of the service.
+            service (Service): The service object.
+
+        Returns:
+            boolean: Returns `True` if the service is started successfully,
+            returns `False` otherwise.
+        """
+        if ssl_context is None:
+            ssl_context = make_ssl_context(
+                self.internal_ssl_key,
+                self.internal_ssl_cert,
+                cafile=self.internal_ssl_ca,
+                purpose=ssl.Purpose.CLIENT_AUTH,
+            )
+
+        msg = f'{service_name} at {service.url}' if service.url else service_name
+        if service.managed:
+            self.log.info("Starting managed service %s", msg)
+            try:
+                await service.start()
+            except Exception as e:
+                self.log.critical(
+                    "Failed to start service %s", service_name, exc_info=True
+                )
+                return False
+        else:
+            self.log.info("Adding external service %s", msg)
+
+        if service.url:
+            tries = 10 if service.managed else 1
+            for i in range(tries):
+                try:
+                    await Server.from_orm(service.orm.server).wait_up(
+                        http=True, timeout=1, ssl_context=ssl_context
+                    )
+                except AnyTimeoutError:
+                    if service.managed:
+                        status = await service.spawner.poll()
+                        if status is not None:
+                            self.log.error(
+                                "Service %s exited with status %s",
+                                service_name,
+                                status,
+                            )
+                            break
+                else:
+                    break
+            else:
+                self.log.error(
+                    "Cannot connect to %s service %s at %s. Is it running?",
+                    service.kind,
+                    service_name,
+                    service.url,
+                )
+        return True
+
+    def toggle_service_health_check(self) -> None:
+        if self.service_check_interval and any(
+            s.url for s in self._service_map.values()
+        ):
+            if self._check_services_health_callback is None:
+                self._check_services_health_callback = PeriodicCallback(
+                    self.check_services_health, 1e3 * self.service_check_interval
+                )
+                self._check_services_health_callback.start()
+        else:
+            # Services requiring health check are removed, stop
+            # the periodic callback.
+            if self._check_services_health_callback is not None:
+                self._check_services_health_callback.stop()
+
     async def start(self):
         """Start the whole thing"""
         self.io_loop = loop = IOLoop.current()
@@ -3243,55 +3323,18 @@ class JupyterHub(Application):
 
         # start the service(s)
         for service_name, service in self._service_map.items():
-            msg = f'{service_name} at {service.url}' if service.url else service_name
-            if service.managed:
-                self.log.info("Starting managed service %s", msg)
-                try:
-                    await service.start()
-                except Exception as e:
-                    self.log.critical(
-                        "Failed to start service %s", service_name, exc_info=True
-                    )
-                    self.exit(1)
-            else:
-                self.log.info("Adding external service %s", msg)
-
-            if service.url:
-                tries = 10 if service.managed else 1
-                for i in range(tries):
-                    try:
-                        await Server.from_orm(service.orm.server).wait_up(
-                            http=True, timeout=1, ssl_context=ssl_context
-                        )
-                    except AnyTimeoutError:
-                        if service.managed:
-                            status = await service.spawner.poll()
-                            if status is not None:
-                                self.log.error(
-                                    "Service %s exited with status %s",
-                                    service_name,
-                                    status,
-                                )
-                                break
-                    else:
-                        break
-                else:
-                    self.log.error(
-                        "Cannot connect to %s service %s at %s. Is it running?",
-                        service.kind,
-                        service_name,
-                        service.url,
-                    )
+            service_status = await self._start_service(
+                service_name, service, ssl_context
+            )
+            if not service_status:
+                # Stop the application if a service failed to start.
+                self.exit(1)
 
         await self.proxy.check_routes(self.users, self._service_map)
 
-        if self.service_check_interval and any(
-            s.url for s in self._service_map.values()
-        ):
-            pc = PeriodicCallback(
-                self.check_services_health, 1e3 * self.service_check_interval
-            )
-            pc.start()
+        # Check services health
+        self._check_services_health_callback = None
+        self.toggle_service_health_check()
 
         if self.last_activity_interval:
             pc = PeriodicCallback(

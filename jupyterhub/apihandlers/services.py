@@ -33,6 +33,41 @@ class ServiceAPIHandler(APIHandler):
         service = self.services[service_name]
         self.write(json.dumps(self.service_model(service)))
 
+    async def add_service(self, spec: dict) -> Service:
+        """Add a new service and related objects to the database
+
+        Args:
+            spec (dict): The service specification
+
+        Raises:
+            web.HTTPError: Raise if the service is not created
+
+        Returns:
+            Service: Returns the service instance.
+
+        """
+
+        self._check_service_model(spec)
+        service_name = spec["name"]
+        new_service = self.service_from_spec(spec)
+
+        if new_service is None:
+            raise web.HTTPError(400, f"Failed to create service {service_name}")
+        if new_service.api_token:
+            # Add api token to database
+            await self.app._add_tokens(
+                {new_service.api_token: new_service.name}, kind='service'
+            )
+        elif new_service.managed:
+            new_service.api_token = new_service.orm.new_api_token(
+                note='generated at runtime'
+            )
+        if new_service.managed or new_service.url:
+            self.app.start_service(service_name, new_service)
+            self.app.toggle_service_health_check()
+
+        return new_service
+
     @needs_scope('admin:services')
     async def post(self, service_name: str):
         data = self.get_json_body()
@@ -45,21 +80,7 @@ class ServiceAPIHandler(APIHandler):
             raise web.HTTPError(400, "Invalid service data")
 
         data['name'] = service_name
-        self._check_service_model(data)
-        new_service = self.service_from_spec(data)
-
-        if new_service is None:
-            raise web.HTTPError(400, f'Failed to create service {service_name}')
-        if new_service.api_token:
-            # Add api token to database
-            await self.app._add_tokens(
-                {new_service.api_token: new_service.name}, kind='service'
-            )
-        elif new_service.managed:
-            new_service.api_token = new_service.orm.new_api_token(
-                note='generated at runtime'
-            )
-
+        new_service = self.add_service(data)
         self.write(json.dumps(self.service_model(new_service)))
         self.set_status(201)
 
@@ -85,8 +106,17 @@ class ServiceAPIHandler(APIHandler):
         self.set_status(200)
 
     async def remove_service(self, service: Service, orm_service: orm.Service) -> None:
+        """Remove a service and all related objects from the database.
+
+        Args:
+            service (Service): the service object to be removed
+
+            orm_service (orm.Service): The `orm.Service` object linked
+            with `service`
+        """
         if service.managed:
             await service.stop()
+            self.app.toggle_service_health_check()
 
         if service.oauth_client:
             self.oauth_provider.remove_client(service.oauth_client_id)
@@ -111,7 +141,7 @@ class ServiceAPIHandler(APIHandler):
 
     def service_from_spec(self, spec) -> Optional[Service]:
         """Create service from api request"""
-        service = self.app._service_from_spec(spec, from_config=False)
+        service = self.app.service_from_spec(spec, from_config=False)
         self.db.commit()
         return service
 
