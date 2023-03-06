@@ -13,16 +13,35 @@ depends_on = None
 
 import sqlalchemy as sa
 from alembic import op
-from sqlalchemy import Column, ForeignKey, Table
+from sqlalchemy import Column, ForeignKey, Table, text
 from sqlalchemy.orm import relationship
 from sqlalchemy.orm.session import Session
 
-from jupyterhub import orm, roles, scopes
+from jupyterhub import orm, roles
+
+
+def access_scopes(oauth_client: orm.OAuthClient, db: Session):
+    """Return scope(s) required to access an oauth client
+    This is a clone of `scopes.access_scopes` without using
+    the `orm.Service`
+    """
+    scopes = set()
+    if oauth_client.identifier == "jupyterhub":
+        return frozenset()
+    spawner = oauth_client.spawner
+    if spawner:
+        scopes.add(f"access:servers!server={spawner.user.name}/{spawner.name}")
+    else:
+        statement = f"SELECT * FROM services WHERE oauth_client_id = '{oauth_client.identifier}'"
+        service = db.execute(text(statement)).fetchall()
+        if len(service) > 0:
+            scopes.add(f"access:services!service={service.name}")
+
+    return frozenset(scopes)
 
 
 def upgrade():
     c = op.get_bind()
-
     tables = sa.inspect(c.engine).get_table_names()
 
     # oauth codes are short lived, no need to upgrade them
@@ -100,7 +119,7 @@ def upgrade():
             db = Session(bind=c)
             for oauth_client in db.query(orm.OAuthClient):
                 allowed_scopes = set(roles.roles_to_scopes(oauth_client.allowed_roles))
-                allowed_scopes.update(scopes.access_scopes(oauth_client))
+                allowed_scopes.update(access_scopes(oauth_client, db))
                 oauth_client.allowed_scopes = sorted(allowed_scopes)
             db.commit()
             # drop token-role relationship

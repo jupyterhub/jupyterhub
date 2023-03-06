@@ -417,7 +417,7 @@ class Service(Base):
         ),
     )
 
-    from_config = Column(Boolean, default=True)
+    from_config = Column(Boolean, default=True, nullable=True)
 
     oauth_client = relationship(
         'OAuthClient',
