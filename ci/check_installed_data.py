@@ -12,7 +12,7 @@ print(f"DATA_FILES_PATH={DATA_FILES_PATH}", end=" ")
 DATA_FILES_PATH = Path(DATA_FILES_PATH)
 assert DATA_FILES_PATH.is_dir(), DATA_FILES_PATH
 for subpath in (
-    "templates/page.html",
+    "templates/spawn.html",
     "static/css/style.min.css",
     "static/components/jquery/dist/jquery.js",
     "static/js/admin-react.js",
@@ -28,6 +28,7 @@ for subpath in (
     "alembic.ini",
     "alembic/versions/833da8570507_rbac.py",
     "event-schemas/server-actions/v1.yaml",
+    "singleuser/templates/page.html",
 ):
     path = jupyterhub_path / subpath
     assert path.is_file(), path
