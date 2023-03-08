@@ -3238,6 +3238,48 @@ class JupyterHub(Application):
             if self._check_services_health_callback is not None:
                 self._check_services_health_callback.stop()
 
+    async def _start_service(self, service_name, service, ssl_context):
+        for service_name, service in self._service_map.items():
+            msg = f'{service_name} at {service.url}' if service.url else service_name
+            if service.managed:
+                self.log.info("Starting managed service %s", msg)
+                try:
+                    await service.start()
+                except Exception as e:
+                    self.log.critical(
+                        "Failed to start service %s", service_name, exc_info=True
+                    )
+                    self.exit(1)
+            else:
+                self.log.info("Adding external service %s", msg)
+
+            if service.url:
+                tries = 10 if service.managed else 1
+                for i in range(tries):
+                    try:
+                        await Server.from_orm(service.orm.server).wait_up(
+                            http=True, timeout=1, ssl_context=ssl_context
+                        )
+                    except AnyTimeoutError:
+                        if service.managed:
+                            status = await service.spawner.poll()
+                            if status is not None:
+                                self.log.error(
+                                    "Service %s exited with status %s",
+                                    service_name,
+                                    status,
+                                )
+                                break
+                    else:
+                        break
+                else:
+                    self.log.error(
+                        "Cannot connect to %s service %s at %s. Is it running?",
+                        service.kind,
+                        service_name,
+                        service.url,
+                    )
+
     async def start(self):
         """Start the whole thing"""
         self.io_loop = loop = IOLoop.current()
@@ -3326,9 +3368,9 @@ class JupyterHub(Application):
             service_status = await self._start_service(
                 service_name, service, ssl_context
             )
-            if not service_status:
-                # Stop the application if a service failed to start.
-                self.exit(1)
+            # if not service_status:
+            #     # Stop the application if a service failed to start.
+            #     self.exit(1)
 
         await self.proxy.check_routes(self.users, self._service_map)
 

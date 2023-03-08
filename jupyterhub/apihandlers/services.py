@@ -80,7 +80,7 @@ class ServiceAPIHandler(APIHandler):
             raise web.HTTPError(400, "Invalid service data")
 
         data['name'] = service_name
-        new_service = self.add_service(data)
+        new_service = await self.add_service(data)
         self.write(json.dumps(self.service_model(new_service)))
         self.set_status(201)
 

@@ -394,6 +394,26 @@ class Service(Base):
         'Role', secondary='service_role_map', back_populates='services'
     )
 
+    url = Column(Unicode(2047), nullable=True)
+
+    oauth_client_allowed_scopes = Column(
+        JSONList, nullable=True, default=[]
+    )  # List of string
+
+    info = Column(JSONDict, nullable=True, default={})  # Dict
+
+    display = Column(Boolean, default=True, nullable=True)
+
+    oauth_no_confirm = Column(Boolean, default=False, nullable=True)
+
+    command = Column(JSONList, nullable=True, default=[])  # List of string
+
+    cwd = Column(Unicode, nullable=True)
+
+    environment = Column(JSONDict, nullable=True, default={})  # Dict
+
+    user = Column(Unicode, nullable=True)
+
     api_tokens = relationship(
         "APIToken", back_populates="service", cascade="all, delete-orphan"
     )
