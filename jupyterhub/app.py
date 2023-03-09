@@ -2375,7 +2375,7 @@ class JupyterHub(Application):
         )
         traits = service.traits(input=True)
         for key in traits:
-            value = getattr(orm_service, key, None)
+            value = orm_service.get_column(key)
             if value is not None:
                 setattr(service, key, value)
 
@@ -2448,6 +2448,7 @@ class JupyterHub(Application):
             if key not in traits:
                 raise AttributeError("No such service field: %s" % key)
             setattr(service, key, value)
+            orm_service.update_column(key, value)
 
         if service.api_token:
             self.service_tokens[service.api_token] = service.name
@@ -3238,48 +3239,6 @@ class JupyterHub(Application):
             if self._check_services_health_callback is not None:
                 self._check_services_health_callback.stop()
 
-    async def _start_service(self, service_name, service, ssl_context):
-        for service_name, service in self._service_map.items():
-            msg = f'{service_name} at {service.url}' if service.url else service_name
-            if service.managed:
-                self.log.info("Starting managed service %s", msg)
-                try:
-                    await service.start()
-                except Exception as e:
-                    self.log.critical(
-                        "Failed to start service %s", service_name, exc_info=True
-                    )
-                    self.exit(1)
-            else:
-                self.log.info("Adding external service %s", msg)
-
-            if service.url:
-                tries = 10 if service.managed else 1
-                for i in range(tries):
-                    try:
-                        await Server.from_orm(service.orm.server).wait_up(
-                            http=True, timeout=1, ssl_context=ssl_context
-                        )
-                    except AnyTimeoutError:
-                        if service.managed:
-                            status = await service.spawner.poll()
-                            if status is not None:
-                                self.log.error(
-                                    "Service %s exited with status %s",
-                                    service_name,
-                                    status,
-                                )
-                                break
-                    else:
-                        break
-                else:
-                    self.log.error(
-                        "Cannot connect to %s service %s at %s. Is it running?",
-                        service.kind,
-                        service_name,
-                        service.url,
-                    )
-
     async def start(self):
         """Start the whole thing"""
         self.io_loop = loop = IOLoop.current()
@@ -3365,12 +3324,21 @@ class JupyterHub(Application):
 
         # start the service(s)
         for service_name, service in self._service_map.items():
-            service_status = await self._start_service(
+            service_status = await self.start_service(
                 service_name, service, ssl_context
             )
-            # if not service_status:
-            #     # Stop the application if a service failed to start.
-            #     self.exit(1)
+            if not service_status:
+                if service.from_config:
+                    # Stop the application if a config-based service failed to start.
+                    self.exit(1)
+                else:
+                    # Only warn for database-based service, so that admin can connect
+                    # to hub to remove the service.
+                    self.log.error(
+                        "Failed to start database-based service %s",
+                        service_name,
+                        exc_info=True,
+                    )
 
         await self.proxy.check_routes(self.users, self._service_map)
 

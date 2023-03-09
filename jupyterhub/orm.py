@@ -396,23 +396,23 @@ class Service(Base):
 
     url = Column(Unicode(2047), nullable=True)
 
-    oauth_client_allowed_scopes = Column(
-        JSONList, nullable=True, default=[]
-    )  # List of string
+    oauth_client_allowed_scopes = Column(JSONList, nullable=True)
 
-    info = Column(JSONDict, nullable=True, default={})  # Dict
+    info = Column(JSONDict, nullable=True)
 
-    display = Column(Boolean, default=True, nullable=True)
+    display = Column(Boolean, nullable=True)
 
-    oauth_no_confirm = Column(Boolean, default=False, nullable=True)
+    oauth_no_confirm = Column(Boolean, nullable=True)
 
-    command = Column(JSONList, nullable=True, default=[])  # List of string
+    command = Column(JSONList, nullable=True)
 
-    cwd = Column(Unicode, nullable=True)
+    cwd = Column(Unicode(4095), nullable=True)
 
-    environment = Column(JSONDict, nullable=True, default={})  # Dict
+    environment = Column(JSONDict, nullable=True)
 
-    user = Column(Unicode, nullable=True)
+    user = Column(Unicode(255), nullable=True)
+
+    from_config = Column(Boolean, default=True)
 
     api_tokens = relationship(
         "APIToken", back_populates="service", cascade="all, delete-orphan"
@@ -437,8 +437,6 @@ class Service(Base):
         ),
     )
 
-    from_config = Column(Boolean, default=True, nullable=True)
-
     oauth_client = relationship(
         'OAuthClient',
         back_populates="service",
@@ -459,6 +457,43 @@ class Service(Base):
         Returns None if not found.
         """
         return db.query(cls).filter(cls.name == name).first()
+
+    def update_column(self, column_name: str, value: any) -> bool:
+        """_summary_
+
+        Args:
+            column_name (str): _description_
+            value (any): _description_
+
+        Returns:
+            bool: _description_
+        """
+        if (
+            hasattr(self, column_name)
+            and not getattr(Service, column_name).foreign_keys
+        ):
+            setattr(self, column_name, value)
+            return True
+        else:
+            return False
+
+    def get_column(self, column_name: str):
+        """_summary_
+
+        Args:
+            column_name (str): _description_
+            value (any): _description_
+
+        Returns:
+            bool: _description_
+        """
+        if (
+            hasattr(self, column_name)
+            and not getattr(Service, column_name).foreign_keys
+        ):
+            return getattr(self, column_name)
+        else:
+            return None
 
 
 class Expiring:

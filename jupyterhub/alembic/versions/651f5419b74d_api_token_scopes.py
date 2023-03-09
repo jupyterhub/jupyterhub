@@ -32,10 +32,12 @@ def access_scopes(oauth_client: orm.OAuthClient, db: Session):
     if spawner:
         scopes.add(f"access:servers!server={spawner.user.name}/{spawner.name}")
     else:
-        statement = f"SELECT * FROM services WHERE oauth_client_id = '{oauth_client.identifier}'"
-        service = db.execute(text(statement)).fetchall()
+        statement = "SELECT * FROM services WHERE oauth_client_id = :identifier"
+        service = db.execute(
+            text(statement), {"identifier": oauth_client.identifier}
+        ).fetchall()
         if len(service) > 0:
-            scopes.add(f"access:services!service={service.name}")
+            scopes.add(f"access:services!service={service[0].name}")
 
     return frozenset(scopes)
 

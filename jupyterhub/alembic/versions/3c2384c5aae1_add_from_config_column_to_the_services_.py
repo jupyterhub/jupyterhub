@@ -35,7 +35,7 @@ def upgrade():
     if 'services' in tables:
         op.add_column(
             'services',
-            sa.Column('from_config', sa.Boolean, nullable=True, default=True),
+            sa.Column('from_config', sa.Boolean, default=True),
         )
         op.execute('UPDATE services SET from_config = true')
         for item in COL_DATA:

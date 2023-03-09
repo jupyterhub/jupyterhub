@@ -63,8 +63,20 @@ class ServiceAPIHandler(APIHandler):
                 note='generated at runtime'
             )
         if new_service.managed or new_service.url:
-            self.app.start_service(service_name, new_service)
+            service_status = self.app.start_service(service_name, new_service)
+            if not service_status:
+                self.log.error(
+                    'Failed to start service %s',
+                    service_name,
+                    exc_info=True,
+                )
             self.app.toggle_service_health_check()
+
+        if new_service.oauth_no_confirm:
+            oauth_no_confirm_list = self.settings.get('oauth_no_confirm_list')
+            msg = f"Allowing service {new_service.name} to complete OAuth without confirmation on an authorization web page"
+            self.log.warning(msg)
+            oauth_no_confirm_list.add(new_service.oauth_client_id)
 
         return new_service
 
@@ -135,6 +147,10 @@ class ServiceAPIHandler(APIHandler):
             )
             if orm_server is not None:
                 self.db.delete(orm_server)
+
+        if service.oauth_no_confirm:
+            oauth_no_confirm_list = self.settings.get('oauth_no_confirm_list')
+            oauth_no_confirm_list.remove(service.oauth_client_id)
 
         self.db.delete(orm_service)
         self.db.commit()
