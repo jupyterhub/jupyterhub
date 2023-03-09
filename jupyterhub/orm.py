@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 
 import alembic.command
 import alembic.config
+import sqlalchemy
 from alembic.script import ScriptDirectory
 from sqlalchemy import (
     Boolean,
@@ -902,10 +903,12 @@ def register_ping_connection(engine):
     https://docs.sqlalchemy.org/en/rel_1_1/core/pooling.html#disconnect-handling-pessimistic
     """
 
-    @event.listens_for(engine, "engine_connect")
-    def ping_connection(connection, branch=None):
-        # TODO: remove unused branch arg when we require sqlalchemy 2.0
-
+    # listeners are normally registered as a decorator,
+    # but we need two different signatures to avoid SAWarning:
+    #    The argument signature for the "ConnectionEvents.engine_connect" event listener has changed
+    # while we support sqla 1.4 and 2.0.
+    # @event.listens_for(engine, "engine_connect")
+    def ping_connection(connection):
         # turn off "close with result".  This flag is only used with
         # "connectionless" execution, otherwise will be False in any case
         save_should_close_with_result = connection.should_close_with_result
@@ -938,6 +941,17 @@ def register_ping_connection(engine):
         finally:
             # restore "close with result"
             connection.should_close_with_result = save_should_close_with_result
+
+    # sqla v1/v2 compatible invocation of @event.listens_for:
+    def ping_connection_v1(connection, branch=None):
+        """sqlalchemy < 2.0 compatibility"""
+        return ping_connection(connection)
+
+    if int(sqlalchemy.__version__.split(".", 1)[0]) >= 2:
+        listener = ping_connection
+    else:
+        listener = ping_connection_v1
+    event.listens_for(engine, "engine_connect")(listener)
 
 
 def check_db_revision(engine):
