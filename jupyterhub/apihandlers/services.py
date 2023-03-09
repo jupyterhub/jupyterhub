@@ -49,10 +49,16 @@ class ServiceAPIHandler(APIHandler):
 
         self._check_service_model(spec)
         service_name = spec["name"]
-        new_service = self.service_from_spec(spec)
+        try:
+            new_service = self.service_from_spec(spec)
+        except Exception:
+            msg = f"Failed to create service {service_name}"
+            self.log.error(msg, exc_info=True)
+            raise web.HTTPError(400, msg)
 
         if new_service is None:
             raise web.HTTPError(400, f"Failed to create service {service_name}")
+
         if new_service.api_token:
             # Add api token to database
             await self.app._add_tokens(
@@ -150,7 +156,7 @@ class ServiceAPIHandler(APIHandler):
 
         if service.oauth_no_confirm:
             oauth_no_confirm_list = self.settings.get('oauth_no_confirm_list')
-            oauth_no_confirm_list.remove(service.oauth_client_id)
+            oauth_no_confirm_list.discard(service.oauth_client_id)
 
         self.db.delete(orm_service)
         self.db.commit()

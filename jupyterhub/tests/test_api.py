@@ -8,12 +8,13 @@ from datetime import datetime, timedelta
 from unittest import mock
 from urllib.parse import quote, urlparse
 
+import pytest
 from pytest import fixture, mark
 from tornado.httputil import url_concat
 
 import jupyterhub
 
-from .. import orm
+from .. import orm, roles
 from ..apihandlers.base import PAGINATION_MEDIA_TYPE
 from ..objects import Server
 from ..utils import url_path_join as ujoin
@@ -2089,6 +2090,155 @@ async def test_get_service(app, mockservice_url):
         app, 'services/%s' % mockservice.name, headers=auth_header(db, 'user')
     )
     assert r.status_code == 403
+
+
+@pytest.fixture
+def service_data():
+    return {
+        "oauth_client_id": "service-oauth-client-from-api",
+        "api_token": "api_token-from-api",
+        "oauth_redirect_uri": "http://127.0.0.1:5555/oauth_callback-from-api",
+        "oauth_no_confirm": True,
+        "info": {'foo': 'bar'},
+    }
+
+
+@pytest.fixture
+def service_admin_user(app):
+    user_name = 'admin_services'
+    service_role = {
+        'name': 'admin-services-role',
+        'description': '',
+        'users': [user_name],
+        'scopes': ['admin:services'],
+    }
+    roles.create_role(app.db, service_role)
+    user = add_user(app.db, name=user_name)
+    roles.update_roles(app.db, user, roles=['admin-services-role'])
+    return user
+
+
+@mark.services
+async def test_create_service(app, service_admin_user, service_data):
+    db = app.db
+    service_name = 'service-from-api'
+    r = await api_request(
+        app,
+        f'services/{service_name}',
+        headers=auth_header(db, service_admin_user.name),
+        data=json.dumps(service_data),
+        method='post',
+    )
+
+    r.raise_for_status()
+    assert r.status_code == 201
+    assert r.json()['name'] == service_name
+    orm_service = orm.Service.find(db, service_name)
+    assert orm_service is not None
+
+    oath_client = (
+        db.query(orm.OAuthClient)
+        .filter_by(identifier=service_data['oauth_client_id'])
+        .first()
+    )
+    assert oath_client.redirect_uri == service_data['oauth_redirect_uri']
+
+    assert service_name in app._service_map
+    assert (
+        app._service_map[service_name].oauth_no_confirm
+        == service_data['oauth_no_confirm']
+    )
+
+
+@mark.services
+async def test_create_service_no_role(app, service_data):
+    db = app.db
+    service_name = 'service-from-api'
+    r = await api_request(
+        app,
+        f'services/{service_name}',
+        headers=auth_header(db, 'user'),
+        data=json.dumps(service_data),
+        method='post',
+    )
+
+    assert r.status_code == 403
+
+
+@mark.services
+async def test_create_service_conflict(app, service_admin_user, service_data):
+    db = app.db
+    service_name = 'service-from-config'
+    app.services = [{'name': service_name}]
+    app.init_services()
+
+    r = await api_request(
+        app,
+        f'services/{service_name}',
+        headers=auth_header(db, service_admin_user.name),
+        data=json.dumps(service_data),
+        method='post',
+    )
+
+    assert r.status_code == 409
+
+
+@mark.services
+async def test_create_service_duplication(app, service_admin_user, service_data):
+    db = app.db
+    service_name = 'service-from-api'
+
+    r = await api_request(
+        app,
+        f'services/{service_name}',
+        headers=auth_header(db, service_admin_user.name),
+        data=json.dumps(service_data),
+        method='post',
+    )
+    assert r.status_code == 409
+
+
+@mark.services
+async def test_remove_service(app, service_admin_user, service_data):
+    db = app.db
+    service_name = 'service-from-api'
+
+    r = await api_request(
+        app,
+        f'services/{service_name}',
+        headers=auth_header(db, service_admin_user.name),
+        method='delete',
+    )
+    assert r.status_code == 200
+
+    orm_service = orm.Service.find(db, service_name)
+    assert orm_service is None
+
+    oath_client = (
+        db.query(orm.OAuthClient)
+        .filter_by(identifier=service_data['oauth_client_id'])
+        .first()
+    )
+    assert oath_client is None
+
+    assert service_name not in app._service_map
+
+
+@mark.services
+async def test_remove_service_from_config(app, service_admin_user):
+    db = app.db
+    service_name = 'service-from-config'
+    r = await api_request(
+        app,
+        f'services/{service_name}',
+        headers=auth_header(db, service_admin_user.name),
+        method='delete',
+    )
+    assert r.status_code == 405
+    assert (
+        r.json()['message']
+        == 'Service service-from-config is not modifiable at runtime'
+    )
 
 
 async def test_root_api(app):

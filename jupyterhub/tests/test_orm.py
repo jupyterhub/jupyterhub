@@ -145,6 +145,33 @@ def test_token_expiry(db):
     assert orm_token not in user.api_tokens
 
 
+def test_service_check_data_only_column(db):
+    orm_service = orm.Service(name='check_data_only_column', from_config=True)
+    db.add(orm_service)
+    db.commit()
+    assert orm_service._check_data_only_column('from_config')
+    assert not orm_service._check_data_only_column('server')
+    assert not orm_service._check_data_only_column('oauth_client_id')
+
+
+def test_service_get_column(db):
+    orm_service = orm.Service(name='test_service_get_column', from_config=True)
+    db.add(orm_service)
+    db.commit()
+    orm_service.server = orm.Server()
+    assert orm_service.get_column('from_config')
+    assert orm_service.get_column('server') is None
+
+
+def test_service_update_column(db):
+    orm_service = orm.Service(name='test_service_set_column', from_config=True)
+    db.add(orm_service)
+    db.commit()
+
+    assert orm_service.update_column('from_config', False)
+    assert not orm_service.update_column('server', orm.Server())
+
+
 def test_service_tokens(db):
     service = orm.Service(name='secret')
     db.add(service)

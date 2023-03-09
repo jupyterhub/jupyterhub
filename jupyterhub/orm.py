@@ -458,39 +458,54 @@ class Service(Base):
         """
         return db.query(cls).filter(cls.name == name).first()
 
-    def update_column(self, column_name: str, value: any) -> bool:
-        """_summary_
+    def _check_data_only_column(self, column_name: str) -> bool:
+        """Check if a column is not a ForeignKey or in a
+        relationship.
 
         Args:
-            column_name (str): _description_
-            value (any): _description_
+            column_name (str): ame of the column
 
         Returns:
-            bool: _description_
+            bool: returns `True` if the column is data-only,
+            returns `False` otherwise.
         """
-        if (
-            hasattr(self, column_name)
-            and not getattr(Service, column_name).foreign_keys
-        ):
+        if hasattr(self, column_name):
+            column = getattr(Service, column_name)
+            if hasattr(column, 'foreign_keys'):
+                return len(column.foreign_keys) == 0
+            else:
+                return False
+        else:
+            return False
+
+    def update_column(self, column_name: str, value: any) -> bool:
+        """Update the value of a non-ForeignKey column.
+
+        Args:
+            column_name (str): Name of the column
+            value (any): New value
+
+        Returns:
+            bool: returns `True` if the column is updated,
+            returns `False` otherwise.
+        """
+        if self._check_data_only_column(column_name):
             setattr(self, column_name, value)
             return True
         else:
             return False
 
     def get_column(self, column_name: str):
-        """_summary_
+        """Get non-ForeignKey, non-relationship column
 
         Args:
-            column_name (str): _description_
-            value (any): _description_
+            column_name (str): Name of the column
 
         Returns:
-            bool: _description_
+            The value of requested column, None if it is
+            a foreign key or it does not exist.
         """
-        if (
-            hasattr(self, column_name)
-            and not getattr(Service, column_name).foreign_keys
-        ):
+        if self._check_data_only_column(column_name):
             return getattr(self, column_name)
         else:
             return None
