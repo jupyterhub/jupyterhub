@@ -124,6 +124,8 @@ for project_name, project in project_config["projects"].items():
 
 The `members` step could be skipped if group membership is managed by the authenticator, or handled via the admin UI later, in which case we only need to handle group _creation_ and role assignment.
 
+This configuration code runs when jupyterhub starts up, and as noted above, users and groups cannot have their role assignments change without restarting JupyterHub. If new collaboration groups are created (within configuration, via the admin page, or via the Authenticator), the hub will need to be restarted in order for it to load roles for those new groups.
+
 ### Distinguishing collaborative servers
 
 Finally, we want to enable RTC only on the collaborative user servers (and _only_ the collaborative user servers),
