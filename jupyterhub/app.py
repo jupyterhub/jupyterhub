@@ -2381,6 +2381,9 @@ class JupyterHub(Application):
 
         if orm_service.oauth_client is not None:
             service.oauth_redirect_uri = orm_service.oauth_client.redirect_uri
+            service.oauth_client_id = orm_service.oauth_client.identifier
+            service.oauth_redirect_uri = orm_service.oauth_client.redirect_uri
+
         self._service_map[name] = service
 
         return service

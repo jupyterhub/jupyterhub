@@ -145,13 +145,90 @@ def test_token_expiry(db):
     assert orm_token not in user.api_tokens
 
 
-def test_service_check_data_only_column(db):
+@pytest.mark.parametrize(
+    'column, expected',
+    [
+        (
+            'name',
+            True,
+        ),
+        (
+            'admin',
+            True,
+        ),
+        (
+            'url',
+            True,
+        ),
+        (
+            'oauth_client_allowed_scopes',
+            True,
+        ),
+        (
+            'info',
+            True,
+        ),
+        (
+            'display',
+            True,
+        ),
+        (
+            'oauth_no_confirm',
+            True,
+        ),
+        (
+            'command',
+            True,
+        ),
+        (
+            'cwd',
+            True,
+        ),
+        (
+            'environment',
+            True,
+        ),
+        (
+            'user',
+            True,
+        ),
+        (
+            'from_config',
+            True,
+        ),
+        (
+            'api_tokens',
+            False,
+        ),
+        (
+            '_server_id',
+            False,
+        ),
+        (
+            'server',
+            False,
+        ),
+        (
+            'pid',
+            True,
+        ),
+        (
+            'oauth_client_id',
+            False,
+        ),
+        (
+            'oauth_client',
+            False,
+        ),
+    ],
+)
+def test_service_check_data_only_column(db, column, expected):
     orm_service = orm.Service(name='check_data_only_column', from_config=True)
     db.add(orm_service)
     db.commit()
-    assert orm_service._check_data_only_column('from_config')
-    assert not orm_service._check_data_only_column('server')
-    assert not orm_service._check_data_only_column('oauth_client_id')
+    assert orm_service._check_data_only_column(column) == expected
+    db.delete(orm_service)
+    db.commit()
 
 
 def test_service_get_column(db):

@@ -14,7 +14,7 @@ from tornado.httputil import url_concat
 
 import jupyterhub
 
-from .. import orm, roles
+from .. import orm
 from ..apihandlers.base import PAGINATION_MEDIA_TYPE
 from ..objects import Server
 from ..utils import url_path_join as ujoin
@@ -2093,29 +2093,8 @@ async def test_get_service(app, mockservice_url):
 
 
 @pytest.fixture
-def service_data():
-    return {
-        "oauth_client_id": "service-oauth-client-from-api",
-        "api_token": "api_token-from-api",
-        "oauth_redirect_uri": "http://127.0.0.1:5555/oauth_callback-from-api",
-        "oauth_no_confirm": True,
-        "info": {'foo': 'bar'},
-    }
-
-
-@pytest.fixture
-def service_admin_user(app):
-    user_name = 'admin_services'
-    service_role = {
-        'name': 'admin-services-role',
-        'description': '',
-        'users': [user_name],
-        'scopes': ['admin:services'],
-    }
-    roles.create_role(app.db, service_role)
-    user = add_user(app.db, name=user_name)
-    roles.update_roles(app.db, user, roles=['admin-services-role'])
-    return user
+def service_admin_user(create_user_with_scopes):
+    return create_user_with_scopes('admin:services')
 
 
 @mark.services

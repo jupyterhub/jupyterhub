@@ -534,3 +534,14 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
         queries = db_counts[nodeid]
         if queries:
             terminalreporter.line(f"{queries:<6} {nodeid}")
+
+@fixture
+def service_data():
+    """Data used to create service at runtime"""
+    return {
+        "oauth_client_id": "service-oauth-client-from-api",
+        "api_token": "api_token-from-api",
+        "oauth_redirect_uri": "http://127.0.0.1:5555/oauth_callback-from-api",
+        "oauth_no_confirm": True,
+        "info": {'foo': 'bar'},
+    }
