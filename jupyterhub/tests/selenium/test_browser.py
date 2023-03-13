@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import urllib.parse
 from functools import partial
 
 import pytest
@@ -921,8 +922,18 @@ async def test_oauth_page(
     service_url = url_path_join(public_url(app, service) + 'owhoami/?arg=x')
     await in_thread(browser.get, (service_url))
     expected_client_id = service.name
-    expected_redirect_url = app.base_url + f"servises/{service.name}/oauth_callback"
-    assert expected_client_id, expected_redirect_url in browser.current_url
+    expected_redirect_url = url_path_join(
+        app.base_url + f"services/{service.name}/oauth_callback"
+    )
+    assert (
+        f"client_id=service-{expected_client_id}".replace("=", "%3D")
+        in browser.current_url
+    )
+    # decode the URL
+    decoded_browser_url = urllib.parse.unquote(
+        urllib.parse.unquote(browser.current_url)
+    )
+    assert f"redirect_uri={expected_redirect_url}" in decoded_browser_url
 
     # login user
     await login(browser, user.name, pass_w=str(user.name))
@@ -1092,7 +1103,6 @@ async def test_start_stop_all_servers_on_admin_page(app, browser, admin_user):
     btns = {
         class_name: get_users_buttons(browser, class_name) for class_name in class_names
     }
-    print(btns)
     assert (
         len(btns["start-button"])
         == len(btns["secondary"])
