@@ -176,7 +176,7 @@ In this case, the `url` field will be passed along to the Service as
 
 ## Adding or removing services at runtime
 
-Both Hub-Managed services and Externally-Managed services can be added at runtime by using the JupyterHub’s REST API.
+Both Hub-Managed services and Externally-Managed services can be added at runtime by using JupyterHub’s REST API.
 
 ### Add a new service
 
@@ -194,11 +194,11 @@ POST /hub/api/services/:servicename
 
 - `201 Created`: The service and related objects are created (and started in case of a Hub-managed one) successfully.
 - `400 Bad Request`: The payload is invalid or JupyterHub can not create the service.
-- `409 Conflict`: The service with the same name already exist.
+- `409 Conflict`: The service with the same name already exists.
 
-### Remove a new service
+### Remove an existing service
 
-To remove a new service, send a DELETE request to this endpoint
+To remove an existing service, send a DELETE request to this endpoint
 
 ```
 DELETE /hub/api/services/:servicename
