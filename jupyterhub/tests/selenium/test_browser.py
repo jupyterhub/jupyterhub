@@ -925,14 +925,11 @@ async def test_oauth_page(
     expected_redirect_url = url_path_join(
         app.base_url + f"services/{service.name}/oauth_callback"
     )
-    assert (
-        f"client_id=service-{expected_client_id}".replace("=", "%3D")
-        in browser.current_url
-    )
     # decode the URL
     decoded_browser_url = urllib.parse.unquote(
         urllib.parse.unquote(browser.current_url)
     )
+    assert f"client_id=service-{expected_client_id}" in decoded_browser_url
     assert f"redirect_uri={expected_redirect_url}" in decoded_browser_url
 
     # login user
