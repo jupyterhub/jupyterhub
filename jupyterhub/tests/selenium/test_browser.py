@@ -3,6 +3,7 @@
 import asyncio
 import json
 from functools import partial
+from urllib.parse import parse_qs, urlparse
 
 import pytest
 from selenium.common.exceptions import (
@@ -921,8 +922,15 @@ async def test_oauth_page(
     service_url = url_path_join(public_url(app, service) + 'owhoami/?arg=x')
     await in_thread(browser.get, (service_url))
     expected_client_id = service.name
-    expected_redirect_url = app.base_url + f"servises/{service.name}/oauth_callback"
-    assert expected_client_id, expected_redirect_url in browser.current_url
+    expected_redirect_url = url_path_join(
+        app.base_url + f"services/{service.name}/oauth_callback"
+    )
+    # decode the URL
+    query_params = parse_qs(urlparse(browser.current_url).query)
+    query_params = parse_qs(urlparse(query_params['next'][0]).query)
+
+    assert f"service-{expected_client_id}" == query_params['client_id'][0]
+    assert expected_redirect_url == query_params['redirect_uri'][0]
 
     # login user
     await login(browser, user.name, pass_w=str(user.name))
@@ -1092,7 +1100,6 @@ async def test_start_stop_all_servers_on_admin_page(app, browser, admin_user):
     btns = {
         class_name: get_users_buttons(browser, class_name) for class_name in class_names
     }
-    print(btns)
     assert (
         len(btns["start-button"])
         == len(btns["secondary"])
