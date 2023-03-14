@@ -2,8 +2,8 @@
 
 import asyncio
 import json
-import urllib.parse
 from functools import partial
+from urllib.parse import parse_qs, urlparse
 
 import pytest
 from selenium.common.exceptions import (
@@ -926,11 +926,11 @@ async def test_oauth_page(
         app.base_url + f"services/{service.name}/oauth_callback"
     )
     # decode the URL
-    decoded_browser_url = urllib.parse.unquote(
-        urllib.parse.unquote(browser.current_url)
-    )
-    assert f"client_id=service-{expected_client_id}" in decoded_browser_url
-    assert f"redirect_uri={expected_redirect_url}" in decoded_browser_url
+    query_params = parse_qs(urlparse(browser.current_url).query)
+    query_params = parse_qs(urlparse(query_params['next'][0]).query)
+
+    assert f"service-{expected_client_id}" == query_params['client_id'][0]
+    assert expected_redirect_url == query_params['redirect_uri'][0]
 
     # login user
     await login(browser, user.name, pass_w=str(user.name))
