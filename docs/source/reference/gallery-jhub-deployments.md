@@ -83,7 +83,6 @@ easy to do with RStudio too.
     - Slurm job dispatched on Crestone compute cluster
     - log troubleshooting
     - Profiles in IPython Clusters tab
-  - [Parallel Processing with JupyterHub tutorial](https://curc.readthedocs.io/en/latest/gateways/parallel-programming-jupyter.html)
 
 ### George Washington University
 
