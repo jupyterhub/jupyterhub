@@ -26,10 +26,6 @@ FROM $BASE_IMAGE AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 WORKDIR /src/jupyterhub
-# copy everything except whats in .dockerignore, its a
-# compromise between needing to rebuild and maintaining
-# what needs to be part of the build
-COPY . .
 
 RUN apt-get update \
  && apt-get install -yq --no-install-recommends \
@@ -45,10 +41,14 @@ RUN apt-get update \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/* \
  && python3 -m pip install --no-cache-dir --upgrade setuptools pip build wheel \
- && npm install --global yarn \
+ && npm install --global yarn
+# copy everything except whats in .dockerignore, its a
+# compromise between needing to rebuild and maintaining
+# what needs to be part of the build
+COPY . .
  # Build client component packages (they will be copied into ./share and
  # packaged with the built wheel.)
- && python3 -m build --wheel \
+RUN python3 -m build --wheel \
  && python3 -m pip wheel --wheel-dir wheelhouse dist/*.whl
 
 FROM $BASE_IMAGE
