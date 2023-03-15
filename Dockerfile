@@ -73,6 +73,7 @@ RUN apt-get update \
     curl \
     gnupg \
     locales \
+    python-is-python3 \
     python3-pip \
     python3-pycurl \
     nodejs \
