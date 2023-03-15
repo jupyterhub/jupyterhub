@@ -2360,7 +2360,19 @@ class JupyterHub(Application):
         orm_service: orm.Service,
         domain: str,
         host: str,
-    ):
+    ) -> Service:
+        """Create the service instance and related objects from
+        ORM data.
+
+        Args:
+            orm_service (orm.Service): The `orm.Service` object
+            domain (str): The domain of Hub session
+            host (str):  The host of Hub session
+
+        Returns:
+            Service: the created service
+        """
+
         name = orm_service.name
         service = Service(
             parent=self,
@@ -2395,6 +2407,21 @@ class JupyterHub(Application):
         domain: Optional[str] = None,
         host: Optional[str] = None,
     ) -> Optional[Service]:
+        """Create the service instance and related objects from
+        config data.
+
+        Args:
+            spec (Dict): The spec of service, defined in the config file.
+            from_config (bool, optional): `True` if the service will be created
+            from the config file, `False` if it is created from REST API.
+            Defaults to `True`.
+            domain (Optional[str]): The domain of Hub session. Defaults to None.
+            host (Optional[str]): The host of Hub session. Defaults to None.
+
+        Returns:
+            Optional[Service]: The created service
+        """
+
         if domain is None:
             if self.domain:
                 domain = 'services.' + self.domain
@@ -3228,6 +3255,8 @@ class JupyterHub(Application):
         return True
 
     def toggle_service_health_check(self) -> None:
+        """Start or stop the service health check callback."""
+
         if self.service_check_interval and any(
             s.url for s in self._service_map.values()
         ):
