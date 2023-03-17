@@ -273,7 +273,7 @@ c.Spawner.auth_state_hook = auth_state_hook
 :::
 
 Some identity providers may have their own concept of group membership that you would like to preserve in JupyterHub.
-This is now possible with `Authenticator.managed_groups`.
+This is now possible with `Authenticator.manage_groups`.
 
 You can set the config:
 
