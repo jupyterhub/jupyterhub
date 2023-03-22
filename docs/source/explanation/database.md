@@ -179,5 +179,5 @@ For example, to connect to a mysql database with mysqlclient:
 2. configure [](JupyterHub.db_url):
 
    ```python
-   c.JupyterHub.db_url = "mysql+mysqlclient://myuser:mypassword@my-sql-server:3306/my-db-name"
+   c.JupyterHub.db_url = "mysql+mysqldb://myuser:mypassword@my-sql-server:3306/my-db-name"
    ```

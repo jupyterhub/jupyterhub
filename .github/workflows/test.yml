@@ -114,7 +114,7 @@ jobs:
           fi
           if [ "${{ matrix.db }}" == "mysql" ]; then
               echo "MYSQL_HOST=127.0.0.1" >> $GITHUB_ENV
-              echo "JUPYTERHUB_TEST_DB_URL=mysql+mysqlclient://root@127.0.0.1:3306/jupyterhub" >> $GITHUB_ENV
+              echo "JUPYTERHUB_TEST_DB_URL=mysql+mysqldb://root@127.0.0.1:3306/jupyterhub" >> $GITHUB_ENV
           fi
           if [ "${{ matrix.ssl }}" == "ssl" ]; then
               echo "SSL_ENABLED=1" >> $GITHUB_ENV

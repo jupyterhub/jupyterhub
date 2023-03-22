@@ -35,7 +35,7 @@ def generate_old_db(env_dir, hub_version, db_url):
         pkgs.append('sqlalchemy<2')
 
     if 'mysql' in db_url:
-        pkgs.append('mysql-connector-python')
+        pkgs.append('mysqlclient')
     elif 'postgres' in db_url:
         pkgs.append('psycopg2-binary')
     check_call([env_pip, 'install'] + pkgs)
