@@ -95,8 +95,14 @@ The Hub and its database are not involved in most requests to single-user server
 
 JupyterHub supports a variety of database backends via [SQLAlchemy][].
 The default is sqlite, which works great for many cases, but you should be able to use many backends supported by SQLAlchemy.
-Usually, this will mean PostgreSQL or MySQL, both of which are well tested with JupyterHub.
+Usually, this will mean PostgreSQL or MySQL, both of which are officially supported and well tested with JupyterHub, but others may work as well.
+See [SQLAlchemy's docs][sqlalchemy-dialect] for how to connect to different database backends.
+Doing so generally involves:
 
+1. installing a Python package that provides a client implementation, and
+2. setting [](JupyterHub.db_url) to connect to your database with the specified implementation
+
+[sqlalchemy-dialect]: https://docs.sqlalchemy.org/en/20/dialects/
 [sqlalchemy]: https://www.sqlalchemy.org
 
 ### Default backend: SQLite
@@ -109,14 +115,16 @@ For production systems, SQLite has some disadvantages when used with JupyterHub:
 
 - `upgrade-db` may not always work, and you may need to start with a fresh database
 - `downgrade-db` **will not** work if you want to rollback to an earlier
-  version, so backup the `jupyterhub.sqlite` file before upgrading
+  version, so backup the `jupyterhub.sqlite` file before upgrading (JupyterHub automatically creates a date-stamped backup file when upgrading sqlite)
 
 The sqlite documentation provides a helpful page about [when to use SQLite and
 where traditional RDBMS may be a better choice](https://sqlite.org/whentouse.html).
 
 ### Picking your database backend (PostgreSQL, MySQL)
 
-When running a long term deployment or a production system, we recommend using a full-fledged relational database, such as [PostgreSQL](https://www.postgresql.org) or [MySQL](https://www.mysql.com), that supports the SQL `ALTER TABLE` statement.
+When running a long term deployment or a production system, we recommend using a full-fledged relational database, such as [PostgreSQL](https://www.postgresql.org) or [MySQL](https://www.mysql.com), that supports the SQL `ALTER TABLE` statement, which is used in some database upgrade steps.
+
+In general, you select your database backend with [](JupyterHub.db_url), and can further configure it (usually not necessary) with [](JupyterHub.db_kwargs).
 
 ## Notes and Tips
 
@@ -132,14 +140,25 @@ multiple processes which might try to access the file at the same time.
 ### PostgreSQL
 
 We recommend using PostgreSQL for production if you are unsure whether to use
-MySQL or PostgreSQL or if you do not have a strong preference. There is
-additional configuration required for MySQL that is not needed for PostgreSQL.
+MySQL or PostgreSQL or if you do not have a strong preference.
+There is additional configuration required for MySQL that is not needed for PostgreSQL.
+
+For example, to connect to a postgres database with psycopg2:
+
+1. install psycopg2: `pip instal psycopg2` (or `psycopg2-binary` to avoid compilation, which is [not recommended for production][psycopg2-binary])
+2. set authentication via environment variables `PGUSER` and `PGPASSWORD`
+3. configure [](JupyterHub.db_url):
+
+   ```python
+   c.JupyterHub.db_url = "postgres+psycopg2://my-postgres-server:5432/my-db-name"
+   ```
+
+[psycopg2-binary]: https://www.psycopg.org/docs/install.html#psycopg-vs-psycopg-binary
 
 ### MySQL / MariaDB
 
-- You should use the `pymysql` sqlalchemy provider (the other one, MySQLdb,
-  isn't available for py3).
-- You also need to set `pool_recycle` to some value (typically 60 - 300)
+- You should probably use the `pymysql` or `mysqlclient` sqlalchemy provider, or another backend [recommended by sqlalchemy](https://docs.sqlalchemy.org/en/20/dialects/mysql.html#dialect-mysql)
+- You also need to set `pool_recycle` to some value (typically 60 - 300, JupyterHub will default to 60)
   which depends on your MySQL setup. This is necessary since MySQL kills
   connections serverside if they've been idle for a while, and the connection
   from the hub will be idle for longer than most connections. This behavior
@@ -153,3 +172,12 @@ additional configuration required for MySQL that is not needed for PostgreSQL.
   correctly. Later versions of MariaDB and MySQL should set these values by
   default, as well as have a default `DYNAMIC` `row_format` and pose no trouble
   to users.
+
+For example, to connect to a mysql database with mysqlclient:
+
+1. install mysqlclient: `pip install mysqlclient`
+2. configure [](JupyterHub.db_url):
+
+   ```python
+   c.JupyterHub.db_url = "mysql+mysqldb://myuser:mypassword@my-sql-server:3306/my-db-name"
+   ```
