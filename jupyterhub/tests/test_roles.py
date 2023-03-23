@@ -848,8 +848,12 @@ async def test_server_token_role(app):
     orm_server_token = orm.APIToken.find(app.db, server_token)
     assert orm_server_token
 
-    server_role = orm.Role.find(app.db, 'server')
-    assert set(server_role.scopes) == set(orm_server_token.scopes)
+    # resolve `!server` filter in server role
+    server_role_scopes = {
+        s.replace("!server", f"!server={user.name}/")
+        for s in orm.Role.find(app.db, "server").scopes
+    }
+    assert set(orm_server_token.scopes) == server_role_scopes
 
     assert orm_server_token.user.name == user.name
     assert user.api_tokens == [orm_server_token]

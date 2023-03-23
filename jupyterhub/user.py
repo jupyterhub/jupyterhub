@@ -13,7 +13,7 @@ from tornado import gen, web
 from tornado.httputil import urlencode
 from tornado.log import app_log
 
-from . import orm
+from . import orm, roles, scopes
 from ._version import __version__, _check_version
 from .crypto import CryptKeeper, EncryptionUnavailable, InvalidToken, decrypt, encrypt
 from .metrics import RUNNING_SERVERS, TOTAL_USERS
@@ -673,12 +673,62 @@ class User:
         orm_server = orm.Server(base_url=base_url)
         db.add(orm_server)
         note = "Server at %s" % base_url
-        api_token = self.new_api_token(note=note, roles=['server'])
         db.commit()
 
         spawner = self.get_spawner(server_name, replace_failed=True)
         spawner.server = server = Server(orm_server=orm_server)
         assert spawner.orm_spawner.server is orm_server
+
+        requested_scopes = spawner.server_token_scopes
+        if callable(requested_scopes):
+            requested_scopes = await maybe_future(requested_scopes(spawner))
+        if not requested_scopes:
+            # nothing requested, default to 'server' role
+            requested_scopes = orm.Role.find(db, "server").scopes
+        requested_scopes = set(requested_scopes)
+        # resolve !server filter, which won't resolve elsewhere,
+        # because this token is not owned by the server's own oauth client
+        server_filter = f"={self.name}/{server_name}"
+        requested_scopes = {
+            scope + server_filter if scope.endswith("!server") else scope
+            for scope in requested_scopes
+        }
+        # ensure activity scope is requested, since activity doesn't work without
+        activity_scope = "users:activity!user"
+        if not {activity_scope, "users:activity", "inherit"}.intersection(
+            requested_scopes
+        ):
+            self.log.warning(
+                f"Adding required scope {activity_scope} to server token, missing from Spawner.server_token_scopes. Please make sure to add it!"
+            )
+            requested_scopes |= {activity_scope}
+
+        have_scopes = roles.roles_to_scopes(roles.get_roles_for(self.orm_user))
+        have_scopes |= {"inherit"}
+        jupyterhub_client = (
+            db.query(orm.OAuthClient)
+            .filter_by(
+                identifier="jupyterhub",
+            )
+            .one()
+        )
+
+        resolved_scopes, excluded_scopes = scopes._resolve_requested_scopes(
+            requested_scopes, have_scopes, self.orm_user, jupyterhub_client, db
+        )
+        if excluded_scopes:
+            # what level should this be?
+            # for admins-get-more use case, this is going to happen for most users
+            # but for misconfiguration, folks will want to know!
+            self.log.debug(
+                "Not assigning requested scopes for %s: requested=%s, assigned=%s, excluded=%s",
+                spawner._log_name,
+                requested_scopes,
+                resolved_scopes,
+                excluded_scopes,
+            )
+
+        api_token = self.new_api_token(note=note, scopes=resolved_scopes)
 
         # pass requesting handler to the spawner
         # e.g. for processing GET params
@@ -808,6 +858,7 @@ class User:
                         spawner.api_token,
                         generated=False,
                         note="retrieved from spawner %s" % server_name,
+                        scopes=resolved_scopes,
                     )
                 # update OAuth client secret with updated API token
                 if oauth_provider:

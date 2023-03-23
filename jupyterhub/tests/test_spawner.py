@@ -20,7 +20,7 @@ from ..objects import Hub, Server
 from ..scopes import access_scopes
 from ..spawner import LocalProcessSpawner, Spawner
 from ..user import User
-from ..utils import AnyTimeoutError, new_token, url_path_join
+from ..utils import AnyTimeoutError, maybe_future, new_token, url_path_join
 from .mocking import public_url
 from .test_api import add_user
 from .utils import async_requests
@@ -336,6 +336,12 @@ async def test_spawner_insert_api_token(app):
     assert found
     assert found.user.name == user.name
     assert user.api_tokens == [found]
+    # resolve `!server` filter in server role
+    server_role_scopes = {
+        s.replace("!server", f"!server={user.name}/")
+        for s in orm.Role.find(app.db, "server").scopes
+    }
+    assert set(found.scopes) == server_role_scopes
     await user.stop()
 
 
@@ -359,6 +365,58 @@ async def test_spawner_bad_api_token(app):
         await user.spawn()
     assert orm.APIToken.find(app.db, other_token) is None
     assert other_user.api_tokens == []
+
+
+@pytest.mark.parametrize(
+    "have_scopes, request_scopes, expected_scopes",
+    [
+        (["self"], ["inherit"], ["inherit"]),
+        (["self"], [], ["access:servers!server=USER/", "users:activity!user"]),
+        (
+            ["self"],
+            ["admin:groups", "read:servers!server"],
+            ["users:activity!user", "read:servers!server=USER/"],
+        ),
+        (
+            ["self", "read:groups!group=x", "users:activity"],
+            ["admin:groups", "users:activity"],
+            ["read:groups!group=x", "read:groups:name!group=x", "users:activity"],
+        ),
+    ],
+)
+async def test_server_token_scopes(
+    app, username, create_user_with_scopes, have_scopes, request_scopes, expected_scopes
+):
+    """Token provided by spawner is not in the db
+
+    Insert token into db as a user-provided token.
+    """
+    db = app.db
+
+    # apply templating
+    def _format_scopes(scopes):
+        if callable(scopes):
+
+            async def get_scopes(*args):
+                return _format_scopes(await maybe_future(scopes(*args)))
+
+            return get_scopes
+
+        return [s.replace("USER", username) for s in scopes]
+
+    have_scopes = _format_scopes(have_scopes)
+    request_scopes = _format_scopes(request_scopes)
+    expected_scopes = _format_scopes(expected_scopes)
+
+    user = create_user_with_scopes(*have_scopes, name=username)
+    spawner = user.spawner
+    spawner.server_token_scopes = request_scopes
+
+    await user.spawn()
+    orm_token = orm.APIToken.find(db, spawner.api_token)
+    assert orm_token
+    assert set(orm_token.scopes) == set(expected_scopes)
+    await user.stop()
 
 
 async def test_spawner_delete_server(app):

@@ -382,6 +382,23 @@ class Spawner(LoggingConfigurable):
         scopes.append(f"access:servers!server={self.user.name}/{self.name}")
         return sorted(set(scopes))
 
+    server_token_scopes = Union(
+        [List(Unicode()), Callable()],
+        help="""The list of scopes to request for $JUPYTERHUB_API_TOKEN
+
+        If not specified, the scopes in the `server` role will be used
+        (unchanged from pre-4.0).
+
+        If callable, will be called with the Spawner instance as its sole argument
+        (JupyterHub user available as spawner.user).
+
+        JUPYTERHUB_API_TOKEN will be assigned the _subset_ of these scopes
+        that are held by the user (as in oauth_client_allowed_scopes).
+
+        .. versionadded:: 4.0
+        """,
+    ).tag(config=True)
+
     will_resume = Bool(
         False,
         help="""Whether the Spawner will resume on next start
