@@ -374,13 +374,13 @@ async def test_spawner_bad_api_token(app):
         (["self"], [], ["access:servers!server=USER/", "users:activity!user"]),
         (
             ["self"],
-            ["admin:groups", "users:activity!server"],
-            ["users:activity!server=USER/"],
+            ["admin:groups", "read:servers!server"],
+            ["users:activity!user", "read:servers!server=USER/"],
         ),
         (
-            ["self", "read:groups!group=x"],
-            ["admin:groups", "users:activity!user"],
-            ["read:groups!group=x", "read:groups:name!group=x", "users:activity!user"],
+            ["self", "read:groups!group=x", "users:activity"],
+            ["admin:groups", "users:activity"],
+            ["read:groups!group=x", "read:groups:name!group=x", "users:activity"],
         ),
     ],
 )

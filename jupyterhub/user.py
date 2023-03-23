@@ -693,6 +693,16 @@ class User:
             scope + server_filter if scope.endswith("!server") else scope
             for scope in requested_scopes
         }
+        # ensure activity scope is requested, since activity doesn't work without
+        activity_scope = "users:activity!user"
+        if not {activity_scope, "users:activity", "inherit"}.intersection(
+            requested_scopes
+        ):
+            self.log.warning(
+                f"Adding required scope {activity_scope} to server token, missing from Spawner.server_token_scopes. Please make sure to add it!"
+            )
+            requested_scopes |= {activity_scope}
+
         have_scopes = roles.roles_to_scopes(roles.get_roles_for(self.orm_user))
         have_scopes |= {"inherit"}
         jupyterhub_client = (
