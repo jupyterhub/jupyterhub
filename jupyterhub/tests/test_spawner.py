@@ -336,7 +336,12 @@ async def test_spawner_insert_api_token(app):
     assert found
     assert found.user.name == user.name
     assert user.api_tokens == [found]
-    assert set(found.scopes) == set(orm.Role.find(app.db, "server").scopes)
+    # resolve `!server` filter in server role
+    server_role_scopes = {
+        s.replace("!server", f"!server={user.name}/")
+        for s in orm.Role.find(app.db, "server").scopes
+    }
+    assert set(found.scopes) == server_role_scopes
     await user.stop()
 
 
@@ -366,7 +371,7 @@ async def test_spawner_bad_api_token(app):
     "have_scopes, request_scopes, expected_scopes",
     [
         (["self"], ["inherit"], ["inherit"]),
-        (["self"], [], ["access:servers!user", "users:activity!user"]),
+        (["self"], [], ["access:servers!server=USER/", "users:activity!user"]),
         (
             ["self"],
             ["admin:groups", "users:activity!server"],
