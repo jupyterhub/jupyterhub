@@ -27,7 +27,8 @@ FROM $BASE_IMAGE AS builder
 ENV DEBIAN_FRONTEND=noninteractive
 WORKDIR /src/jupyterhub
 
-RUN apt-get update \
+RUN --mount=type=cache,target=/var/cache/apt \
+  apt-get update \
  && apt-get install -yq --no-install-recommends \
     build-essential \
     ca-certificates \
@@ -46,9 +47,10 @@ RUN apt-get update \
 # compromise between needing to rebuild and maintaining
 # what needs to be part of the build
 COPY . .
- # Build client component packages (they will be copied into ./share and
- # packaged with the built wheel.)
-RUN python3 -m build --wheel \
+# Build client component packages (they will be copied into ./share and
+# packaged with the built wheel.)
+RUN --mount=type=cache,target=/src/jupyterhub/wheelhouse \
+ python3 -m build --wheel \
  && python3 -m pip wheel --wheel-dir wheelhouse dist/*.whl
 
 FROM $BASE_IMAGE
@@ -66,9 +68,8 @@ LABEL org.jupyter.service="jupyterhub"
 
 WORKDIR /srv/jupyterhub
 
-COPY --from=builder /src/jupyterhub/wheelhouse /tmp/wheelhouse
-
-RUN apt-get update \
+RUN --mount=type=cache,from=builder,source=/var/cache/apt,target=/var/cache/apt \
+ apt update \
  && apt-get install -yq --no-install-recommends \
     ca-certificates \
     curl \
@@ -83,11 +84,12 @@ RUN apt-get update \
  # always make sure pip is up to date!
  && python3 -m pip install --no-cache-dir --upgrade setuptools pip \
  && npm install -g configurable-http-proxy@^4.2.0 \
- # install the wheels we built in the first stage
- && python3 -m pip install --no-cache-dir /tmp/wheelhouse/* \
  # clean cache and logs
- && apt-get clean \
- && rm -rf /var/lib/apt/lists/* /var/log/* /var/tmp/* ~/.npm \
+ && rm -rf /var/lib/apt/lists/* /var/log/* /var/tmp/* ~/.npm
+ # install the wheels we built in the first stage
+RUN --mount=type=cache,from=builder,source=/src/jupyterhub,target=/tmp/wheelhouse \
+ python3 -m pip install --no-cache-dir /tmp/* \
+ # clean cache and logs
  && find / -type d -name '*__pycache__' -prune -exec rm -rf {} \;
 
 CMD ["jupyterhub"]
