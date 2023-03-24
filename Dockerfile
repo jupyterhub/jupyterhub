@@ -27,8 +27,7 @@ FROM $BASE_IMAGE AS builder
 ENV DEBIAN_FRONTEND=noninteractive
 WORKDIR /src/jupyterhub
 
-RUN --mount=type=cache,target=/var/cache/apt \
-  apt-get update \
+RUN apt-get update \
  && apt-get install -yq --no-install-recommends \
     build-essential \
     ca-certificates \
@@ -68,8 +67,7 @@ LABEL org.jupyter.service="jupyterhub"
 
 WORKDIR /srv/jupyterhub
 
-RUN --mount=type=cache,from=builder,source=/var/cache/apt,target=/var/cache/apt \
- apt update \
+RUN apt update \
  && apt-get install -yq --no-install-recommends \
     ca-certificates \
     curl \
