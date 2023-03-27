@@ -68,7 +68,7 @@
     "prettier": "^2.2.1",
     "sinon": "^13.0.1",
     "style-loader": "^2.0.0",
-    "webpack": "^5.6.0",
+    "webpack": "^5.76.0",
     "webpack-cli": "^4.10.0",
     "webpack-dev-server": "^4.9.3"
   }

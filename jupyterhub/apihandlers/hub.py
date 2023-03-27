@@ -5,7 +5,6 @@ import json
 import sys
 
 from tornado import web
-from tornado.ioloop import IOLoop
 
 from .._version import __version__
 from ..scopes import needs_scope
@@ -52,6 +51,9 @@ class ShutdownAPIHandler(APIHandler):
 
 
 class RootAPIHandler(APIHandler):
+    def check_xsrf_cookie(self):
+        return
+
     def get(self):
         """GET /api/ returns info about the Hub and its API.
 

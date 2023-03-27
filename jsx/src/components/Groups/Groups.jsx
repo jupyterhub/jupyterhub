@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import PropTypes from "prop-types";
 
@@ -37,7 +37,7 @@ const Groups = (props) => {
 
   useEffect(() => {
     updateGroups(offset, limit).then((data) =>
-      dispatchPageUpdate(data.items, data._pagination)
+      dispatchPageUpdate(data.items, data._pagination),
     );
   }, [offset, limit]);
 

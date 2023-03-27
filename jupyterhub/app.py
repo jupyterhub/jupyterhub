@@ -74,6 +74,7 @@ from .metrics import (
     INIT_SPAWNERS_DURATION_SECONDS,
     RUNNING_SERVERS,
     TOTAL_USERS,
+    PeriodicMetricsCollector,
 )
 from .oauth.provider import make_provider
 from .objects import Hub, Server
@@ -297,14 +298,28 @@ class JupyterHub(Application):
         return classes
 
     load_groups = Dict(
-        List(Unicode()),
-        help="""Dict of 'group': ['usernames'] to load at startup.
+        Union([Dict(), List()]),
+        help="""
+        Dict of `{'group': {'users':['usernames'], 'properties': {}}`  to load at startup.
+
+        Example::
+
+            c.JupyterHub.load_groups = {
+                'groupname': {
+                    'users': ['usernames'],
+                    'properties': {'key': 'value'},
+                },
+            }
 
         This strictly *adds* groups and users to groups.
+        Properties, if defined, replace all existing properties.
 
         Loading one set of groups, then starting JupyterHub again with a different
         set will not remove users or groups from previous launches.
         That must be done through the API.
+
+        .. versionchanged:: 3.2
+          Changed format of group from list of usernames to dict
         """,
     ).tag(config=True)
 
@@ -1150,20 +1165,41 @@ class JupyterHub(Application):
         False, help="Allow named single-user servers per user"
     ).tag(config=True)
 
-    named_server_limit_per_user = Integer(
-        0,
+    named_server_limit_per_user = Union(
+        [Integer(), Callable()],
+        default_value=0,
         help="""
         Maximum number of concurrent named servers that can be created by a user at a time.
 
         Setting this can limit the total resources a user can consume.
 
         If set to 0, no limit is enforced.
+
+        Can be an integer or a callable/awaitable based on the handler object:
+
+        ::
+
+            def named_server_limit_per_user_fn(handler):
+                user = handler.current_user
+                if user and user.admin:
+                    return 0
+                return 5
+
+            c.JupyterHub.named_server_limit_per_user = named_server_limit_per_user_fn
         """,
     ).tag(config=True)
 
     default_server_name = Unicode(
         "",
-        help="If named servers are enabled, default name of server to spawn or open, e.g. by user-redirect.",
+        help="""
+        If named servers are enabled, default name of server to spawn or open
+        when no server is specified, e.g. by user-redirect.
+
+        Note: This has no effect if named servers are not enabled,
+        and does _not_ change the existence or behavior of the default server named `''` (the empty string).
+        This only affects which named server is launched when no server is specified,
+        e.g. by links to `/hub/user-redirect/lab/tree/mynotebook.ipynb`.
+        """,
     ).tag(config=True)
     # Ensure that default_server_name doesn't do anything if named servers aren't allowed
     _default_server_name = Unicode(
@@ -1175,6 +1211,11 @@ class JupyterHub(Application):
         if self.allow_named_servers:
             return self.default_server_name
         else:
+            if self.default_server_name:
+                self.log.warning(
+                    f"Ignoring `JupyterHub.default_server_name = {self.default_server_name!r}` config"
+                    " without `JupyterHub.allow_named_servers = True`."
+                )
             return ""
 
     # class for spawning single-user servers
@@ -1492,13 +1533,20 @@ class JupyterHub(Application):
 
     extra_handlers = List(
         help="""
-        Register extra tornado Handlers for jupyterhub.
+        DEPRECATED.
 
-        Should be of the form ``("<regex>", Handler)``
-
-        The Hub prefix will be added, so `/my-page` will be served at `/hub/my-page`.
+        If you need to register additional HTTP endpoints
+        please use services instead.
         """
     ).tag(config=True)
+
+    @observe("extra_handlers")
+    def _extra_handlers_changed(self, change):
+        if change.new:
+            self.log.warning(
+                "JupyterHub.extra_handlers is deprecated in JupyterHub 3.1."
+                " Please use JupyterHub services to register additional HTTP endpoints."
+            )
 
     default_url = Union(
         [Unicode(), Callable()],
@@ -1914,9 +1962,9 @@ class JupyterHub(Application):
             user = orm.User.find(db, name)
             if user is None:
                 user = orm.User(name=name, admin=True)
+                db.add(user)
                 roles.assign_default_roles(self.db, entity=user)
                 new_users.append(user)
-                db.add(user)
             else:
                 user.admin = True
         # the admin_users config variable will never be used after this point.
@@ -2015,17 +2063,36 @@ class JupyterHub(Application):
 
         if self.authenticator.manage_groups and self.load_groups:
             raise ValueError("Group management has been offloaded to the authenticator")
-        for name, usernames in self.load_groups.items():
+        for name, contents in self.load_groups.items():
             group = orm.Group.find(db, name)
+
             if group is None:
                 self.log.info(f"Creating group {name}")
                 group = orm.Group(name=name)
                 db.add(group)
-            for username in usernames:
-                username = self.authenticator.normalize_username(username)
-                user = await self._get_or_create_user(username)
-                self.log.debug(f"Adding user {username} to group {name}")
-                group.users.append(user)
+            if isinstance(contents, list):
+                self.log.warning(
+                    "group config `'groupname': [usernames]` config format is deprecated in JupyterHub 3.2,"
+                    " use `'groupname': {'users': [usernames], ...}`"
+                )
+                contents = {"users": contents}
+            if 'users' in contents:
+                for username in contents['users']:
+                    username = self.authenticator.normalize_username(username)
+                    user = await self._get_or_create_user(username)
+                    if group not in user.groups:
+                        self.log.debug(f"Adding user {username} to  group {name}")
+                        group.users.append(user)
+
+            if 'properties' in contents:
+                group_properties = contents['properties']
+                if group.properties != group_properties:
+                    # add equality check to avoid no-op db transactions
+                    self.log.debug(
+                        f"Adding properties to group {name}: {group_properties}"
+                    )
+                    group.properties = group_properties
+
         db.commit()
 
     async def init_role_creation(self):
@@ -2309,6 +2376,7 @@ class JupyterHub(Application):
             if orm_service is None:
                 # not found, create a new one
                 orm_service = orm.Service(name=name)
+                self.db.add(orm_service)
                 if spec.get('admin', False):
                     self.log.warning(
                         f"Service {name} sets `admin: True`, which is deprecated in JupyterHub 2.0."
@@ -2317,7 +2385,6 @@ class JupyterHub(Application):
                         "the Service admin flag will be ignored."
                     )
                     roles.update_roles(self.db, entity=orm_service, roles=['admin'])
-                self.db.add(orm_service)
             orm_service.admin = spec.get('admin', False)
             self.db.commit()
             service = Service(
@@ -2359,7 +2426,7 @@ class JupyterHub(Application):
                     proto=parsed.scheme,
                     ip=parsed.hostname,
                     port=port,
-                    cookie_name='jupyterhub-services',
+                    cookie_name=service.oauth_client_id,
                     base_url=service.prefix,
                 )
                 self.db.add(server)
@@ -2661,6 +2728,16 @@ class JupyterHub(Application):
                 )
                 oauth_no_confirm_list.add(service.oauth_client_id)
 
+        # configure xsrf cookie
+        # (user xsrf_cookie_kwargs works as override)
+        xsrf_cookie_kwargs = self.tornado_settings.setdefault("xsrf_cookie_kwargs", {})
+        if not xsrf_cookie_kwargs:
+            # default to cookie_options
+            xsrf_cookie_kwargs.update(self.tornado_settings.get("cookie_options", {}))
+
+        # restrict xsrf cookie to hub base path
+        xsrf_cookie_kwargs["path"] = self.hub.base_url
+
         settings = dict(
             log_function=log_request,
             config=self.config,
@@ -2714,6 +2791,7 @@ class JupyterHub(Application):
             shutdown_on_logout=self.shutdown_on_logout,
             eventlog=self.eventlog,
             app=self,
+            xsrf_cookies=True,
         )
         # allow configured settings to have priority
         settings.update(self.tornado_settings)
@@ -2851,7 +2929,6 @@ class JupyterHub(Application):
         init_spawners_future.add_done_callback(log_init_time)
 
         try:
-
             # don't allow a zero timeout because we still need to be sure
             # that the Spawner objects are defined and pending
             await gen.with_timeout(
@@ -2881,6 +2958,8 @@ class JupyterHub(Application):
                 await self.proxy.check_routes(self.users, self._service_map)
 
             asyncio.ensure_future(finish_init_spawners())
+        metrics_updater = PeriodicMetricsCollector(parent=self, db=self.db)
+        metrics_updater.start()
 
     async def cleanup(self):
         """Shutdown managed services and various subprocesses. Cleanup runtime files."""

@@ -94,8 +94,9 @@ class GroupListAPIHandler(_GroupAPIHandler):
             # create the group
             self.log.info("Creating new group %s with %i users", name, len(users))
             self.log.debug("Users: %s", usernames)
-            group = orm.Group(name=name, users=users)
+            group = orm.Group(name=name)
             self.db.add(group)
+            group.users = users
             self.db.commit()
             created.append(group)
         self.write(json.dumps([self.group_model(group) for group in created]))
@@ -131,8 +132,9 @@ class GroupAPIHandler(_GroupAPIHandler):
         # create the group
         self.log.info("Creating new group %s with %i users", group_name, len(users))
         self.log.debug("Users: %s", usernames)
-        group = orm.Group(name=group_name, users=users)
+        group = orm.Group(name=group_name)
         self.db.add(group)
+        group.users = users
         self.db.commit()
         self.write(json.dumps(self.group_model(group)))
         self.set_status(201)
@@ -192,8 +194,25 @@ class GroupUsersAPIHandler(_GroupAPIHandler):
         self.write(json.dumps(self.group_model(group)))
 
 
+class GroupPropertiesAPIHandler(_GroupAPIHandler):
+    """Modify a group's properties"""
+
+    @needs_scope('groups')
+    def put(self, group_name):
+        group = self.find_group(group_name)
+        data = self.get_json_body()
+        # self._check_group_model(data)
+        if not isinstance(data, dict):
+            raise web.HTTPError(400, "Must specify properties")
+        self.log.info("Updating properties of group %s", group_name)
+        group.properties = data
+        self.db.commit()
+        self.write(json.dumps(self.group_model(group)))
+
+
 default_handlers = [
     (r"/api/groups", GroupListAPIHandler),
     (r"/api/groups/([^/]+)", GroupAPIHandler),
     (r"/api/groups/([^/]+)/users", GroupUsersAPIHandler),
+    (r"/api/groups/([^/]+)/properties", GroupPropertiesAPIHandler),
 ]

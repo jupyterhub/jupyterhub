@@ -6,7 +6,7 @@ Contains base Spawner class & default implementation
 import ast
 import json
 import os
-import pipes
+import shlex
 import shutil
 import signal
 import sys
@@ -378,9 +378,26 @@ class Spawner(LoggingConfigurable):
                     raise ValueError(f"No such role(s): {', '.join(missing_roles)}")
                 scopes.extend(roles_to_scopes(roles))
 
-        # always add access scopes
-        scopes.extend(self.oauth_access_scopes)
+        # always add access scope
+        scopes.append(f"access:servers!server={self.user.name}/{self.name}")
         return sorted(set(scopes))
+
+    server_token_scopes = Union(
+        [List(Unicode()), Callable()],
+        help="""The list of scopes to request for $JUPYTERHUB_API_TOKEN
+
+        If not specified, the scopes in the `server` role will be used
+        (unchanged from pre-4.0).
+
+        If callable, will be called with the Spawner instance as its sole argument
+        (JupyterHub user available as spawner.user).
+
+        JUPYTERHUB_API_TOKEN will be assigned the _subset_ of these scopes
+        that are held by the user (as in oauth_client_allowed_scopes).
+
+        .. versionadded:: 4.0
+        """,
+    ).tag(config=True)
 
     will_resume = Bool(
         False,
@@ -896,7 +913,6 @@ class Spawner(LoggingConfigurable):
         Override in subclasses to restore any extra state that is needed to track
         the single-user server for that user. Subclasses should call super().
         """
-        pass
 
     def get_state(self):
         """Save state of spawner into database.
@@ -1119,7 +1135,7 @@ class Spawner(LoggingConfigurable):
     ssl_alt_names_include_local = Bool(
         True,
         config=True,
-        help="""Whether to include DNS:localhost, IP:127.0.0.1 in alt names""",
+        help="""Whether to include `DNS:localhost`, `IP:127.0.0.1` in alt names""",
     )
 
     async def create_certs(self):
@@ -1341,7 +1357,6 @@ class Spawner(LoggingConfigurable):
 
         Stopping a server does *not* call this method.
         """
-        pass
 
     def add_poll_callback(self, callback, *args, **kwargs):
         """Add a callback to fire when the single-user server stops"""
@@ -1669,9 +1684,9 @@ class LocalProcessSpawner(Spawner):
         if self.shell_cmd:
             # using shell_cmd (e.g. bash -c),
             # add our cmd list as the last (single) argument:
-            cmd = self.shell_cmd + [' '.join(pipes.quote(s) for s in cmd)]
+            cmd = self.shell_cmd + [' '.join(shlex.quote(s) for s in cmd)]
 
-        self.log.info("Spawning %s", ' '.join(pipes.quote(s) for s in cmd))
+        self.log.info("Spawning %s", ' '.join(shlex.quote(s) for s in cmd))
 
         popen_kwargs = dict(
             preexec_fn=self.make_preexec_fn(self.user.name),

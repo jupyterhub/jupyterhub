@@ -229,9 +229,10 @@ async def exponential_backoff(
         # add some random jitter to improve performance
         # this prevents overloading any single tornado loop iteration with
         # too many things
-        dt = min(max_wait, remaining, random.uniform(0, start_wait * scale))
-        if dt < max_wait:
+        limit = min(max_wait, start_wait * scale)
+        if limit < max_wait:
             scale *= scale_factor
+        dt = min(remaining, random.uniform(0, limit))
         await asyncio.sleep(dt)
     raise asyncio.TimeoutError(fail_message)
 
@@ -527,7 +528,6 @@ def print_stacks(file=sys.stderr):
     """
     # local imports because these will not be used often,
     # no need to add them to startup
-    import asyncio
     import traceback
 
     from .log import coroutine_frames
@@ -711,7 +711,7 @@ def get_accepted_mimetype(accept_header, choices=None):
     Return `None` if choices is given and no match is found,
     or nothing is specified.
     """
-    for (mime, params, q) in _parse_accept_header(accept_header):
+    for mime, params, q in _parse_accept_header(accept_header):
         if choices:
             if mime in choices:
                 return mime

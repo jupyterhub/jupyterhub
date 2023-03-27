@@ -35,7 +35,6 @@ import string
 import time
 import uuid
 import warnings
-from functools import partial
 from http import HTTPStatus
 from unittest import mock
 from urllib.parse import urlencode
@@ -244,7 +243,6 @@ class HubAuth(SingletonConfigurable):
             return 'http://127.0.0.1:8081' + url_path_join(self.hub_prefix, 'api')
 
     api_token = Unicode(
-        os.getenv('JUPYTERHUB_API_TOKEN', ''),
         help="""API key for accessing Hub API.
 
         Default: $JUPYTERHUB_API_TOKEN
@@ -253,6 +251,10 @@ class HubAuth(SingletonConfigurable):
         Will be auto-generated for hub-managed services.
         """,
     ).tag(config=True)
+
+    @default("api_token")
+    def _default_api_token(self):
+        return os.getenv('JUPYTERHUB_API_TOKEN', '')
 
     hub_prefix = Unicode(
         '/hub/',
@@ -349,7 +351,9 @@ class HubAuth(SingletonConfigurable):
     @property
     def oauth_scopes(self):
         warnings.warn(
-            "HubAuth.oauth_scopes is deprecated in JupyterHub 3.0. Use .access_scopes"
+            "HubAuth.oauth_scopes is deprecated in JupyterHub 3.0. Use .access_scopes",
+            DeprecationWarning,
+            stacklevel=2,
         )
         return self.access_scopes
 
@@ -1145,6 +1149,7 @@ class HubAuthenticated:
         except UserNotAllowed as e:
             # cache None, in case get_user is called again while processing the error
             self._hub_auth_user_cache = None
+
             # Override redirect so if/when tornado @web.authenticated
             # tries to redirect to login URL, 403 will be raised instead.
             # This is not the best, but avoids problems that can be caused

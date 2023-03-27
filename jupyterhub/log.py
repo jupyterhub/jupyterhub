@@ -66,7 +66,7 @@ class CoroutineLogFormatter(LogFormatter):
 # url params to be scrubbed if seen
 # any url param that *contains* one of these
 # will be scrubbed from logs
-SCRUB_PARAM_KEYS = ('token', 'auth', 'key', 'code', 'state')
+SCRUB_PARAM_KEYS = ('token', 'auth', 'key', 'code', 'state', '_xsrf')
 
 
 def _scrub_uri(uri):
@@ -105,11 +105,16 @@ def _scrub_headers(headers):
             auth_type = ''
         headers['Authorization'] = f'{auth_type} [secret]'
     if 'Cookie' in headers:
-        c = SimpleCookie(headers['Cookie'])
-        redacted = []
-        for name in c.keys():
-            redacted.append(f"{name}=[secret]")
-        headers['Cookie'] = '; '.join(redacted)
+        try:
+            c = SimpleCookie(headers['Cookie'])
+        except Exception as e:
+            # it's possible for browsers to send invalid cookies
+            headers['Cookie'] = f"Invalid Cookie: {e}"
+        else:
+            redacted = []
+            for name in c.keys():
+                redacted.append(f"{name}=[secret]")
+            headers['Cookie'] = '; '.join(redacted)
     return headers
 
 

@@ -31,7 +31,6 @@ var editUserJsx = (callbackSpy, empty) => (
         editUser={callbackSpy}
         updateUsers={callbackSpy}
         history={{ push: () => {} }}
-        failRegexEvent={callbackSpy}
         noChangeEvent={callbackSpy}
       />
     </HashRouter>

@@ -6,6 +6,7 @@ define(["jquery", "utils"], function ($, utils) {
 
   var JHAPI = function (base_url) {
     this.base_url = base_url;
+    this.xsrf_token = window.jhdata.xsrf_token;
   };
 
   var default_options = {
@@ -38,8 +39,13 @@ define(["jquery", "utils"], function ($, utils) {
     var url = utils.url_path_join(
       this.base_url,
       "api",
-      utils.encode_uri_components(path)
+      utils.encode_uri_components(path),
     );
+    if (this.xsrf_token) {
+      // add xsrf token to url parameter
+      var sep = url.indexOf("?") === -1 ? "?" : "&";
+      url = url + sep + "_xsrf=" + this.xsrf_token;
+    }
     $.ajax(url, options);
   };
 
@@ -54,7 +60,7 @@ define(["jquery", "utils"], function ($, utils) {
     options = update(options, { type: "POST", dataType: null });
     this.api_request(
       utils.url_path_join("users", user, "servers", server_name),
-      options
+      options,
     );
   };
 
@@ -69,7 +75,7 @@ define(["jquery", "utils"], function ($, utils) {
     options = update(options, { type: "DELETE", dataType: null });
     this.api_request(
       utils.url_path_join("users", user, "servers", server_name),
-      options
+      options,
     );
   };
 
@@ -119,7 +125,7 @@ define(["jquery", "utils"], function ($, utils) {
 
     this.api_request(
       utils.url_path_join("users", user, "admin-access"),
-      options
+      options,
     );
   };
 
@@ -143,7 +149,7 @@ define(["jquery", "utils"], function ($, utils) {
     options = update(options, { type: "DELETE" });
     this.api_request(
       utils.url_path_join("users", user, "tokens", token_id),
-      options
+      options,
     );
   };
 

@@ -559,7 +559,6 @@ class MockGroupsAuthenticator(auth.Authenticator):
 async def test_auth_managed_groups(
     app, user, group, authenticated_groups, refresh_groups
 ):
-
     authenticator = MockGroupsAuthenticator(
         parent=app,
         authenticated_groups=authenticated_groups,

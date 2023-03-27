@@ -337,6 +337,15 @@ class UserAPIHandler(APIHandler):
 class UserTokenListAPIHandler(APIHandler):
     """API endpoint for listing/creating tokens"""
 
+    # defer check_xsrf_cookie so we can accept auth
+    # in the `auth` request field, which shouldn't require xsrf cookies
+    _skip_post_check_xsrf = True
+
+    def check_xsrf_cookie(self):
+        if self.request.method == 'POST' and self._skip_post_check_xsrf:
+            return
+        return super().check_xsrf_cookie()
+
     @needs_scope('read:tokens')
     def get(self, user_name):
         """Get tokens for a given user"""
@@ -374,6 +383,7 @@ class UserTokenListAPIHandler(APIHandler):
                 if isinstance(name, dict):
                     # not a simple string so it has to be a dict
                     name = name.get('name')
+                # don't check xsrf if we've authenticated via the request body
             except web.HTTPError as e:
                 # turn any authentication error into 403
                 raise web.HTTPError(403)
@@ -384,7 +394,14 @@ class UserTokenListAPIHandler(APIHandler):
                     "Error authenticating request for %s: %s", self.request.uri, e
                 )
                 raise web.HTTPError(403)
+            if name is None:
+                raise web.HTTPError(403)
             requester = self.find_user(name)
+        else:
+            # perform delayed xsrf check
+            # if we aren't authenticating via the request body
+            self._skip_post_check_xsrf = False
+            self.check_xsrf_cookie()
         if requester is None:
             # couldn't identify requester
             raise web.HTTPError(403)
@@ -502,17 +519,19 @@ class UserServerAPIHandler(APIHandler):
         if server_name:
             if not self.allow_named_servers:
                 raise web.HTTPError(400, "Named servers are not enabled.")
-            if (
-                self.named_server_limit_per_user > 0
-                and server_name not in user.orm_spawners
-            ):
+
+            named_server_limit_per_user = (
+                await self.get_current_user_named_server_limit()
+            )
+
+            if named_server_limit_per_user > 0 and server_name not in user.orm_spawners:
                 named_spawners = list(user.all_spawners(include_default=False))
-                if self.named_server_limit_per_user <= len(named_spawners):
+                if named_server_limit_per_user <= len(named_spawners):
                     raise web.HTTPError(
                         400,
                         "User {} already has the maximum of {} named servers."
                         "  One must be deleted before a new server can be created".format(
-                            user_name, self.named_server_limit_per_user
+                            user_name, named_server_limit_per_user
                         ),
                     )
         spawner = user.get_spawner(server_name, replace_failed=True)

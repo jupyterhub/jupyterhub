@@ -52,7 +52,7 @@ def get_default_roles():
             'description': 'Post activity only',
             'scopes': [
                 'users:activity!user',
-                'access:servers!user',
+                'access:servers!server',
             ],
         },
         {

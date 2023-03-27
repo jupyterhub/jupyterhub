@@ -3,18 +3,18 @@
 To determine which scopes a role should have, one can follow these steps:
 
 1. Determine what actions the role holder should have/have not access to
-2. Match the actions against the [JupyterHub's APIs](../reference/rest-api.rst)
+2. Match the actions against the [JupyterHub's APIs](jupyterhub-rest-API)
 3. Check which scopes are required to access the APIs
 4. Combine scopes and subscopes if applicable
 5. Customize the scopes with filters if needed
 6. Define the role with required scopes and assign to users/services/groups/tokens
 
-Below, different use cases are presented on how to use the RBAC framework.
+Below, different use cases are presented on how to use the [RBAC framework](rbac)
 
 ## Service to cull idle servers
 
 Finding and shutting down idle servers can save a lot of computational resources.
-We can make use of [jupyterhub-idle-culler](https://github.com/jupyterhub/jupyterhub-idle-culler) to manage this for us.
+**We can make use of [jupyterhub-idle-culler](https://github.com/jupyterhub/jupyterhub-idle-culler) to manage this for us.**
 Below follows a short tutorial on how to add a cull-idle service in the RBAC system.
 
 1. Install the cull-idle server script with `pip install jupyterhub-idle-culler`.

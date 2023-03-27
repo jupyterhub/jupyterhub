@@ -9,6 +9,7 @@ import random
 import re
 import time
 import uuid
+import warnings
 from datetime import datetime, timedelta
 from http.client import responses
 from urllib.parse import parse_qs, parse_qsl, urlencode, urlparse, urlunparse
@@ -232,6 +233,16 @@ class BaseHandler(RequestHandler):
     # Login and cookie-related
     # ---------------------------------------------------------------
 
+    def check_xsrf_cookie(self):
+        try:
+            return super().check_xsrf_cookie()
+        except Exception as e:
+            # ensure _juptyerhub_user is defined on rejected requests
+            if not hasattr(self, "_jupyterhub_user"):
+                self._jupyterhub_user = None
+            self._resolve_roles_and_scopes()
+            raise
+
     @property
     def admin_users(self):
         return self.settings.setdefault('admin_users', set())
@@ -247,6 +258,17 @@ class BaseHandler(RequestHandler):
     @property
     def authenticate_prometheus(self):
         return self.settings.get('authenticate_prometheus', True)
+
+    async def get_current_user_named_server_limit(self):
+        """
+        Return named server limit for current user.
+        """
+        named_server_limit_per_user = self.named_server_limit_per_user
+
+        if callable(named_server_limit_per_user):
+            return await maybe_future(named_server_limit_per_user(self))
+
+        return named_server_limit_per_user
 
     def get_auth_token(self):
         """Get the authorization token from Authorization header"""
@@ -367,6 +389,10 @@ class BaseHandler(RequestHandler):
                 recorded = self._record_activity(orm_token.user, now) or recorded
         if recorded:
             self.db.commit()
+
+        # record that we've been token-authenticated
+        # XSRF checks are skipped when using token auth
+        self._token_authenticated = True
 
         if orm_token.service:
             return orm_token.service
@@ -515,6 +541,8 @@ class BaseHandler(RequestHandler):
         # clear hub cookie
         self.clear_cookie(self.hub.cookie_name, path=self.hub.base_url, **kwargs)
         # clear services cookie
+        # FIXME: remove when we haven't been setting this in a while
+        # (stopped setting it in 3.2)
         self.clear_cookie(
             'jupyterhub-services',
             path=url_path_join(self.base_url, 'services'),
@@ -531,8 +559,6 @@ class BaseHandler(RequestHandler):
             '_xsrf',
             **clear_xsrf_cookie_kwargs,
         )
-        # Reset _jupyterhub_user
-        self._jupyterhub_user = None
 
     def _set_cookie(self, key, value, encrypted=True, **overrides):
         """Setting any cookie should go through here
@@ -588,12 +614,10 @@ class BaseHandler(RequestHandler):
 
     def set_service_cookie(self, user):
         """set the login cookie for services"""
-        self._set_user_cookie(
-            user,
-            orm.Server(
-                cookie_name='jupyterhub-services',
-                base_url=url_path_join(self.base_url, 'services'),
-            ),
+        warnings.warn(
+            "set_service_cookie is deprecated in JupyterHub 2.0. Not setting jupyterhub-services cookie.",
+            DeprecationWarning,
+            stacklevel=2,
         )
 
     def set_hub_cookie(self, user):
@@ -608,10 +632,6 @@ class BaseHandler(RequestHandler):
                 self.request.host,
                 self.domain,
             )
-
-        # set single cookie for services
-        if self.db.query(orm.Service).filter(orm.Service.server != None).first():
-            self.set_service_cookie(user)
 
         if not self.get_session_cookie():
             self.set_session_cookie()
@@ -644,7 +664,12 @@ class BaseHandler(RequestHandler):
             next_url = "//" + next_url.lstrip("/")
         parsed_next_url = urlparse(next_url)
 
-        if (next_url + '/').startswith((f'{proto}://{host}/', f'//{host}/',)) or (
+        if (next_url + '/').startswith(
+            (
+                f'{proto}://{host}/',
+                f'//{host}/',
+            )
+        ) or (
             self.subdomain_host
             and parsed_next_url.netloc
             and ("." + parsed_next_url.netloc).endswith(
@@ -711,7 +736,7 @@ class BaseHandler(RequestHandler):
         if not next_url_from_param:
             # when a request made with ?next=... assume all the params have already been encoded
             # otherwise, preserve params from the current request across the redirect
-            next_url = self.append_query_parameters(next_url, exclude=['next'])
+            next_url = self.append_query_parameters(next_url, exclude=['next', '_xsrf'])
         return next_url
 
     def append_query_parameters(self, url, exclude=None):
@@ -1256,6 +1281,7 @@ class BaseHandler(RequestHandler):
         """
         template_ns = {}
         template_ns.update(self.template_namespace)
+        template_ns["xsrf_token"] = self.xsrf_token.decode("ascii")
         template_ns.update(ns)
         template = self.get_template(name, sync)
         if sync:
@@ -1278,6 +1304,7 @@ class BaseHandler(RequestHandler):
             services=self.get_accessible_services(user),
             parsed_scopes=self.parsed_scopes,
             expanded_scopes=self.expanded_scopes,
+            xsrf=self.xsrf_token.decode('ascii'),
         )
         if self.settings['template_vars']:
             ns.update(self.settings['template_vars'])

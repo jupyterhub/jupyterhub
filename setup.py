@@ -38,7 +38,7 @@ def get_data_files():
     """Get data files in share/jupyter"""
 
     data_files = []
-    for (d, dirs, filenames) in os.walk(share_jupyterhub):
+    for d, dirs, filenames in os.walk(share_jupyterhub):
         rel_d = os.path.relpath(d, here)
         data_files.append((rel_d, [os.path.join(rel_d, f) for f in filenames]))
     return data_files
@@ -50,7 +50,13 @@ def get_package_data():
     (mostly alembic config)
     """
     package_data = {}
-    package_data['jupyterhub'] = ['alembic.ini', 'alembic/*', 'alembic/versions/*']
+    package_data['jupyterhub'] = [
+        'alembic.ini',
+        'alembic/*',
+        'alembic/versions/*',
+        'event-schemas/*/*.yaml',
+        'singleuser/templates/*.html',
+    ]
     return package_data
 
 
@@ -121,6 +127,27 @@ setup_args = dict(
         'Source': 'https://github.com/jupyterhub/jupyterhub/',
         'Tracker': 'https://github.com/jupyterhub/jupyterhub/issues',
     },
+    extras_require={
+        "test": [
+            "beautifulsoup4[html5lib]",
+            "coverage",
+            # cryptography is an optional dependency for jupyterhub that we test
+            # against by default
+            "cryptography",
+            "jsonschema",
+            "jupyterlab>=3",
+            "mock",
+            # nbclassic provides the '/tree/' handler that we tests against in
+            # the test test_nbclassic_control_panel.
+            "nbclassic",
+            "pytest>=3.3",
+            "pytest-asyncio>=0.17",
+            "pytest-cov",
+            "requests-mock",
+            "selenium",
+            "virtualenv",
+        ],
+    },
 )
 
 
@@ -168,9 +195,6 @@ class NPM(BaseCommand):
     bower_dir = pjoin(static, 'components')
 
     def should_run(self):
-        if not shutil.which('npm'):
-            print("npm unavailable", file=sys.stderr)
-            return False
         if not os.path.exists(self.bower_dir):
             return True
         if not os.path.exists(self.node_modules):
@@ -195,6 +219,7 @@ class NPM(BaseCommand):
         os.utime(self.bower_dir)
         # update data-files in case this created new files
         self.distribution.data_files = get_data_files()
+        assert not self.should_run(), 'NPM.run failed'
 
 
 class CSS(BaseCommand):
@@ -213,7 +238,7 @@ class CSS(BaseCommand):
         earliest_target = sorted(mtime(t) for t in targets)[0]
 
         # check if any .less files are newer than the generated targets
-        for (dirpath, dirnames, filenames) in os.walk(static):
+        for dirpath, dirnames, filenames in os.walk(static):
             for f in filenames:
                 if f.endswith('.less'):
                     path = pjoin(static, dirpath, f)
@@ -255,6 +280,7 @@ class CSS(BaseCommand):
             raise
         # update data-files in case this created new files
         self.distribution.data_files = get_data_files()
+        assert not self.should_run(), 'CSS.run failed'
 
 
 class JSX(BaseCommand):
@@ -314,6 +340,7 @@ class JSX(BaseCommand):
 
         # update data-files in case this created new files
         self.distribution.data_files = get_data_files()
+        assert not self.should_run(), 'JSX.run failed'
 
 
 def js_css_first(cls, strict=True):

@@ -1,3 +1,5 @@
+(authenticators-reference)=
+
 # Authenticators
 
 The {class}`.Authenticator` is the mechanism for authorizing users to use the
@@ -31,8 +33,7 @@ popular services:
 - Okpy
 - OpenShift
 
-A generic implementation, which you can use for OAuth authentication
-with any provider, is also available.
+A [generic implementation](https://github.com/jupyterhub/oauthenticator/blob/master/oauthenticator/generic.py), which you can use for OAuth authentication with any provider, is also available.
 
 ## The Dummy Authenticator
 
@@ -165,7 +166,7 @@ setup(
 ```
 
 If you have added this metadata to your package,
-users can select your authenticator with the configuration:
+admins can select your authenticator with the configuration:
 
 ```python
 c.JupyterHub.authenticator_class = 'myservice'
@@ -247,6 +248,23 @@ class MyAuthenticator(Authenticator):
         spawner.environment['UPSTREAM_TOKEN'] = auth_state['upstream_token']
 ```
 
+Note that environment variable names and values are always strings, so passing multiple values means setting multiple environment variables or serializing more complex data into a single variable, e.g. as a JSON string.
+
+auth state can also be used to configure the spawner via _config_ without subclassing
+by setting `c.Spawner.auth_state_hook`. This function will be called with `(spawner, auth_state)`,
+only when auth_state is defined.
+
+For example:
+(for KubeSpawner)
+
+```python
+def auth_state_hook(spawner, auth_state):
+    spawner.volumes = auth_state['user_volumes']
+    spawner.mounts = auth_state['user_mounts']
+
+c.Spawner.auth_state_hook = auth_state_hook
+```
+
 (authenticator-groups)=
 
 ## Authenticator-managed group membership
@@ -255,7 +273,7 @@ class MyAuthenticator(Authenticator):
 :::
 
 Some identity providers may have their own concept of group membership that you would like to preserve in JupyterHub.
-This is now possible with `Authenticator.managed_groups`.
+This is now possible with `Authenticator.manage_groups`.
 
 You can set the config:
 
@@ -281,7 +299,7 @@ all group-management via the API is disabled.
 
 ## pre_spawn_start and post_spawn_stop hooks
 
-Authenticators uses two hooks, {meth}`.Authenticator.pre_spawn_start` and
+Authenticators use two hooks, {meth}`.Authenticator.pre_spawn_start` and
 {meth}`.Authenticator.post_spawn_stop(user, spawner)` to add pass additional state information
 between the authenticator and a spawner. These hooks are typically used auth-related
 startup, i.e. opening a PAM session, and auth-related cleanup, i.e. closing a

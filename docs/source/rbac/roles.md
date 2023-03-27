@@ -1,8 +1,6 @@
-(roles)=
-
 # Roles
 
-JupyterHub provides four roles that are available by default:
+JupyterHub provides four (4) roles that are available by default:
 
 ```{admonition} **Default roles**
 - `user` role provides a {ref}`default user scope <default-user-scope-target>` `self` that grants access to the user's own resources.
@@ -13,11 +11,11 @@ JupyterHub provides four roles that are available by default:
 **These roles cannot be deleted.**
 ```
 
-These default roles have a default collection of scopes,
-but you can define the scopes associated with each role (excluding admin) to suit your needs,
+We call these 'default' roles because they are available by default and have a default collection of scopes.
+However, you can define the scopes associated with each role (excluding the admin role) to suit your needs,
 as seen [below](overriding-default-roles).
 
-The `user`, `admin`, and `token` roles by default all preserve the permissions prior to RBAC.
+The `user`, `admin`, and `token` roles, by default, all preserve the permissions prior to Role-based Access Control (RBAC).
 Only the `server` role is changed from pre-2.0, to reduce its permissions to activity-only
 instead of the default of a full access token.
 
@@ -31,10 +29,10 @@ Roles can be assigned to the following entities:
 An entity can have zero, one, or multiple roles, and there are no restrictions on which roles can be assigned to which entity. Roles can be added to or removed from entities at any time.
 
 **Users** \
-When a new user gets created, they are assigned their default role `user`. Additionaly, if the user is created with admin privileges (via `c.Authenticator.admin_users` in `jupyterhub_config.py` or `admin: true` via API), they will be also granted `admin` role. If existing user's admin status changes via API or `jupyterhub_config.py`, their default role will be updated accordingly (after next startup for the latter).
+When a new user gets created, they are assigned their default role, `user`. Additionally, if the user is created with admin privileges (via `c.Authenticator.admin_users` in `jupyterhub_config.py` or `admin: true` via API), they will be also granted `admin` role. If existing user's admin status changes via API or `jupyterhub_config.py`, their default role will be updated accordingly (after next startup for the latter).
 
 **Services** \
-Services do not have a default role. Services without roles have no access to the guarded API end-points, so most services will require assignment of a role in order to function.
+Services do not have a default role. Services without roles have no access to the guarded API end-points. So, most services will require assignment of a role in order to function.
 
 **Groups** \
 A group does not require any role, and has no roles by default. If a user is a member of a group, they automatically inherit any of the group's permissions (see {ref}`resolving-roles-scopes-target` for more details). This is useful for assigning a set of common permissions to several users.
@@ -113,7 +111,7 @@ In case the role with a certain name already exists in the database, its definit
 
 (overriding-default-roles)=
 
-### Overriding default roles
+### Overriding Default Roles
 
 Role definitions can include those of the "default" roles listed above (admin excluded),
 if the default scopes associated with those roles do not suit your deployment.
@@ -154,7 +152,7 @@ c.JupyterHub.load_roles = [
 
 (removing-roles-target)=
 
-## Removing roles
+## Removing Roles
 
 Only the entities present in the role definition in the `jupyterhub_config.py` remain the role bearers. If a user, service or group is removed from the role definition, they will lose the role on the next startup.
 

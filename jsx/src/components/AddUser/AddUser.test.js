@@ -28,7 +28,6 @@ var addUserJsx = (spy, spy2, spy3) => (
     <HashRouter>
       <AddUser
         addUsers={spy}
-        failRegexEvent={spy2 || spy}
         updateUsers={spy3 || spy2 || spy}
         history={{ push: () => {} }}
       />
@@ -131,7 +130,7 @@ test("Shows a more specific UI error dialogue when user creation returns an impr
   });
 
   let errorDialog = screen.getByText(
-    "Failed to create user. User already exists."
+    "Failed to create user. User already exists.",
   );
 
   expect(errorDialog).toBeVisible();

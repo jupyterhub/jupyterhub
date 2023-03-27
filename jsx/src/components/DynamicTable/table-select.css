@@ -1,0 +1,64 @@
+@import url(../../style/root.css);
+
+.properties-table {
+  width: 95%;
+  position: relative;
+  padding: 5px;
+  overflow-x: scroll;
+}
+
+.properties-table-keyvalues {
+  width: 95%;
+  position: relative;
+  padding: 5px;
+  overflow-x: scroll;
+}
+
+.properties-table div {
+  display: inline-block;
+}
+
+.properties-table-keyvalues .item {
+  padding: 3px;
+  padding-left: 2px;
+  padding-right: 2px;
+  border-radius: 1px;
+  font-size: 14px;
+  margin-left: 1px;
+  margin-right: 1px;
+  transition: 30ms ease-in all;
+  cursor: pointer;
+  user-select: none;
+  border: solid 1px #dfdfdf;
+}
+
+.properties-table .item {
+  padding: 3px;
+  padding-left: 2px;
+  padding-right: 2px;
+  border-radius: 1px;
+  font-size: 14px;
+  margin-left: 1px;
+  margin-right: 1px;
+  transition: 30ms ease-in all;
+  cursor: pointer;
+  user-select: none;
+  border: solid 1px #dfdfdf;
+}
+
+.properties-table .item.unselected {
+  background-color: #f7f7f7;
+  color: #777;
+}
+
+.properties-table .item.selected {
+  background-color: orange;
+  color: white;
+}
+
+.properties-table .item:hover {
+  opacity: 0.7;
+}
+.boxed {
+  border: 1px solid red;
+}

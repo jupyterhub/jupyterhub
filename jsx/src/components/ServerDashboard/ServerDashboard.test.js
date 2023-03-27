@@ -78,7 +78,19 @@ var mockAppState = () =>
         pending: null,
         created: "2020-12-07T18:46:27.115528Z",
         last_activity: "2020-12-07T20:43:51.013613Z",
-        servers: {},
+        servers: {
+          "": {
+            name: "",
+            last_activity: "2020-12-07T20:58:02.437408Z",
+            started: "2020-12-07T20:58:01.508266Z",
+            pending: null,
+            ready: false,
+            state: { pid: 12345 },
+            url: "/user/bar/",
+            user_options: {},
+            progress_url: "/hub/api/users/bar/progress",
+          },
+        },
       },
     ],
     user_page: {
@@ -369,7 +381,7 @@ test("Shows a UI error dialogue when start all servers fails", async () => {
             />
           </Switch>
         </HashRouter>
-      </Provider>
+      </Provider>,
     );
   });
 
@@ -403,7 +415,7 @@ test("Shows a UI error dialogue when stop all servers fails", async () => {
             />
           </Switch>
         </HashRouter>
-      </Provider>
+      </Provider>,
     );
   });
 
@@ -437,7 +449,7 @@ test("Shows a UI error dialogue when start user server fails", async () => {
             />
           </Switch>
         </HashRouter>
-      </Provider>
+      </Provider>,
     );
   });
 
@@ -471,7 +483,7 @@ test("Shows a UI error dialogue when start user server returns an improper statu
             />
           </Switch>
         </HashRouter>
-      </Provider>
+      </Provider>,
     );
   });
 
@@ -505,7 +517,7 @@ test("Shows a UI error dialogue when stop user servers fails", async () => {
             />
           </Switch>
         </HashRouter>
-      </Provider>
+      </Provider>,
     );
   });
 
@@ -539,7 +551,7 @@ test("Shows a UI error dialogue when stop user server returns an improper status
             />
           </Switch>
         </HashRouter>
-      </Provider>
+      </Provider>,
     );
   });
 
@@ -585,7 +597,7 @@ test("Search for user calls updateUsers with name filter", async () => {
             />
           </Switch>
         </HashRouter>
-      </Provider>
+      </Provider>,
     );
   });
 

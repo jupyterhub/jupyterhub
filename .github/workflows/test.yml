@@ -28,7 +28,7 @@ on:
 env:
   # UTF-8 content may be interpreted as ascii and causes errors without this.
   LANG: C.UTF-8
-  PYTEST_ADDOPTS: "--verbose --color=yes"
+  SQLALCHEMY_WARN_20: "1"
 
 permissions:
   contents: read
@@ -78,17 +78,29 @@ jobs:
             oldest_dependencies: oldest_dependencies
             legacy_notebook: legacy_notebook
           - python: "3.8"
-            legacy_notebook: legacy_notebook
+            jupyter_server: "1.*"
+            subset: singleuser
           - python: "3.9"
             db: mysql
           - python: "3.10"
             db: postgres
-          - python: "3.10"
+          - python: "3.11"
             subdomain: subdomain
-          - python: "3.10"
+            serverextension: serverextension
+          - python: "3.11"
             ssl: ssl
-          - python: "3.11.0-rc.1"
-          - python: "3.10"
+            serverextension: serverextension
+          - python: "3.11"
+            subdomain: subdomain
+            noextension: noextension
+            subset: singleuser
+          - python: "3.11"
+            ssl: ssl
+            noextension: noextension
+            subset: singleuser
+          - python: "3.11"
+            selenium: selenium
+          - python: "3.11"
             main_dependencies: main_dependencies
 
     steps:
@@ -102,7 +114,7 @@ jobs:
           fi
           if [ "${{ matrix.db }}" == "mysql" ]; then
               echo "MYSQL_HOST=127.0.0.1" >> $GITHUB_ENV
-              echo "JUPYTERHUB_TEST_DB_URL=mysql+mysqlconnector://root@127.0.0.1:3306/jupyterhub" >> $GITHUB_ENV
+              echo "JUPYTERHUB_TEST_DB_URL=mysql+mysqldb://root@127.0.0.1:3306/jupyterhub" >> $GITHUB_ENV
           fi
           if [ "${{ matrix.ssl }}" == "ssl" ]; then
               echo "SSL_ENABLED=1" >> $GITHUB_ENV
@@ -113,8 +125,10 @@ jobs:
               echo "PGPASSWORD=hub[test/:?" >> $GITHUB_ENV
               echo "JUPYTERHUB_TEST_DB_URL=postgresql://test_user:hub%5Btest%2F%3A%3F@127.0.0.1:5432/jupyterhub" >> $GITHUB_ENV
           fi
-          if [ "${{ matrix.jupyter_server }}" != "" ]; then
-              echo "JUPYTERHUB_SINGLEUSER_APP=jupyterhub.tests.mockserverapp.MockServerApp" >> $GITHUB_ENV
+          if [ "${{ matrix.serverextension }}" != "" ]; then
+              echo "JUPYTERHUB_SINGLEUSER_EXTENSION=1" >> $GITHUB_ENV
+          elif [ "${{ matrix.noextension }}" != "" ]; then
+              echo "JUPYTERHUB_SINGLEUSER_EXTENSION=0" >> $GITHUB_ENV
           fi
       - uses: actions/checkout@v3
       # NOTE: actions/setup-node@v3 make use of a cache within the GitHub base
@@ -139,16 +153,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           pip install --upgrade pip
-
-          if [[ "${{ matrix.python }}" == "3.11"* ]]; then
-            # greenlet is not actually required,
-            # but is an install dependency of sqlalchemy.
-            # It does not yet install on 3.11
-            # see: see https://github.com/gevent/gevent/issues/1867
-            pip install ./ci/mock-greenlet
-          fi
-
-          pip install --upgrade . -r dev-requirements.txt
+          pip install -e ".[test]"
 
           if [ "${{ matrix.oldest_dependencies }}" != "" ]; then
             # take any dependencies in requirements.txt such as tornado>=5.0
@@ -160,16 +165,23 @@ jobs:
 
           if [ "${{ matrix.main_dependencies }}" != "" ]; then
               pip install git+https://github.com/ipython/traitlets#egg=traitlets --force
+              pip install --upgrade --pre sqlalchemy
           fi
           if [ "${{ matrix.legacy_notebook }}" != "" ]; then
               pip uninstall jupyter_server --yes
               pip install 'notebook<7'
           fi
+          if [ "${{ matrix.jupyter_server }}" != "" ]; then
+              pip install "jupyter_server==${{ matrix.jupyter_server }}"
+          fi
           if [ "${{ matrix.db }}" == "mysql" ]; then
-              pip install mysql-connector-python
+              pip install mysqlclient
           fi
           if [ "${{ matrix.db }}" == "postgres" ]; then
               pip install psycopg2-binary
+          fi
+          if [ "${{ matrix.serverextension }}" != "" ]; then
+            pip install 'jupyter-server>=2'
           fi
 
           pip freeze
@@ -215,12 +227,15 @@ jobs:
               DB=postgres bash ci/init-db.sh
           fi
 
+      - name: Configure selenium tests
+        if: matrix.selenium
+        run: echo "PYTEST_ADDOPTS=$PYTEST_ADDOPTS -m selenium" >> "${GITHUB_ENV}"
+
       - name: Run pytest
         run: |
-          pytest --maxfail=2 --cov=jupyterhub jupyterhub/tests
-      - name: Submit codecov report
-        run: |
-          codecov
+          pytest -k "${{ matrix.subset }}" --maxfail=2 --cov=jupyterhub jupyterhub/tests
+
+      - uses: codecov/codecov-action@v3
 
   docker-build:
     runs-on: ubuntu-20.04

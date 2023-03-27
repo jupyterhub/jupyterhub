@@ -3,6 +3,7 @@
 # Distributed under the terms of the Modified BSD License.
 import json
 from datetime import datetime
+from unittest import mock
 from urllib.parse import parse_qsl, quote, urlencode, urlparse, urlunparse
 
 from oauthlib import oauth2
@@ -14,6 +15,11 @@ from .base import APIHandler, BaseHandler
 
 
 class TokenAPIHandler(APIHandler):
+    def check_xsrf_cookie(self):
+        # no xsrf check needed here
+        # post is just a 404
+        return
+
     @token_authenticated
     def get(self, token):
         # FIXME: deprecate this API for oauth token resolution, in favor of using /api/user
@@ -241,12 +247,18 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
 
         uri, http_method, body, headers = self.extract_oauth_params()
         try:
-            (
-                requested_scopes,
-                credentials,
-            ) = self.oauth_provider.validate_authorization_request(
-                uri, http_method, body, headers
-            )
+            with mock.patch.object(
+                self.oauth_provider.request_validator,
+                "_current_user",
+                self.current_user,
+                create=True,
+            ):
+                (
+                    requested_scopes,
+                    credentials,
+                ) = self.oauth_provider.validate_authorization_request(
+                    uri, http_method, body, headers
+                )
             credentials = self.add_credentials(credentials)
             client = self.oauth_provider.fetch_by_client_id(credentials['client_id'])
             allowed = False
@@ -289,12 +301,15 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
             required_scopes = {*scopes.identify_scopes(), *scopes.access_scopes(client)}
             user_scopes |= {"inherit", *required_scopes}
 
-            allowed_scopes = requested_scopes.intersection(user_scopes)
-            excluded_scopes = requested_scopes.difference(user_scopes)
-            # TODO: compute lower-level intersection of remaining _expanded_ scopes
-            # (e.g. user has admin:users, requesting read:users!group=x)
+            allowed_scopes, disallowed_scopes = scopes._resolve_requested_scopes(
+                requested_scopes,
+                user_scopes,
+                user=user.orm_user,
+                client=client,
+                db=self.db,
+            )
 
-            if excluded_scopes:
+            if disallowed_scopes:
                 self.log.warning(
                     f"Service {client.description} requested scopes {','.join(requested_scopes)}"
                     f" for user {self.current_user.name},"
@@ -368,32 +383,6 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
     @web.authenticated
     def post(self):
         uri, http_method, body, headers = self.extract_oauth_params()
-        referer = self.request.headers.get('Referer', 'no referer')
-        full_url = self.request.full_url()
-        # trim protocol, which cannot be trusted with multiple layers of proxies anyway
-        # Referer is set by browser, but full_url can be modified by proxy layers to appear as http
-        # when it is actually https
-        referer_proto, _, stripped_referer = referer.partition("://")
-        referer_proto = referer_proto.lower()
-        req_proto, _, stripped_full_url = full_url.partition("://")
-        req_proto = req_proto.lower()
-        if referer_proto != req_proto:
-            self.log.warning("Protocol mismatch: %s != %s", referer, full_url)
-            if req_proto == "https":
-                # insecure origin to secure target is not allowed
-                raise web.HTTPError(
-                    403, "Not allowing authorization form submitted from insecure page"
-                )
-        if stripped_referer != stripped_full_url:
-            # OAuth post must be made to the URL it came from
-            self.log.error("Original OAuth POST from %s != %s", referer, full_url)
-            self.log.error(
-                "Stripped OAuth POST from %s != %s", stripped_referer, stripped_full_url
-            )
-            raise web.HTTPError(
-                403, "Authorization form must be sent from authorization page"
-            )
-
         # The scopes the user actually authorized, i.e. checkboxes
         # that were selected.
         scopes = self.get_arguments('scopes')

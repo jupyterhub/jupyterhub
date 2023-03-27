@@ -84,6 +84,9 @@ class LogoutHandler(BaseHandler):
         """
         await self.default_handle_logout()
         await self.handle_logout()
+        # clear jupyterhub user before rendering logout page
+        # ensures the login button is shown instead of logout
+        self._jupyterhub_user = None
         await self.render_logout_page()
 
 
@@ -98,7 +101,9 @@ class LoginHandler(BaseHandler):
             "login_url": self.settings['login_url'],
             "authenticator_login_url": url_concat(
                 self.authenticator.login_url(self.hub.base_url),
-                {'next': self.get_argument('next', '')},
+                {
+                    'next': self.get_argument('next', ''),
+                },
             ),
         }
         custom_html = Template(
@@ -144,7 +149,10 @@ class LoginHandler(BaseHandler):
     async def post(self):
         # parse the arguments dict
         data = {}
-        for arg in self.request.arguments:
+        for arg in self.request.body_arguments:
+            if arg == "_xsrf":
+                # don't include xsrf token in auth input
+                continue
             # strip username, but not other fields like passwords,
             # which should be allowed to start or end with space
             data[arg] = self.get_argument(arg, strip=arg == "username")

@@ -33,7 +33,7 @@ require(["jquery", "jhapi", "moment"], function ($, JHAPI, moment) {
           $("#token-result").text(reply.token);
           $("#token-area").show();
         },
-      }
+      },
     );
     return false;
   });
@@ -55,4 +55,7 @@ require(["jquery", "jhapi", "moment"], function ($, JHAPI, moment) {
       },
     });
   });
+
+  // signal that page has finished loading (mostly for tests)
+  window._jupyterhub_page_loaded = true;
 });

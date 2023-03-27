@@ -6,6 +6,8 @@ from concurrent.futures import ThreadPoolExecutor
 import pytest
 import requests
 from certipy import Certipy
+from sqlalchemy import text
+from tornado.httputil import url_concat
 
 from jupyterhub import metrics, orm
 from jupyterhub.objects import Server
@@ -84,8 +86,8 @@ def check_db_locks(func):
         def _check(_=None):
             temp_session = app.session_factory()
             try:
-                temp_session.execute('CREATE TABLE dummy (foo INT)')
-                temp_session.execute('DROP TABLE dummy')
+                temp_session.execute(text('CREATE TABLE dummy (foo INT)'))
+                temp_session.execute(text('DROP TABLE dummy'))
             finally:
                 temp_session.close()
 
@@ -161,13 +163,14 @@ async def api_request(
         h.update(headers)
         h.update(auth_header(app.db, kwargs.pop('name', 'admin')))
 
+    url = ujoin(base_url, 'api', *api_path)
+
     if 'cookies' in kwargs:
         # for cookie-authenticated requests,
-        # set Referer so it looks like the request originated
-        # from a Hub-served page
-        headers.setdefault('Referer', ujoin(base_url, 'test'))
+        # add _xsrf to url params
+        if "_xsrf" in kwargs['cookies'] and not noauth:
+            url = url_concat(url, {"_xsrf": kwargs['cookies']['_xsrf']})
 
-    url = ujoin(base_url, 'api', *api_path)
     f = getattr(async_requests, method)
     if app.internal_ssl:
         kwargs['cert'] = (app.internal_ssl_cert, app.internal_ssl_key)
