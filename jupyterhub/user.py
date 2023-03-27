@@ -348,7 +348,7 @@ class User:
         """Synchronize roles with database"""
         current_roles = {g.name for g in self.db.query(orm.Role).all()}
 
-        auth_roles_names = getRoleNames(auth_roles)
+        auth_roles_names = _get_role_names(auth_roles)
 
         new_roles_names = set(auth_roles_names).difference(current_roles)
         if new_roles_names:
@@ -361,7 +361,7 @@ class User:
                     # create roles that don't exist yet
                     self.log.info(f"Creating new role {role_name}")
 
-                    role = getRoleObject(auth_roles, role_name)
+                    role = _get_role_object(auth_roles, role_name)
 
                     role_name = []
                     if 'name' in role.keys():
