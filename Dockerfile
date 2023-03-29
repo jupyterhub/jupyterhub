@@ -48,8 +48,9 @@ RUN apt-get update \
 COPY . .
 # Build client component packages (they will be copied into ./share and
 # packaged with the built wheel.)
-RUN --mount=type=cache,target=/src/jupyterhub/wheelhouse \
- python3 -m build --wheel \
+ARG PIP_CACHE_DIR=/tmp/pip-cache
+RUN --mount=type=cache,target=${PIP_CACHE_DIR} \
+    python3 -m build --wheel \
  && python3 -m pip wheel --wheel-dir wheelhouse dist/*.whl
 
 FROM $BASE_IMAGE
