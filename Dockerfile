@@ -46,8 +46,6 @@ RUN apt-get update \
 # compromise between needing to rebuild and maintaining
 # what needs to be part of the build
 COPY . .
-# Build client component packages (they will be copied into ./share and
-# packaged with the built wheel.)
 ARG PIP_CACHE_DIR=/tmp/pip-cache
 RUN --mount=type=cache,target=${PIP_CACHE_DIR} \
     python3 -m build --wheel \
@@ -80,15 +78,14 @@ RUN apt update \
     nodejs \
     npm \
  && locale-gen $LC_ALL \
- # always make sure pip is up to date!
- && python3 -m pip install --no-cache-dir --upgrade setuptools pip \
  && npm install -g configurable-http-proxy@^4.2.0 \
  # clean cache and logs
- && rm -rf /var/lib/apt/lists/* /var/log/* /var/tmp/* ~/.npm
- # install the wheels we built in the first stage
-RUN --mount=type=cache,from=builder,source=/src/jupyterhub,target=/tmp/wheelhouse \
- python3 -m pip install --no-cache-dir /tmp/* \
- # clean cache and logs
- && find / -type d -name '*__pycache__' -prune -exec rm -rf {} \;
+ && rm -rf /var/lib/apt/lists/* /var/log/* /var/tmp/* ~/.npm \
+ && find / -type d -name '__pycache__' -prune -exec rm -rf {} \;
+# install the wheels we built in the first stage
+RUN --mount=type=cache,from=builder,source=/src/jupyterhub/wheelhouse,target=/tmp/wheelhouse \
+    # always make sure pip is up to date!
+    python3 -m pip install --no-compile --no-cache-dir --upgrade setuptools pip \
+ && python3 -m pip install --no-compile --no-cache-dir /tmp/wheelhouse/*
 
 CMD ["jupyterhub"]
