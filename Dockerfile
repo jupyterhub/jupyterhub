@@ -27,8 +27,8 @@ FROM $BASE_IMAGE AS builder
 ENV DEBIAN_FRONTEND=noninteractive
 WORKDIR /src/jupyterhub
 
-RUN apt-get update -q \
- && apt-get install -yq --no-install-recommends \
+RUN apt update -q \
+ && apt install -yq --no-install-recommends \
     build-essential \
     ca-certificates \
     locales \
@@ -38,7 +38,7 @@ RUN apt-get update -q \
     python3-venv \
     nodejs \
     npm \
- && apt-get clean \
+ && apt clean \
  && rm -rf /var/lib/apt/lists/* \
  && python3 -m pip install --no-cache-dir --upgrade setuptools pip build wheel \
  && npm install --global yarn
@@ -67,7 +67,7 @@ LABEL org.jupyter.service="jupyterhub"
 WORKDIR /srv/jupyterhub
 
 RUN apt update -q \
- && apt-get install -yq --no-install-recommends \
+ && apt install -yq --no-install-recommends \
     ca-certificates \
     curl \
     gnupg \
