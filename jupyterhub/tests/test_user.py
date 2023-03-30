@@ -53,3 +53,16 @@ def test_sync_groups(app, user, group_names):
             assert user.orm_user in group.users
         else:
             assert user.orm_user not in group.users
+
+
+@pytest.mark.parametrize(
+    "server_name, path",
+    [
+        ("", ""),
+        ("name", "name/"),
+        ("næme", "n%C3%A6me/"),
+    ],
+)
+def test_server_url(app, user, server_name, path):
+    user_url = user.url
+    assert user.server_url(server_name) == user_url + path
