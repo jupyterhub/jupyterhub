@@ -24,11 +24,11 @@
 ARG BASE_IMAGE=ubuntu:22.04
 FROM $BASE_IMAGE AS builder
 
-USER root
+ENV DEBIAN_FRONTEND=noninteractive
+WORKDIR /src/jupyterhub
 
-ENV DEBIAN_FRONTEND noninteractive
-RUN apt-get update \
- && apt-get install -yq --no-install-recommends \
+RUN apt update -q \
+ && apt install -yq --no-install-recommends \
     build-essential \
     ca-certificates \
     locales \
@@ -38,66 +38,54 @@ RUN apt-get update \
     python3-venv \
     nodejs \
     npm \
- && apt-get clean \
- && rm -rf /var/lib/apt/lists/*
-
-RUN python3 -m pip install --upgrade setuptools pip build wheel
-RUN npm install --global yarn
-
+ && apt clean \
+ && rm -rf /var/lib/apt/lists/* \
+ && python3 -m pip install --no-cache-dir --upgrade setuptools pip build wheel \
+ && npm install --global yarn
 # copy everything except whats in .dockerignore, its a
 # compromise between needing to rebuild and maintaining
 # what needs to be part of the build
-COPY . /src/jupyterhub/
-WORKDIR /src/jupyterhub
-
-# Build client component packages (they will be copied into ./share and
-# packaged with the built wheel.)
-RUN python3 -m build --wheel
-RUN python3 -m pip wheel --wheel-dir wheelhouse dist/*.whl
-
+COPY . .
+ARG PIP_CACHE_DIR=/tmp/pip-cache
+RUN --mount=type=cache,target=${PIP_CACHE_DIR} \
+    python3 -m build --wheel \
+ && python3 -m pip wheel --wheel-dir wheelhouse dist/*.whl
 
 FROM $BASE_IMAGE
-
-USER root
-
-ENV DEBIAN_FRONTEND=noninteractive
-
-RUN apt-get update \
- && apt-get install -yq --no-install-recommends \
-    ca-certificates \
-    curl \
-    gnupg \
-    locales \
-    python3-pip \
-    python3-pycurl \
-    nodejs \
-    npm \
- && apt-get clean \
- && rm -rf /var/lib/apt/lists/*
-
-ENV SHELL=/bin/bash \
+ENV DEBIAN_FRONTEND=noninteractive \
+    SHELL=/bin/bash \
     LC_ALL=en_US.UTF-8 \
     LANG=en_US.UTF-8 \
-    LANGUAGE=en_US.UTF-8
-
-RUN  locale-gen $LC_ALL
-
-# always make sure pip is up to date!
-RUN python3 -m pip install --no-cache --upgrade setuptools pip
-
-RUN npm install -g configurable-http-proxy@^4.2.0 \
- && rm -rf ~/.npm
-
-# install the wheels we built in the first stage
-COPY --from=builder /src/jupyterhub/wheelhouse /tmp/wheelhouse
-RUN python3 -m pip install --no-cache /tmp/wheelhouse/*
-
-RUN mkdir -p /srv/jupyterhub/
-WORKDIR /srv/jupyterhub/
+    LANGUAGE=en_US.UTF-8 \
+    PYTHONDONTWRITEBYTECODE=1
 
 EXPOSE 8000
 
 LABEL maintainer="Jupyter Project <jupyter@googlegroups.com>"
 LABEL org.jupyter.service="jupyterhub"
+
+WORKDIR /srv/jupyterhub
+
+RUN apt update -q \
+ && apt install -yq --no-install-recommends \
+    ca-certificates \
+    curl \
+    gnupg \
+    locales \
+    python-is-python3 \
+    python3-pip \
+    python3-pycurl \
+    nodejs \
+    npm \
+ && locale-gen $LC_ALL \
+ && npm install -g configurable-http-proxy@^4.2.0 \
+ # clean cache and logs
+ && rm -rf /var/lib/apt/lists/* /var/log/* /var/tmp/* ~/.npm \
+ && find / -type d -name '__pycache__' -prune -exec rm -rf {} \;
+# install the wheels we built in the first stage
+RUN --mount=type=cache,from=builder,source=/src/jupyterhub/wheelhouse,target=/tmp/wheelhouse \
+    # always make sure pip is up to date!
+    python3 -m pip install --no-compile --no-cache-dir --upgrade setuptools pip \
+ && python3 -m pip install --no-compile --no-cache-dir /tmp/wheelhouse/*
 
 CMD ["jupyterhub"]
