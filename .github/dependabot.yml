@@ -8,8 +8,9 @@ version: 2
 updates:
   # Maintain dependencies in our GitHub Workflows
   - package-ecosystem: github-actions
-    directory: "/"
+    directory: /
+    labels: [ci]
     schedule:
-      interval: weekly
-      time: "05:00"
-      timezone: "Etc/UTC"
+      interval: monthly
+      time: 05:00
+      timezone: Etc/UTC
