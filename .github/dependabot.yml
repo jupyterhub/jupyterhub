@@ -12,5 +12,5 @@ updates:
     labels: [ci]
     schedule:
       interval: monthly
-      time: 05:00
+      time: "05:00"
       timezone: Etc/UTC
