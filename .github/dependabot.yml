@@ -9,6 +9,7 @@ updates:
   # Maintain dependencies in our GitHub Workflows
   - package-ecosystem: github-actions
     directory: /
+    labels: [ci]
     schedule:
       interval: monthly
       time: 05:00
