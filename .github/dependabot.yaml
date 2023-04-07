@@ -1,4 +1,4 @@
-# dependabot.yml reference: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+# dependabot.yaml reference: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
 #
 # Notes:
 # - Status and logs from dependabot are provided at
