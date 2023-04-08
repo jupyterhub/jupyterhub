@@ -82,6 +82,10 @@ RUN apt update -q \
  # clean cache and logs
  && rm -rf /var/lib/apt/lists/* /var/log/* /var/tmp/* ~/.npm \
  && find / -type d -name '__pycache__' -prune -exec rm -rf {} \;
+
+# install neede python libraries needed to spawn a jupyter server.
+RUN pip3 install notebook jupyter;
+
 # install the wheels we built in the first stage
 RUN --mount=type=cache,from=builder,source=/src/jupyterhub/wheelhouse,target=/tmp/wheelhouse \
     # always make sure pip is up to date!
