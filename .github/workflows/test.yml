@@ -240,6 +240,10 @@ jobs:
       - name: Ensure browsers are installed
         run: python -m playwright install --with-deps
 
+      - name: Configure playwright tests
+        if: matrix.playwright
+        run: echo "PYTEST_ADDOPTS=$PYTEST_ADDOPTS -m playwright" >> "${GITHUB_ENV}"
+
       - name: Run pytest
         run: |
           pytest -k "${{ matrix.subset }}" --maxfail=2 --cov=jupyterhub jupyterhub/tests
