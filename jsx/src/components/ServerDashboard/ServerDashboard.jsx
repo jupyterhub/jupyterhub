@@ -236,8 +236,7 @@ const ServerDashboard = (props) => {
             break;
         }
         if (Array.isArray(value)) {
-          // cast arrays (e.g. roles, groups) to string
-          value = value.sort().join(", ");
+          value.sort();
         }
         result[key] = value;
         return result;
