@@ -30,3 +30,11 @@
 tr.noborder > td {
   border: none !important;
 }
+
+.server-dashboard-row-list-item {
+  display: inline-block;
+  padding: 0 5px;
+  margin: 2px;
+  border: 1px solid #ddd;
+  border-radius: 2px;
+}
