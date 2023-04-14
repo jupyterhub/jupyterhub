@@ -20,6 +20,7 @@ const ReactObjectTableViewer = (props) => {
         {keys.map((k, key) => {
           const val = data[k];
           const isObject = typeof val === "object";
+          const isElement = React.isValidElement(val);
 
           return (
             <tr key={key}>
@@ -32,7 +33,8 @@ const ReactObjectTableViewer = (props) => {
               </th>
               {isObject && (
                 <td>
-                  <ReactObjectTableViewer {...opt} data={val} />
+                  {isElement && val}
+                  {!isElement && <ReactObjectTableViewer {...opt} data={val} />}
                 </td>
               )}
               {!isObject && (
@@ -53,9 +55,9 @@ const ReactObjectTableViewer = (props) => {
 
 ReactObjectTableViewer.propTypes = {
   data: PropTypes.object,
-  style: PropTypes.CSSProperties,
-  keyStyle: PropTypes.CSSProperties,
-  valueStyle: PropTypes.CSSProperties,
+  style: PropTypes.objectOf(PropTypes.string),
+  keyStyle: PropTypes.objectOf(PropTypes.string),
+  valueStyle: PropTypes.objectOf(PropTypes.string),
   className: PropTypes.string,
   layout: PropTypes.string,
 };
