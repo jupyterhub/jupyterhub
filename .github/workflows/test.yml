@@ -101,6 +101,8 @@ jobs:
           - python: "3.11"
             selenium: selenium
           - python: "3.11"
+            selenium: playwright
+          - python: "3.11"
             main_dependencies: main_dependencies
 
     steps:
@@ -230,6 +232,9 @@ jobs:
       - name: Configure selenium tests
         if: matrix.selenium
         run: echo "PYTEST_ADDOPTS=$PYTEST_ADDOPTS -m selenium" >> "${GITHUB_ENV}"
+
+      - name: Ensure browsers are installed
+        run: python -m playwright install --with-deps
 
       - name: Run pytest
         run: |
