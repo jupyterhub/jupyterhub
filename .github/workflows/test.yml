@@ -101,7 +101,7 @@ jobs:
           - python: "3.11"
             selenium: selenium
           - python: "3.11"
-            selenium: playwright
+            playwright: playwright
           - python: "3.11"
             main_dependencies: main_dependencies
 
