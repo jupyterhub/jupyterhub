@@ -233,6 +233,10 @@ jobs:
         if: matrix.selenium
         run: echo "PYTEST_ADDOPTS=$PYTEST_ADDOPTS -m selenium" >> "${GITHUB_ENV}"
 
+      - name: Install playwright module
+        run: |
+          pip install playwright
+
       - name: Ensure browsers are installed
         run: python -m playwright install --with-deps
 
