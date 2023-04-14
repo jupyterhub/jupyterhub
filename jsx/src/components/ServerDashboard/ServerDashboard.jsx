@@ -236,7 +236,8 @@ const ServerDashboard = (props) => {
             break;
         }
         if (Array.isArray(value)) {
-          value.sort();
+          // cast arrays (e.g. roles, groups) to string
+          value = value.sort().join(", ");
         }
         result[key] = value;
         return result;
@@ -253,6 +254,7 @@ const ServerDashboard = (props) => {
         }}
         valueStyle={{
           padding: "4px",
+          whiteSpace: "unset",
         }}
         data={sortedData}
       />
