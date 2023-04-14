@@ -12,7 +12,7 @@ import {
   CardGroup,
   Collapse,
 } from "react-bootstrap";
-import ReactObjectTableViewer from "react-object-table-viewer";
+import ReactObjectTableViewer from "../ReactObjectTableViewer/ReactObjectTableViewer";
 
 import { Link } from "react-router-dom";
 import { FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
