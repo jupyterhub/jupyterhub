@@ -27,17 +27,21 @@ FROM $BASE_IMAGE AS builder
 ENV DEBIAN_FRONTEND=noninteractive
 WORKDIR /src/jupyterhub
 
+# Ubuntu 22.04 comes with Nodejs 12 which is too old for building JupyterHub JS
+# It's fine at runtime though (used only by configurable-http-proxy)
 RUN apt update -q \
  && apt install -yq --no-install-recommends \
     build-essential \
     ca-certificates \
+    curl \
     locales \
     python3-dev \
     python3-pip \
     python3-pycurl \
     python3-venv \
+ && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+ && apt-get install -yq --no-install-recommends \
     nodejs \
-    npm \
  && apt clean \
  && rm -rf /var/lib/apt/lists/* \
  && python3 -m pip install --no-cache-dir --upgrade setuptools pip build wheel \
