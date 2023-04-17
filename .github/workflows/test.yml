@@ -166,7 +166,9 @@ jobs:
           fi
 
           if [ "${{ matrix.main_dependencies }}" != "" ]; then
-              pip install git+https://github.com/ipython/traitlets#egg=traitlets --force
+              # Tests are broken:
+              # https://github.com/jupyterhub/jupyterhub/issues/4418
+              # pip install git+https://github.com/ipython/traitlets#egg=traitlets --force
               pip install --upgrade --pre sqlalchemy
           fi
           if [ "${{ matrix.legacy_notebook }}" != "" ]; then
