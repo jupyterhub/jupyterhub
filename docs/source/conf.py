@@ -235,7 +235,7 @@ ogp_use_first_image = True
 # If you are basing changes off another branch/ commit, always change back
 # rediraffe_branch to main before pushing your changes upstream.
 #
-rediraffe_branch = "main"
+rediraffe_branch = os.environ.get("REDIRAFFE_BRANCH", "main")
 rediraffe_redirects = "redirects.txt"
 # rediraffe_redirects = {
 # "old-file": "new-folder/new-file-name",
