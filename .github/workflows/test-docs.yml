@@ -82,9 +82,10 @@ jobs:
       # git references, and forks can be outdated, we only run these steps when
       # working against jupyterhub/jupyterhub to avoid incorrectly erroring
       - name: check redirects for this PR
-        if: github.repository == 'jupyterhub/jupyterhub'
+        if: ${{ github.event_name == 'pull_request' }}
         run: |
           cd docs
+          export REDIRAFFE_BRANCH=${{ github.base_ref }}
           make rediraffecheckdiff
 
       # this should check currently published 'stable' links for redirects
