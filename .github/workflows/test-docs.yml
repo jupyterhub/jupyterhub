@@ -78,13 +78,18 @@ jobs:
           cd docs
           make linkcheck
 
+      # make rediraffecheckdiff compares files with the origin/main and other
+      # git references, and forks can be outdated, we only run these steps when
+      # working against jupyterhub/jupyterhub to avoid incorrectly erroring
       - name: check redirects for this PR
+        if: github.repository == 'jupyterhub/jupyterhub'
         run: |
           cd docs
           make rediraffecheckdiff
 
       # this should check currently published 'stable' links for redirects
       - name: check redirects since last release
+        if: github.repository == 'jupyterhub/jupyterhub'
         run: |
           cd docs
           export REDIRAFFE_BRANCH=$(git describe --tags --abbrev 0)
@@ -92,6 +97,7 @@ jobs:
 
       # longer-term redirect check (fixed version) for older links
       - name: check redirects since 3.0.0
+        if: github.repository == 'jupyterhub/jupyterhub'
         run: |
           cd docs
           export REDIRAFFE_BRANCH=3.0.0
