@@ -85,7 +85,7 @@ jobs:
         if: ${{ github.event_name == 'pull_request' }}
         run: |
           cd docs
-          export REDIRAFFE_BRANCH=${{ github.base_ref }}
+          export REDIRAFFE_BRANCH=origin/${{ github.base_ref }}
           make rediraffecheckdiff
 
       # this should check currently published 'stable' links for redirects
