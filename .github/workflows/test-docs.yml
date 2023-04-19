@@ -92,7 +92,7 @@ jobs:
         if: github.repository == 'jupyterhub/jupyterhub'
         run: |
           cd docs
-          export REDIRAFFE_BRANCH=$(git describe --tags --abbrev 0)
+          export REDIRAFFE_BRANCH=$(git describe --tags --abbrev=0)
           make rediraffecheckdiff
 
       # longer-term redirect check (fixed version) for older links
