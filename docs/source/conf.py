@@ -201,6 +201,7 @@ intersphinx_mapping = {
     "python": ("https://docs.python.org/3/", None),
     "tornado": ("https://www.tornadoweb.org/en/stable/", None),
     "jupyter-server": ("https://jupyter-server.readthedocs.io/en/stable/", None),
+    "nbgitpuller": ("https://nbgitpuller.readthedocs.io/en/latest", None),
 }
 
 # -- Options for the opengraph extension -------------------------------------
