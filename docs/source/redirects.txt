@@ -2,10 +2,6 @@
 # For more information, see rediraffe configuration in the conf.py file.
 
 
-#  -- JupyterHub 4.0 --
-# redirects below are up-to-date as of JupyterHub 4.0
-# add future redirects above
-
 "changelog.md" "reference/changelog.md"
 "contributor-list.md" "contributing/contributor-list.md"
 "gallery-jhub-deployments.md" "reference/gallery-jhub-deployments.md"
@@ -42,3 +38,8 @@
 "reference/separate-proxy.md" "howto/separate-proxy.md"
 "reference/server-api.md" "tutorial/server-api.md"
 "reference/websecurity.md" "explanation/websecurity.md"
+
+#  -- JupyterHub 4.0 --
+# redirects above are up-to-date as of JupyterHub 4.0
+# add future redirects below
+# (e.g. with `make rediraffewritediff`)
