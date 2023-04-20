@@ -145,7 +145,7 @@ setup_args = dict(
             "pytest-cov",
             "requests-mock",
             "selenium",
-            "virtualenv",
+            "playwright" "virtualenv",
         ],
     },
 )
