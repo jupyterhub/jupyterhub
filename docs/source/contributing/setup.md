@@ -130,8 +130,8 @@ configuration:
 jupyterhub -f testing/jupyterhub_config.py
 ```
 
-The default JupyterHub [authenticator](https://jupyterhub.readthedocs.io/en/stable/reference/authenticators.html#the-default-pam-authenticator)
-& [spawner](https://jupyterhub.readthedocs.io/en/stable/api/spawner.html#localprocessspawner)
+The default JupyterHub [authenticator](PAMAuthenticator)
+& [spawner](LocalProcessSpawner)
 require your system to have user accounts for each user you want to log in to
 JupyterHub as.
 
