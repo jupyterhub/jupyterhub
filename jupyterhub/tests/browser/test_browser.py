@@ -8,7 +8,7 @@ from playwright.async_api import expect
 from jupyterhub.tests.utils import public_host
 from jupyterhub.utils import url_path_join
 
-pytestmark = pytest.mark.playwright
+pytestmark = pytest.mark.browser
 
 
 async def login(browser, username, password):

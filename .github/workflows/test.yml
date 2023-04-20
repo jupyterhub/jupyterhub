@@ -99,9 +99,7 @@ jobs:
             noextension: noextension
             subset: singleuser
           - python: "3.11"
-            selenium: selenium
-          - python: "3.11"
-            playwright: playwright
+            browser: browser
           - python: "3.11"
             main_dependencies: main_dependencies
 
@@ -231,21 +229,17 @@ jobs:
               DB=postgres bash ci/init-db.sh
           fi
 
-      - name: Configure selenium tests
-        if: matrix.selenium
-        run: echo "PYTEST_ADDOPTS=$PYTEST_ADDOPTS -m selenium" >> "${GITHUB_ENV}"
+      - name: Configure browser tests
+        if: matrix.browser
+        run: echo "PYTEST_ADDOPTS=$PYTEST_ADDOPTS -m browser" >> "${GITHUB_ENV}"
 
       - name: Install playwright module
         run: |
           pip install playwright
 
       - name: Ensure browsers are installed for playwright
-        if: matrix.playwright
+        if: matrix.browser
         run: python -m playwright install --with-deps
-
-      - name: Configure playwright tests
-        if: matrix.playwright
-        run: echo "PYTEST_ADDOPTS=$PYTEST_ADDOPTS -m playwright" >> "${GITHUB_ENV}"
 
       - name: Run pytest
         run: |
