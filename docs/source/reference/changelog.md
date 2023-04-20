@@ -14,8 +14,7 @@ command line for details.
 
 4.0 is a major release, but a small one.
 
-:::{note}
-**Upgrade note**
+:::{admonition} Upgrade note
 
 Upgrading from 3.1 to 4.0 should require no additional action beyond running `jupyterhub --upgrade-db` to upgrade the database schema after upgrading the package version.
 It is otherwise a regular jupyterhub [upgrade](upgrading-jupyterhub).
