@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Fragment } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { debounce } from "lodash";
 import PropTypes from "prop-types";
@@ -12,7 +12,7 @@ import {
   CardGroup,
   Collapse,
 } from "react-bootstrap";
-import ReactObjectTableViewer from "react-object-table-viewer";
+import ReactObjectTableViewer from "../ReactObjectTableViewer/ReactObjectTableViewer";
 
 import { Link } from "react-router-dom";
 import { FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
@@ -28,6 +28,13 @@ const AccessServerButton = ({ url }) => (
     </button>
   </a>
 );
+
+const RowListItem = ({ text }) => (
+  <span className="server-dashboard-row-list-item">{text}</span>
+);
+RowListItem.propTypes = {
+  text: PropTypes.string,
+};
 
 const ServerDashboard = (props) => {
   let base_url = window.base_url || "/";
@@ -236,8 +243,13 @@ const ServerDashboard = (props) => {
             break;
         }
         if (Array.isArray(value)) {
-          // cast arrays (e.g. roles, groups) to string
-          value = value.sort().join(", ");
+          value = (
+            <Fragment>
+              {value.sort().flatMap((v) => (
+                <RowListItem text={v} />
+              ))}
+            </Fragment>
+          );
         }
         result[key] = value;
         return result;

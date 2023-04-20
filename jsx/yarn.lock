@@ -5963,7 +5963,7 @@ react-bootstrap@^2.1.1:
     uncontrollable "^7.2.1"
     warning "^4.0.3"
 
-react-dom@17.0.2, react-dom@^17.0.1:
+react-dom@^17.0.1:
   version "17.0.2"
   resolved "https://registry.yarnpkg.com/react-dom/-/react-dom-17.0.2.tgz#ecffb6845e3ad8dbfcdc498f0d0a939736502c23"
   integrity sha512-s4h96KtLDUQlsENhMn1ar8t2bEa+q/YAtj8pPPdIjPDGBDIVNsrD9aXNWqspUe6AzKCIG0C1HZZLqLV7qpOBGA==
@@ -6003,14 +6003,6 @@ react-multi-select-component@^3.0.7:
   integrity sha512-ycb+qCc8I+KLjlgVvo/I5Gsali8qw4vLUjfIMorgpt/RUY0+0aOtqxOAc4ojwQAe6tNKee23IRyCCQvU4tyBFA==
   dependencies:
     goober "^2.0.30"
-
-react-object-table-viewer@^1.0.7:
-  version "1.0.7"
-  resolved "https://registry.yarnpkg.com/react-object-table-viewer/-/react-object-table-viewer-1.0.7.tgz#31816021fa4526641c6b66bd9433ec9b78c2e472"
-  integrity sha512-OezCet8+BmEdJJHO5WGPFPRWXxw4Ls6HsV4Uh1kRPlmRXLOTNqWt/ZHmH8NhTl1BA9HkdhEegKVqc2b61wDMLg==
-  dependencies:
-    react "^17.0.2"
-    react-dom "17.0.2"
 
 react-redux@^7.2.2:
   version "7.2.8"
@@ -6081,7 +6073,7 @@ react-transition-group@^4.4.2:
     loose-envify "^1.4.0"
     prop-types "^15.6.2"
 
-react@^17.0.1, react@^17.0.2:
+react@^17.0.1:
   version "17.0.2"
   resolved "https://registry.yarnpkg.com/react/-/react-17.0.2.tgz#d0b5cc516d29eb3eee383f75b62864cfb6800037"
   integrity sha512-gnhPt75i/dq/z3/6q/0asP78D0u592D5L1pd7M8P+dck6Fu/jJeL6iVVK23fptSUZj8Vjf++7wXA8UNclGQcbA==
