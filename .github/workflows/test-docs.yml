@@ -78,11 +78,13 @@ jobs:
           cd docs
           make linkcheck
 
-      # make rediraffecheckdiff compares files with the origin/main and other
-      # git references, and forks can be outdated, we only run these steps when
-      # working against jupyterhub/jupyterhub to avoid incorrectly erroring
+      # make rediraffecheckdiff compares files for different changesets
+      # these diff targets aren't always available
+      # - compare with base ref (usually 'main', always on 'origin') for pull requests
+      # - only compare with tags when running against jupyterhub/jupyterhub
+      #   to avoid errors on forks, which often lack tags
       - name: check redirects for this PR
-        if: ${{ github.event_name == 'pull_request' }}
+        if: github.event_name == 'pull_request'
         run: |
           cd docs
           export REDIRAFFE_BRANCH=origin/${{ github.base_ref }}
