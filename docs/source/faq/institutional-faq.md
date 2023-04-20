@@ -124,13 +124,13 @@ as more resources are needed - allowing you to utilize the benefits of a flexibl
 
 ### Is JupyterHub secure?
 
-The short answer: yes.  
+The short answer: yes.
 JupyterHub as a standalone application has been battle-tested at an institutional
 level for several years, and makes a number of "default" security decisions that are reasonable for most
 users.
 
 - For security considerations in the base JupyterHub application,
-  [see the JupyterHub security page](https://jupyterhub.readthedocs.io/en/stable/reference/websecurity.html).
+  [see the JupyterHub security page](web-security).
 - For security considerations when deploying JupyterHub on Kubernetes, see the
   [JupyterHub on Kubernetes security page](https://z2jh.jupyter.org/en/latest/security.html).
 
