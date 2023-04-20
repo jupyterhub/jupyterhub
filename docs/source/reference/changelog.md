@@ -13,6 +13,13 @@ command line for details.
 ### 4.0.0 - 2023-04-20
 
 4.0 is a major release, but a small one.
+
+:::{admonition} Upgrade note
+
+Upgrading from 3.1 to 4.0 should require no additional action beyond running `jupyterhub --upgrade-db` to upgrade the database schema after upgrading the package version.
+It is otherwise a regular jupyterhub [upgrade](upgrading-jupyterhub).
+:::
+
 There are three major changes that _should_ be invisible to most users:
 
 1. Groups can now have 'properties', editable via the admin page, which can be used by Spawners for their operations.
