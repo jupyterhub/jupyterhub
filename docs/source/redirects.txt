@@ -39,6 +39,15 @@
 "reference/server-api.md" "tutorial/server-api.md"
 "reference/websecurity.md" "explanation/websecurity.md"
 
+"api/app.md" "reference/api/app.md"
+"api/auth.md" "reference/api/auth.md"
+"api/index.md" "reference/api/index.md"
+"api/proxy.md" "reference/api/proxy.md"
+"api/service.md" "reference/api/service.md"
+"api/services.auth.md" "reference/api/services.auth.md"
+"api/spawner.md" "reference/api/spawner.md"
+"api/user.md" "reference/api/user.md"
+
 #  -- JupyterHub 4.0 --
 # redirects above are up-to-date as of JupyterHub 4.0
 # add future redirects below
