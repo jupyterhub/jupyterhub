@@ -31,7 +31,7 @@ from ... import orm, roles
 from ...utils import url_path_join
 from ..utils import api_request, public_host, public_url, ujoin
 
-pytestmark = pytest.mark.selenium
+pytestmark = pytest.mark.browser
 
 
 async def webdriver_wait(driver, condition, timeout=30):
