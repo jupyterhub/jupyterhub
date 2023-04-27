@@ -1008,6 +1008,7 @@ async def test_start_stop_server_on_admin_page(
 
     user1, user2 = create_list_of_users(create_user_with_scopes, 2)
     await open_admin_page(app, browser, admin_user)
+    await browser.wait_for_load_state("networkidle")
     users = await browser.locator('//td[@data-testid="user-row-name"]').all()
     users_list = [await user.text_content() for user in users]
     users_list = [user.strip() for user in users_list]
