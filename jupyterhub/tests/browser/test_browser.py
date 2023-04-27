@@ -1,12 +1,15 @@
 """Tests for the Playwright Python"""
 
+import json
 import re
+from urllib.parse import parse_qs, urlparse
 
 import pytest
 from playwright.async_api import expect
 from tornado.escape import url_escape
 from tornado.httputil import url_concat
 
+from jupyterhub import orm, roles, scopes
 from jupyterhub.tests.utils import public_host, public_url, ujoin
 from jupyterhub.utils import url_escape_path, url_path_join
 
@@ -536,3 +539,531 @@ async def test_revoke_token(app, browser, token_type, user):
             await browser.wait_for_load_state("domcontentloaded")
         await expect(revoke_btns).to_have_count(0)
         await expect(revoke_btns).to_have_count(len(user.api_tokens))
+
+
+# MENU BAR
+
+
+@pytest.mark.parametrize(
+    "page, logged_in",
+    [
+        # the home page: verify if links work on the top bar
+        ("/hub/home", True),
+        # the token page: verify if links work on the top bar
+        ("/hub/token", True),
+        # "hub/not" = any url that is not existed: verify if links work on the top bar
+        ("hub/not", True),
+        # the login page: verify if links work on the top bar
+        ("", False),
+    ],
+)
+async def test_menu_bar(app, browser, page, logged_in, user):
+    url = url_path_join(
+        public_host(app),
+        url_concat(
+            url_path_join(app.base_url, "/login?next="),
+            {"next": url_path_join(app.base_url, page)},
+        ),
+    )
+    await browser.goto(url)
+    if page:
+        await login(browser, user.name, password=user.name)
+    bar_link_elements = browser.locator('//div[@class="container-fluid"]//a')
+
+    if not logged_in:
+        await expect(bar_link_elements).to_have_count(1)
+    elif "hub/not" in page:
+        await expect(bar_link_elements).to_have_count(3)
+    else:
+        await expect(bar_link_elements).to_have_count(4)
+        user_name = browser.get_by_text(f"{user.name}")
+        await expect(user_name).to_be_visible()
+
+    # verify the title on the logo
+    logo = browser.get_by_role("img")
+    await expect(logo).to_have_attribute("title", "Home")
+    expected_link_bar_url = ["/hub/", "/hub/home", "/hub/token", "/hub/logout"]
+    expected_link_bar_name = ["", "Home", "Token", "Logout"]
+    for index in range(await bar_link_elements.count()):
+        # verify that links on the topbar work, checking the titles of links
+        link = bar_link_elements.nth(index)
+        await expect(bar_link_elements.nth(index)).to_have_attribute(
+            'href', re.compile('.*' + expected_link_bar_url[index])
+        )
+        await expect(bar_link_elements.nth(index)).to_have_text(
+            expected_link_bar_name[index]
+        )
+        await link.click()
+        if index == 0:
+            if not logged_in:
+                expected_url = f"hub/login?next={url_escape(app.base_url)}"
+                assert expected_url in browser.url
+            else:
+                await expect(browser).to_have_url(re.compile(f".*/user/{user.name}/"))
+                await browser.go_back()
+                await expect(browser).to_have_url(re.compile(".*" + page))
+        elif index == 3:
+            await expect(browser).to_have_url(re.compile(".*/login"))
+        else:
+            await expect(browser).to_have_url(
+                re.compile(".*" + expected_link_bar_url[index])
+            )
+
+
+# LOGOUT
+
+
+@pytest.mark.parametrize(
+    "url",
+    [("/hub/home"), ("/hub/token"), ("/hub/spawn")],
+)
+async def test_user_logout(app, browser, url, user):
+    if "/hub/home" in url:
+        await open_home_page(app, browser, user)
+    elif "/hub/token" in url:
+        await open_home_page(app, browser, user)
+    elif "/hub/spawn" in url:
+        await open_spawn_pending(app, browser, user)
+    logout_btn = browser.get_by_role("button", name="Logout")
+    await expect(logout_btn).to_be_enabled()
+    await logout_btn.click()
+    # checking url changing to login url and login form is displayed
+    await expect(browser).to_have_url(re.compile(".*/hub/login"))
+    form = browser.locator('//*[@id="login-main"]/form')
+    await expect(form).to_be_visible()
+    bar_link_elements = browser.locator('//div[@class="container-fluid"]//a')
+    await expect(bar_link_elements).to_have_count(1)
+    await expect(bar_link_elements).to_have_attribute('href', (re.compile(".*/hub/")))
+
+    # verify that user can login after logout
+    await login(browser, user.name, password=user.name)
+    await expect(browser).to_have_url(re.compile(".*/user/" + f"{user.name}/"))
+
+
+# OAUTH confirmation page
+
+
+@pytest.mark.parametrize(
+    "user_scopes",
+    [
+        ([]),  # no scopes
+        (  # user has just access to own resources
+            [
+                'self',
+            ]
+        ),
+        (  # user has access to all groups resources
+            [
+                'read:groups',
+                'groups',
+            ]
+        ),
+        (  # user has access to specific users/groups/services resources
+            [
+                'read:users!user=gawain',
+                'read:groups!group=mythos',
+                'read:services!service=test',
+            ]
+        ),
+    ],
+)
+async def test_oauth_page(
+    app,
+    browser,
+    mockservice_url,
+    create_temp_role,
+    create_user_with_scopes,
+    user_scopes,
+):
+    # create user with appropriate access permissions
+    service_role = create_temp_role(user_scopes)
+    service = mockservice_url
+    user = create_user_with_scopes("access:services")
+    roles.grant_role(app.db, user, service_role)
+    oauth_client = (
+        app.db.query(orm.OAuthClient)
+        .filter_by(identifier=service.oauth_client_id)
+        .one()
+    )
+    oauth_client.allowed_scopes = sorted(roles.roles_to_scopes([service_role]))
+    app.db.commit()
+    # open the service url in the browser
+    service_url = url_path_join(public_url(app, service) + 'owhoami/?arg=x')
+    await browser.goto(service_url)
+
+    expected_redirect_url = url_path_join(
+        app.base_url + f"services/{service.name}/oauth_callback"
+    )
+    expected_client_id = f"service-{service.name}"
+
+    # decode the URL
+    query_params = parse_qs(urlparse(browser.url).query)
+    query_params = parse_qs(urlparse(query_params['next'][0]).query)
+
+    # check if the client_id and redirected url in the browser_url
+    assert expected_client_id == query_params['client_id'][0]
+    assert expected_redirect_url == query_params['redirect_uri'][0]
+
+    # login user
+    await login(browser, user.name, password=str(user.name))
+    auth_btn = browser.locator('//input[@type="submit"]')
+    await expect(auth_btn).to_be_enabled()
+    text_permission = browser.get_by_role("paragraph")
+    await expect(text_permission).to_contain_text(f"JupyterHub service {service.name}")
+    await expect(text_permission).to_contain_text(f"oauth URL: {expected_redirect_url}")
+
+    # verify that user can see the service name and oauth URL
+    # permissions check
+    oauth_form = browser.locator('//form')
+    scopes_elements = await oauth_form.locator(
+        '//input[@type="hidden" and @name="scopes"]'
+    ).all()
+
+    # checking that scopes are invisible on the page
+    scope_list_oauth_page = [
+        await expect(scopes_element).not_to_be_visible()
+        for scopes_element in scopes_elements
+    ]
+    # checking that all scopes granded to user are presented in POST form (scope_list)
+    scope_list_oauth_page = [
+        await scopes_element.get_attribute("value")
+        for scopes_element in scopes_elements
+    ]
+    assert all(x in scope_list_oauth_page for x in user_scopes)
+    assert f"access:services!service={service.name}" in scope_list_oauth_page
+
+    # checking that user cannot uncheck the checkbox
+    check_boxes = await oauth_form.get_by_role('checkbox', name="raw-scopes").all()
+    for check_box in check_boxes:
+        await expect(check_box).not_to_be_editable()
+        await expect(check_box).to_be_disabled()
+        await expect(check_box).to_have_value("title", "This authorization is required")
+
+    # checking that appropriete descriptions are displayed depending of scopes
+    descriptions = await oauth_form.locator('//span').all()
+    desc_list_form = [await description.text_content() for description in descriptions]
+    desc_list_form = [" ".join(desc.split()) for desc in desc_list_form]
+
+    # getting descriptions from scopes.py to compare them with descriptions on UI
+    scope_descriptions = scopes.describe_raw_scopes(
+        user_scopes or ['(no_scope)'], user.name
+    )
+    desc_list_expected = [
+        f"{sd['description']} Applies to {sd['filter']}."
+        if sd.get('filter')
+        else sd['description']
+        for sd in scope_descriptions
+    ]
+    assert sorted(desc_list_form) == sorted(desc_list_expected)
+
+    # click on the Authorize button
+    await auth_btn.click()
+    # check that user returned to service page
+    await expect(browser).to_have_url(service_url)
+    # check the granted permissions by
+    # getting the scopes from the service page,
+    # which contains the JupyterHub user model
+    text = await browser.locator("//body").text_content()
+    user_model = json.loads(text)
+    authorized_scopes = user_model["scopes"]
+    # resolve the expected expanded scopes
+    # authorized for the service
+    expected_scopes = scopes.expand_scopes(user_scopes, owner=user.orm_user)
+    expected_scopes |= scopes.access_scopes(oauth_client)
+    expected_scopes |= scopes.identify_scopes(user.orm_user)
+
+    # compare the scopes on the service page with the expected scope list
+    assert sorted(authorized_scopes) == sorted(expected_scopes)
+
+
+# ADMIN UI
+
+
+async def open_admin_page(app, browser, login_as=None):
+    """Login as `user` and open the admin page"""
+    admin_page = url_escape(app.base_url) + "hub/admin"
+    if login_as:
+        user = login_as
+        url = url_path_join(
+            public_host(app), app.hub.base_url, "/login?next=" + admin_page
+        )
+        await browser.goto(url)
+        await login(browser, user.name, password=str(user.name))
+        await expect(browser).to_have_url(re.compile(".*/hub/admin"))
+    else:
+        # url = url_path_join(public_host(app), app.hub.base_url, "/login?next=" + admin_page)
+        await browser.goto(admin_page)
+        await expect(browser).to_have_url(re.compile(".*/hub/admin"))
+
+
+def create_list_of_users(create_user_with_scopes, n):
+    return [create_user_with_scopes("self") for i in range(n)]
+
+
+async def test_start_stop_all_servers_on_admin_page(app, browser, admin_user):
+    """verifying of working "Start All"/"Stop All" buttons"""
+
+    await open_admin_page(app, browser, admin_user)
+    # get total count of users from db
+    users_count_db = app.db.query(orm.User).count()
+    start_all_btn = browser.get_by_test_id("start-all")
+    stop_all_btn = browser.get_by_test_id("stop-all")
+    # verify Start All and Stop All buttons are displayed
+    await expect(start_all_btn).to_be_enabled()
+    await expect(stop_all_btn).to_be_enabled()
+
+    users = browser.get_by_test_id("user-row-name")
+    # verify that all servers are not started
+    # users´numbers are the same as numbers of the start button and the Spawn page button
+    # no Stop server buttons are displayed
+    # no access buttons are displayed
+    btns_start = browser.get_by_test_id("user-row-server-activity").get_by_role(
+        "button", name="Start Server"
+    )
+    btns_stop = browser.get_by_test_id("user-row-server-activity").get_by_role(
+        "button", name="Stop Server"
+    )
+    btns_spawn = browser.get_by_test_id("user-row-server-activity").get_by_role(
+        "button", name="Spawn Page"
+    )
+    btns_access = browser.get_by_test_id("user-row-server-activity").get_by_role(
+        "button", name="Access Server"
+    )
+
+    assert (
+        await btns_start.count()
+        == await btns_spawn.count()
+        == await users.count()
+        == users_count_db
+    )
+    assert await btns_stop.count() == await btns_access.count() == 0
+
+    # start all servers via the Start All
+    await start_all_btn.click()
+    # Start All and Stop All are still displayed
+    await expect(start_all_btn).to_be_enabled()
+    await expect(stop_all_btn).to_be_enabled()
+
+    for btn_start in await btns_start.all():
+        await btn_start.wait_for(state="hidden")
+    # users´numbers are the same as numbers of the stop button and the Access button
+    # no Start server buttons are displayed
+    # no Spawn page buttons are displayed
+    assert await btns_start.count() == await btns_spawn.count() == 0
+    assert (
+        await btns_stop.count()
+        == await btns_access.count()
+        == await users.count()
+        == users_count_db
+    )
+    # stop all servers via the Stop All
+    await stop_all_btn.click()
+    for btn_stop in await btns_stop.all():
+        await btn_stop.wait_for(state="hidden")
+    # verify that all servers are stopped
+    # users´numbers are the same as numbers of the start button and the Spawn page button
+    # no Stop server buttons are displayed
+    # no access buttons are displayed
+    await expect(start_all_btn).to_be_enabled()
+    await expect(stop_all_btn).to_be_enabled()
+    assert (
+        await btns_start.count()
+        == await btns_spawn.count()
+        == await users.count()
+        == users_count_db
+    )
+
+
+@pytest.mark.parametrize("added_count_users", [10, 47, 48, 49, 110])
+async def test_paging_on_admin_page(
+    app, browser, admin_user, added_count_users, create_user_with_scopes
+):
+    """verifying of displaying number of total users on the admin page and navigation with "Previous"/"Next" buttons"""
+
+    create_list_of_users(create_user_with_scopes, added_count_users)
+    await open_admin_page(app, browser, admin_user)
+    # get total count of users from db
+    users_count_db = app.db.query(orm.User).count()
+    # get total count of users from UI page
+    displaying = browser.get_by_text("Displaying")
+    btn_previous = browser.get_by_role("button", name="Previous")
+    btn_next = browser.get_by_role("button", name="Next")
+    # verify "Previous"/"Next" button clickability depending on users number on the page
+    await expect(displaying).to_have_text(
+        re.compile(".*" + f"0-{min(users_count_db,50)}" + ".*")
+    )
+    if users_count_db > 50:
+        await expect(btn_next.locator("//span")).to_have_class("active-pagination")
+        # click on Next button
+        await btn_next.click()
+        if users_count_db <= 100:
+            await expect(displaying).to_have_text(
+                re.compile(".*" + f"50-{users_count_db}" + ".*")
+            )
+        else:
+            await expect(displaying).to_have_text(re.compile(".*" + "50-100" + ".*"))
+            await expect(btn_next.locator("//span")).to_have_class("active-pagination")
+        await expect(btn_previous.locator("//span")).to_have_class("active-pagination")
+        # click on Previous button
+        await btn_previous.click()
+    else:
+        await expect(btn_next.locator("//span")).to_have_class("inactive-pagination")
+        await expect(btn_previous.locator("//span")).to_have_class(
+            "inactive-pagination"
+        )
+
+
+@pytest.mark.parametrize(
+    "added_count_users, search_value",
+    [
+        # the value of search is absent =>the expected result null records are found
+        (10, "not exists"),
+        # a search value is a middle part of users name (number,symbol,letter)
+        (25, "r_5"),
+        # a search value equals to number
+        (50, "1"),
+        # searching result shows on more than one page
+        (60, "user"),
+    ],
+)
+async def test_search_on_admin_page(
+    app,
+    browser,
+    admin_user,
+    create_user_with_scopes,
+    added_count_users,
+    search_value,
+):
+    create_list_of_users(create_user_with_scopes, added_count_users)
+    await open_admin_page(app, browser, admin_user)
+    element_search = browser.locator('//input[@name="user_search"]')
+    await element_search.click()
+    await element_search.fill(search_value, force=True)
+    await browser.wait_for_load_state("networkidle")
+    # get the result of the search from db
+    users_count_db_filtered = (
+        app.db.query(orm.User).filter(orm.User.name.like(f'%{search_value}%')).count()
+    )
+    # get the result of the search
+    filtered_list_on_page = browser.locator('//tr[@class="user-row"]')
+    displaying = browser.get_by_text("Displaying")
+    if users_count_db_filtered <= 50:
+        await expect(filtered_list_on_page).to_have_count(users_count_db_filtered)
+        await expect(displaying).to_contain_text(
+            re.compile(f"0-{users_count_db_filtered}")
+        )
+        # check that users names contain the search value in the filtered list
+        for element in await filtered_list_on_page.get_by_test_id(
+            "user-row-name"
+        ).all():
+            await expect(element).to_contain_text(re.compile(f".*{search_value}.*"))
+    else:
+        await expect(filtered_list_on_page).to_have_count(50)
+        await expect(displaying).to_contain_text(re.compile("0-50"))
+        # click on Next button to verify that the rest part of filtered list is displayed on the next page
+        await browser.get_by_role("button", name="Next").click()
+        filtered_list_on_next_page = browser.locator('//tr[@class="user-row"]')
+        await expect(filtered_list_on_page).to_have_count(users_count_db_filtered - 50)
+        for element in await filtered_list_on_next_page.get_by_test_id(
+            "user-row-name"
+        ).all():
+            await expect(element).to_contain_text(re.compile(f".*{search_value}.*"))
+
+
+async def test_start_stop_server_on_admin_page(
+    app,
+    browser,
+    admin_user,
+    create_user_with_scopes,
+):
+    async def click_start_server(browser, username):
+        """start the server for one user via the Start Server button, index = 0 or 1"""
+        start_btn_xpath = f'//a[contains(@href, "spawn/{username}")]/preceding-sibling::button[contains(@class, "start-button")]'
+        start_btn = browser.locator(start_btn_xpath)
+        await expect(start_btn).to_be_enabled()
+        await start_btn.click()
+
+    async def click_spawn_page(browser, username):
+        """spawn the server for one user via the Spawn page button, index = 0 or 1"""
+        spawn_btn_xpath = f'//a[contains(@href, "spawn/{username}")]/button[contains(@class, "secondary")]'
+        spawn_btn = browser.locator(spawn_btn_xpath)
+        await expect(spawn_btn).to_be_enabled()
+        async with browser.expect_navigation(url=f"**/user/{username}/"):
+            await spawn_btn.click()
+
+    async def click_access_server(browser, username):
+        """access to the server for users via the Access Server button"""
+        access_btn_xpath = f'//a[contains(@href, "user/{username}")]/button[contains(@class, "primary")]'
+        access_btn = browser.locator(access_btn_xpath)
+        await expect(access_btn).to_be_enabled()
+        await access_btn.click()
+        await browser.go_back()
+
+    async def click_stop_button(browser, username):
+        """stop the server for one user via the Stop Server button"""
+        stop_btn_xpath = f'//a[contains(@href, "user/{username}")]/preceding-sibling::button[contains(@class, "stop-button")]'
+        stop_btn = browser.locator(stop_btn_xpath)
+        await expect(stop_btn).to_be_enabled()
+        await stop_btn.click()
+
+    user1, user2 = create_list_of_users(create_user_with_scopes, 2)
+    await open_admin_page(app, browser, admin_user)
+    users = await browser.locator('//td[@data-testid="user-row-name"]').all()
+    users_list = [await user.text_content() for user in users]
+    users_list = [user.strip() for user in users_list]
+    assert {user1.name, user2.name}.issubset({e for e in users_list})
+
+    # check that all users have correct link for Spawn Page
+    spawn_page_btns = browser.locator(
+        '//*[@data-testid="user-row-server-activity"]//a[contains(@href, "spawn/")]'
+    )
+    spawn_page_btns_list = await spawn_page_btns.all()
+    for user, spawn_page_btn in zip(users, spawn_page_btns_list):
+        user_from_table = await user.text_content()
+        user_from_table = user_from_table.strip()
+        link = await spawn_page_btn.get_attribute('href')
+        assert f"/spawn/{user_from_table}" in link
+
+    # click on Start button
+    await click_start_server(browser, user1.name)
+    await expect(browser.get_by_role("button", name="Stop Server")).to_have_count(1)
+    await expect(browser.get_by_role("button", name="Start Server")).to_have_count(
+        len(users_list) - 1
+    )
+    await expect(browser.get_by_role("button", name="Spawn Page")).to_have_count(
+        len(users_list) - 1
+    )
+
+    # click on Spawn page button
+    await click_spawn_page(browser, user2.name)
+    await expect(browser).to_have_url(re.compile(".*" + f"/user/{user2.name}/"))
+
+    # open/return to the Admin page
+    admin_page = url_path_join(public_host(app), app.hub.base_url, "admin")
+    await browser.goto(admin_page)
+    await expect(browser.get_by_role("button", name="Stop Server")).to_have_count(2)
+    await expect(browser.get_by_role("button", name="Access Server")).to_have_count(2)
+    await expect(browser.get_by_role("button", name="Start Server")).to_have_count(
+        len(users_list) - 2
+    )
+
+    # click on the Access button
+    await click_access_server(browser, user1.name)
+    await expect(browser.get_by_role("button", name="Stop Server")).to_have_count(2)
+    await expect(browser.get_by_role("button", name="Start Server")).to_have_count(
+        len(users_list) - 2
+    )
+
+    # click on Stop button for both users
+    [
+        await click_stop_button(browser, username)
+        for username in (user1.name, user2.name)
+    ]
+    await expect(browser.get_by_role("button", name="Stop Server")).to_have_count(0)
+    await expect(browser.get_by_role("button", name="Access Server")).to_have_count(0)
+    await expect(browser.get_by_role("button", name="Start Server")).to_have_count(
+        len(users_list)
+    )
+    await expect(browser.get_by_role("button", name="Spawn Page")).to_have_count(
+        len(users_list)
+    )
