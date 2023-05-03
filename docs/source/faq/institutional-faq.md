@@ -66,7 +66,7 @@ Here is a sample of organizations that use JupyterHub:
 - **Universities and colleges**: UC Berkeley, UC San Diego, Cal Poly SLO, Harvard University, University of Chicago,
   University of Oslo, University of Sheffield, Université Paris Sud, University of Versailles
 - **Research laboratories**: NASA, NCAR, NOAA, the Large Synoptic Survey Telescope, Brookhaven National Lab,
-  Minnesota Supercomputing Institute, ALCF, CERN, Lawrence Livermore National Laboratory
+  Minnesota Supercomputing Institute, ALCF, CERN, Lawrence Livermore National Laboratory, HUNT
 - **Online communities**: Pangeo, Quantopian, mybinder.org, MathHub, Open Humans
 - **Computing infrastructure providers**: NERSC, San Diego Supercomputing Center, Compute Canada
 - **Companies**: Capital One, SANDVIK code, Globus
