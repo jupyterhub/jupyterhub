@@ -59,7 +59,11 @@ COPY . .
 
 ######################################################################
 # The JupyterHub wheel is pure Python so can be built once on any architecture
-FROM --platform=${BUILDPLATFORM:-linux/amd64} base-builder AS jupyterhub-builder
+# TODO: re-enable BUILDPLATFORM instead of forcing to linux/amd64
+#FROM --platform=${BUILDPLATFORM:-linux/amd64} base-builder AS jupyterhub-builder
+FROM --platform=linux/amd64 base-builder AS jupyterhub-builder
+
+RUN echo "BUILDPLATFORM=${BUILDPLATFORM} TARGETPLATFORM=${TARGETPLATFORM}"
 
 ARG PIP_CACHE_DIR=/tmp/pip-cache
 RUN --mount=type=cache,target=${PIP_CACHE_DIR} \
