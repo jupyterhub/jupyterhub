@@ -63,6 +63,10 @@ COPY . .
 #FROM --platform=${BUILDPLATFORM:-linux/amd64} base-builder AS jupyterhub-builder
 FROM --platform=linux/amd64 base-builder AS jupyterhub-builder
 
+# Need ARG to be able to view values
+# https://docs.docker.com/engine/reference/builder/#automatic-platform-args-in-the-global-scope
+ARG BUILDPLATFORM
+ARG TARGETPLATFORM
 RUN echo "BUILDPLATFORM=${BUILDPLATFORM} TARGETPLATFORM=${TARGETPLATFORM}"
 
 ARG PIP_CACHE_DIR=/tmp/pip-cache
