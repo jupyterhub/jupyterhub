@@ -297,6 +297,17 @@ class JupyterHub(Application):
                         classes.append(cls)
         return classes
 
+    api_include_config = List(
+        Unicode(),
+        config=True,
+        help="""
+        List of ClassName or ClassName.trait_name filters
+        for which config options to return from the `/api/config` endpoint.
+
+        Default: nothing is included.
+        """,
+    )
+
     load_groups = Dict(
         Union([Dict(), List()]),
         help="""

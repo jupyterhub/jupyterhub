@@ -5,6 +5,7 @@ import re
 import sys
 import uuid
 from datetime import datetime, timedelta
+from functools import partial
 from unittest import mock
 from urllib.parse import quote, urlparse
 
@@ -2106,6 +2107,59 @@ async def test_options(app):
 async def test_bad_json_body(app):
     r = await api_request(app, 'users', method='post', data='notjson')
     assert r.status_code == 400
+
+
+@mark.parametrize(
+    "filters, output",
+    [
+        # nothing specified, nothing returned
+        ([], {}),
+        (
+            # Gets fully resolved config value
+            # (from instance, not config object)
+            ["Spawner.cmd"],
+            {
+                "MockSpawner": {
+                    "cmd": [sys.executable, "-m", "jupyterhub.tests.mocksu"],
+                }
+            },
+        ),
+        (
+            # classes not recognized,
+            # extract directly from config
+            ["UnusedClass"],
+            {
+                "UnusedClass": {
+                    "number": 5,
+                    "some_list": "<LazyConfigValue {'extend': ['x']}>",
+                }
+            },
+        ),
+        (
+            # no errors for config not present
+            ["UnusedClass.nosuchtrait", "MissingEntirely.trait"],
+            {},
+        ),
+        (
+            # don't include missing traits
+            # or traits that aren't configurable
+            ["JupyterHub.nosuchtrait", "JupyterHub.authenticator"],
+            {},
+        ),
+    ],
+)
+async def test_info_config(request, app, filters, output):
+    restore_filters = app.api_include_config
+    request.addfinalizer(partial(setattr, app, "api_include_config", restore_filters))
+    app.api_include_config = filters
+    app.config.UnusedClass.number = 5
+    app.config.UnusedClass.some_list.append("x")
+    request.addfinalizer(partial(app.config.__delitem__, "UnusedClass"))
+
+    r = await api_request(app, 'info')
+    assert r.status_code == 200
+    info = r.json()
+    assert info["config"] == output
 
 
 # ---------------------------------

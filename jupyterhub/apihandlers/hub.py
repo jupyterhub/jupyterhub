@@ -6,6 +6,7 @@ import sys
 
 from tornado import web
 
+from .._config import get_resolved_config
 from .._version import __version__
 from ..scopes import needs_scope
 from .base import APIHandler
@@ -84,14 +85,20 @@ class InfoAPIHandler(APIHandler):
             info['version'] = version
             return info
 
+        if self.app.api_include_config:
+            config = get_resolved_config(self.app, self.app.api_include_config)
+        else:
+            config = {}
+
         data = {
             'version': __version__,
             'python': sys.version,
             'sys_executable': sys.executable,
             'spawner': _class_info(self.settings['spawner_class']),
             'authenticator': _class_info(self.authenticator.__class__),
+            'config': config,
         }
-        self.finish(json.dumps(data))
+        self.finish(json.dumps(data, default=repr))
 
 
 default_handlers = [
