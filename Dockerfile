@@ -22,7 +22,11 @@
 # from your docker directory.
 
 ARG BASE_IMAGE=ubuntu:22.04
-FROM $BASE_IMAGE AS builder
+
+
+######################################################################
+# A base image for building wheels
+FROM --platform=${TARGETPLATFORM:-linux/amd64} $BASE_IMAGE AS base-builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 WORKDIR /src/jupyterhub
@@ -46,16 +50,37 @@ RUN apt update -q \
  && rm -rf /var/lib/apt/lists/* \
  && python3 -m pip install --no-cache-dir --upgrade setuptools pip build wheel \
  && npm install --global yarn
+
 # copy everything except whats in .dockerignore, its a
 # compromise between needing to rebuild and maintaining
 # what needs to be part of the build
 COPY . .
+
+
+######################################################################
+# The JupyterHub wheel is pure Python so can be built once on any architecture
+FROM --platform=${BUILDPLATFORM:-linux/amd64} base-builder AS jupyterhub-builder
+
+ARG PIP_CACHE_DIR=/tmp/pip-cache
+RUN --mount=type=cache,target=${PIP_CACHE_DIR} \
+    python3 -m build --wheel
+
+
+######################################################################
+# All other wheels required by JupyterHub, some are platform specific
+FROM --platform=${TARGETPLATFORM:-linux/amd64} base-builder AS builder
+
+COPY --from=jupyterhub-builder /src/jupyterhub/dist/*.whl /src/jupyterhub/dist/
 ARG PIP_CACHE_DIR=/tmp/pip-cache
 RUN --mount=type=cache,target=${PIP_CACHE_DIR} \
     python3 -m build --wheel \
  && python3 -m pip wheel --wheel-dir wheelhouse dist/*.whl
 
-FROM $BASE_IMAGE
+
+######################################################################
+# The final JupyterHub image, platform specific
+FROM --platform=${TARGETPLATFORM:-linux/amd64} $BASE_IMAGE
+
 ENV DEBIAN_FRONTEND=noninteractive \
     SHELL=/bin/bash \
     LC_ALL=en_US.UTF-8 \
@@ -84,8 +109,7 @@ RUN apt update -q \
  && locale-gen $LC_ALL \
  && npm install -g configurable-http-proxy@^4.2.0 \
  # clean cache and logs
- && rm -rf /var/lib/apt/lists/* /var/log/* /var/tmp/* ~/.npm \
- && find / -type d -name '__pycache__' -prune -exec rm -rf {} \;
+ && rm -rf /var/lib/apt/lists/* /var/log/* /var/tmp/* ~/.npm
 # install the wheels we built in the first stage
 RUN --mount=type=cache,from=builder,source=/src/jupyterhub/wheelhouse,target=/tmp/wheelhouse \
     # always make sure pip is up to date!
