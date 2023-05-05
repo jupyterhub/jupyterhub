@@ -4,6 +4,7 @@ Used in the /api/info endpoint
 """
 
 from dataclasses import dataclass, field
+from typing import Optional
 
 from traitlets.log import get_logger
 
@@ -18,7 +19,7 @@ class _MockORMUser:
     id: int = 0
     name: str = "username"
     admin: bool = False
-    encrypted_auth_state: bytes | None = None
+    encrypted_auth_state: Optional[bytes] = None
     state: dict = field(default_factory=dict)
 
     # relationships likely to be used
