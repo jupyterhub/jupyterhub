@@ -30,8 +30,8 @@ ARG BASE_IMAGE=ubuntu:22.04
 
 
 ######################################################################
-# The JupyterHub wheel is pure Python so can be built once for all
-# platform on the native architecture
+# The JupyterHub wheel is pure Python so can be built for any platform
+# on the native architecture (avoiding QEMU emulation)
 FROM --platform=${BUILDPLATFORM:-linux/amd64} $BASE_IMAGE AS jupyterhub-builder
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -62,15 +62,6 @@ WORKDIR /src/jupyterhub
 # compromise between needing to rebuild and maintaining
 # what needs to be part of the build
 COPY . .
-
-
-# Need ARG to be able to view values
-# https://docs.docker.com/engine/reference/builder/#automatic-platform-args-in-the-global-scope
-ARG BUILDPLATFORM
-ARG TARGETPLATFORM
-RUN echo "BUILDPLATFORM=${BUILDPLATFORM} TARGETPLATFORM=${TARGETPLATFORM}"
-RUN uname -a
-RUN env | sort
 
 ARG PIP_CACHE_DIR=/tmp/pip-cache
 RUN --mount=type=cache,target=${PIP_CACHE_DIR} \
