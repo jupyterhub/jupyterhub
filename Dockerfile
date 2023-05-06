@@ -68,6 +68,8 @@ FROM --platform=linux/amd64 base-builder AS jupyterhub-builder
 ARG BUILDPLATFORM
 ARG TARGETPLATFORM
 RUN echo "BUILDPLATFORM=${BUILDPLATFORM} TARGETPLATFORM=${TARGETPLATFORM}"
+RUN uname -a
+RUN env | sort
 
 ARG PIP_CACHE_DIR=/tmp/pip-cache
 RUN --mount=type=cache,target=${PIP_CACHE_DIR} \
@@ -87,7 +89,7 @@ RUN --mount=type=cache,target=${PIP_CACHE_DIR} \
 
 ######################################################################
 # The final JupyterHub image, platform specific
-FROM --platform=${TARGETPLATFORM:-linux/amd64} $BASE_IMAGE
+FROM --platform=${TARGETPLATFORM:-linux/amd64} $BASE_IMAGE AS jupyterhub
 
 ENV DEBIAN_FRONTEND=noninteractive \
     SHELL=/bin/bash \
