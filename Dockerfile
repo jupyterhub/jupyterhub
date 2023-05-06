@@ -39,8 +39,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Don't clear apt cache, and don't combine RUN commands, so that cached layers can
 # be reused in other stages
 
-RUN apt update -q \
- && apt install -yq --no-install-recommends \
+RUN apt-get update -qq \
+ && apt-get install -yqq --no-install-recommends \
     build-essential \
     ca-certificates \
     curl \
@@ -53,7 +53,7 @@ RUN apt update -q \
 # Ubuntu 22.04 comes with Nodejs 12 which is too old for building JupyterHub JS
 # It's fine at runtime though (used only by configurable-http-proxy)
 RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
- && apt-get install -yq --no-install-recommends \
+ && apt-get install -yqq --no-install-recommends \
     nodejs \
  && npm install --global yarn
 
@@ -89,8 +89,8 @@ FROM --platform=${TARGETPLATFORM:-linux/amd64} $BASE_IMAGE AS wheel-builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt update -q \
- && apt install -yq --no-install-recommends \
+RUN apt-get update -qq \
+ && apt-get install -yqq --no-install-recommends \
     build-essential \
     ca-certificates \
     curl \
@@ -127,8 +127,8 @@ LABEL org.jupyter.service="jupyterhub"
 
 WORKDIR /srv/jupyterhub
 
-RUN apt update -q \
- && apt install -yq --no-install-recommends \
+RUN apt-get update -qq \
+ && apt-get install -yqq --no-install-recommends \
     ca-certificates \
     curl \
     gnupg \
