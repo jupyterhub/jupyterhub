@@ -21,18 +21,24 @@
 # your jupyterhub_config.py will be added automatically
 # from your docker directory.
 
+######################################################################
+# This Dockerfile uses multi-stage builds with optimisations to build
+# the JupyterHub wheel on the native architecture only
+# https://www.docker.com/blog/faster-multi-platform-builds-dockerfile-cross-compilation-guide/
+
 ARG BASE_IMAGE=ubuntu:22.04
 
 
 ######################################################################
 # A base image for building wheels
-FROM --platform=${TARGETPLATFORM:-linux/amd64} $BASE_IMAGE AS base-builder
+# FROM --platform=${TARGETPLATFORM:-linux/amd64} $BASE_IMAGE AS base-builder
+FROM --platform=linux/amd64 $BASE_IMAGE AS jupyterhub-builder
 
 ENV DEBIAN_FRONTEND=noninteractive
-WORKDIR /src/jupyterhub
 
-# Ubuntu 22.04 comes with Nodejs 12 which is too old for building JupyterHub JS
-# It's fine at runtime though (used only by configurable-http-proxy)
+# Don't clear apt cache, and don't combine RUN commands, so that cached layers can
+# be reused in other stages
+
 RUN apt update -q \
  && apt install -yq --no-install-recommends \
     build-essential \
@@ -43,14 +49,15 @@ RUN apt update -q \
     python3-pip \
     python3-pycurl \
     python3-venv \
- && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+ && python3 -m pip install --no-cache-dir --upgrade setuptools pip build wheel
+# Ubuntu 22.04 comes with Nodejs 12 which is too old for building JupyterHub JS
+# It's fine at runtime though (used only by configurable-http-proxy)
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
  && apt-get install -yq --no-install-recommends \
     nodejs \
- && apt clean \
- && rm -rf /var/lib/apt/lists/* \
- && python3 -m pip install --no-cache-dir --upgrade setuptools pip build wheel \
  && npm install --global yarn
 
+WORKDIR /src/jupyterhub
 # copy everything except whats in .dockerignore, its a
 # compromise between needing to rebuild and maintaining
 # what needs to be part of the build
@@ -61,7 +68,7 @@ COPY . .
 # The JupyterHub wheel is pure Python so can be built once on any architecture
 # TODO: re-enable BUILDPLATFORM instead of forcing to linux/amd64
 #FROM --platform=${BUILDPLATFORM:-linux/amd64} base-builder AS jupyterhub-builder
-FROM --platform=linux/amd64 base-builder AS jupyterhub-builder
+# FROM --platform=linux/amd64 base-builder AS jupyterhub-builder
 
 # Need ARG to be able to view values
 # https://docs.docker.com/engine/reference/builder/#automatic-platform-args-in-the-global-scope
@@ -78,13 +85,28 @@ RUN --mount=type=cache,target=${PIP_CACHE_DIR} \
 
 ######################################################################
 # All other wheels required by JupyterHub, some are platform specific
-FROM --platform=${TARGETPLATFORM:-linux/amd64} base-builder AS builder
+FROM --platform=${TARGETPLATFORM:-linux/amd64} $BASE_IMAGE AS wheel-builder
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt update -q \
+ && apt install -yq --no-install-recommends \
+    build-essential \
+    ca-certificates \
+    curl \
+    locales \
+    python3-dev \
+    python3-pip \
+    python3-pycurl \
+    python3-venv \
+ && python3 -m pip install --no-cache-dir --upgrade setuptools pip build wheel
+
+WORKDIR /src/jupyterhub
 
 COPY --from=jupyterhub-builder /src/jupyterhub/dist/*.whl /src/jupyterhub/dist/
 ARG PIP_CACHE_DIR=/tmp/pip-cache
 RUN --mount=type=cache,target=${PIP_CACHE_DIR} \
-    python3 -m build --wheel \
- && python3 -m pip wheel --wheel-dir wheelhouse dist/*.whl
+    python3 -m pip wheel --wheel-dir wheelhouse dist/*.whl
 
 
 ######################################################################
@@ -120,8 +142,8 @@ RUN apt update -q \
  && npm install -g configurable-http-proxy@^4.2.0 \
  # clean cache and logs
  && rm -rf /var/lib/apt/lists/* /var/log/* /var/tmp/* ~/.npm
-# install the wheels we built in the first stage
-RUN --mount=type=cache,from=builder,source=/src/jupyterhub/wheelhouse,target=/tmp/wheelhouse \
+# install the wheels we built in the previous stage
+RUN --mount=type=cache,from=wheel-builder,source=/src/jupyterhub/wheelhouse,target=/tmp/wheelhouse \
     # always make sure pip is up to date!
     python3 -m pip install --no-compile --no-cache-dir --upgrade setuptools pip \
  && python3 -m pip install --no-compile --no-cache-dir /tmp/wheelhouse/*
