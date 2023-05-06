@@ -30,9 +30,9 @@ ARG BASE_IMAGE=ubuntu:22.04
 
 
 ######################################################################
-# A base image for building wheels
-# FROM --platform=${TARGETPLATFORM:-linux/amd64} $BASE_IMAGE AS base-builder
-FROM --platform=linux/amd64 $BASE_IMAGE AS jupyterhub-builder
+# The JupyterHub wheel is pure Python so can be built once for all
+# platform on the native architecture
+FROM --platform=${BUILDPLATFORM:-linux/amd64} $BASE_IMAGE AS jupyterhub-builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -64,12 +64,6 @@ WORKDIR /src/jupyterhub
 COPY . .
 
 
-######################################################################
-# The JupyterHub wheel is pure Python so can be built once on any architecture
-# TODO: re-enable BUILDPLATFORM instead of forcing to linux/amd64
-#FROM --platform=${BUILDPLATFORM:-linux/amd64} base-builder AS jupyterhub-builder
-# FROM --platform=linux/amd64 base-builder AS jupyterhub-builder
-
 # Need ARG to be able to view values
 # https://docs.docker.com/engine/reference/builder/#automatic-platform-args-in-the-global-scope
 ARG BUILDPLATFORM
@@ -85,7 +79,7 @@ RUN --mount=type=cache,target=${PIP_CACHE_DIR} \
 
 ######################################################################
 # All other wheels required by JupyterHub, some are platform specific
-FROM --platform=${TARGETPLATFORM:-linux/amd64} $BASE_IMAGE AS wheel-builder
+FROM $BASE_IMAGE AS wheel-builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -111,7 +105,7 @@ RUN --mount=type=cache,target=${PIP_CACHE_DIR} \
 
 ######################################################################
 # The final JupyterHub image, platform specific
-FROM --platform=${TARGETPLATFORM:-linux/amd64} $BASE_IMAGE AS jupyterhub
+FROM $BASE_IMAGE AS jupyterhub
 
 ENV DEBIAN_FRONTEND=noninteractive \
     SHELL=/bin/bash \
