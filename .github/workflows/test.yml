@@ -254,7 +254,6 @@ jobs:
         run: |
           DOCKER_BUILDKIT=1 docker build -t jupyterhub/jupyterhub .
           docker build -t jupyterhub/jupyterhub-onbuild onbuild
-          docker build -t jupyterhub/jupyterhub:alpine -f dockerfiles/Dockerfile.alpine .
           docker build -t jupyterhub/singleuser singleuser
 
       - name: smoke test jupyterhub
