@@ -1991,6 +1991,7 @@ async def test_info(app):
     assert data['version'] == jupyterhub.__version__
     assert sorted(data) == [
         'authenticator',
+        'config',
         'python',
         'spawner',
         'sys_executable',
@@ -2006,6 +2007,7 @@ async def test_info(app):
         'class': 'jupyterhub.tests.mocking.MockSpawner',
         'version': jupyterhub.__version__,
     }
+    assert data['config'] == {}
 
 
 # ------------------
