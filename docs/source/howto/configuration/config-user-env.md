@@ -195,7 +195,7 @@ def named_server_limit_per_user_fn(handler):
         return 0
     return 5
 
-c.JupyterHub.named_server_limit_per_user = named_server_limit_per_user_fn
+c.JupyterHub.named_server_limit_per_user = property(named_server_limit_per_user_fn)
 ```
 
 This can be useful for quota service implementations. The example above limits the number of named servers for non-admin users only.
