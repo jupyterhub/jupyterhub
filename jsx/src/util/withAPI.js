@@ -7,17 +7,23 @@ const withAPI = withProps(() => ({
       `/users?include_stopped_servers&offset=${offset}&limit=${limit}&name_filter=${
         name_filter || ""
       }`,
-      "GET",
+      "GET"
     ).then((data) => data.json()),
   updateGroups: (offset, limit) =>
     jhapiRequest(`/groups?offset=${offset}&limit=${limit}`, "GET").then(
-      (data) => data.json(),
+      (data) => data.json()
     ),
   shutdownHub: () => jhapiRequest("/shutdown", "POST"),
   startServer: (name, serverName = "") =>
     jhapiRequest("/users/" + name + "/servers/" + (serverName || ""), "POST"),
   stopServer: (name, serverName = "") =>
     jhapiRequest("/users/" + name + "/servers/" + (serverName || ""), "DELETE"),
+  deleteServer: (name, serverName = "") =>
+    jhapiRequest(
+      "/users/" + name + "/servers/" + (serverName || ""),
+      "DELETE",
+      { remove: true }
+    ),
   startAll: (names) =>
     names.map((e) => jhapiRequest("/users/" + e + "/server", "POST")),
   stopAll: (names) =>

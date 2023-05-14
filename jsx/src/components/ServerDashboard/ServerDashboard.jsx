@@ -45,11 +45,11 @@ const ServerDashboard = (props) => {
     adminAsc = (e) => e.sort((a) => (a.admin ? 1 : -1)),
     dateDesc = (e) =>
       e.sort((a, b) =>
-        new Date(a.last_activity) - new Date(b.last_activity) > 0 ? -1 : 1,
+        new Date(a.last_activity) - new Date(b.last_activity) > 0 ? -1 : 1
       ),
     dateAsc = (e) =>
       e.sort((a, b) =>
-        new Date(a.last_activity) - new Date(b.last_activity) > 0 ? 1 : -1,
+        new Date(a.last_activity) - new Date(b.last_activity) > 0 ? 1 : -1
       ),
     runningAsc = (e) => e.sort((a) => (a.server == null ? -1 : 1)),
     runningDesc = (e) => e.sort((a) => (a.server == null ? 1 : -1));
@@ -74,6 +74,7 @@ const ServerDashboard = (props) => {
     shutdownHub,
     startServer,
     stopServer,
+    deleteServer,
     startAll,
     stopAll,
     history,
@@ -143,7 +144,7 @@ const ServerDashboard = (props) => {
                     dispatchPageUpdate(
                       data.items,
                       data._pagination,
-                      name_filter,
+                      name_filter
                     );
                   })
                   .catch(() => {
@@ -167,6 +168,50 @@ const ServerDashboard = (props) => {
     );
   };
 
+  const DeleteServerButton = ({ serverName, userName }) => {
+    if (serverName === "") {
+      return null;
+    }
+    var [isDisabled, setIsDisabled] = useState(false);
+    return (
+      <button
+        className="btn btn-danger btn-xs stop-button"
+        // It's not possible to delete unnamed servers
+        disabled={isDisabled}
+        onClick={() => {
+          setIsDisabled(true);
+          deleteServer(userName, serverName)
+            .then((res) => {
+              if (res.status < 300) {
+                updateUsers(...slice)
+                  .then((data) => {
+                    dispatchPageUpdate(
+                      data.items,
+                      data._pagination,
+                      name_filter
+                    );
+                  })
+                  .catch(() => {
+                    setIsDisabled(false);
+                    setErrorAlert(`Failed to update users list.`);
+                  });
+              } else {
+                setErrorAlert(`Failed to delete server.`);
+                setIsDisabled(false);
+              }
+              return res;
+            })
+            .catch(() => {
+              setErrorAlert(`Failed to delete server.`);
+              setIsDisabled(false);
+            });
+        }}
+      >
+        Delete Server
+      </button>
+    );
+  };
+
   const StartServerButton = ({ serverName, userName }) => {
     var [isDisabled, setIsDisabled] = useState(false);
     return (
@@ -183,7 +228,7 @@ const ServerDashboard = (props) => {
                     dispatchPageUpdate(
                       data.items,
                       data._pagination,
-                      name_filter,
+                      name_filter
                     );
                   })
                   .catch(() => {
@@ -323,6 +368,10 @@ const ServerDashboard = (props) => {
                 serverName={server.name}
                 userName={user.name}
                 style={{ marginRight: 20 }}
+              />
+              <DeleteServerButton
+                serverName={server.name}
+                userName={user.name}
               />
               <a
                 href={`${base_url}spawn/${user.name}${
@@ -483,7 +532,7 @@ const ServerDashboard = (props) => {
                               failedServers.length > 1 ? "servers" : "server"
                             }. ${
                               failedServers.length > 1 ? "Are they " : "Is it "
-                            } already running?`,
+                            } already running?`
                           );
                         }
                         return res;
@@ -494,11 +543,11 @@ const ServerDashboard = (props) => {
                             dispatchPageUpdate(
                               data.items,
                               data._pagination,
-                              name_filter,
+                              name_filter
                             );
                           })
                           .catch(() =>
-                            setErrorAlert(`Failed to update users list.`),
+                            setErrorAlert(`Failed to update users list.`)
                           );
                         return res;
                       })
@@ -523,7 +572,7 @@ const ServerDashboard = (props) => {
                               failedServers.length > 1 ? "servers" : "server"
                             }. ${
                               failedServers.length > 1 ? "Are they " : "Is it "
-                            } already stopped?`,
+                            } already stopped?`
                           );
                         }
                         return res;
@@ -534,11 +583,11 @@ const ServerDashboard = (props) => {
                             dispatchPageUpdate(
                               data.items,
                               data._pagination,
-                              name_filter,
+                              name_filter
                             );
                           })
                           .catch(() =>
-                            setErrorAlert(`Failed to update users list.`),
+                            setErrorAlert(`Failed to update users list.`)
                           );
                         return res;
                       })
@@ -582,6 +631,7 @@ ServerDashboard.propTypes = {
   shutdownHub: PropTypes.func,
   startServer: PropTypes.func,
   stopServer: PropTypes.func,
+  deleteServer: PropTypes.func,
   startAll: PropTypes.func,
   stopAll: PropTypes.func,
   dispatch: PropTypes.func,
