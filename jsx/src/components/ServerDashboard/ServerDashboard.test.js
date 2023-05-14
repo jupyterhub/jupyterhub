@@ -2,7 +2,7 @@ import React from "react";
 import "@testing-library/jest-dom";
 import { act } from "react-dom/test-utils";
 import userEvent from "@testing-library/user-event";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, getByText } from "@testing-library/react";
 import { HashRouter, Switch } from "react-router-dom";
 import { Provider, useSelector } from "react-redux";
 import { createStore } from "redux";
@@ -43,6 +43,31 @@ var mockAsync = (data) =>
 var mockAsyncRejection = () =>
   jest.fn().mockImplementation(() => Promise.reject());
 
+var bar_servers = {
+  "": {
+    name: "",
+    last_activity: "2020-12-07T20:58:02.437408Z",
+    started: "2020-12-07T20:58:01.508266Z",
+    pending: null,
+    ready: false,
+    state: { pid: 12345 },
+    url: "/user/bar/",
+    user_options: {},
+    progress_url: "/hub/api/users/bar/progress",
+  },
+  servername: {
+    name: "servername",
+    last_activity: "2020-12-07T20:58:02.437408Z",
+    started: "2020-12-07T20:58:01.508266Z",
+    pending: null,
+    ready: false,
+    state: { pid: 12345 },
+    url: "/user/bar/servername",
+    user_options: {},
+    progress_url: "/hub/api/users/bar/servername/progress",
+  },
+};
+
 var mockAppState = () =>
   Object.assign({}, initialState, {
     user_data: [
@@ -78,19 +103,7 @@ var mockAppState = () =>
         pending: null,
         created: "2020-12-07T18:46:27.115528Z",
         last_activity: "2020-12-07T20:43:51.013613Z",
-        servers: {
-          "": {
-            name: "",
-            last_activity: "2020-12-07T20:58:02.437408Z",
-            started: "2020-12-07T20:58:01.508266Z",
-            pending: null,
-            ready: false,
-            state: { pid: 12345 },
-            url: "/user/bar/",
-            user_options: {},
-            progress_url: "/hub/api/users/bar/progress",
-          },
-        },
+        servers: bar_servers,
       },
     ],
     user_page: {
@@ -150,9 +163,11 @@ test("Renders users from props.user_data into table", async () => {
 
   let foo = screen.getByTestId("user-name-div-foo");
   let bar = screen.getByTestId("user-name-div-bar");
+  let bar_server = screen.getByTestId("user-name-div-bar-servername");
 
   expect(foo).toBeVisible();
   expect(bar).toBeVisible();
+  expect(bar_server).toBeVisible();
 });
 
 test("Renders correctly the status of a single-user server", async () => {
@@ -162,10 +177,13 @@ test("Renders correctly the status of a single-user server", async () => {
     render(serverDashboardJsx(callbackSpy));
   });
 
-  let start = screen.getByText("Start Server");
-  let stop = screen.getByText("Stop Server");
+  let start_elems = screen.getAllByText("Start Server");
+  expect(start_elems.length).toBe(Object.keys(bar_servers).length);
+  start_elems.forEach((start) => {
+    expect(start).toBeVisible();
+  });
 
-  expect(start).toBeVisible();
+  let stop = screen.getByText("Stop Server");
   expect(stop).toBeVisible();
 });
 
@@ -176,9 +194,12 @@ test("Renders spawn page link", async () => {
     render(serverDashboardJsx(callbackSpy));
   });
 
-  let link = screen.getByText("Spawn Page").closest("a");
-  let url = new URL(link.href);
-  expect(url.pathname).toEqual("/spawn/bar");
+  for (let server in bar_servers) {
+    let row = screen.getByTestId(`user-row-bar${server ? "-" + server : ""}`);
+    let link = getByText(row, "Spawn Page").closest("a");
+    let url = new URL(link.href);
+    expect(url.pathname).toEqual("/spawn/bar" + (server ? "/" + server : ""));
+  }
 });
 
 test("Invokes the startServer event on button click", async () => {
@@ -188,10 +209,11 @@ test("Invokes the startServer event on button click", async () => {
     render(serverDashboardJsx(callbackSpy));
   });
 
-  let start = screen.getByText("Start Server");
+  let start_elems = screen.getAllByText("Start Server");
+  expect(start_elems.length).toBe(Object.keys(bar_servers).length);
 
   await act(async () => {
-    fireEvent.click(start);
+    fireEvent.click(start_elems[0]);
   });
 
   expect(callbackSpy).toHaveBeenCalled();
@@ -381,7 +403,7 @@ test("Shows a UI error dialogue when start all servers fails", async () => {
             />
           </Switch>
         </HashRouter>
-      </Provider>,
+      </Provider>
     );
   });
 
@@ -415,7 +437,7 @@ test("Shows a UI error dialogue when stop all servers fails", async () => {
             />
           </Switch>
         </HashRouter>
-      </Provider>,
+      </Provider>
     );
   });
 
@@ -449,14 +471,15 @@ test("Shows a UI error dialogue when start user server fails", async () => {
             />
           </Switch>
         </HashRouter>
-      </Provider>,
+      </Provider>
     );
   });
 
-  let start = screen.getByText("Start Server");
+  let start_elems = screen.getAllByText("Start Server");
+  expect(start_elems.length).toBe(Object.keys(bar_servers).length);
 
   await act(async () => {
-    fireEvent.click(start);
+    fireEvent.click(start_elems[0]);
   });
 
   let errorDialog = screen.getByText("Failed to start server.");
@@ -483,14 +506,15 @@ test("Shows a UI error dialogue when start user server returns an improper statu
             />
           </Switch>
         </HashRouter>
-      </Provider>,
+      </Provider>
     );
   });
 
-  let start = screen.getByText("Start Server");
+  let start_elems = screen.getAllByText("Start Server");
+  expect(start_elems.length).toBe(Object.keys(bar_servers).length);
 
   await act(async () => {
-    fireEvent.click(start);
+    fireEvent.click(start_elems[0]);
   });
 
   let errorDialog = screen.getByText("Failed to start server.");
@@ -517,7 +541,7 @@ test("Shows a UI error dialogue when stop user servers fails", async () => {
             />
           </Switch>
         </HashRouter>
-      </Provider>,
+      </Provider>
     );
   });
 
@@ -551,7 +575,7 @@ test("Shows a UI error dialogue when stop user server returns an improper status
             />
           </Switch>
         </HashRouter>
-      </Provider>,
+      </Provider>
     );
   });
 
@@ -597,7 +621,7 @@ test("Search for user calls updateUsers with name filter", async () => {
             />
           </Switch>
         </HashRouter>
-      </Provider>,
+      </Provider>
     );
   });
 
@@ -655,4 +679,21 @@ test("Interacting with PaginationFooter causes state update and refresh via useE
   // unclear how to fix this.
   // expect(callbackSpy.mock.calls).toHaveLength(2);
   // expect(callbackSpy).toHaveBeenCalledWith(2, 2, "");
+});
+
+test("Server delete button exists for named servers", async () => {
+  let callbackSpy = mockAsync();
+
+  await act(async () => {
+    render(serverDashboardJsx(callbackSpy));
+  });
+
+  for (let server in bar_servers) {
+    if (server === "") {
+      continue;
+    }
+    let row = screen.getByTestId(`user-row-bar-${server}`);
+    let delete_button = getByText(row, "Delete Server");
+    expect(delete_button).toBeEnabled();
+  }
 });

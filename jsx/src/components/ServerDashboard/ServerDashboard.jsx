@@ -323,7 +323,11 @@ const ServerDashboard = (props) => {
     const userServerName = user.name + serverNameDash;
     const open = collapseStates[userServerName] || false;
     return [
-      <tr key={`${userServerName}-row`} className="user-row">
+      <tr
+        key={`${userServerName}-row`}
+        data-testid={`user-row-${userServerName}`}
+        className="user-row"
+      >
         <td data-testid="user-row-name">
           <span>
             <Button
