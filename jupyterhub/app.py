@@ -2457,6 +2457,14 @@ class JupyterHub(Application):
             # Do nothing if the config file tries to modify a API-base service
             # or vice versa.
             if orm_service.from_config != from_config:
+                if from_config:
+                    self.log.error(
+                        f"The service {name} from the config file is trying to modify a runtime-created service with the same name"
+                    )
+                else:
+                    self.log.error(
+                        f"The runtime-created service {name} is trying to modify a config-based service with the same name"
+                    )
                 return
         orm_service.admin = spec.get('admin', False)
 
@@ -2489,21 +2497,27 @@ class JupyterHub(Application):
 
         if service.url:
             parsed = urlparse(service.url)
+            port = None
             if parsed.port is not None:
                 port = parsed.port
             elif parsed.scheme == 'http':
                 port = 80
             elif parsed.scheme == 'https':
                 port = 443
-            server = service.orm.server = orm.Server(
-                proto=parsed.scheme,
-                ip=parsed.hostname,
-                port=port,
-                cookie_name=service.oauth_client_id,
-                base_url=service.prefix,
-            )
-            self.db.add(server)
 
+            if port is not None:
+                server = service.orm.server = orm.Server(
+                    proto=parsed.scheme,
+                    ip=parsed.hostname,
+                    port=port,
+                    cookie_name=service.oauth_client_id,
+                    base_url=service.prefix,
+                )
+                self.db.add(server)
+            else:
+                self.log.error(
+                    f"Can not detect server port for service named {name}, the server is ignored!"
+                )
         else:
             service.orm.server = None
 

@@ -107,7 +107,7 @@ class ServiceAPIHandler(APIHandler):
         service, orm_service = self.find_service(service_name)
 
         if service is None:
-            raise web.HTTPError(404, f"Service {service_name} does not exists")
+            raise web.HTTPError(404, f"Service {service_name} does not exist")
 
         if service.from_config:
             raise web.HTTPError(
