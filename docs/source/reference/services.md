@@ -176,7 +176,7 @@ In this case, the `url` field will be passed along to the Service as
 
 ## Adding or removing services at runtime
 
-Both Hub-Managed services and Externally-Managed services can be added at runtime by using JupyterHub’s REST API.
+Only externally-managed services can be added at runtime by using JupyterHub’s REST API.
 
 ### Add a new service
 
@@ -188,7 +188,7 @@ POST /hub/api/services/:servicename
 
 **Required scope: `admin:services`**
 
-**Payload**: The payload should contain the definition of the service to be created. The endpoint supports the same properties as services defined in the config file.
+**Payload**: The payload should contain the definition of the service to be created. The endpoint supports the same properties as externally-managed services defined in the config file.
 
 **Possible responses**
 

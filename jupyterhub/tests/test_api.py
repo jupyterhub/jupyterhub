@@ -4,6 +4,7 @@ import json
 import re
 import sys
 import uuid
+from copy import deepcopy
 from datetime import datetime, timedelta
 from unittest import mock
 from urllib.parse import quote, urlparse
@@ -2175,6 +2176,26 @@ async def test_create_service_duplication(app, service_admin_user, service_data)
         method='post',
     )
     assert r.status_code == 409
+
+
+@mark.services
+async def test_create_managed_service(app, service_admin_user, service_data):
+    db = app.db
+    service_name = 'managed-service-from-api'
+    managed_service_data = deepcopy(service_data)
+    managed_service_data['command'] = ['foo']
+    r = await api_request(
+        app,
+        f'services/{service_name}',
+        headers=auth_header(db, service_admin_user.name),
+        data=json.dumps(managed_service_data),
+        method='post',
+    )
+
+    assert r.status_code == 400
+    assert 'Can not create managed service' in r.json()['message']
+    orm_service = orm.Service.find(db, service_name)
+    assert orm_service is None
 
 
 @mark.services

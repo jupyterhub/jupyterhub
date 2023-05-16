@@ -49,6 +49,11 @@ class ServiceAPIHandler(APIHandler):
 
         self._check_service_model(spec)
         service_name = spec["name"]
+        managed = bool(spec.get('command'))
+        if managed:
+            msg = f"Can not create managed service {service_name} at runtime"
+            self.log.error(msg, exc_info=True)
+            raise web.HTTPError(400, msg)
         try:
             new_service = self.service_from_spec(spec)
         except Exception:
@@ -64,12 +69,9 @@ class ServiceAPIHandler(APIHandler):
             await self.app._add_tokens(
                 {new_service.api_token: new_service.name}, kind='service'
             )
-        elif new_service.managed:
-            new_service.api_token = new_service.orm.new_api_token(
-                note='generated at runtime'
-            )
-        if new_service.managed or new_service.url:
-            service_status = self.app.start_service(service_name, new_service)
+        if new_service.url:
+            # Start polling for external service
+            service_status = await self.app.start_service(service_name, new_service)
             if not service_status:
                 self.log.error(
                     'Failed to start service %s',
@@ -116,6 +118,8 @@ class ServiceAPIHandler(APIHandler):
         try:
             await self.remove_service(service, orm_service)
             self.services.pop(service_name)
+            if service.url:
+                self.app.toggle_service_health_check()
         except Exception:
             msg = f"Failed to remove service {service_name}"
             self.log.error(msg, exc_info=True)
@@ -178,7 +182,7 @@ class ServiceAPIHandler(APIHandler):
             service = self.services.get(name)
             return service, orm_service
 
-        return None, None
+        return (None, None)
 
 
 default_handlers = [
