@@ -2199,6 +2199,90 @@ async def test_create_managed_service(app, service_admin_user, service_data):
 
 
 @mark.services
+async def test_create_admin_service(app, admin_user, service_data):
+    db = app.db
+    service_name = 'admin-service-from-api'
+    managed_service_data = deepcopy(service_data)
+    managed_service_data['admin'] = True
+    r = await api_request(
+        app,
+        f'services/{service_name}',
+        headers=auth_header(db, admin_user.name),
+        data=json.dumps(managed_service_data),
+        method='post',
+    )
+
+    assert r.status_code == 201
+    orm_service = orm.Service.find(db, service_name)
+    assert orm_service is not None
+
+
+@mark.services
+async def test_create_admin_service_without_admin_right(
+    app, service_admin_user, service_data
+):
+    db = app.db
+    service_name = 'managed-service-from-api'
+    managed_service_data = deepcopy(service_data)
+    managed_service_data['admin'] = True
+    r = await api_request(
+        app,
+        f'services/{service_name}',
+        headers=auth_header(db, service_admin_user.name),
+        data=json.dumps(managed_service_data),
+        method='post',
+    )
+
+    assert r.status_code == 400
+    assert 'Not assigning requested scopes' in r.json()['message']
+    orm_service = orm.Service.find(db, service_name)
+    assert orm_service is None
+
+
+@mark.services
+async def test_create_service_with_scope(app, create_user_with_scopes, service_data):
+    db = app.db
+    service_name = 'service-with-scope'
+    managed_service_data = deepcopy(service_data)
+    managed_service_data['oauth_client_allowed_scopes'] = ["admin:users"]
+    managed_service_data['oauth_client_id'] = "service-client-with-scope"
+    user_with_scope = create_user_with_scopes('admin:services', 'admin:users')
+    r = await api_request(
+        app,
+        f'services/{service_name}',
+        headers=auth_header(db, user_with_scope.name),
+        data=json.dumps(managed_service_data),
+        method='post',
+    )
+
+    assert r.status_code == 201
+    orm_service = orm.Service.find(db, service_name)
+    assert orm_service is not None
+
+
+@mark.services
+async def test_create_service_without_requested_scope(
+    app, service_admin_user, service_data
+):
+    db = app.db
+    service_name = 'service-without-requested-scope'
+    managed_service_data = deepcopy(service_data)
+    managed_service_data['oauth_client_allowed_scopes'] = ["admin:users"]
+    r = await api_request(
+        app,
+        f'services/{service_name}',
+        headers=auth_header(db, service_admin_user.name),
+        data=json.dumps(managed_service_data),
+        method='post',
+    )
+
+    assert r.status_code == 400
+    assert 'Not assigning requested scopes' in r.json()['message']
+    orm_service = orm.Service.find(db, service_name)
+    assert orm_service is None
+
+
+@mark.services
 async def test_remove_service(app, service_admin_user, service_data):
     db = app.db
     service_name = 'service-from-api'

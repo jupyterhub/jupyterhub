@@ -10,7 +10,8 @@ from typing import Optional, Tuple
 from tornado import web
 
 from .. import orm
-from ..scopes import Scope, needs_scope
+from ..roles import get_default_roles
+from ..scopes import Scope, _check_token_scopes, needs_scope
 from ..services.service import Service
 from .base import APIHandler
 
@@ -33,6 +34,25 @@ class ServiceAPIHandler(APIHandler):
         service = self.services[service_name]
         self.write(json.dumps(self.service_model(service)))
 
+    def _check_service_scopes(self, spec: dict):
+        user = self.current_user
+        requested_scopes = []
+        if spec.get('admin'):
+            default_roles = get_default_roles()
+            admin_scopes = [
+                role['scopes'] for role in default_roles if role['name'] == 'admin'
+            ]
+            requested_scopes.extend(admin_scopes[0])
+
+        requested_client_scope = spec.get('oauth_client_allowed_scopes')
+        if requested_client_scope is not None:
+            requested_scopes.extend(requested_client_scope)
+        if len(requested_scopes) > 0:
+            try:
+                _check_token_scopes(requested_scopes, user, None)
+            except ValueError as e:
+                raise web.HTTPError(400, str(e))
+
     async def add_service(self, spec: dict) -> Service:
         """Add a new service and related objects to the database
 
@@ -48,6 +68,8 @@ class ServiceAPIHandler(APIHandler):
         """
 
         self._check_service_model(spec)
+        self._check_service_scopes(spec)
+
         service_name = spec["name"]
         managed = bool(spec.get('command'))
         if managed:
