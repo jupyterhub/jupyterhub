@@ -1110,6 +1110,92 @@ async def test_progress_ready(request, app):
     assert evt['url'] == app_user.url
 
 
+async def test_progress_ready_hook_async_func(request, app):
+    """Test progress ready hook in Spawner class with an async function"""
+    db = app.db
+    name = 'saga'
+    app_user = add_user(db, app=app, name=name)
+    html_message = 'customized html message'
+    spawner = app_user.spawner
+
+    async def custom_progress_ready_hook(spawner, ready_event):
+        ready_event['html_message'] = html_message
+        return ready_event
+
+    spawner.progress_ready_hook = custom_progress_ready_hook
+    r = await api_request(app, 'users', name, 'server', method='post')
+    r.raise_for_status()
+    r = await api_request(app, 'users', name, 'server/progress', stream=True)
+    r.raise_for_status()
+    request.addfinalizer(r.close)
+    assert r.headers['content-type'] == 'text/event-stream'
+    ex = async_requests.executor
+    line_iter = iter(r.iter_lines(decode_unicode=True))
+    evt = await ex.submit(next_event, line_iter)
+    assert evt['progress'] == 100
+    assert evt['ready']
+    assert evt['url'] == app_user.url
+    assert evt['html_message'] == html_message
+
+
+async def test_progress_ready_hook_sync_func(request, app):
+    """Test progress ready hook in Spawner class with a sync function"""
+    db = app.db
+    name = 'saga'
+    app_user = add_user(db, app=app, name=name)
+    html_message = 'customized html message'
+    spawner = app_user.spawner
+
+    def custom_progress_ready_hook(spawner, ready_event):
+        ready_event['html_message'] = html_message
+        return ready_event
+
+    spawner.progress_ready_hook = custom_progress_ready_hook
+    r = await api_request(app, 'users', name, 'server', method='post')
+    r.raise_for_status()
+    r = await api_request(app, 'users', name, 'server/progress', stream=True)
+    r.raise_for_status()
+    request.addfinalizer(r.close)
+    assert r.headers['content-type'] == 'text/event-stream'
+    ex = async_requests.executor
+    line_iter = iter(r.iter_lines(decode_unicode=True))
+    evt = await ex.submit(next_event, line_iter)
+    assert evt['progress'] == 100
+    assert evt['ready']
+    assert evt['url'] == app_user.url
+    assert evt['html_message'] == html_message
+
+
+async def test_progress_ready_hook_async_func_exception(request, app):
+    """Test progress ready hook in Spawner class with an exception in
+    an async function
+    """
+    db = app.db
+    name = 'saga'
+    app_user = add_user(db, app=app, name=name)
+    html_message = 'Server ready at <a href="{0}">{0}</a>'.format(app_user.url)
+    spawner = app_user.spawner
+
+    async def custom_progress_ready_hook(spawner, ready_event):
+        ready_event["html_message"] = "."
+        raise Exception()
+
+    spawner.progress_ready_hook = custom_progress_ready_hook
+    r = await api_request(app, 'users', name, 'server', method='post')
+    r.raise_for_status()
+    r = await api_request(app, 'users', name, 'server/progress', stream=True)
+    r.raise_for_status()
+    request.addfinalizer(r.close)
+    assert r.headers['content-type'] == 'text/event-stream'
+    ex = async_requests.executor
+    line_iter = iter(r.iter_lines(decode_unicode=True))
+    evt = await ex.submit(next_event, line_iter)
+    assert evt['progress'] == 100
+    assert evt['ready']
+    assert evt['url'] == app_user.url
+    assert evt['html_message'] == html_message
+
+
 async def test_progress_bad(request, app, bad_spawn):
     """Test progress API when spawner has already failed"""
     db = app.db
