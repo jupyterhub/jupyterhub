@@ -511,16 +511,25 @@ class JupyterHubSingleUser(ExtensionApp):
 
         # Jupyter Server default: config files have higher priority than extensions,
         # by:
-        # 1. load config files
+        # 1. load config files and CLI
         # 2. load extension config
         # 3. merge file config into extension config
 
         # we invert that by merging our extension config into server config before
         # they get merged the other way
         # this way config from this extension should always have highest priority
+
+        # but this also puts our config above _CLI_ options,
+        # and CLI should come before env,
+        # so merge that into _our_ config before loading
+        if self.serverapp.cli_config:
+            for cls_name, cls_config in self.serverapp.cli_config.items():
+                if cls_name in self.config:
+                    self.config[cls_name].merge(cls_config)
+
         self.serverapp.update_config(self.config)
 
-        # add our custom templates
+        # config below here has _lower_ priority than user config
         self.config.NotebookApp.extra_template_paths.append(SINGLEUSER_TEMPLATES_DIR)
 
     @default("default_url")
