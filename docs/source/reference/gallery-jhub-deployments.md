@@ -63,6 +63,15 @@ easy to do with RStudio too.
 
 - [jupyterhub-deploy-teaching](https://github.com/jupyterhub/jupyterhub-deploy-teaching) based on work by Brian Granger for Cal Poly's Data Science 301 Course
 
+### CERN
+
+[CERN](https://home.cern/), also known as the European Organization for Nuclear Research, is a world-renowned scientific research centre and the home of the Large Hadron Collider (LHC).
+
+Within CERN, there are two noteworthy JupyterHub deployments in operation:
+
+- [SWAN](https://swan.web.cern.ch/swan/), which stands for Service for Web based Analysis, serves as an interactive data analysis platform primarily utilized at CERN.
+- [VRE](https://vre-hub.github.io/), which stands for Virtual Research Environment, is an analysis platform developed within the [EOSC Project](https://eoscfuture.eu/) to cater to the needs of scientific communities involved in European projects.
+
 ### Chameleon
 
 [Chameleon](https://www.chameleoncloud.org) is a NSF-funded configurable experimental environment for large-scale computer science systems research with [bare metal reconfigurability](https://chameleoncloud.readthedocs.io/en/latest/technical/baremetal.html). Chameleon users utilize JupyterHub to document and reproduce their complex CISE and networking experiments.
