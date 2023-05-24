@@ -1202,13 +1202,13 @@ components:
           description: Timestamp of last-seen activity from the user
           format: date-time
         servers:
-          type: array
+          type: object
           description: |
             The servers for this user.
             By default: only includes _active_ servers.
             Changed in 3.0: if `?include_stopped_servers` parameter is specified,
             stopped servers will be included as well.
-          items:
+          additionalProperties:
             $ref: "#/components/schemas/Server"
         auth_state:
           type: object
