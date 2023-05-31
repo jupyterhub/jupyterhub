@@ -33,36 +33,13 @@ such as:
 To send requests using the JupyterHub API, you must pass an API token with
 the request.
 
-The preferred way of generating an API token is by running:
-
-```bash
-openssl rand -hex 32
-```
-
-This `openssl` command generates a potential token that can then be
-added to JupyterHub using `.api_tokens` configuration setting in
-`jupyterhub_config.py`.
-
-```{note}
-The api_tokens configuration has been softly deprecated since the introduction of services.
-```
-
-Alternatively, you can use the `jupyterhub token` command to generate a token
-for a specific hub user by passing the **username**:
-
-```bash
-jupyterhub token <username>
-```
-
-This command generates a random string to use as a token and registers
-it for the given user with the Hub's database.
-
-In [version 0.8.0](changelog), a token request page for
-generating an API token is available from the JupyterHub user interface:
+While JupyterHub is running, any JupyterHub user can request a token via the `token` page.
+This is accessible via a `token` link in the top nav bar from the JupyterHub home page,
+or at the URL `/hub/token`.
 
 :::{figure-md}
 
-![token request page](../images/token-request.png)
+![token request page](../images/token-page.png)
 
 JupyterHub's API token page
 :::
@@ -73,6 +50,40 @@ JupyterHub's API token page
 JupyterHub's token page after successfully requesting a token.
 
 :::
+
+### Register API tokens via configuration
+
+Sometimes, you'll want to pre-generate a token for access to JupyterHub,
+typically for use by external services,
+so that both JupyterHub and the service have access to the same value.
+
+First, you need to generate a good random secret.
+A good way of generating an API token is by running:
+
+```bash
+openssl rand -hex 32
+```
+
+This `openssl` command generates a potential token that can then be added to JupyterHub configuration in `jupyterhub_config.py`.
+
+For external services, this would be registered with JupyterHub via configuration:
+
+```python
+c.JupyterHub.services = [
+    {
+        "name": "my-service",
+        "api_token": the_secret_value,
+    },
+]
+```
+
+At this point, requests authenticated with the token will be associated with The service `my-service`.
+
+```{note}
+You can also load additional tokens for users via the `JupyterHub.api_tokens` configuration.
+
+However, this option has been softly deprecated since the introduction of services.
+```
 
 ## Assigning permissions to a token
 

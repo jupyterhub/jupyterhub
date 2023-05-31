@@ -21,7 +21,7 @@
           This note will help you keep track of what your tokens are for.
         </small>
         <br><br>
-        <label for="token-expiration-seconds">Token expires</label>
+        <label for="token-expiration-seconds">Token expires in</label>
         {% block expiration_options %}
         <select id="token-expiration-seconds"
                 class="form-control">
@@ -33,7 +33,7 @@
         </select>
         {% endblock expiration_options %}
         <small id="note-expires-at" class="form-text text-muted">
-          You can configure when your token will be expired.
+          You can configure when your token will expire.
         </small>
       </div>
     </form>
@@ -62,8 +62,8 @@
   <div class="row">
     <h2>API Tokens</h2>
     <p>
-      These are tokens with full access to the JupyterHub API.
-      Anything you can do with JupyterHub can be done with these tokens.
+      These are tokens with access to the JupyterHub API.
+      Permissions for each token may be viewed via the JupyterHub tokens API.
       Revoking the API token for a running server will require restarting that server.
     </p>
     <table class="table table-striped">
@@ -72,7 +72,7 @@
           <th>Note</th>
           <th>Last used</th>
           <th>Created</th>
-          <th>Expires at</th>
+          <th>Expires</th>
         </tr>
       </thead>
       <tbody>
