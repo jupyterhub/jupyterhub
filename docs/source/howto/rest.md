@@ -64,7 +64,7 @@ A good way of generating an API token is by running:
 openssl rand -hex 32
 ```
 
-This `openssl` command generates a potential token that can then be added to JupyterHub configuration in `jupyterhub_config.py`.
+This `openssl` command generates a random token that can be added to the JupyterHub configuration in `jupyterhub_config.py`.
 
 For external services, this would be registered with JupyterHub via configuration:
 
@@ -82,7 +82,7 @@ At this point, requests authenticated with the token will be associated with The
 ```{note}
 You can also load additional tokens for users via the `JupyterHub.api_tokens` configuration.
 
-However, this option has been softly deprecated since the introduction of services.
+However, this option has been deprecated since the introduction of services.
 ```
 
 ## Assigning permissions to a token
