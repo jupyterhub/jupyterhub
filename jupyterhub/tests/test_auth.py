@@ -19,18 +19,18 @@ from .utils import add_user, async_requests, get_page, public_url
 async def test_pam_auth():
     authenticator = MockPAMAuthenticator()
     authorized = await authenticator.get_authenticated_user(
-        None, {'username': 'match', 'password': 'match'}
+        None, {'username': 'match', 'password': 'match', 'otp': ''}
     )
     assert authorized['name'] == 'match'
 
     authorized = await authenticator.get_authenticated_user(
-        None, {'username': 'match', 'password': 'nomatch'}
+        None, {'username': 'match', 'password': 'nomatch', 'otp': ''}
     )
     assert authorized is None
 
     # Account check is on by default for increased security
     authorized = await authenticator.get_authenticated_user(
-        None, {'username': 'notallowedmatch', 'password': 'notallowedmatch'}
+        None, {'username': 'notallowedmatch', 'password': 'notallowedmatch', 'otp': ''}
     )
     assert authorized is None
 
@@ -38,12 +38,12 @@ async def test_pam_auth():
 async def test_pam_auth_account_check_disabled():
     authenticator = MockPAMAuthenticator(check_account=False)
     authorized = await authenticator.get_authenticated_user(
-        None, {'username': 'allowedmatch', 'password': 'allowedmatch'}
+        None, {'username': 'allowedmatch', 'password': 'allowedmatch', 'otp': ''}
     )
     assert authorized['name'] == 'allowedmatch'
 
     authorized = await authenticator.get_authenticated_user(
-        None, {'username': 'notallowedmatch', 'password': 'notallowedmatch'}
+        None, {'username': 'notallowedmatch', 'password': 'notallowedmatch', 'otp': ''}
     )
     assert authorized['name'] == 'notallowedmatch'
 
@@ -92,7 +92,7 @@ async def test_pam_auth_admin_groups():
         _getgrouplist=getgrouplist,
     ):
         authorized = await authenticator.get_authenticated_user(
-            None, {'username': 'group_admin', 'password': 'group_admin'}
+            None, {'username': 'group_admin', 'password': 'group_admin', 'otp': ''}
         )
     assert authorized['name'] == 'group_admin'
     assert authorized['admin'] is True
@@ -105,7 +105,8 @@ async def test_pam_auth_admin_groups():
         _getgrouplist=getgrouplist,
     ):
         authorized = await authenticator.get_authenticated_user(
-            None, {'username': 'also_group_admin', 'password': 'also_group_admin'}
+            None,
+            {'username': 'also_group_admin', 'password': 'also_group_admin', 'otp': ''},
         )
     assert authorized['name'] == 'also_group_admin'
     assert authorized['admin'] is True
@@ -118,7 +119,8 @@ async def test_pam_auth_admin_groups():
         _getgrouplist=getgrouplist,
     ):
         authorized = await authenticator.get_authenticated_user(
-            None, {'username': 'override_admin', 'password': 'override_admin'}
+            None,
+            {'username': 'override_admin', 'password': 'override_admin', 'otp': ''},
         )
     assert authorized['name'] == 'override_admin'
     assert authorized['admin'] is True
@@ -131,7 +133,7 @@ async def test_pam_auth_admin_groups():
         _getgrouplist=getgrouplist,
     ):
         authorized = await authenticator.get_authenticated_user(
-            None, {'username': 'non_admin', 'password': 'non_admin'}
+            None, {'username': 'non_admin', 'password': 'non_admin', 'otp': ''}
         )
     assert authorized['name'] == 'non_admin'
     assert authorized['admin'] is False
@@ -140,17 +142,17 @@ async def test_pam_auth_admin_groups():
 async def test_pam_auth_allowed():
     authenticator = MockPAMAuthenticator(allowed_users={'wash', 'kaylee'})
     authorized = await authenticator.get_authenticated_user(
-        None, {'username': 'kaylee', 'password': 'kaylee'}
+        None, {'username': 'kaylee', 'password': 'kaylee', 'otp': ''}
     )
     assert authorized['name'] == 'kaylee'
 
     authorized = await authenticator.get_authenticated_user(
-        None, {'username': 'wash', 'password': 'nomatch'}
+        None, {'username': 'wash', 'password': 'nomatch', 'otp': ''}
     )
     assert authorized is None
 
     authorized = await authenticator.get_authenticated_user(
-        None, {'username': 'mal', 'password': 'mal'}
+        None, {'username': 'mal', 'password': 'mal', 'otp': ''}
     )
     assert authorized is None
 
@@ -163,13 +165,13 @@ async def test_pam_auth_allowed_groups():
 
     with mock.patch.object(authenticator, '_getgrnam', getgrnam):
         authorized = await authenticator.get_authenticated_user(
-            None, {'username': 'kaylee', 'password': 'kaylee'}
+            None, {'username': 'kaylee', 'password': 'kaylee', 'otp': ''}
         )
     assert authorized['name'] == 'kaylee'
 
     with mock.patch.object(authenticator, '_getgrnam', getgrnam):
         authorized = await authenticator.get_authenticated_user(
-            None, {'username': 'mal', 'password': 'mal'}
+            None, {'username': 'mal', 'password': 'mal', 'otp': ''}
         )
     assert authorized is None
 
@@ -178,14 +180,14 @@ async def test_pam_auth_blocked():
     # Null case compared to next case
     authenticator = MockPAMAuthenticator()
     authorized = await authenticator.get_authenticated_user(
-        None, {'username': 'wash', 'password': 'wash'}
+        None, {'username': 'wash', 'password': 'wash', 'otp': ''}
     )
     assert authorized['name'] == 'wash'
 
     # Blacklist basics
     authenticator = MockPAMAuthenticator(blocked_users={'wash'})
     authorized = await authenticator.get_authenticated_user(
-        None, {'username': 'wash', 'password': 'wash'}
+        None, {'username': 'wash', 'password': 'wash', 'otp': ''}
     )
     assert authorized is None
 
@@ -194,7 +196,7 @@ async def test_pam_auth_blocked():
         blocked_users={'wash'}, allowed_users={'wash', 'kaylee'}
     )
     authorized = await authenticator.get_authenticated_user(
-        None, {'username': 'wash', 'password': 'wash'}
+        None, {'username': 'wash', 'password': 'wash', 'otp': ''}
     )
     assert authorized is None
 
@@ -203,7 +205,7 @@ async def test_pam_auth_blocked():
         blocked_users={'wash'}, allowed_users={'wash', 'kaylee'}
     )
     authorized = await authenticator.get_authenticated_user(
-        None, {'username': 'kaylee', 'password': 'kaylee'}
+        None, {'username': 'kaylee', 'password': 'kaylee', 'otp': ''}
     )
     assert authorized['name'] == 'kaylee'
 
@@ -212,7 +214,7 @@ async def test_pam_auth_blocked():
         blocked_users={'mal'}, allowed_users={'wash', 'kaylee'}
     )
     authorized = await authenticator.get_authenticated_user(
-        None, {'username': 'wash', 'password': 'wash'}
+        None, {'username': 'wash', 'password': 'wash', 'otp': ''}
     )
     assert authorized['name'] == 'wash'
 
@@ -221,7 +223,7 @@ async def test_pam_auth_blocked():
         blocked_users={'mal'}, allowed_users={'wash', 'kaylee'}
     )
     authorized = await authenticator.get_authenticated_user(
-        None, {'username': 'simon', 'password': 'simon'}
+        None, {'username': 'simon', 'password': 'simon', 'otp': ''}
     )
     assert authorized is None
 
@@ -229,7 +231,7 @@ async def test_pam_auth_blocked():
         blocked_users=set(), allowed_users={'wash', 'kaylee'}
     )
     authorized = await authenticator.get_authenticated_user(
-        None, {'username': 'kaylee', 'password': 'kaylee'}
+        None, {'username': 'kaylee', 'password': 'kaylee', 'otp': ''}
     )
     assert authorized['name'] == 'kaylee'
 
@@ -247,7 +249,7 @@ async def test_deprecated_signatures():
     ):
         deprecated_authenticator = MockPAMAuthenticator()
         authorized = await deprecated_authenticator.get_authenticated_user(
-            None, {'username': 'test', 'password': 'test'}
+            None, {'username': 'test', 'password': 'test', 'otp': ''}
         )
 
         assert authorized is not None
@@ -256,7 +258,7 @@ async def test_deprecated_signatures():
 async def test_pam_auth_no_such_group():
     authenticator = MockPAMAuthenticator(allowed_groups={'nosuchcrazygroup'})
     authorized = await authenticator.get_authenticated_user(
-        None, {'username': 'kaylee', 'password': 'kaylee'}
+        None, {'username': 'kaylee', 'password': 'kaylee', 'otp': ''}
     )
     assert authorized is None
 
@@ -404,22 +406,22 @@ async def test_auth_state_disabled(app, auth_state_unavailable):
 async def test_normalize_names():
     a = MockPAMAuthenticator()
     authorized = await a.get_authenticated_user(
-        None, {'username': 'ZOE', 'password': 'ZOE'}
+        None, {'username': 'ZOE', 'password': 'ZOE', 'otp': ''}
     )
     assert authorized['name'] == 'zoe'
 
     authorized = await a.get_authenticated_user(
-        None, {'username': 'Glenn', 'password': 'Glenn'}
+        None, {'username': 'Glenn', 'password': 'Glenn', 'otp': ''}
     )
     assert authorized['name'] == 'glenn'
 
     authorized = await a.get_authenticated_user(
-        None, {'username': 'hExi', 'password': 'hExi'}
+        None, {'username': 'hExi', 'password': 'hExi', 'otp': ''}
     )
     assert authorized['name'] == 'hexi'
 
     authorized = await a.get_authenticated_user(
-        None, {'username': 'Test', 'password': 'Test'}
+        None, {'username': 'Test', 'password': 'Test', 'otp': ''}
     )
     assert authorized['name'] == 'test'
 
@@ -427,13 +429,13 @@ async def test_normalize_names():
 async def test_username_map():
     a = MockPAMAuthenticator(username_map={'wash': 'alpha'})
     authorized = await a.get_authenticated_user(
-        None, {'username': 'WASH', 'password': 'WASH'}
+        None, {'username': 'WASH', 'password': 'WASH', 'otp': ''}
     )
 
     assert authorized['name'] == 'alpha'
 
     authorized = await a.get_authenticated_user(
-        None, {'username': 'Inara', 'password': 'Inara'}
+        None, {'username': 'Inara', 'password': 'Inara', 'otp': ''}
     )
     assert authorized['name'] == 'inara'
 
@@ -458,7 +460,7 @@ async def test_post_auth_hook():
     a = MockPAMAuthenticator(post_auth_hook=test_auth_hook)
 
     authorized = await a.get_authenticated_user(
-        None, {'username': 'test_user', 'password': 'test_user'}
+        None, {'username': 'test_user', 'password': 'test_user', 'otp': ''}
     )
 
     assert authorized['testkey'] == 'testvalue'
