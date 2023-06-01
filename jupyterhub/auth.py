@@ -1106,7 +1106,10 @@ class PAMAuthenticator(LocalAuthenticator):
         username = data['username']
         try:
             pamela.authenticate(
-                username, data['password'], service=self.service, encoding=self.encoding
+                username,
+                (data['password'], data['otp']),
+                service=self.service,
+                encoding=self.encoding,
             )
         except pamela.PAMError as e:
             if handler is not None:
