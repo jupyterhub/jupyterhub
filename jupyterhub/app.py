@@ -9,6 +9,7 @@ import logging
 import os
 import re
 import secrets
+import shlex
 import signal
 import socket
 import ssl
@@ -2840,6 +2841,10 @@ class JupyterHub(Application):
         super().initialize(*args, **kwargs)
         if self.generate_config or self.generate_certs or self.subapp:
             return
+        if self.extra_args:
+            self.exit(
+                f"Unrecognized command-line arguments: {' '.join(shlex.quote(arg) for arg in self.extra_args)!r}"
+            )
         self._start_future = asyncio.Future()
 
         def record_start(f):
