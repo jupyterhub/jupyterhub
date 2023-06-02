@@ -157,6 +157,25 @@ class Authenticator(LoggingConfigurable):
         """
     ).tag(config=True)
 
+    otp_prompt = Any(
+        "OTP:",
+        help="""
+        The prompt string for the extra OTP (One Time Password) field. Defaults to `OTP:`.
+
+        .. versionadded:: 4.1
+        """,
+    ).tag(config=True)
+
+    request_otp = Bool(
+        False,
+        config=True,
+        help="""
+        Display the extra OTP (One Time Password) prompt on the login scree.
+
+        .. versionadded:: 4.1
+        """,
+    )
+
     _deprecated_aliases = {
         "whitelist": ("allowed_users", "1.2"),
         "blacklist": ("blocked_users", "1.2"),

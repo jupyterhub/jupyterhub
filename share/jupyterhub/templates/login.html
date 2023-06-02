@@ -64,7 +64,8 @@
       id="password_input"
       tabindex="2"
     />
-    <label for='otp_input'>OTP (if required):</label>
+    {% if authenticator_request_otp %}
+    <label for='otp_input'>{{ authenticator_otp_prompt }}</label>
     <input
       type="password"
       class="form-control"
@@ -73,6 +74,7 @@
       id="otp_input"
       tabindex="3"
     />
+    {% endif %}
 
     <div class="feedback-container">
       <input
