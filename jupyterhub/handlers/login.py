@@ -105,6 +105,7 @@ class LoginHandler(BaseHandler):
                     'next': self.get_argument('next', ''),
                 },
             ),
+            "xsrf": self.xsrf_token.decode('ascii'),
         }
         custom_html = Template(
             self.authenticator.get_custom_html(self.hub.base_url)
