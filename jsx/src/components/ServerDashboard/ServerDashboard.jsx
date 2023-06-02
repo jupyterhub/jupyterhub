@@ -74,6 +74,7 @@ const ServerDashboard = (props) => {
     shutdownHub,
     startServer,
     stopServer,
+    deleteServer,
     startAll,
     stopAll,
     history,
@@ -163,6 +164,50 @@ const ServerDashboard = (props) => {
         }}
       >
         Stop Server
+      </button>
+    );
+  };
+
+  const DeleteServerButton = ({ serverName, userName }) => {
+    if (serverName === "") {
+      return null;
+    }
+    var [isDisabled, setIsDisabled] = useState(false);
+    return (
+      <button
+        className="btn btn-danger btn-xs stop-button"
+        // It's not possible to delete unnamed servers
+        disabled={isDisabled}
+        onClick={() => {
+          setIsDisabled(true);
+          deleteServer(userName, serverName)
+            .then((res) => {
+              if (res.status < 300) {
+                updateUsers(...slice)
+                  .then((data) => {
+                    dispatchPageUpdate(
+                      data.items,
+                      data._pagination,
+                      name_filter,
+                    );
+                  })
+                  .catch(() => {
+                    setIsDisabled(false);
+                    setErrorAlert(`Failed to update users list.`);
+                  });
+              } else {
+                setErrorAlert(`Failed to delete server.`);
+                setIsDisabled(false);
+              }
+              return res;
+            })
+            .catch(() => {
+              setErrorAlert(`Failed to delete server.`);
+              setIsDisabled(false);
+            });
+        }}
+      >
+        Delete Server
       </button>
     );
   };
@@ -278,7 +323,11 @@ const ServerDashboard = (props) => {
     const userServerName = user.name + serverNameDash;
     const open = collapseStates[userServerName] || false;
     return [
-      <tr key={`${userServerName}-row`} className="user-row">
+      <tr
+        key={`${userServerName}-row`}
+        data-testid={`user-row-${userServerName}`}
+        className="user-row"
+      >
         <td data-testid="user-row-name">
           <span>
             <Button
@@ -323,6 +372,10 @@ const ServerDashboard = (props) => {
                 serverName={server.name}
                 userName={user.name}
                 style={{ marginRight: 20 }}
+              />
+              <DeleteServerButton
+                serverName={server.name}
+                userName={user.name}
               />
               <a
                 href={`${base_url}spawn/${user.name}${
@@ -582,6 +635,7 @@ ServerDashboard.propTypes = {
   shutdownHub: PropTypes.func,
   startServer: PropTypes.func,
   stopServer: PropTypes.func,
+  deleteServer: PropTypes.func,
   startAll: PropTypes.func,
   stopAll: PropTypes.func,
   dispatch: PropTypes.func,

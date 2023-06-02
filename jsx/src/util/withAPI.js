@@ -18,6 +18,12 @@ const withAPI = withProps(() => ({
     jhapiRequest("/users/" + name + "/servers/" + (serverName || ""), "POST"),
   stopServer: (name, serverName = "") =>
     jhapiRequest("/users/" + name + "/servers/" + (serverName || ""), "DELETE"),
+  deleteServer: (name, serverName = "") =>
+    jhapiRequest(
+      "/users/" + name + "/servers/" + (serverName || ""),
+      "DELETE",
+      { remove: true },
+    ),
   startAll: (names) =>
     names.map((e) => jhapiRequest("/users/" + e + "/server", "POST")),
   stopAll: (names) =>
