@@ -8,19 +8,23 @@ import functools
 import hashlib
 import inspect
 import random
+import re
 import secrets
 import socket
 import ssl
+import string
 import sys
 import threading
 import uuid
 import warnings
 from binascii import b2a_hex
 from datetime import datetime, timezone
+from functools import lru_cache
 from hmac import compare_digest
 from operator import itemgetter
 from urllib.parse import quote
 
+import idna
 from async_generator import aclosing
 from sqlalchemy.exc import SQLAlchemyError
 from tornado import gen, ioloop, web
@@ -779,3 +783,146 @@ def get_browser_protocol(request):
 
     # no forwarded headers
     return request.protocol
+
+
+# set of chars that are safe in dns labels
+# (allow '.' because we don't mind multiple levels of subdomains)
+_dns_safe = set(string.ascii_letters + string.digits + '-.')
+# don't escape % because it's the escape char and we handle it separately
+_dns_needs_replace = _dns_safe | {"%"}
+
+
+@lru_cache()
+def _dns_quote(name):
+    """Escape a name for use in a dns label
+
+    this is _NOT_ fully domain-safe, but works often enough for realistic usernames.
+    Fully safe would be full IDNA encoding,
+    PLUS escaping non-IDNA-legal ascii,
+    PLUS some encoding of boundary conditions
+    """
+    # escape name for subdomain label
+    label = quote(name, safe="").lower()
+    # some characters are not handled by quote,
+    # because they are legal in URLs but not domains,
+    # specifically _ and ~ (starting in 3.7).
+    # Escape these in the same way (%{hex_codepoint}).
+    unique_chars = set(label)
+    for c in unique_chars:
+        if c not in _dns_needs_replace:
+            label = label.replace(c, f"%{ord(c):x}")
+
+    # underscore is our escape char -
+    # it's not officially legal in hostnames,
+    # but is valid in _domain_ names (?),
+    # and seems to always work in practice.
+    # FIXME: We should consider switching to proper IDNA encoding
+    # in a major release
+    label = label.replace("%", "_")
+    return label
+
+
+def subdomain_hook_legacy(name, domain, kind):
+    """Legacy (default) hook for subdomains
+
+    Users are at '$user.$host' where $user is _mostly_ DNS-safe.
+    Services are all simultaneously on 'services.$host`.
+    """
+    if kind == "user":
+        # backward-compatibility
+        return f"{_dns_quote(name)}.{domain}"
+    elif kind == "service":
+        return f"services.{domain}"
+    else:
+        raise ValueError(f"kind must be 'service' or 'user', not {kind!r}")
+
+
+# strict dns-safe characters (excludes '-')
+_strict_dns_safe = set(string.ascii_lowercase) | set(string.digits)
+
+
+def _trim_and_hash(name):
+    """Always-safe fallback for a DNS label
+
+    Produces a valid DNS label for any string
+
+    - prefix with 'u' to avoid collisions and first-character rules
+    - Selects the first N characters that are safe
+    - suffix with truncated hash of true name
+    """
+    name_hash = hashlib.sha256(name.encode('utf8')).hexdigest()[:7]
+
+    safe_chars = [c for c in name.lower() if c in _strict_dns_safe]
+    name_stub = ''.join(safe_chars[:8])
+    # We MUST NOT put the `--` in the 3rd and 4th position (RFC 5891)
+    # which is reserved for IDNs
+    # It would be if name_stub were empty, so put 'x' here
+    # (value doesn't matter, as uniqueness is in the hash - the stub is more of a hint, anyway)
+    if not name_stub:
+        name_stub = "x"
+    return f"u-{name_stub}--{name_hash}"
+
+
+# A host name (label) can start or end with a letter or a number
+# this pattern doesn't need to handle the boundary conditions,
+# which are handled more simply with starts/endswith
+_dns_re = re.compile(r'^[a-z0-9-]{1,63}$', flags=re.IGNORECASE)
+
+
+def _is_dns_safe(label):
+    # A host name (label) MUST NOT consist of all numeric values
+    if label.isnumeric():
+        return False
+    # A host name (label) can be up to 63 characters
+    if not 0 < len(label) < 64:
+        return False
+    # A host name (label) MUST NOT start or end with a '-' (dash)
+    if label.startswith('-') or label.endswith('-'):
+        return False
+    return bool(_dns_re.match(label))
+
+
+def _strict_dns_safe_encode(name):
+    """Will encode a username to a guaranteed-safe DNS label
+
+    - if it contains '--' at all, jump to the end and take the hash route to avoid collisions with escaped
+    - if safe, use it
+    - if not, use IDNA encoding
+    - if a safe encoding cannot be produced, use stripped safe characters + '--{hash}`
+    """
+    # short-circuit: avoid accepting already-encoded results
+    # which all include '--'
+    if '--' in name:
+        return _trim_and_hash(name)
+
+    # if name is already safe (and can't collide with an escaped result) use it
+    if _is_dns_safe(name):
+        return name
+
+    # next: use IDNA encoding, if applicable
+    try:
+        idna_name = idna.encode(name).decode("ascii")
+    except ValueError:
+        idna_name = None
+
+    if idna_name and idna_name != name and _is_dns_safe(idna_name):
+        return idna_name
+
+    # fallback, always works: trim to safe characters and hash
+    return _trim_and_hash(name)
+
+
+def subdomain_hook_idna(name, domain, kind):
+    """New, reliable subdomain hook
+
+    More reliable than previous, should always produce valid domains
+
+    - uses IDNA encoding for simple unicode names
+    - separate domain for each service
+    - uses stripped name and hash, where above schemes fail to produce a valid domain
+    """
+    safe_name = _strict_dns_safe_encode(name)
+    if kind == "user":
+        return f"{safe_name}.users.{domain}"
+    elif kind == "service":
+        return f"{safe_name}.services.{domain}"

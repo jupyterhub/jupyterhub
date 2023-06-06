@@ -91,6 +91,8 @@ from .utils import (
     maybe_future,
     print_ps_info,
     print_stacks,
+    subdomain_hook_idna,
+    subdomain_hook_legacy,
     url_path_join,
 )
 
@@ -736,6 +738,55 @@ class JupyterHub(Application):
         if not self.subdomain_host:
             return ''
         return urlparse(self.subdomain_host).hostname
+
+    subdomain_hook = Union(
+        [Callable(), Unicode()],
+        default_value="legacy",
+        config=True,
+        help="""
+        Hook for constructing subdomains for users and services.
+
+        Default: 'legacy'
+        Use 'idna' to select a newer, more robust scheme,
+        which will become the default in the future.
+
+        A custom subdomain hook should have the signature:
+
+        def subdomain_hook(name, domain, kind) -> str:
+            ...
+
+        and should return a _valid_ domain name for all usernames.
+
+        - `kind` will be one of 'user' or 'services'
+        - `domain` is the domain of the Hub itself
+        - `name` is the original name, which may need escaping to be safe as a domain component.
+
+        The default behavior is to have all services
+        on a single `services.{domain}` subdomain,
+        and each user on `{username}.{domain}`.
+        This is the 'legacy' scheme,
+        and doesn't work for all usernames.
+
+        .. versionadded:: 4.1
+        """,
+    )
+
+    @default("subdomain_hook")
+    def _default_subdomain_hook(self):
+        if self.subdomain_host:
+            self.log.warning(
+                "Using deprecated legacy subdomain hook. subdomain_hook = 'idna' is added in JupyterHub 4.1 and will become the default in a future JupyterHub release."
+            )
+        return subdomain_hook_legacy
+
+    @validate("subdomain_hook")
+    def _subdomain_hook(self, proposal):
+        # shortcut `subdomain_hook = "idna"` config
+        if proposal.value == "idna":
+            return subdomain_hook_idna
+        if proposal.value == "legacy":
+            return subdomain_hook_legacy
+        return proposal.value
 
     logo_file = Unicode(
         '',
@@ -2361,17 +2412,21 @@ class JupyterHub(Application):
 
     def init_services(self):
         self._service_map.clear()
-        if self.domain:
-            domain = 'services.' + self.domain
-            parsed = urlparse(self.subdomain_host)
-            host = f'{parsed.scheme}://services.{parsed.netloc}'
-        else:
-            domain = host = ''
-
+        parsed_host = urlparse(self.subdomain_host)
         for spec in self.services:
             if 'name' not in spec:
                 raise ValueError('service spec must have a name: %r' % spec)
             name = spec['name']
+
+            # domain for service
+            if self.domain:
+                domain = self.subdomain_hook(name, self.domain, kind="service")
+                host = f"{parsed_host.scheme}://{domain}"
+                if parsed_host.port:
+                    host = f"{host}:{parsed_host.port}"
+            else:
+                domain = host = ''
+
             # get/create orm
             orm_service = orm.Service.find(self.db, name=name)
             if orm_service is None:
@@ -2763,6 +2818,7 @@ class JupyterHub(Application):
             static_path=os.path.join(self.data_files_path, 'static'),
             static_url_prefix=url_path_join(self.hub.base_url, 'static/'),
             static_handler_class=CacheControlStaticFilesHandler,
+            subdomain_hook=self.subdomain_hook,
             template_path=self.template_paths,
             template_vars=self.template_vars,
             jinja2_env=jinja_env,
