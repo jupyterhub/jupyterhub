@@ -745,27 +745,39 @@ class JupyterHub(Application):
         config=True,
         help="""
         Hook for constructing subdomains for users and services.
+        Only used when `JupyterHub.subdomain_host` is set.
 
-        Default: 'legacy'
-        Use 'idna' to select a newer, more robust scheme,
-        which will become the default in the future.
+        There are two predefined hooks, which can be selected by name:
 
-        A custom subdomain hook should have the signature:
+        - 'legacy' (default, deprecated)
+        - 'idna' (more robust, will become default in the future)
+
+        Otherwise, should be a function which must not be async.
+        A custom subdomain_hook should have the signature:
 
         def subdomain_hook(name, domain, kind) -> str:
             ...
 
-        and should return a _valid_ domain name for all usernames.
+        and should return a unique, valid domain name for all usernames.
 
         - `kind` will be one of 'user' or 'services'
         - `domain` is the domain of the Hub itself
         - `name` is the original name, which may need escaping to be safe as a domain component.
+
+        JupyterHub itself puts very little limit on usernames
+        to accommodate a wide variety of Authenticators,
+        but your identity provider is likely much more strict,
+        allowing you to make assumptions about the name.
 
         The default behavior is to have all services
         on a single `services.{domain}` subdomain,
         and each user on `{username}.{domain}`.
         This is the 'legacy' scheme,
         and doesn't work for all usernames.
+
+        The 'idna' scheme is a new scheme that should produce a valid domain name for any user,
+        using IDNA encoding for unicode usernames, and a truncate-and-hash approach for
+        any usernames that can't be easily encoded into a domain component.
 
         .. versionadded:: 4.1
         """,
@@ -782,11 +794,16 @@ class JupyterHub(Application):
     @validate("subdomain_hook")
     def _subdomain_hook(self, proposal):
         # shortcut `subdomain_hook = "idna"` config
-        if proposal.value == "idna":
+        hook = proposal.value
+        if hook == "idna":
             return subdomain_hook_idna
-        if proposal.value == "legacy":
+        if hook == "legacy":
             return subdomain_hook_legacy
-        return proposal.value
+        if not callable(hook):
+            raise ValueError(
+                f"subdomain_hook must be 'idna', 'legacy', or a caallable, got {hook!r}"
+            )
+        return hook
 
     logo_file = Unicode(
         '',
