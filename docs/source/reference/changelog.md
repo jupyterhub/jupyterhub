@@ -10,7 +10,7 @@ command line for details.
 
 ## 4.0
 
-### 4.0.1
+### 4.0.1 - 2023-06-08
 
 ([full changelog](https://github.com/jupyterhub/jupyterhub/compare/4.0.0...4.0.1))
 
