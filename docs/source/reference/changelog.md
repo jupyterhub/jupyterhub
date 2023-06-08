@@ -10,6 +10,52 @@ command line for details.
 
 ## 4.0
 
+### 4.0.1 - 2023-06-08
+
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/4.0.0...4.0.1))
+
+#### Enhancements made
+
+- Delete server button on admin page [#4457](https://github.com/jupyterhub/jupyterhub/pull/4457) ([@diocas](https://github.com/diocas), [@minrk](https://github.com/minrk))
+
+#### Bugs fixed
+
+- Abort informatively on unrecognized CLI options [#4467](https://github.com/jupyterhub/jupyterhub/pull/4467) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- Add xsrf to custom_html template context [#4464](https://github.com/jupyterhub/jupyterhub/pull/4464) ([@opoplawski](https://github.com/opoplawski), [@minrk](https://github.com/minrk))
+- preserve CLI > env priority config in jupyterhub-singleuser extension [#4451](https://github.com/jupyterhub/jupyterhub/pull/4451) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio), [@timeu](https://github.com/timeu), [@rcthomas](https://github.com/rcthomas))
+
+#### Maintenance and upkeep improvements
+
+- Fix link to collaboration accounts doc in example [#4448](https://github.com/jupyterhub/jupyterhub/pull/4448) ([@minrk](https://github.com/minrk))
+- Remove Dockerfile.alpine [#4444](https://github.com/jupyterhub/jupyterhub/pull/4444) ([@manics](https://github.com/manics), [@minrk](https://github.com/minrk))
+- Update jsx dependencies as much as possible [#4443](https://github.com/jupyterhub/jupyterhub/pull/4443) ([@manics](https://github.com/manics), [@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- Remove unused admin JS code [#4438](https://github.com/jupyterhub/jupyterhub/pull/4438) ([@yuvipanda](https://github.com/yuvipanda), [@minrk](https://github.com/minrk))
+- Finish migrating browser tests from selenium to playwright [#4435](https://github.com/jupyterhub/jupyterhub/pull/4435) ([@mouse1203](https://github.com/mouse1203), [@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- Migrate some tests from selenium to playwright [#4431](https://github.com/jupyterhub/jupyterhub/pull/4431) ([@mouse1203](https://github.com/mouse1203), [@minrk](https://github.com/minrk))
+- Begin setup of playwright tests [#4420](https://github.com/jupyterhub/jupyterhub/pull/4420) ([@mouse1203](https://github.com/mouse1203), [@minrk](https://github.com/minrk), [@manics](https://github.com/manics))
+
+#### Documentation improvements
+
+- Reorder token request docs [#4463](https://github.com/jupyterhub/jupyterhub/pull/4463) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics))
+- 'servers' should be a dict of dicts, not a list of dicts in rest-api.yml [#4458](https://github.com/jupyterhub/jupyterhub/pull/4458) ([@tfmark](https://github.com/tfmark), [@minrk](https://github.com/minrk))
+- Config reference: link to nicer(?) API docs first [#4456](https://github.com/jupyterhub/jupyterhub/pull/4456) ([@manics](https://github.com/manics), [@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- Add CERN to Gallery of JupyterHub Deployments [#4454](https://github.com/jupyterhub/jupyterhub/pull/4454) ([@goseind](https://github.com/goseind), [@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- Fix "Thanks" typo. [#4441](https://github.com/jupyterhub/jupyterhub/pull/4441) ([@ryanlovett](https://github.com/ryanlovett), [@minrk](https://github.com/minrk))
+- add HUNT into research institutions [#4432](https://github.com/jupyterhub/jupyterhub/pull/4432) ([@matuskosut](https://github.com/matuskosut), [@minrk](https://github.com/minrk), [@manics](https://github.com/manics))
+- docs: fix missing redirects for api to reference/api [#4429](https://github.com/jupyterhub/jupyterhub/pull/4429) ([@consideRatio](https://github.com/consideRatio), [@minrk](https://github.com/minrk), [@manics](https://github.com/manics))
+- update sharing faq for 2023 [#4428](https://github.com/jupyterhub/jupyterhub/pull/4428) ([@minrk](https://github.com/minrk))
+- Fix some public URL links within the docs [#4427](https://github.com/jupyterhub/jupyterhub/pull/4427) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- add upgrade note for 4.0 to changelog [#4426](https://github.com/jupyterhub/jupyterhub/pull/4426) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+
+#### Contributors to this release
+
+The following people contributed discussions, new ideas, code and documentation contributions, and review.
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/#how-does-this-tool-define-contributions-in-the-reports).
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2023-04-20&to=2023-06-07&type=c))
+
+@consideRatio ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3AconsideRatio+updated%3A2023-04-20..2023-06-07&type=Issues)) | @diocas ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Adiocas+updated%3A2023-04-20..2023-06-07&type=Issues)) | @echarles ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aecharles+updated%3A2023-04-20..2023-06-07&type=Issues)) | @goseind ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Agoseind+updated%3A2023-04-20..2023-06-07&type=Issues)) | @hsadia538 ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ahsadia538+updated%3A2023-04-20..2023-06-07&type=Issues)) | @mahamtariq58 ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amahamtariq58+updated%3A2023-04-20..2023-06-07&type=Issues)) | @manics ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amanics+updated%3A2023-04-20..2023-06-07&type=Issues)) | @matuskosut ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amatuskosut+updated%3A2023-04-20..2023-06-07&type=Issues)) | @minrk ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk+updated%3A2023-04-20..2023-06-07&type=Issues)) | @mouse1203 ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amouse1203+updated%3A2023-04-20..2023-06-07&type=Issues)) | @opoplawski ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aopoplawski+updated%3A2023-04-20..2023-06-07&type=Issues)) | @rcthomas ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Arcthomas+updated%3A2023-04-20..2023-06-07&type=Issues)) | @ryanlovett ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aryanlovett+updated%3A2023-04-20..2023-06-07&type=Issues)) | @tfmark ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Atfmark+updated%3A2023-04-20..2023-06-07&type=Issues)) | @timeu ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Atimeu+updated%3A2023-04-20..2023-06-07&type=Issues)) | @yuvipanda ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ayuvipanda+updated%3A2023-04-20..2023-06-07&type=Issues))
+
 ### 4.0.0 - 2023-04-20
 
 4.0 is a major release, but a small one.
