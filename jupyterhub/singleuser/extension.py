@@ -617,8 +617,8 @@ class JupyterHubSingleUser(ExtensionApp):
         app.web_app.settings[
             "page_config_hook"
         ] = app.identity_provider.page_config_hook
-        # allow to override log_function with tornado_settings set in user config
-        if not app.web_app.settings.get("log_function"):
+        # if the user has configured a log function in the tornado settings, do not override it
+        if not 'log_function' in app.config.ServerApp.get('tornado_settings', {}):
             app.web_app.settings["log_function"] = log_request
         # add jupyterhub version header
         headers = app.web_app.settings.setdefault("headers", {})
