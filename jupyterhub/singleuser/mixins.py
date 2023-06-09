@@ -669,9 +669,8 @@ class SingleUserNotebookAppMixin(Configurable):
         # load the hub-related settings into the tornado settings dict
         self.init_hub_auth()
         s = self.tornado_settings
-        # allow to override log_function with tornado_settings set in user config
-        if not s.get('log_function'):
-            s['log_function'] = log_request
+        # if the user has configured a log function in the tornado settings, do not override it
+        s.setdefault('log_function', log_request)
         s['user'] = self.user
         s['group'] = self.group
         s['hub_prefix'] = self.hub_prefix
