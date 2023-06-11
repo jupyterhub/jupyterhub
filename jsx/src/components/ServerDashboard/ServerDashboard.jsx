@@ -462,9 +462,11 @@ const ServerDashboard = (props) => {
           <tbody>
             <tr className="noborder">
               <td>
-                <Button variant="light" className="add-users-button">
-                  <Link to="/add-users">Add Users</Link>
-                </Button>
+                <Link to="/add-users">
+                  <Button variant="light" className="add-users-button">
+                    Add Users
+                  </Button>
+                </Link>
               </td>
               <td></td>
               <td></td>
@@ -559,6 +561,7 @@ const ServerDashboard = (props) => {
                   Shutdown Hub
                 </Button>
               </td>
+              <td></td>
             </tr>
             {servers.flatMap(([user, server]) => serverRow(user, server))}
           </tbody>
