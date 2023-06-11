@@ -1,0 +1,7 @@
+{
+  "items": [
+    { "kind": "group", "name": "testgroup", "users": [] },
+    { "kind": "group", "name": "testgroup2", "users": ["foo", "bar"] }
+  ],
+  "_pagination": { "offset": 0, "limit": 50, "total": 2, "next": null }
+}
