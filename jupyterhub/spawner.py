@@ -843,7 +843,7 @@ class Spawner(LoggingConfigurable):
     progress_ready_hook = Any(
         help="""
         An optional hook function that you can implement to modify the
-        ready event, which will be shown to the user once a service
+        ready event, which will be shown to the user on the spawn progress page when their server
         is ready.
 
         This can be set independent of any concrete spawner implementation.
@@ -852,7 +852,6 @@ class Spawner(LoggingConfigurable):
 
         Example::
 
-            from subprocess import check_call
             async def my_ready_hook(spawner, ready_event):
                 ready_event["html_message"] = f"Server {spawner.name} is ready for {spawner.user.name}"
                 return ready_event

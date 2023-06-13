@@ -4,7 +4,6 @@
 import asyncio
 import inspect
 import json
-from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 
 from async_generator import aclosing
@@ -723,7 +722,7 @@ class SpawnProgressAPIHandler(APIHandler):
                 'html_message': 'Server ready at <a href="{0}">{0}</a>'.format(url),
                 'url': url,
             }
-            original_ready_event = deepcopy(ready_event)
+            original_ready_event = ready_event.copy()
             if spawner.progress_ready_hook:
                 try:
                     ready_event = spawner.progress_ready_hook(spawner, ready_event)
