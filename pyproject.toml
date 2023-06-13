@@ -1,3 +1,100 @@
+# PEP 621 build info
+[build-system]
+requires = ["setuptools>=61", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+# Project metadata
+# ref: https://setuptools.pypa.io/en/latest/userguide/pyproject_config.html
+[project]
+name = "jupyterhub"
+version = "4.1.0.dev"
+dynamic = ["readme", "dependencies"]
+description = "JupyterHub: A multi-user server for Jupyter notebooks"
+authors = [
+  { name = "Jupyter Development Team", email = "jupyter@googlegroups.com" },
+]
+keywords = ["Interactive", "Interpreter", "Shell", "Web", "Jupyter"]
+license = { text = "BSD-3-Clause" }
+requires-python = ">=3.7"
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Developers",
+  "Intended Audience :: System Administrators",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: BSD License",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Operating System :: POSIX",
+  "Framework :: Jupyter",
+]
+
+[project.urls]
+Homepage = "https://hub.jupyter.org"
+Documentation = "https://jupyterhub.readthedocs.io"
+Funding = "https://jupyter.org/about"
+Source = "https://github.com/jupyterhub/jupyterhub"
+Tracker = "https://github.com/jupyterhub/jupyterhub/issues"
+
+[project.optional-dependencies]
+test = [
+  "beautifulsoup4[html5lib]",
+  "coverage",
+  # cryptography is an optional dependency for jupyterhub that we test
+  # against by default
+  "cryptography",
+  "jsonschema",
+  "jupyterlab>=3",
+  "mock",
+  # nbclassic provides the '/tree/' handler that we tests against in
+  # the test test_nbclassic_control_panel.
+  "nbclassic",
+  "pytest>=3.3",
+  "pytest-asyncio>=0.17",
+  "pytest-cov",
+  "requests-mock",
+  "playwright",
+  "virtualenv",
+]
+
+[project.scripts]
+jupyterhub = "jupyterhub.app:main"
+jupyterhub-singleuser = "jupyterhub.singleuser:main"
+
+[project.entry-points."jupyterhub.authenticators"]
+default = "jupyterhub.auth:PAMAuthenticator"
+pam = "jupyterhub.auth:PAMAuthenticator"
+dummy = "jupyterhub.auth:DummyAuthenticator"
+null = "jupyterhub.auth:NullAuthenticator"
+
+[project.entry-points."jupyterhub.proxies"]
+default = "jupyterhub.proxy:ConfigurableHTTPProxy"
+configurable-http-proxy = "jupyterhub.proxy:ConfigurableHTTPProxy"
+
+[project.entry-points."jupyterhub.spawners"]
+default = "jupyterhub.spawner:LocalProcessSpawner"
+localprocess = "jupyterhub.spawner:LocalProcessSpawner"
+simple = "jupyterhub.spawner:SimpleLocalProcessSpawner"
+
+[tool.setuptools]
+zip-safe = false
+license-files = ["COPYING.md"]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = [""]
+include = ["jupyterhub*"]
+
+# dynamic sources of metadata in other files
+[tool.setuptools.dynamic]
+readme = { file = "README.md", content-type = "text/markdown" }
+dependencies = { file = "requirements.txt" }
+
+# declarative data-files doesn't quite work right
+# this is still in setup.py:get_data_files
+# [tool.setuptools.data-files]
+# "share/jupyterhub" = ["share/jupyterhub/**"]
+
+
 # autoflake is used for autoformatting Python code
 #
 # ref: https://github.com/PyCQA/autoflake#readme
@@ -66,6 +163,10 @@ tag_template = "{new_version}"
 # For each file to patch, add a [[tool.tbump.file]] config
 # section containing the path of the file, relative to the
 # pyproject.toml location.
+
+[[tool.tbump.file]]
+src = "pyproject.toml"
+search = 'version = "{current_version}"'
 
 [[tool.tbump.file]]
 src = "jupyterhub/_version.py"
