@@ -37,7 +37,7 @@ import uuid
 import warnings
 from http import HTTPStatus
 from unittest import mock
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 from tornado.httputil import url_concat
@@ -891,8 +891,13 @@ class HubOAuth(HubAuth):
             # OAuth that doesn't complete shouldn't linger too long.
             'max_age': 600,
         }
-        if get_browser_protocol(handler.request) == 'https':
-            kwargs['secure'] = True
+        public_url = os.getenv("JUPYTERHUB_PUBLIC_URL")
+        if public_url:
+            if urlparse(public_url).scheme == 'https':
+                kwargs['secure'] = True
+        else:
+            if get_browser_protocol(handler.request) == 'https':
+                kwargs['secure'] = True
         # load user cookie overrides
         kwargs.update(self.cookie_options)
         handler.set_secure_cookie(cookie_name, b64_state, **kwargs)

@@ -704,6 +704,21 @@ class JupyterHub(Application):
         proto = 'https' if self.ssl_cert else 'http'
         return proto + '://:8000'
 
+    public_url = Unicode(
+        "",
+        config=True,
+        help="""Set the public URL of JupyterHub
+
+        This will skip any detection of URL and protocol from requests,
+        which isn't always correct when JupyterHub is behind
+        multiple layers of proxies, etc.
+        Usually the failure is detecting http when it's really https.
+
+        Should include the full, public URL of JupyterHub,
+        including the public-facing base_url prefix.
+        """,
+    )
+
     subdomain_host = Unicode(
         '',
         help="""Run single-user servers on subdomains of this host.
@@ -2755,6 +2770,7 @@ class JupyterHub(Application):
             spawner_class=self.spawner_class,
             base_url=self.base_url,
             default_url=self.default_url,
+            public_url=urlparse(self.public_url) if self.public_url else "",
             cookie_secret=self.cookie_secret,
             cookie_max_age_days=self.cookie_max_age_days,
             redirect_to_server=self.redirect_to_server,
