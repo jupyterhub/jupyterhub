@@ -2041,21 +2041,20 @@ class JupyterHub(Application):
 
         TOTAL_USERS.set(total_users)
 
-    async def _get_or_create_user(self, username):
+    async def _get_or_create_user(self, username, hint):
         """Create user if username is found in config but user does not exist"""
-        if not (await maybe_future(self.authenticator.check_allowed(username, None))):
-            raise ValueError(
-                "Username %r is not in Authenticator.allowed_users" % username
-            )
         user = orm.User.find(self.db, name=username)
         if user is None:
             if not self.authenticator.validate_username(username):
                 raise ValueError("Username %r is not valid" % username)
-            self.log.info(f"Creating user {username}")
+            self.log.info(f"Creating user {username} found in {hint}")
             user = orm.User(name=username)
             self.db.add(user)
             roles.assign_default_roles(self.db, entity=user)
             self.db.commit()
+            f = self.authenticator.add_user(user)
+            if f:
+                await maybe_future(f)
         return user
 
     async def init_groups(self):
@@ -2064,7 +2063,9 @@ class JupyterHub(Application):
 
         if self.authenticator.manage_groups and self.load_groups:
             raise ValueError("Group management has been offloaded to the authenticator")
+
         for name, contents in self.load_groups.items():
+            self.log.debug("Loading group %s", name)
             group = orm.Group.find(db, name)
 
             if group is None:
@@ -2080,9 +2081,11 @@ class JupyterHub(Application):
             if 'users' in contents:
                 for username in contents['users']:
                     username = self.authenticator.normalize_username(username)
-                    user = await self._get_or_create_user(username)
+                    user = await self._get_or_create_user(
+                        username, hint=f"group: {name}"
+                    )
                     if group not in user.groups:
-                        self.log.debug(f"Adding user {username} to  group {name}")
+                        self.log.debug(f"Adding user {username} to group {name}")
                         group.users.append(user)
 
             if 'properties' in contents:
@@ -2110,8 +2113,9 @@ class JupyterHub(Application):
         roles_with_new_permissions = []
         for role_spec in self.load_roles:
             role_name = role_spec['name']
+            self.log.debug("Loading role %s", role_name)
             if role_name in default_roles_dict:
-                self.log.debug(f"Overriding default role {role_name}")
+                self.log.debug("Overriding default role %s", role_name)
                 # merge custom role spec with default role spec when overriding
                 # so the new role can be partially defined
                 default_role_spec = default_roles_dict.pop(role_name)
@@ -2198,34 +2202,33 @@ class JupyterHub(Application):
                     for name in role_spec[kind]:
                         if kind == 'users':
                             name = self.authenticator.normalize_username(name)
-                            if not (
-                                await maybe_future(
-                                    self.authenticator.check_allowed(name, None)
-                                )
-                            ):
-                                raise ValueError(
-                                    f"Username {name} is not in Authenticator.allowed_users"
-                                )
                         Class = orm.get_class(kind)
                         orm_obj = Class.find(db, name)
                         if orm_obj is not None:
                             orm_role_bearers.append(orm_obj)
                         else:
-                            self.log.info(
-                                f"Found unexisting {kind} {name} in role definition {role_name}"
-                            )
                             if kind == 'users':
-                                orm_obj = await self._get_or_create_user(name)
+                                orm_obj = await self._get_or_create_user(
+                                    name, hint=f"role: {role_name}"
+                                )
                                 orm_role_bearers.append(orm_obj)
                             elif kind == 'groups':
+                                self.log.info(
+                                    f"Creating group {name} found in role: {role_name}"
+                                )
                                 group = orm.Group(name=name)
                                 db.add(group)
                                 db.commit()
                                 orm_role_bearers.append(group)
-                            else:
+                            elif kind == "services":
                                 raise ValueError(
-                                    f"{kind} {name} defined in config role definition {role_name} but not present in database"
+                                    f"Found undefined service {name} in role {role_name}. Define it first in c.JupyterHub.services."
                                 )
+                            else:
+                                # this can't happen now, but keep the `else` in case we introduce a problem
+                                # in the declaration of `kinds` above
+                                raise ValueError(f"Unhandled role member kind: {kind}")
+
                         # Ensure all with admin role have admin flag
                         if role_name == 'admin':
                             orm_obj.admin = True
@@ -2285,20 +2288,12 @@ class JupyterHub(Application):
         for token, name in token_dict.items():
             if kind == 'user':
                 name = self.authenticator.normalize_username(name)
-                if not (
-                    await maybe_future(self.authenticator.check_allowed(name, None))
-                ):
-                    raise ValueError(
-                        "Token user name %r is not in Authenticator.allowed_users"
-                        % name
-                    )
                 if not self.authenticator.validate_username(name):
                     raise ValueError("Token user name %r is not valid" % name)
             if kind == 'service':
                 if not any(service["name"] == name for service in self.services):
                     self.log.warning(
-                        "Warning: service '%s' not in services, creating implicitly. It is recommended to register services using services list."
-                        % name
+                        f"service {name} not in services, creating implicitly. It is recommended to register services using services list."
                     )
             orm_token = orm.APIToken.find(db, token)
             if orm_token is None:
