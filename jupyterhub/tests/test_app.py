@@ -251,7 +251,6 @@ async def test_load_groups(tmpdir, request):
     hub.init_db()
     db = hub.db
     await hub.init_role_creation()
-
     await hub.init_users()
     await hub.init_groups()
 
@@ -435,3 +434,42 @@ def test_launch_instance(request, argv, sys_argv):
         assert hub.argv == sys_argv[1:]
     else:
         assert hub.argv == argv
+
+
+async def test_user_creation(tmpdir, request):
+    allowed_users = {"in-allowed", "in-group-in-allowed", "in-role-in-allowed"}
+    groups = {
+        "group": {
+            "users": ["in-group", "in-group-in-allowed"],
+        }
+    }
+    roles = [
+        {
+            "name": "therole",
+            "users": ["in-role", "in-role-in-allowed"],
+        }
+    ]
+
+    cfg = Config()
+    cfg.Authenticator.allowed_users = allowed_users
+    cfg.JupyterHub.load_groups = groups
+    cfg.JupyterHub.load_roles = roles
+    ssl_enabled = getattr(request.module, "ssl_enabled", False)
+    kwargs = dict(config=cfg)
+    if ssl_enabled:
+        kwargs['internal_certs_location'] = str(tmpdir)
+    hub = MockHub(**kwargs)
+    hub.init_db()
+
+    await hub.init_role_creation()
+    await hub.init_role_assignment()
+    await hub.init_users()
+    await hub.init_groups()
+    assert hub.authenticator.allowed_users == {
+        "admin",  # added by default config
+        "in-allowed",
+        "in-group-in-allowed",
+        "in-role-in-allowed",
+        "in-group",
+        "in-role",
+    }
