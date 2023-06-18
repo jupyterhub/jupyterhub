@@ -342,7 +342,7 @@ const ServerDashboard = (props) => {
         </td>
         <EditUserCell user={user} />
       </tr>,
-      <tr>
+      <tr key={`${userServerName}-detail`}>
         <td
           colSpan={6}
           style={{ padding: 0 }}

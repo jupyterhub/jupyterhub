@@ -985,7 +985,7 @@ async def test_start_stop_server_on_admin_page(
 
     async def click_spawn_page(browser, username):
         """spawn the server for one user via the Spawn page button, index = 0 or 1"""
-        spawn_btn_xpath = f'//a[contains(@href, "spawn/{username}")]/button[contains(@class, "secondary")]'
+        spawn_btn_xpath = f'//a[contains(@href, "spawn/{username}")]/button[contains(@class, "btn-light")]'
         spawn_btn = browser.locator(spawn_btn_xpath)
         await expect(spawn_btn).to_be_enabled()
         async with browser.expect_navigation(url=f"**/user/{username}/"):
@@ -993,7 +993,7 @@ async def test_start_stop_server_on_admin_page(
 
     async def click_access_server(browser, username):
         """access to the server for users via the Access Server button"""
-        access_btn_xpath = f'//a[contains(@href, "user/{username}")]/button[contains(@class, "primary")]'
+        access_btn_xpath = f'//a[contains(@href, "user/{username}")]/button[contains(@class, "btn-primary")]'
         access_btn = browser.locator(access_btn_xpath)
         await expect(access_btn).to_be_enabled()
         await access_btn.click()
