@@ -845,6 +845,15 @@ def needs_scope(*scopes):
     def scope_decorator(func):
         @functools.wraps(func)
         def _auth_func(self, *args, **kwargs):
+            if not self.current_user:
+                # not authenticated at all, fail with more generic message
+                # this is the most likely permission error - missing or mis-specified credentials,
+                # don't indicate that they have insufficient permissions.
+                raise web.HTTPError(
+                    403,
+                    "Missing or invalid credentials.",
+                )
+
             sig = inspect.signature(func)
             bound_sig = sig.bind(self, *args, **kwargs)
             bound_sig.apply_defaults()
@@ -853,6 +862,11 @@ def needs_scope(*scopes):
                 self.expanded_scopes = {}
                 self.parsed_scopes = {}
 
+            try:
+                end_point = self.request.path
+            except AttributeError:
+                end_point = self.__name__
+
             s_kwargs = {}
             for resource in {'user', 'server', 'group', 'service'}:
                 resource_name = resource + '_name'
@@ -860,14 +874,10 @@ def needs_scope(*scopes):
                     resource_value = bound_sig.arguments[resource_name]
                     s_kwargs[resource] = resource_value
             for scope in scopes:
-                app_log.debug("Checking access via scope %s", scope)
+                app_log.debug("Checking access to %s via scope %s", end_point, scope)
                 has_access = _check_scope_access(self, scope, **s_kwargs)
                 if has_access:
                     return func(self, *args, **kwargs)
-            try:
-                end_point = self.request.path
-            except AttributeError:
-                end_point = self.__name__
             app_log.warning(
                 "Not authorizing access to {}. Requires any of [{}], not derived from scopes [{}]".format(
                     end_point, ", ".join(scopes), ", ".join(self.expanded_scopes)
