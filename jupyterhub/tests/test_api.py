@@ -122,6 +122,41 @@ async def test_xsrf_check(app, username, method, path, xsrf_in_url):
         assert r.status_code == 403
 
 
+@mark.parametrize(
+    "auth, expected_message",
+    [
+        ("", "Missing or invalid credentials"),
+        ("cookie_no_xsrf", "'_xsrf' argument missing from GET"),
+        ("cookie_xsrf_mismatch", "XSRF cookie does not match GET argument"),
+        ("token_no_scope", "requires any of [list:users]"),
+        ("cookie_no_scope", "requires any of [list:users]"),
+    ],
+)
+async def test_permission_error_messages(app, user, auth, expected_message):
+    # 1. no credentials, should be 403 and not mention xsrf
+
+    url = public_url(app, path="hub/api/users")
+
+    kwargs = {}
+    kwargs["headers"] = headers = {}
+    kwargs["params"] = params = {}
+    if auth == "token_no_scope":
+        token = user.new_api_token()
+        headers["Authorization"] = f"Bearer {token}"
+    elif "cookie" in auth:
+        cookies = kwargs["cookies"] = await app.login_user(user.name)
+        if auth == "cookie_no_scope":
+            params["_xsrf"] = cookies["_xsrf"]
+        if auth == "cookie_xsrf_mismatch":
+            params["_xsrf"] = "somethingelse"
+
+    r = await async_requests.get(url, **kwargs)
+    assert r.status_code == 403
+    response = r.json()
+    message = response["message"]
+    assert expected_message in message
+
+
 # --------------
 # User API tests
 # --------------
