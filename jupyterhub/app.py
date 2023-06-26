@@ -2250,22 +2250,54 @@ class JupyterHub(Application):
 
         db.commit()
         if self.authenticator.allowed_users:
-            self.log.debug(
-                f"Assigning {len(self.authenticator.allowed_users)} allowed_users to the user role"
-            )
-            allowed_users = db.query(orm.User).filter(
+            user_role = orm.Role.find(db, "user")
+            self.log.debug("Assigning allowed_users to the user role")
+            # query only those that need the user role _and don't have it_
+            needs_user_role = db.query(orm.User).filter(
                 orm.User.name.in_(self.authenticator.allowed_users)
+                & ~orm.User.roles.any(id=user_role.id)
             )
-            for user in allowed_users:
-                roles.grant_role(db, user, 'user')
+            if self.log.isEnabledFor(logging.DEBUG):
+                # filter on isEnabledFor to skip the extra `count()` query if we aren't going to log it
+                self.log.debug(
+                    f"Assigning {needs_user_role.count()} allowed_users to the user role"
+                )
+
+            for user in needs_user_role:
+                roles.grant_role(db, user, user_role)
+
         admin_role = orm.Role.find(db, 'admin')
         for kind in admin_role_objects:
             Class = orm.get_class(kind)
-            for admin_obj in db.query(Class).filter_by(admin=True):
-                if has_admin_role_spec[kind]:
-                    admin_obj.admin = admin_role in admin_obj.roles
-                else:
-                    roles.grant_role(db, admin_obj, 'admin')
+
+            # sync obj.admin with admin role
+            # query only those objects that do not match config
+            # to avoid expensive query for no-op updates
+
+            # always: in admin role sets admin = True
+            for is_admin in db.query(Class).filter(
+                (Class.admin == False) & Class.roles.any(id=admin_role.id)
+            ):
+                self.log.info(f"Setting admin=True on {is_admin}")
+                is_admin.admin = True
+
+            if has_admin_role_spec[kind]:
+                # role membership specified exactly in config,
+                # already populated above
+                # make sure user.admin matches admin role
+                # setting .admin=False for anyone no longer in admin role
+                for no_longer_admin in db.query(Class).filter(
+                    (Class.admin == True) & ~Class.roles.any(id=admin_role.id)
+                ):
+                    self.log.warning(f"Removing admin=True from {no_longer_admin}")
+                    no_longer_admin.admin = False
+            else:
+                # no admin role membership declared,
+                # populate admin role from admin attribute (the old way, only additive)
+                for admin_obj in db.query(Class).filter(
+                    (Class.admin == True) & ~Class.roles.any(id=admin_role.id)
+                ):
+                    roles.grant_role(db, admin_obj, admin_role)
         db.commit()
         # make sure that on hub upgrade, all users, services and tokens have at least one role (update with default)
         if getattr(self, '_rbac_upgrade', False):
