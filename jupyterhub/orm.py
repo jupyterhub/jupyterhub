@@ -31,6 +31,7 @@ from sqlalchemy.orm import (
     Session,
     declarative_base,
     interfaces,
+    joinedload,
     object_session,
     relationship,
     sessionmaker,
@@ -219,7 +220,9 @@ class Group(Base):
     name = Column(Unicode(255), unique=True)
     users = relationship('User', secondary='user_group_map', back_populates='groups')
     properties = Column(JSONDict, default={})
-    roles = relationship('Role', secondary='group_role_map', back_populates='groups')
+    roles = relationship(
+        'Role', secondary='group_role_map', back_populates='groups', lazy="selectin"
+    )
 
     def __repr__(self):
         return f"<{self.__class__.__name__} {self.name}>"
@@ -259,7 +262,9 @@ class User(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(Unicode(255), unique=True)
 
-    roles = relationship('Role', secondary='user_role_map', back_populates='users')
+    roles = relationship(
+        'Role', secondary='user_role_map', back_populates='users', lazy="selectin"
+    )
 
     _orm_spawners = relationship(
         "Spawner", back_populates="user", cascade="all, delete-orphan"
@@ -322,12 +327,13 @@ class Spawner(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'))
-    user = relationship("User", back_populates="_orm_spawners")
+    user = relationship("User", back_populates="_orm_spawners", lazy="joined")
 
     server_id = Column(Integer, ForeignKey('servers.id', ondelete='SET NULL'))
     server = relationship(
         Server,
         back_populates="spawner",
+        lazy="joined",
         single_parent=True,
         cascade="all, delete-orphan",
     )
@@ -391,7 +397,7 @@ class Service(Base):
     name = Column(Unicode(255), unique=True)
     admin = Column(Boolean(create_constraint=False), default=False)
     roles = relationship(
-        'Role', secondary='service_role_map', back_populates='services'
+        'Role', secondary='service_role_map', back_populates='services', lazy="selectin"
     )
 
     api_tokens = relationship(
@@ -403,6 +409,7 @@ class Service(Base):
     server = relationship(
         Server,
         back_populates="service",
+        lazy="joined",
         single_parent=True,
         cascade="all, delete-orphan",
     )
@@ -557,7 +564,10 @@ class Hashed(Expiring):
         `kind='user'` only returns API tokens for users
         `kind='service'` only returns API tokens for services
         """
-        prefix_match = cls.find_prefix(db, token)
+        prefix_match = cls.find_prefix(db, token).options(
+            joinedload(cls.user), joinedload(User.roles)
+        )
+
         for orm_token in prefix_match:
             if orm_token.match(token):
                 return orm_token
@@ -593,9 +603,11 @@ class APIToken(Hashed, Base):
         nullable=True,
     )
 
-    user = relationship("User", back_populates="api_tokens")
-    service = relationship("Service", back_populates="api_tokens")
-    oauth_client = relationship("OAuthClient", back_populates="access_tokens")
+    user = relationship("User", back_populates="api_tokens", lazy="joined")
+    service = relationship("Service", back_populates="api_tokens", lazy="joined")
+    oauth_client = relationship(
+        "OAuthClient", back_populates="access_tokens", lazy="joined"
+    )
 
     id = Column(Integer, primary_key=True)
     hashed = Column(Unicode(255), unique=True)
