@@ -928,7 +928,4 @@ def subdomain_hook_idna(name, domain, kind):
     - uses stripped name and hash, where above schemes fail to produce a valid domain
     """
     safe_name = _strict_dns_safe_encode(name)
-    if kind == "user":
-        return f"{safe_name}.users.{domain}"
-    elif kind == "service":
-        return f"{safe_name}.services.{domain}"
+    return f"{safe_name}--{kind}.{domain}"
