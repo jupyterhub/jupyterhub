@@ -715,9 +715,26 @@ class JupyterHub(Application):
         Usually the failure is detecting http when it's really https.
 
         Should include the full, public URL of JupyterHub,
-        including the public-facing base_url prefix.
+        including the public-facing base_url prefix
+        (i.e. it should include a trailing slash).
         """,
     )
+
+    @validate("public_url")
+    def _validate_public_url(self, proposal):
+        url = proposal.value
+        if not url:
+            # explicitly empty (default)
+            return url
+        if not url.endswith("/"):
+            # ensure we have a trailing slash
+            # for consistency with base_url
+            url = url + "/"
+        if "://" not in url:
+            raise ValueError(
+                f"JupyterHub.public_url '{url}' is missing protocol. It should probably start with 'https://'"
+            )
+        return url
 
     subdomain_host = Unicode(
         '',
