@@ -2,6 +2,7 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import asyncio
+import inspect
 import json
 from datetime import datetime, timedelta, timezone
 
@@ -710,19 +711,32 @@ class SpawnProgressAPIHandler(APIHandler):
         # - spawner not running at all
         # - spawner failed
         # - spawner pending start (what we expect)
-        url = url_path_join(user.url, url_escape_path(server_name), '/')
-        ready_event = {
-            'progress': 100,
-            'ready': True,
-            'message': f"Server ready at {url}",
-            'html_message': 'Server ready at <a href="{0}">{0}</a>'.format(url),
-            'url': url,
-        }
         failed_event = {'progress': 100, 'failed': True, 'message': "Spawn failed"}
+
+        async def get_ready_event():
+            url = url_path_join(user.url, url_escape_path(server_name), '/')
+            ready_event = {
+                'progress': 100,
+                'ready': True,
+                'message': f"Server ready at {url}",
+                'html_message': 'Server ready at <a href="{0}">{0}</a>'.format(url),
+                'url': url,
+            }
+            original_ready_event = ready_event.copy()
+            if spawner.progress_ready_hook:
+                try:
+                    ready_event = spawner.progress_ready_hook(spawner, ready_event)
+                    if inspect.isawaitable(ready_event):
+                        ready_event = await ready_event
+                except Exception as e:
+                    self.log.exception(f"Error in ready_event hook: {e}")
+                    ready_event = original_ready_event
+            return ready_event
 
         if spawner.ready:
             # spawner already ready. Trigger progress-completion immediately
             self.log.info("Server %s is already started", spawner._log_name)
+            ready_event = await get_ready_event()
             await self.send_event(ready_event)
             return
 
@@ -766,6 +780,7 @@ class SpawnProgressAPIHandler(APIHandler):
         if spawner.ready:
             # spawner is ready, signal completion and redirect
             self.log.info("Server %s is ready", spawner._log_name)
+            ready_event = await get_ready_event()
             await self.send_event(ready_event)
         else:
             # what happened? Maybe spawn failed?
