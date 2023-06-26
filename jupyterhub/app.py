@@ -760,9 +760,9 @@ class JupyterHub(Application):
 
         and should return a unique, valid domain name for all usernames.
 
-        - `kind` will be one of 'user' or 'services'
+        - `name` is the original name, which may need escaping to be safe as a domain name label
         - `domain` is the domain of the Hub itself
-        - `name` is the original name, which may need escaping to be safe as a domain component.
+        - `kind` will be one of 'user' or 'service'
 
         JupyterHub itself puts very little limit on usernames
         to accommodate a wide variety of Authenticators,
