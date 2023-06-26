@@ -844,11 +844,15 @@ _strict_dns_safe = set(string.ascii_lowercase) | set(string.digits)
 def _trim_and_hash(name):
     """Always-safe fallback for a DNS label
 
-    Produces a valid DNS label for any string
+    Produces a valid and unique DNS label for any string
 
-    - prefix with 'u' to avoid collisions and first-character rules
-    - Selects the first N characters that are safe
+    - prefix with 'u-' to avoid collisions and first-character rules
+    - Selects the first N characters that are safe ('x' if none are safe)
     - suffix with truncated hash of true name
+    - length is guaranteed to be < 32 characters
+      leaving room for additional components to build a DNS label.
+      Will currently be between 12-19 characters:
+        4 (prefix, delimiters) + 7 (hash) + 1-8 (name stub)
     """
     name_hash = hashlib.sha256(name.encode('utf8')).hexdigest()[:7]
 
@@ -869,12 +873,12 @@ def _trim_and_hash(name):
 _dns_re = re.compile(r'^[a-z0-9-]{1,63}$', flags=re.IGNORECASE)
 
 
-def _is_dns_safe(label):
+def _is_dns_safe(label, max_length=63):
     # A host name (label) MUST NOT consist of all numeric values
     if label.isnumeric():
         return False
     # A host name (label) can be up to 63 characters
-    if not 0 < len(label) < 64:
+    if not 0 < len(label) <= max_length:
         return False
     # A host name (label) MUST NOT start or end with a '-' (dash)
     if label.startswith('-') or label.endswith('-'):
@@ -882,13 +886,15 @@ def _is_dns_safe(label):
     return bool(_dns_re.match(label))
 
 
-def _strict_dns_safe_encode(name):
+def _strict_dns_safe_encode(name, max_length=63):
     """Will encode a username to a guaranteed-safe DNS label
 
     - if it contains '--' at all, jump to the end and take the hash route to avoid collisions with escaped
     - if safe, use it
     - if not, use IDNA encoding
     - if a safe encoding cannot be produced, use stripped safe characters + '--{hash}`
+    - allow specifying a max_length, to give room for additional components,
+      if used as only a _part_ of a DNS label.
     """
     # short-circuit: avoid accepting already-encoded results
     # which all include '--'
@@ -896,7 +902,7 @@ def _strict_dns_safe_encode(name):
         return _trim_and_hash(name)
 
     # if name is already safe (and can't collide with an escaped result) use it
-    if _is_dns_safe(name):
+    if _is_dns_safe(name, max_length=max_length):
         return name
 
     # next: use IDNA encoding, if applicable

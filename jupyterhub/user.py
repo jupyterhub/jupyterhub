@@ -19,6 +19,7 @@ from .objects import Server
 from .spawner import LocalProcessSpawner
 from .utils import (
     AnyTimeoutError,
+    _strict_dns_safe,
     make_ssl_context,
     maybe_future,
     subdomain_hook_legacy,
@@ -524,6 +525,17 @@ class User:
         """Get the domain for my server."""
         hook = self.settings.get("subdomain_hook", subdomain_hook_legacy)
         return hook(self.name, self.settings['domain'], kind='user')
+
+    @property
+    def dns_safe_name(self):
+        """Get a dns-safe encoding of my name
+
+        - always safe value for a single DNS label
+        - max 40 characters, leaving room for additional components
+
+        .. versionadded:: 4.1
+        """
+        return _strict_dns_safe(self.name, max_length=40)
 
     @property
     def host(self):
