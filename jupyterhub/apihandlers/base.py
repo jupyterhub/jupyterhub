@@ -272,6 +272,11 @@ class APIHandler(BaseHandler):
         if isinstance(user, orm.User):
             user = self.users[user.id]
         include_stopped_servers = self.include_stopped_servers
+        # TODO: we shouldn't fetch fields we can't read and then filter them out,
+        # which may be wasted database queries
+        # we should check and then fetch.
+        # but that's tricky for e.g. server filters
+
         model = {
             'kind': 'user',
             'name': user.name,
