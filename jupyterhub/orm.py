@@ -217,11 +217,7 @@ class Group(Base):
     properties = Column(JSONDict, default={})
 
     def __repr__(self):
-        return "<%s %s (%i users)>" % (
-            self.__class__.__name__,
-            self.name,
-            len(self.users),
-        )
+        return f"<{self.__class__.__name__} {self.name}>"
 
     @classmethod
     def find(cls, db, name):
