@@ -951,7 +951,7 @@ class HubOAuth(HubAuth):
 
     def clear_cookie(self, handler):
         """Clear the OAuth cookie
-        
+
         Args:
             handler (tornado.web.RequestHandler): the current request handler
         """
