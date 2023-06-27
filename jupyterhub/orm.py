@@ -818,14 +818,14 @@ class OAuthCode(Expiring, Base):
     client_id = Column(
         Unicode(255), ForeignKey('oauth_clients.identifier', ondelete='CASCADE')
     )
-    client = relationship("OAuthClient", back_populates="codes")
+    client = relationship("OAuthClient", back_populates="codes", lazy="joined")
     code = Column(Unicode(36))
     expires_at = Column(Integer)
     redirect_uri = Column(Unicode(1023))
     session_id = Column(Unicode(255))
     # state = Column(Unicode(1023))
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'))
-    user = relationship("User", back_populates="oauth_codes")
+    user = relationship("User", back_populates="oauth_codes", lazy="joined")
 
     scopes = Column(JSONList, default=[])
 
@@ -860,8 +860,12 @@ class OAuthClient(Base):
     def client_id(self):
         return self.identifier
 
-    spawner = relationship("Spawner", back_populates="oauth_client", uselist=False)
-    service = relationship("Service", back_populates="oauth_client", uselist=False)
+    spawner = relationship(
+        "Spawner", back_populates="oauth_client", uselist=False, lazy="joined"
+    )
+    service = relationship(
+        "Service", back_populates="oauth_client", uselist=False, lazy="joined"
+    )
     access_tokens = relationship(
         APIToken, back_populates='oauth_client', cascade='all, delete-orphan'
     )
