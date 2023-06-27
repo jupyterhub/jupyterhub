@@ -950,7 +950,11 @@ class HubOAuth(HubAuth):
         handler.set_secure_cookie(self.cookie_name, access_token, **kwargs)
 
     def clear_cookie(self, handler):
-        """Clear the OAuth cookie"""
+        """Clear the OAuth cookie
+        
+        Args:
+            handler (tornado.web.RequestHandler): the current request handler
+        """
         handler.clear_cookie(self.cookie_name, path=self.base_url)
 
 
