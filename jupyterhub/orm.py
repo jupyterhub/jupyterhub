@@ -263,7 +263,10 @@ class User(Base):
     name = Column(Unicode(255), unique=True)
 
     roles = relationship(
-        'Role', secondary='user_role_map', back_populates='users', lazy="selectin"
+        'Role',
+        secondary='user_role_map',
+        back_populates='users',
+        lazy="selectin",
     )
 
     _orm_spawners = relationship(
@@ -285,6 +288,7 @@ class User(Base):
         "Group",
         secondary='user_group_map',
         back_populates="users",
+        lazy="selectin",
     )
     oauth_codes = relationship(
         "OAuthCode", back_populates="user", cascade="all, delete-orphan"
