@@ -2281,23 +2281,22 @@ class JupyterHub(Application):
                 self.log.info(f"Setting admin=True on {is_admin}")
                 is_admin.admin = True
 
-            if has_admin_role_spec[kind]:
-                # role membership specified exactly in config,
-                # already populated above
-                # make sure user.admin matches admin role
-                # setting .admin=False for anyone no longer in admin role
-                for no_longer_admin in db.query(Class).filter(
-                    (Class.admin == True) & ~Class.roles.any(id=admin_role.id)
-                ):
-                    self.log.warning(f"Removing admin=True from {no_longer_admin}")
-                    no_longer_admin.admin = False
-            else:
-                # no admin role membership declared,
-                # populate admin role from admin attribute (the old way, only additive)
-                for admin_obj in db.query(Class).filter(
-                    (Class.admin == True) & ~Class.roles.any(id=admin_role.id)
-                ):
-                    roles.grant_role(db, admin_obj, admin_role)
+            # iterate over users with admin=True
+            # who are not in the admin role.
+            for not_admin_obj in db.query(Class).filter(
+                (Class.admin == True) & ~Class.roles.any(id=admin_role.id)
+            ):
+                if has_admin_role_spec[kind]:
+                    # role membership specified exactly in config,
+                    # already populated above.
+                    # make sure user.admin matches admin role
+                    # setting .admin=False for anyone no longer in admin role
+                    self.log.warning(f"Removing admin=True from {not_admin_obj}")
+                    not_admin_obj.admin = False
+                else:
+                    # no admin role membership declared,
+                    # populate admin role from admin attribute (the old way, only additive)
+                    roles.grant_role(db, not_admin_obj, admin_role)
         db.commit()
         # make sure that on hub upgrade, all users, services and tokens have at least one role (update with default)
         if getattr(self, '_rbac_upgrade', False):
