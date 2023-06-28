@@ -34,6 +34,7 @@ from subprocess import TimeoutExpired
 from unittest import mock
 
 from pytest import fixture, raises
+from sqlalchemy import event
 from tornado.httpclient import HTTPError
 from tornado.platform.asyncio import AsyncIOMainLoop
 
@@ -484,3 +485,52 @@ def preserve_scopes():
     scope_definitions = copy.deepcopy(scopes.scope_definitions)
     yield scope_definitions
     scopes.scope_definitions = scope_definitions
+
+
+# collect db query counts and report the top N tests by db query count
+@fixture(autouse=True)
+def count_db_executions(request, record_property):
+    if 'app' in request.fixturenames:
+        app = request.getfixturevalue("app")
+        initial_count = app.db_query_count
+        yield
+        # populate property, collected later in pytest_terminal_summary
+        record_property("db_executions", app.db_query_count - initial_count)
+    elif 'db' in request.fixturenames:
+        # some use the 'db' fixture directly for one-off database tests
+        count = 0
+        engine = request.getfixturevalue("db").get_bind()
+
+        @event.listens_for(engine, "before_execute")
+        def before_execute(conn, clauseelement, multiparams, params, execution_options):
+            nonlocal count
+            count += 1
+
+        yield
+        record_property("db_executions", count)
+    else:
+        # nothing to do, still have to yield
+        yield
+
+
+def pytest_terminal_summary(terminalreporter, exitstatus, config):
+    # collect db_executions property
+    # populated by the count_db_executions fixture
+    db_counts = {}
+    for report in terminalreporter.getreports(""):
+        properties = dict(report.user_properties)
+        db_executions = properties.get("db_executions", 0)
+        if db_executions:
+            db_counts[report.nodeid] = db_executions
+
+    total_queries = sum(db_counts.values())
+    if total_queries == 0:
+        # nothing to report (e.g. test subset)
+        return
+    n = min(10, len(db_counts))
+    terminalreporter.section(f"top {n} database queries")
+    terminalreporter.line(f"{total_queries:<6} (total)")
+    for nodeid in sorted(db_counts, key=db_counts.get, reverse=True)[:n]:
+        queries = db_counts[nodeid]
+        if queries:
+            terminalreporter.line(f"{queries:<6} {nodeid}")
