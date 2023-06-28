@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 from async_generator import aclosing
 from dateutil.parser import parse as parse_date
 from sqlalchemy import func, or_
-from sqlalchemy.orm import raiseload, selectinload
+from sqlalchemy.orm import joinedload, raiseload, selectinload
 from tornado import web
 from tornado.iostream import StreamClosedError
 
@@ -132,10 +132,11 @@ class UserListAPIHandler(APIHandler):
                 orm.Server, orm.Spawner.server
             )
 
-        # apply joinedload options
+        # apply eager load options
         query = query.options(
+            selectinload(orm.User.roles),
             selectinload(orm.User.groups),
-            selectinload(orm.User._orm_spawners),
+            joinedload(orm.User._orm_spawners),
         )
         # if testing, add raiseload to prevent lazy loading of anything we didn't ask for
         if True:
