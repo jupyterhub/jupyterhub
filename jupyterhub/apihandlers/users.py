@@ -139,9 +139,10 @@ class UserListAPIHandler(APIHandler):
             joinedload(orm.User._orm_spawners),
         )
         # if testing, add raiseload to prevent lazy loading of anything we didn't ask for
-        if True:
+        if False:
             # FIXME: detect tests
             query = query.options(raiseload("*"))
+            # pass
 
         sub_scope = self.parsed_scopes['list:users']
         if sub_scope != scopes.Scope.ALL:
