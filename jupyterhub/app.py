@@ -32,6 +32,7 @@ from dateutil.parser import parse as parse_date
 from jinja2 import ChoiceLoader, Environment, FileSystemLoader, PrefixLoader
 from jupyter_telemetry.eventlog import EventLog
 from sqlalchemy.exc import OperationalError, SQLAlchemyError
+from sqlalchemy.orm import joinedload
 from tornado import gen, web
 from tornado.httpclient import AsyncHTTPClient
 from tornado.ioloop import IOLoop, PeriodicCallback
@@ -2622,19 +2623,22 @@ class JupyterHub(Application):
         # Server objects can be associated with either a Spawner or a Service,
         # we are only interested in the ones associated with a Spawner
         check_futures = []
-        for orm_server in db.query(orm.Server):
-            orm_spawner = orm_server.spawner
-            if not orm_spawner:
-                # check for orphaned Server rows
-                # this shouldn't happen if we've got our sqlachemy right
-                if not orm_server.service:
-                    self.log.warning("deleting orphaned server %s", orm_server)
-                    self.db.delete(orm_server)
-                    self.db.commit()
-                continue
+
+        for orm_user, orm_spawner in (
+            self.db.query(orm.User, orm.Spawner)
+            # join filters out any Users with no Spawners
+            .join(orm.Spawner, orm.User._orm_spawners)
+            # this gets Users with *any* active server
+            .filter(orm.Spawner.server != None)
+            # pre-load relationships to avoid O(N active servers) queries
+            .options(
+                joinedload(orm.User._orm_spawners),
+                joinedload(orm.Spawner.server),
+            )
+        ):
             # instantiate Spawner wrapper and check if it's still alive
             # spawner should be running
-            user = self.users[orm_spawner.user]
+            user = self.users[orm_user]
             spawner = user.spawners[orm_spawner.name]
             self.log.debug("Loading state for %s from db", spawner._log_name)
             # signal that check is pending to avoid race conditions
