@@ -14,7 +14,7 @@ depends_on = None
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy import Column, ForeignKey, Table
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import raiseload, relationship, selectinload
 from sqlalchemy.orm.session import Session
 
 from jupyterhub import orm, roles, scopes
@@ -62,7 +62,10 @@ def upgrade():
 
             # tokens have roles, evaluate to scopes
             db = Session(bind=c)
-            for token in db.query(orm.APIToken):
+
+            for token in db.query(orm.APIToken).options(
+                selectinload(orm.APIToken.roles), raiseload("*")
+            ):
                 token.scopes = list(roles.roles_to_scopes(token.roles))
             db.commit()
             # drop token-role relationship
