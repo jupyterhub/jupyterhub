@@ -167,7 +167,8 @@ async def cleanup_after(request, io_loop):
         app = MockHub.instance()
         if app.db_file.closed:
             return
-        for uid, user in list(app.users.items()):
+        for orm_user in app.db.query(orm.User):
+            user = app.users[orm_user]
             for name, spawner in list(user.spawners.items()):
                 if spawner.active:
                     try:
@@ -177,7 +178,7 @@ async def cleanup_after(request, io_loop):
                     print(f"Stopping leftover server {spawner._log_name}")
                     await user.stop(name)
             if user.name not in {'admin', 'user'}:
-                app.users.delete(uid)
+                app.users.delete(user.id)
         # delete groups
         for group in app.db.query(orm.Group):
             app.db.delete(group)
