@@ -331,7 +331,7 @@ class Spawner(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'))
-    user = relationship("User", back_populates="_orm_spawners", lazy="joined")
+    user = relationship("User", back_populates="_orm_spawners")
 
     server_id = Column(Integer, ForeignKey('servers.id', ondelete='SET NULL'))
     server = relationship(
@@ -413,7 +413,6 @@ class Service(Base):
     server = relationship(
         Server,
         back_populates="service",
-        lazy="joined",
         single_parent=True,
         cascade="all, delete-orphan",
     )
@@ -569,7 +568,7 @@ class Hashed(Expiring):
         `kind='service'` only returns API tokens for services
         """
         prefix_match = cls.find_prefix(db, token).options(
-            joinedload(cls.user), joinedload(User.roles)
+            joinedload(cls.user), joinedload(cls.service)
         )
 
         for orm_token in prefix_match:
@@ -607,11 +606,9 @@ class APIToken(Hashed, Base):
         nullable=True,
     )
 
-    user = relationship("User", back_populates="api_tokens", lazy="joined")
-    service = relationship("Service", back_populates="api_tokens", lazy="joined")
-    oauth_client = relationship(
-        "OAuthClient", back_populates="access_tokens", lazy="joined"
-    )
+    user = relationship("User", back_populates="api_tokens")
+    service = relationship("Service", back_populates="api_tokens")
+    oauth_client = relationship("OAuthClient", back_populates="access_tokens")
 
     id = Column(Integer, primary_key=True)
     hashed = Column(Unicode(255), unique=True)
@@ -818,14 +815,20 @@ class OAuthCode(Expiring, Base):
     client_id = Column(
         Unicode(255), ForeignKey('oauth_clients.identifier', ondelete='CASCADE')
     )
-    client = relationship("OAuthClient", back_populates="codes", lazy="joined")
+    client = relationship(
+        "OAuthClient",
+        back_populates="codes",
+    )
     code = Column(Unicode(36))
     expires_at = Column(Integer)
     redirect_uri = Column(Unicode(1023))
     session_id = Column(Unicode(255))
     # state = Column(Unicode(1023))
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'))
-    user = relationship("User", back_populates="oauth_codes", lazy="joined")
+    user = relationship(
+        "User",
+        back_populates="oauth_codes",
+    )
 
     scopes = Column(JSONList, default=[])
 
@@ -839,6 +842,10 @@ class OAuthCode(Expiring, Base):
             db.query(cls)
             .filter(cls.code == code)
             .filter(or_(cls.expires_at == None, cls.expires_at >= cls.now()))
+            .options(
+                # load user with the code
+                joinedload(cls.user, innerjoin=True),
+            )
             .first()
         )
 
@@ -861,10 +868,14 @@ class OAuthClient(Base):
         return self.identifier
 
     spawner = relationship(
-        "Spawner", back_populates="oauth_client", uselist=False, lazy="joined"
+        "Spawner",
+        back_populates="oauth_client",
+        uselist=False,
     )
     service = relationship(
-        "Service", back_populates="oauth_client", uselist=False, lazy="joined"
+        "Service",
+        back_populates="oauth_client",
+        uselist=False,
     )
     access_tokens = relationship(
         APIToken, back_populates='oauth_client', cascade='all, delete-orphan'
