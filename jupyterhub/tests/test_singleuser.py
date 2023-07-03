@@ -2,6 +2,7 @@
 import os
 import sys
 from contextlib import nullcontext
+from pprint import pprint
 from subprocess import CalledProcessError, check_output
 from unittest import mock
 from urllib.parse import urlencode, urlparse
@@ -171,9 +172,7 @@ async def test_disable_user_config(request, app, tmpdir, full_spawn):
     )
     r.raise_for_status()
     info = r.json()
-    import pprint
-
-    pprint.pprint(info)
+    pprint(info)
     assert info['disable_user_config']
     server_config = info['config']
     settings = info['settings']
@@ -196,6 +195,70 @@ async def test_disable_user_config(request, app, tmpdir, full_spawn):
         if 'path' in key and isinstance(setting, list):
             for path in setting:
                 assert_not_in_home(path, key)
+
+
+@pytest.mark.parametrize("extension", [True, False])
+@pytest.mark.parametrize("notebook_dir", ["", "~", "~/sub", "ABS"])
+async def test_notebook_dir(
+    request, app, tmpdir, user, full_spawn, extension, notebook_dir
+):
+    token = user.new_api_token(scopes=["access:servers!user"])
+    headers = {"Authorization": f"Bearer {token}"}
+
+    spawner = user.spawner
+    if extension:
+        user.spawner.environment["JUPYTERHUB_SINGELUSER_EXTENSION"] = "1"
+    else:
+        user.spawner.environment["JUPYTERHUB_SINGELUSER_EXTENSION"] = "0"
+
+    home_dir = tmpdir.join("home").mkdir()
+    sub_dir = home_dir.join("sub").mkdir()
+    with sub_dir.join("subfile.txt").open("w") as f:
+        f.write("txt\n")
+    abs_dir = tmpdir.join("abs").mkdir()
+    with abs_dir.join("absfile.txt").open("w") as f:
+        f.write("absfile\n")
+
+    if notebook_dir:
+        expected_root_dir = notebook_dir.replace("ABS", str(abs_dir)).replace(
+            "~", str(home_dir)
+        )
+    else:
+        expected_root_dir = str(home_dir)
+
+    spawner.notebook_dir = notebook_dir.replace("ABS", str(abs_dir))
+
+    # home_dir is defined on SimpleSpawner
+    user.spawner.home_dir = home = str(home_dir)
+    spawner.environment["HOME"] = home
+    await user.spawn()
+    await app.proxy.add_user(user)
+    url = public_url(app, user)
+    r = await async_requests.get(
+        url_path_join(public_url(app, user), 'jupyterhub-test-info'), headers=headers
+    )
+    r.raise_for_status()
+    info = r.json()
+    pprint(info)
+
+    assert info["root_dir"] == expected_root_dir
+    # secondary check: make sure it has the intended effect on root_dir
+    r = await async_requests.get(
+        url_path_join(public_url(app, user), 'api/contents/'), headers=headers
+    )
+    r.raise_for_status()
+    root_contents = sorted(item['name'] for item in r.json()['content'])
+
+    # check contents
+    if not notebook_dir or notebook_dir == "~":
+        # use any to avoid counting possible automatically created files in $HOME
+        assert 'sub' in root_contents
+    elif notebook_dir == "ABS":
+        assert 'absfile.txt' in root_contents
+    elif notebook_dir == "~/sub":
+        assert 'subfile.txt' in root_contents
+    else:
+        raise ValueError(f"No contents check for {notebook_dir=}")
 
 
 def test_help_output():
