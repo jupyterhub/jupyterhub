@@ -29,7 +29,6 @@ import asyncio
 import copy
 import os
 import sys
-from getpass import getuser
 from subprocess import TimeoutExpired
 from unittest import mock
 
@@ -103,18 +102,14 @@ def auth_state_enabled(app):
 @fixture
 def db():
     """Get a db session"""
-    global _db
-    if _db is None:
-        # make sure some initial db contents are filled out
-        # specifically, the 'default' jupyterhub oauth client
-        app = MockHub(db_url='sqlite:///:memory:')
-        app.init_db()
-        _db = app.db
-        for role in get_default_roles():
-            create_role(_db, role)
-        user = orm.User(name=getuser())
-        _db.add(user)
-        _db.commit()
+    # make sure some initial db contents are filled out
+    # specifically, the 'default' jupyterhub oauth client
+    app = MockHub(db_url='sqlite:///:memory:')
+    app.init_db()
+    _db = app.db
+    for role in get_default_roles():
+        create_role(_db, role)
+    _db.commit()
     return _db
 
 
@@ -180,6 +175,7 @@ async def cleanup_after(request, io_loop):
                     print(f"Stopping leftover server {spawner._log_name}")
                     await user.stop(name)
             if user.name not in {'admin', 'user'}:
+                print("deleting", user.name)
                 app.users.delete(user.id)
         # delete groups
         for group in app.db.query(orm.Group):

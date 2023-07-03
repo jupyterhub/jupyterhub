@@ -494,6 +494,72 @@ def test_group_delete_cascade(db):
     assert user1 not in group1.users
 
 
+def test_share_user(db):
+    user1 = orm.User(name='user1')
+    user2 = orm.User(name='user2')
+    group1 = orm.Group(name='group1')
+    group2 = orm.Group(name='group2')
+    spawner = orm.Spawner(user=user1)
+    db.add(user1)
+    db.add(user2)
+    db.add(spawner)
+    db.commit()
+
+    share = orm.Share(
+        owner=user1,
+        spawner=spawner,
+        user=user2,
+    )
+    db.add(share)
+    db.commit()
+    assert user1.shares == [share]
+    assert spawner.shares == [share]
+    assert user1.shared_with_me == []
+    assert user2.shared_with_me == [share]
+    db.delete(share)
+    db.commit()
+    assert user1.shares == []
+    assert spawner.shares == []
+    assert user1.shared_with_me == []
+    assert user2.shared_with_me == []
+
+
+def test_share_group(db):
+    assert list(db.query(orm.User)) == []
+    user1 = orm.User(name='user1')
+    user2 = orm.User(name='user2')
+    group2 = orm.Group(name='group2')
+    spawner = orm.Spawner(user=user1)
+    db.add(user1)
+    db.add(user2)
+    db.add(group2)
+    db.add(spawner)
+    db.commit()
+    group2.users.append(user2)
+    db.commit()
+    share = orm.Share(
+        owner=user1,
+        spawner=spawner,
+        group=group2,
+    )
+    db.add(share)
+    db.commit()
+    assert user1.shares == [share]
+    assert spawner.shares == [share]
+    assert user1.shared_with_me == []
+    assert user2.shared_with_me == []
+    assert group2.shared_with_me == [share]
+    assert user2.all_shared_with_me == [share]
+    db.delete(share)
+    db.commit()
+    assert user1.shares == []
+    assert spawner.shares == []
+    assert user1.shared_with_me == []
+    assert user2.shared_with_me == []
+    assert group2.shared_with_me == []
+    assert user2.all_shared_with_me == []
+
+
 def test_expiring_api_token(app, user):
     db = app.db
     token = orm.APIToken.new(expires_in=30, user=user)

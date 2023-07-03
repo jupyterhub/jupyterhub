@@ -858,6 +858,24 @@ paths:
         - oauth2:
             - groups
       x-codegen-request-body-name: body
+
+  /shares:
+    get:
+      summary: List shares (new in 5.0)
+      responses:
+        200:
+          description: The share list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Share"
+      security:
+        - oauth2:
+            - list:shares
+            - read:shares
+
   /services:
     get:
       summary: List services

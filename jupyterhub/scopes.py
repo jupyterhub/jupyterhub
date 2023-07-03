@@ -143,6 +143,23 @@ scope_definitions = {
     'access:services': {
         'description': 'Access services via API or browser.',
     },
+    'read:users:shares': {
+        'description': "Read servers shared with a user.",
+    },
+    'read:groups:shares': {
+        'description': "Read servers shared with a group.",
+    },
+    'read:shares': {
+        'description': "Read information about shared access to servers.",
+    },
+    'shares': {
+        'description': "Manage access to shared servers.",
+        'subscopes': [
+            'read:shares',
+            'read:user:shares',
+            'read:group:shares',
+        ],
+    },
     'proxy': {
         'description': 'Read information about the proxy’s routing table, sync the Hub with the proxy and notify the Hub about a new proxy.'
     },
@@ -400,11 +417,25 @@ def get_scopes_for(orm_object):
             roles.get_roles_for(orm_object),
             owner=orm_object,
         )
-        if isinstance(orm_object, (orm.User, orm.Service)):
-            owner = orm_object
+
+        # add permissions granted from 'shares'
+        for share in orm_object.shared_with_me:
+            expanded_scopes |= expand_share_scopes(share)
+        if isinstance(orm_object, orm.User):
+            for group in orm_object.groups:
+                for share in orm_object.shared_with_me:
+                    expanded_scopes |= expand_share_scopes(share)
 
     return expanded_scopes
 
+
+def expand_share_scopes(share):
+    """Get expanded scopes for a Share"""
+    return expand_scopes(
+        share.scopes,
+        owner=share.owner,
+        oauth_client=share.spawner.oauth_client,
+    )
 
 @lru_cache()
 def _expand_self_scope(username):
@@ -430,6 +461,8 @@ def _expand_self_scope(username):
         'read:users',
         'read:users:name',
         'read:users:groups',
+        'read:users:shares',
+        'read:shares',
         'users:activity',
         'read:users:activity',
         'servers',
