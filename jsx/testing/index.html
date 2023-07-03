@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+
+    <title>JupyterHub</title>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <link rel="stylesheet" href="/static/css/style.min.css" type="text/css" />
+  </head>
+  <body>
+    <div id="react-admin-hook">
+      <script id="jupyterhub-admin-config">
+        window.api_page_limit = parseInt("50");
+        window.base_url = "/";
+      </script>
+      <script src="admin-react.js"></script>
+    </div>
+  </body>
+</html>

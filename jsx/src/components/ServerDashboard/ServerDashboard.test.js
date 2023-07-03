@@ -2,7 +2,13 @@ import React from "react";
 import "@testing-library/jest-dom";
 import { act } from "react-dom/test-utils";
 import userEvent from "@testing-library/user-event";
-import { render, screen, fireEvent, getByText } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  getByText,
+  getAllByRole,
+} from "@testing-library/react";
 import { HashRouter, Switch } from "react-router-dom";
 import { Provider, useSelector } from "react-redux";
 import { createStore } from "redux";
@@ -696,4 +702,60 @@ test("Server delete button exists for named servers", async () => {
     let delete_button = getByText(row, "Delete Server");
     expect(delete_button).toBeEnabled();
   }
+});
+
+test("Start server and confirm pending state", async () => {
+  let spy = mockAsync();
+
+  let mockStartServer = jest.fn(() => {
+    return new Promise(async (resolve) =>
+      clock.setTimeout(() => {
+        resolve({ status: 200 });
+      }, 100),
+    );
+  });
+
+  let mockUpdateUsers = jest.fn(() => Promise.resolve(mockAppState()));
+
+  await act(async () => {
+    render(
+      <Provider store={createStore(mockReducers, {})}>
+        <HashRouter>
+          <Switch>
+            <ServerDashboard
+              updateUsers={mockUpdateUsers}
+              shutdownHub={spy}
+              startServer={mockStartServer}
+              stopServer={spy}
+              startAll={spy}
+              stopAll={spy}
+            />
+          </Switch>
+        </HashRouter>
+      </Provider>,
+    );
+  });
+
+  let actions = screen.getAllByTestId("user-row-server-activity")[1];
+  let buttons = getAllByRole(actions, "button");
+
+  expect(buttons.length).toBe(2);
+  expect(buttons[0].textContent).toBe("Start Server");
+  expect(buttons[1].textContent).toBe("Spawn Page");
+
+  await act(async () => {
+    fireEvent.click(buttons[0]);
+  });
+  expect(mockUpdateUsers.mock.calls).toHaveLength(1);
+
+  expect(buttons.length).toBe(2);
+  expect(buttons[0].textContent).toBe("Start Server");
+  expect(buttons[0]).toBeDisabled();
+  expect(buttons[1].textContent).toBe("Spawn Page");
+  expect(buttons[1]).toBeEnabled();
+
+  await act(async () => {
+    await clock.tick(100);
+  });
+  expect(mockUpdateUsers.mock.calls).toHaveLength(2);
 });
