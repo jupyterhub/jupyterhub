@@ -207,9 +207,9 @@ async def test_notebook_dir(
 
     spawner = user.spawner
     if extension:
-        user.spawner.environment["JUPYTERHUB_SINGELUSER_EXTENSION"] = "1"
+        user.spawner.environment["JUPYTERHUB_SINGLEUSER_EXTENSION"] = "1"
     else:
-        user.spawner.environment["JUPYTERHUB_SINGELUSER_EXTENSION"] = "0"
+        user.spawner.environment["JUPYTERHUB_SINGLEUSER_EXTENSION"] = "0"
 
     home_dir = tmpdir.join("home").mkdir()
     sub_dir = home_dir.join("sub").mkdir()
