@@ -535,6 +535,7 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
         if queries:
             terminalreporter.line(f"{queries:<6} {nodeid}")
 
+
 @fixture
 def service_data():
     """Data used to create service at runtime"""

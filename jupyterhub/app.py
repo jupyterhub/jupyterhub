@@ -2486,7 +2486,6 @@ class JupyterHub(Application):
             if key not in traits:
                 raise AttributeError("No such service field: %s" % key)
             setattr(service, key, value)
-            print('###### updateing', key, value)
             orm_service.update_column(key, value)
 
         if service.api_token:

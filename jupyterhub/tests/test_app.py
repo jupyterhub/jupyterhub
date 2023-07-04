@@ -475,6 +475,7 @@ async def test_user_creation(tmpdir, request):
         "in-role",
     }
 
+
 @pytest.fixture(scope='module')
 def db_temp_path(tmp_path_factory):
     fn = tmp_path_factory.mktemp("db") / "jupyterhub.sqlite"
