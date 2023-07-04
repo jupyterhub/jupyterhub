@@ -490,6 +490,7 @@ class Service(Base):
             returns `False` otherwise.
         """
         if self._check_data_only_column(column_name):
+            print('NOT ForeignKey', column_name)
             setattr(self, column_name, value)
             return True
         else:

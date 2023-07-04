@@ -2486,6 +2486,7 @@ class JupyterHub(Application):
             if key not in traits:
                 raise AttributeError("No such service field: %s" % key)
             setattr(service, key, value)
+            print('###### updateing', key, value)
             orm_service.update_column(key, value)
 
         if service.api_token:
@@ -3256,9 +3257,9 @@ class JupyterHub(Application):
                                 service_name,
                                 status,
                             )
-                            break
+                            return False
                 else:
-                    break
+                    return True
             else:
                 self.log.error(
                     "Cannot connect to %s service %s at %s. Is it running?",
@@ -3266,6 +3267,7 @@ class JupyterHub(Application):
                     service_name,
                     service.url,
                 )
+                return False
         return True
 
     def toggle_service_health_check(self) -> None:
@@ -3284,6 +3286,7 @@ class JupyterHub(Application):
             # the periodic callback.
             if self._check_services_health_callback is not None:
                 self._check_services_health_callback.stop()
+                self._check_services_health_callback = None
 
     async def start(self):
         """Start the whole thing"""
@@ -3370,10 +3373,8 @@ class JupyterHub(Application):
 
         # start the service(s)
         for service_name, service in self._service_map.items():
-            service_status = await self.start_service(
-                service_name, service, ssl_context
-            )
-            if not service_status:
+            service_ready = await self.start_service(service_name, service, ssl_context)
+            if not service_ready:
                 if service.from_config:
                     # Stop the application if a config-based service failed to start.
                     self.exit(1)
@@ -3381,7 +3382,7 @@ class JupyterHub(Application):
                     # Only warn for database-based service, so that admin can connect
                     # to hub to remove the service.
                     self.log.error(
-                        "Failed to start database-based service %s",
+                        "Failed to reach externally managed service %s",
                         service_name,
                         exc_info=True,
                     )

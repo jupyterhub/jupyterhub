@@ -676,6 +676,9 @@ class JupyterHubOAuthServer(WebApplicationServer):
         if orm_client is not None:
             self.db.delete(orm_client)
             self.db.commit()
+            app_log.info("Removed client %s", client_id)
+        else:
+            app_log.warning("No such client %s", client_id)
 
     def fetch_by_client_id(self, client_id):
         """Find a client by its id"""
