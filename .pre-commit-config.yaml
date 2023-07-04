@@ -16,7 +16,7 @@ ci:
 repos:
   # Autoformat: Python code, syntax patterns are modernized
   - repo: https://github.com/asottile/pyupgrade
-    rev: v3.4.0
+    rev: v3.8.0
     hooks:
       - id: pyupgrade
         args:
@@ -24,7 +24,7 @@ repos:
 
   # Autoformat: Python code
   - repo: https://github.com/PyCQA/autoflake
-    rev: v2.1.1
+    rev: v2.2.0
     hooks:
       - id: autoflake
         # args ref: https://github.com/PyCQA/autoflake#advanced-usage
