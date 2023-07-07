@@ -639,7 +639,7 @@ class JupyterHubSingleUser(ExtensionApp):
     disable_user_config = Bool()
 
     @default("disable_user_config")
-    def _defaut_disable_user_config(self):
+    def _default_disable_user_config(self):
         return _bool_env("JUPYTERHUB_DISABLE_USER_CONFIG")
 
     @classmethod
