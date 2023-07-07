@@ -202,6 +202,15 @@ async def test_disable_user_config(request, app, tmpdir, full_spawn):
 async def test_notebook_dir(
     request, app, tmpdir, user, full_spawn, extension, notebook_dir
 ):
+    if extension:
+        try:
+            import jupyter_server  # noqa
+        except ImportError:
+            pytest.skip("needs jupyter-server 2")
+        else:
+            if jupyter_server.version_info < (2,):
+                pytest.skip("needs jupyter-server 2")
+
     token = user.new_api_token(scopes=["access:servers!user"])
     headers = {"Authorization": f"Bearer {token}"}
 
