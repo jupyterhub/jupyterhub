@@ -30,6 +30,7 @@ class JupyterHubTestHandler(JupyterHandler):
         info = {
             "current_user": self.current_user,
             "config": self.app.config,
+            "root_dir": self.contents_manager.root_dir,
             "disable_user_config": getattr(self.app, "disable_user_config", None),
             "settings": self.settings,
             "config_file_paths": self.app.config_file_paths,
