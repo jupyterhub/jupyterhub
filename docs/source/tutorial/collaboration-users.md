@@ -7,7 +7,7 @@ It is recommended to use at least JupyterLab 3.6 with JupyterHub >= 3.1.1 for th
 :::
 
 :::{note}
-If you use the JupyterLab >=4.0 you need to install the [jupyter-collaboration](https://github.com/jupyterlab/jupyter-collaboration) package in your single-user notebook instance. 
+If you use the JupyterLab >=4.0 you need to install the [jupyter-collaboration](https://github.com/jupyterlab/jupyter-collaboration) package in your single-user notebook instance.
 :::
 
 JupyterLab has support for real-time collaboration (RTC), where multiple users are working with the same Jupyter server and see each other's edits.
