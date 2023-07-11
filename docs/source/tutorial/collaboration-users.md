@@ -6,6 +6,10 @@
 It is recommended to use at least JupyterLab 3.6 with JupyterHub >= 3.1.1 for this.
 :::
 
+:::{note}
+If you use the JupyterLab >=4.0 you need to install the [jupyter-collaboration](https://github.com/jupyterlab/jupyter-collaboration) package in your single-user notebook instance. 
+:::
+
 JupyterLab has support for real-time collaboration (RTC), where multiple users are working with the same Jupyter server and see each other's edits.
 Beyond other collaborative-editing environments, Jupyter includes _execution_.
 So granting someone access to your server also means granting them access to **run code as you**.
