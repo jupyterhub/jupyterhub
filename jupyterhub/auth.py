@@ -485,6 +485,8 @@ class Authenticator(LoggingConfigurable):
          - `authenticate` turns formdata into a username
          - `normalize_username` normalizes the username
          - `check_allowed` checks against the allowed usernames
+         - `check_blocked_users` check against the blocked usernames
+         - `is_admin` check if a user is an admin
 
         .. versionchanged:: 0.8
             return dict instead of username
@@ -603,8 +605,7 @@ class Authenticator(LoggingConfigurable):
                 The Authenticator may return a dict instead, which MUST have a
                 key `name` holding the username, and MAY have additional keys:
 
-                - `auth_state`, a dictionary of of auth state that will be
-                  persisted;
+                - `auth_state`, a dictionary of auth state that will be persisted;
                 - `admin`, the admin setting value for the user
                 - `groups`, the list of group names the user should be a member of,
                   if Authenticator.manage_groups is True.
