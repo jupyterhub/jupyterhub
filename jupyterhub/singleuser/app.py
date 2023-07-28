@@ -9,6 +9,7 @@
     Use JUPYTERHUB_SINGLEUSER_APP='notebook' for the legacy 'classic' notebook server (requires notebook<7).
 """
 import os
+from urllib.parse import urlparse
 
 from traitlets import import_item
 
@@ -27,6 +28,7 @@ JUPYTERHUB_SINGLEUSER_APP = _app_shortcuts.get(
     JUPYTERHUB_SINGLEUSER_APP.replace("_", "-"), JUPYTERHUB_SINGLEUSER_APP
 )
 
+jupyverse = None
 
 if JUPYTERHUB_SINGLEUSER_APP:
     if JUPYTERHUB_SINGLEUSER_APP in {"notebook", _app_shortcuts["notebook"]}:
@@ -48,25 +50,33 @@ if JUPYTERHUB_SINGLEUSER_APP:
                 )
     App = import_item(JUPYTERHUB_SINGLEUSER_APP)
 else:
-    App = None
-    _import_error = None
-    for JUPYTERHUB_SINGLEUSER_APP in (
-        "jupyter_server.serverapp.ServerApp",
-        "notebook.notebookapp.NotebookApp",
-    ):
-        try:
-            App = import_item(JUPYTERHUB_SINGLEUSER_APP)
-        except ImportError as e:
-            if _import_error is None:
-                _import_error = e
-            continue
-        else:
-            break
-    if App is None:
-        raise _import_error
+    try:
+        from jupyverse_api.cli import main as jupyverse
+
+        App = None
+    except Exception:
+        App = None
+        _import_error = None
+        for JUPYTERHUB_SINGLEUSER_APP in (
+            "jupyter_server.serverapp.ServerApp",
+            "notebook.notebookapp.NotebookApp",
+        ):
+            try:
+                App = import_item(JUPYTERHUB_SINGLEUSER_APP)
+            except ImportError as e:
+                if _import_error is None:
+                    _import_error = e
+                continue
+            else:
+                break
+        if App is None:
+            raise _import_error
 
 
-SingleUserNotebookApp = make_singleuser_app(App)
+if App is None:
+    SingleUserNotebookApp = None
+else:
+    SingleUserNotebookApp = make_singleuser_app(App)
 
 
 def main():
@@ -77,6 +87,23 @@ def main():
         # This is a minimally extended ServerApp that does:
         # 1. ensure lab extension is enabled, and
         # 2. set default URL to `/lab`
+        if jupyverse:
+            service_url = os.environ.get("JUPYTERHUB_SERVICE_URL")
+            url = urlparse(service_url)
+            try:
+                return jupyverse.callback(
+                    open_browser=True,
+                    host=url.hostname,
+                    port=url.port,
+                    set_=[
+                        f"frontend.base_url={url.path}",
+                        f"app.mount_path={url.path}",
+                    ],
+                    disable=[],
+                )
+            except Exception:
+                return
+
         import re
 
         _version_pat = re.compile(r"(\d+)\.(\d+)")

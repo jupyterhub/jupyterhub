@@ -28,15 +28,20 @@ if not _extension_env:
         # - extension, if jupyter server 2
         # - older subclass app, otherwise
         try:
-            import jupyter_server
+            import jupyverse_api  # noqa: F401
 
-            _server_major = int(jupyter_server.__version__.split(".", 1)[0])
-        except Exception:
-            # don't have jupyter-server, assume classic notebook
             _as_extension = False
-        else:
-            # default to extension if jupyter-server >=2
-            _as_extension = _server_major >= 2
+        except Exception:
+            try:
+                import jupyter_server
+
+                _server_major = int(jupyter_server.__version__.split(".", 1)[0])
+            except Exception:
+                # don't have jupyter-server, assume classic notebook
+                _as_extension = False
+            else:
+                # default to extension if jupyter-server >=2
+                _as_extension = _server_major >= 2
 
     elif _app_env == "extension":
         _as_extension = True
@@ -67,9 +72,11 @@ else:
     from .app import SingleUserNotebookApp, main
 
     # backward-compatibility
-    JupyterHubLoginHandler = SingleUserNotebookApp.login_handler_class
-    JupyterHubLogoutHandler = SingleUserNotebookApp.logout_handler_class
-    OAuthCallbackHandler = SingleUserNotebookApp.oauth_callback_handler_class
+    if SingleUserNotebookApp is not None:
+        # not Jupyverse
+        JupyterHubLoginHandler = SingleUserNotebookApp.login_handler_class
+        JupyterHubLogoutHandler = SingleUserNotebookApp.logout_handler_class
+        OAuthCallbackHandler = SingleUserNotebookApp.oauth_callback_handler_class
 
 
 __all__ = [
