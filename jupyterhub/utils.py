@@ -816,8 +816,6 @@ def _dns_quote(name):
     # it's not officially legal in hostnames,
     # but is valid in _domain_ names (?),
     # and seems to always work in practice.
-    # FIXME: We should consider switching to proper IDNA encoding
-    # in a major release
     label = label.replace("%", "_")
     return label
 

@@ -801,7 +801,7 @@ class JupyterHub(Application):
             return subdomain_hook_legacy
         if not callable(hook):
             raise ValueError(
-                f"subdomain_hook must be 'idna', 'legacy', or a caallable, got {hook!r}"
+                f"subdomain_hook must be 'idna', 'legacy', or a callable, got {hook!r}"
             )
         return hook
 
