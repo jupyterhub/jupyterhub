@@ -274,8 +274,6 @@ class Spawner(LoggingConfigurable):
     api_token = Unicode()
     oauth_client_id = Unicode()
 
-    oauth_scopes = List(Unicode())
-
     @property
     def oauth_scopes(self):
         warnings.warn(
