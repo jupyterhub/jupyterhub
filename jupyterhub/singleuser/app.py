@@ -9,7 +9,6 @@
     Use JUPYTERHUB_SINGLEUSER_APP='notebook' for the legacy 'classic' notebook server (requires notebook<7).
 """
 import os
-from urllib.parse import urlparse
 
 from traitlets import import_item
 
@@ -27,8 +26,7 @@ _app_shortcuts = {
 JUPYTERHUB_SINGLEUSER_APP = _app_shortcuts.get(
     JUPYTERHUB_SINGLEUSER_APP.replace("_", "-"), JUPYTERHUB_SINGLEUSER_APP
 )
-
-jupyverse = None
+JUPYVERSE = JUPYTERHUB_SINGLEUSER_APP == "jupyverse"
 
 if JUPYTERHUB_SINGLEUSER_APP:
     if JUPYTERHUB_SINGLEUSER_APP in {"notebook", _app_shortcuts["notebook"]}:
@@ -48,29 +46,24 @@ if JUPYTERHUB_SINGLEUSER_APP:
                     f"Leave $JUPYTERHUB_SINGLEUSER_APP unspecified (or use the default JUPYTERHUB_SINGLEUSER_APP=jupyter-server), "
                     'and set `c.Spawner.default_url = "/tree"` to make notebook v7 the default UI.'
                 )
-    App = import_item(JUPYTERHUB_SINGLEUSER_APP)
+    App = None if JUPYVERSE else import_item(JUPYTERHUB_SINGLEUSER_APP)
 else:
-    try:
-        from jupyverse_api.cli import main as jupyverse
-
-        App = None
-    except Exception:
-        App = None
-        _import_error = None
-        for JUPYTERHUB_SINGLEUSER_APP in (
-            "jupyter_server.serverapp.ServerApp",
-            "notebook.notebookapp.NotebookApp",
-        ):
-            try:
-                App = import_item(JUPYTERHUB_SINGLEUSER_APP)
-            except ImportError as e:
-                if _import_error is None:
-                    _import_error = e
-                continue
-            else:
-                break
-        if App is None:
-            raise _import_error
+    App = None
+    _import_error = None
+    for JUPYTERHUB_SINGLEUSER_APP in (
+        "jupyter_server.serverapp.ServerApp",
+        "notebook.notebookapp.NotebookApp",
+    ):
+        try:
+            App = import_item(JUPYTERHUB_SINGLEUSER_APP)
+        except ImportError as e:
+            if _import_error is None:
+                _import_error = e
+            continue
+        else:
+            break
+    if App is None:
+        raise _import_error
 
 
 if App is None:
@@ -87,23 +80,6 @@ def main():
         # This is a minimally extended ServerApp that does:
         # 1. ensure lab extension is enabled, and
         # 2. set default URL to `/lab`
-        if jupyverse:
-            service_url = os.environ.get("JUPYTERHUB_SERVICE_URL")
-            url = urlparse(service_url)
-            try:
-                return jupyverse.callback(
-                    open_browser=True,
-                    host=url.hostname,
-                    port=url.port,
-                    set_=[
-                        f"frontend.base_url={url.path}",
-                        f"app.mount_path={url.path}",
-                    ],
-                    disable=[],
-                )
-            except Exception:
-                return
-
         import re
 
         _version_pat = re.compile(r"(\d+)\.(\d+)")
@@ -119,5 +95,10 @@ def main():
             version_tuple = tuple(int(v) for v in m.groups())
             if version_tuple >= (3, 1):
                 return SingleUserLabApp.launch_instance()
+
+    if JUPYVERSE:
+        from fps_auth_jupyterhub import launch
+
+        return launch()
 
     return SingleUserNotebookApp.launch_instance()
