@@ -45,7 +45,7 @@ additional packages.
 
 ## Configuring Jupyter and IPython
 
-[Jupyter](https://jupyter-notebook.readthedocs.io/en/stable/config_overview.html)
+[Jupyter](https://jupyter-notebook.readthedocs.io/en/stable/configuring/config_overview.html)
 and [IPython](https://ipython.readthedocs.io/en/stable/development/config.html)
 have their own configuration systems.
 
