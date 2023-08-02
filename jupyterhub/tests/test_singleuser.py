@@ -17,6 +17,8 @@ from ..utils import url_path_join
 from .mocking import public_url
 from .utils import AsyncSession, async_requests, get_page
 
+IS_JUPYVERSE = os.environ.get("JUPYTERHUB_SINGLEUSER_APP") == "jupyverse"
+
 
 @pytest.mark.parametrize(
     "access_scopes, server_name, expect_success",
@@ -63,6 +65,8 @@ async def test_singleuser_auth(
         await user.spawn(server_name)
         await app.proxy.add_user(user, server_name)
     spawner = user.spawners[server_name]
+    if IS_JUPYVERSE:
+        spawner.default_url = "/lab"
     url = url_path_join(public_url(app, user), server_name)
 
     # no cookies, redirects to login page
@@ -142,6 +146,8 @@ async def test_disable_user_config(request, app, tmpdir, full_spawn):
         print("stopping")
         await user.stop()
     # start with new config:
+    if IS_JUPYVERSE:
+        user.spawner.default_url = "/lab"
     user.spawner.debug = True
     user.spawner.disable_user_config = True
     home_dir = tmpdir.join("home")
@@ -166,6 +172,10 @@ async def test_disable_user_config(request, app, tmpdir, full_spawn):
         url_path_join('/user/nandy', user.spawner.default_url or "/tree")
     )
     assert r.status_code == 200
+
+    if IS_JUPYVERSE:
+        # the remaining is jupyter-server specific
+        return
 
     r = await async_requests.get(
         url_path_join(public_url(app, user), 'jupyterhub-test-info'), cookies=cookies
@@ -202,6 +212,9 @@ async def test_disable_user_config(request, app, tmpdir, full_spawn):
 async def test_notebook_dir(
     request, app, tmpdir, user, full_spawn, extension, notebook_dir
 ):
+    if IS_JUPYVERSE:
+        pytest.skip("jupyter-server specific test")
+
     if extension:
         try:
             import jupyter_server  # noqa
@@ -271,6 +284,9 @@ async def test_notebook_dir(
 
 
 def test_help_output():
+    if IS_JUPYVERSE:
+        pytest.skip("jupyter-server specific test")
+
     out = check_output(
         [sys.executable, '-m', 'jupyterhub.singleuser', '--help-all']
     ).decode('utf8', 'replace')
@@ -278,6 +294,9 @@ def test_help_output():
 
 
 def test_version():
+    if IS_JUPYVERSE:
+        pytest.skip("jupyter-server specific test")
+
     out = check_output(
         [sys.executable, '-m', 'jupyterhub.singleuser', '--version']
     ).decode('utf8', 'replace')
@@ -344,6 +363,9 @@ def test_singleuser_app_class(JUPYTERHUB_SINGLEUSER_APP):
 
 
 async def test_nbclassic_control_panel(app, user, full_spawn):
+    if IS_JUPYVERSE:
+        pytest.skip("nbclassic specific test")
+
     # login, start the server
     await user.spawn()
     cookies = await app.login_user(user.name)
