@@ -56,7 +56,11 @@ RUNNING_SERVERS = Gauge(
     namespace=metrics_prefix,
 )
 
-TOTAL_USERS = Gauge('total_users', 'Total number of users', namespace=metrics_prefix)
+TOTAL_USERS = Gauge(
+    'total_users',
+    'Total number of users',
+    namespace=metrics_prefix,
+)
 
 ACTIVE_USERS = Gauge(
     'active_users',
