@@ -11,14 +11,15 @@ from .utils import add_user, api_request, get_page
 
 
 @pytest.mark.parametrize(
-    "metric, expected_metric_name",
+    "metric, expected_name",
     [
         (metrics.TOTAL_USERS, 'jupyterhub_total_users'),
         (metrics.REQUEST_DURATION_SECONDS, 'jupyterhub_request_duration_seconds'),
     ],
 )
-def test_metrics_prefix(metric, expected_metric_name):
-    assert metric._name == expected_metric_name
+def test_metrics_prefix(metric, expected_name):
+    description = metric.describe()[0]
+    assert description.name == expected_name
 
 
 async def test_total_users(app):
