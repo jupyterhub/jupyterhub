@@ -23,11 +23,13 @@ class Generator:
             obj = getattr(jupyterhub.metrics, name)
             if obj.__class__.__module__.startswith('prometheus_client.'):
                 description = obj.describe()[0]
-                table_rows.append([
-                    description.type,
-                    description.name,
-                    description.documentation,
-                ])
+                table_rows.append(
+                    [
+                        description.type,
+                        description.name,
+                        description.documentation,
+                    ]
+                )
         return table_rows
 
     def prometheus_metrics(self):
