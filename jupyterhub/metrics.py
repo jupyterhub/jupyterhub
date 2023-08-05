@@ -19,6 +19,7 @@ them manually here.
 
     added ``jupyterhub_`` prefix to metric names.
 """
+
 import os
 from datetime import timedelta
 from enum import Enum

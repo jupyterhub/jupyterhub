@@ -10,6 +10,17 @@ from ..utils import utcnow
 from .utils import add_user, api_request, get_page
 
 
+@pytest.mark.parametrize(
+    "metric, expected_metric_name",
+    [
+        (metrics.TOTAL_USERS, 'jupyterhub_total_user'),
+        (metrics.REQUEST_DURATION_SECONDS, 'jupyterhub_request_duration_seconds'),
+    ],
+)
+def test_metrics_prefix(metric, expected_metric_name):
+    assert metric._name == expected_metric_name
+
+
 async def test_total_users(app):
     num_users = app.db.query(orm.User).count()
     sample = metrics.TOTAL_USERS.collect()[0].samples[0]
