@@ -13,7 +13,7 @@ from .utils import add_user, api_request, get_page
 @pytest.mark.parametrize(
     "metric, expected_metric_name",
     [
-        (metrics.TOTAL_USERS, 'jupyterhub_total_user'),
+        (metrics.TOTAL_USERS, 'jupyterhub_total_users'),
         (metrics.REQUEST_DURATION_SECONDS, 'jupyterhub_request_duration_seconds'),
     ],
 )
