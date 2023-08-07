@@ -105,8 +105,7 @@ class LoginHandler(BaseHandler):
                     'next': self.get_argument('next', ''),
                 },
             ),
-            "authenticator_request_otp": self.settings['request_otp'],
-            "authenticator_otp_prompt": self.settings['otp_prompt'],
+            "authenticator": self.authenticator,
             "xsrf": self.xsrf_token.decode('ascii'),
         }
         custom_html = Template(

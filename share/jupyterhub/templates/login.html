@@ -64,8 +64,8 @@
       id="password_input"
       tabindex="2"
     />
-    {% if authenticator_request_otp %}
-    <label for='otp_input'>{{ authenticator_otp_prompt }}</label>
+    {% if authenticator.request_otp %}
+    <label for='otp_input'>{{ authenticator.otp_prompt }}</label>
     <input
       type="password"
       class="form-control"
