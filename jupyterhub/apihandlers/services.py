@@ -100,7 +100,6 @@ class ServiceAPIHandler(APIHandler):
                     service_name,
                     exc_info=True,
                 )
-            self.app.toggle_service_health_check()
 
         if new_service.oauth_no_confirm:
             oauth_no_confirm_list = self.settings.get('oauth_no_confirm_list')
@@ -140,8 +139,6 @@ class ServiceAPIHandler(APIHandler):
         try:
             await self.remove_service(service, orm_service)
             self.services.pop(service_name)
-            if service.url:
-                self.app.toggle_service_health_check()
         except Exception:
             msg = f"Failed to remove service {service_name}"
             self.log.error(msg, exc_info=True)
@@ -160,7 +157,6 @@ class ServiceAPIHandler(APIHandler):
         """
         if service.managed:
             await service.stop()
-            self.app.toggle_service_health_check()
 
         if service.oauth_client:
             self.oauth_provider.remove_client(service.oauth_client_id)

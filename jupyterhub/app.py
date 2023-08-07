@@ -2585,6 +2585,7 @@ class JupyterHub(Application):
         """Check connectivity of all services"""
         for name, service in self._service_map.items():
             if not service.url:
+                # no URL to check, nothing to do
                 continue
             try:
                 await Server.from_orm(service.orm.server).wait_up(timeout=1, http=True)
@@ -3269,24 +3270,6 @@ class JupyterHub(Application):
                 return False
         return True
 
-    def toggle_service_health_check(self) -> None:
-        """Start or stop the service health check callback."""
-
-        if self.service_check_interval and any(
-            s.url for s in self._service_map.values()
-        ):
-            if self._check_services_health_callback is None:
-                self._check_services_health_callback = PeriodicCallback(
-                    self.check_services_health, 1e3 * self.service_check_interval
-                )
-                self._check_services_health_callback.start()
-        else:
-            # Services requiring health check are removed, stop
-            # the periodic callback.
-            if self._check_services_health_callback is not None:
-                self._check_services_health_callback.stop()
-                self._check_services_health_callback = None
-
     async def start(self):
         """Start the whole thing"""
         self.io_loop = loop = IOLoop.current()
@@ -3390,7 +3373,11 @@ class JupyterHub(Application):
 
         # Check services health
         self._check_services_health_callback = None
-        self.toggle_service_health_check()
+        if self.service_check_interval:
+            self._check_services_health_callback = PeriodicCallback(
+                self.check_services_health, 1e3 * self.service_check_interval
+            )
+            self._check_services_health_callback.start()
 
         if self.last_activity_interval:
             pc = PeriodicCallback(
