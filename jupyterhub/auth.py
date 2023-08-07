@@ -160,9 +160,9 @@ class Authenticator(LoggingConfigurable):
     otp_prompt = Any(
         "OTP:",
         help="""
-        The prompt string for the extra OTP (One Time Password) field. Defaults to `OTP:`.
+        The prompt string for the extra OTP (One Time Password) field.
 
-        .. versionadded:: 4.1
+        .. versionadded:: 5.0
         """,
     ).tag(config=True)
 
@@ -170,9 +170,9 @@ class Authenticator(LoggingConfigurable):
         False,
         config=True,
         help="""
-        Display the extra OTP (One Time Password) prompt on the login scree.
+        Prompt for OTP (One Time Password) in the login form.
 
-        .. versionadded:: 4.1
+        .. versionadded:: 5.0
         """,
     )
 
