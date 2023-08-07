@@ -533,7 +533,7 @@ class User:
         - always safe value for a single DNS label
         - max 40 characters, leaving room for additional components
 
-        .. versionadded:: 4.1
+        .. versionadded:: 5.0
         """
         return _strict_dns_safe(self.name, max_length=40)
 

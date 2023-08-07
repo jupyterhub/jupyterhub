@@ -779,7 +779,7 @@ class JupyterHub(Application):
         using IDNA encoding for unicode usernames, and a truncate-and-hash approach for
         any usernames that can't be easily encoded into a domain component.
 
-        .. versionadded:: 4.1
+        .. versionadded:: 5.0
         """,
     )
 
@@ -787,7 +787,7 @@ class JupyterHub(Application):
     def _default_subdomain_hook(self):
         if self.subdomain_host:
             self.log.warning(
-                "Using deprecated legacy subdomain hook. subdomain_hook = 'idna' is added in JupyterHub 4.1 and will become the default in a future JupyterHub release."
+                "Using deprecated legacy subdomain hook. subdomain_hook = 'idna' is added in JupyterHub 5.0 and will become the default in a future JupyterHub release."
             )
         return subdomain_hook_legacy
 
