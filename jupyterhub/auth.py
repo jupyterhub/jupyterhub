@@ -1123,10 +1123,14 @@ class PAMAuthenticator(LocalAuthenticator):
         Return None otherwise.
         """
         username = data['username']
+        password = data["password"]
+        if "otp" in data:
+            # OTP given, pass as tuple (requires pamela 1.1)
+            password = (data["password"], data["otp"])
         try:
             pamela.authenticate(
                 username,
-                (data['password'], data['otp']),
+                password,
                 service=self.service,
                 encoding=self.encoding,
             )
