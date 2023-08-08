@@ -2389,13 +2389,14 @@ class JupyterHub(Application):
             hub=self.hub,
         )
         traits = service.traits(input=True)
-        for key in traits:
-            value = orm_service.get_column(key)
-            if value is not None:
-                setattr(service, key, value)
+        for key, trait in traits.items():
+            if not trait.metadata.get("in_db", True):
+                continue
+            orm_value = getattr(orm_service, key)
+            if orm_value is not None:
+                setattr(service, key, orm_value)
 
         if orm_service.oauth_client is not None:
-            service.oauth_redirect_uri = orm_service.oauth_client.redirect_uri
             service.oauth_client_id = orm_service.oauth_client.identifier
             service.oauth_redirect_uri = orm_service.oauth_client.redirect_uri
 
@@ -2476,10 +2477,15 @@ class JupyterHub(Application):
 
         traits = service.traits(input=True)
         for key, value in spec.items():
-            if key not in traits:
+            trait = traits.get(key)
+            if trait is None:
                 raise AttributeError("No such service field: %s" % key)
             setattr(service, key, value)
-            orm_service.update_column(key, value)
+            # also set the value on the orm object
+            # unless it's marked as not in the db
+            # (e.g. on the oauth object)
+            if trait.metadata.get("in_db", True):
+                setattr(orm_service, key, value)
 
         if service.api_token:
             self.service_tokens[service.api_token] = service.name

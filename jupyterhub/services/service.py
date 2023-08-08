@@ -180,9 +180,12 @@ class Service(LoggingConfigurable):
     - user: str
         The name of a system user to become.
         If unspecified, run as the same user as the Hub.
+
     """
 
-    # inputs:
+    # traits tagged with `input=True` are accepted as input from configuration / API
+    # input traits are also persisted to the db UNLESS they are also tagged with `in_db=False`
+
     name = Unicode(
         help="""The name of the service.
 
@@ -205,7 +208,7 @@ class Service(LoggingConfigurable):
 
         DEPRECATED in 3.0: use oauth_client_allowed_scopes
       """
-    ).tag(input=True)
+    ).tag(input=True, in_db=False)
 
     oauth_client_allowed_scopes = List(
         help="""OAuth allowed scopes.
@@ -225,7 +228,7 @@ class Service(LoggingConfigurable):
 
         If unspecified, an API token will be generated for managed services.
         """
-    ).tag(input=True)
+    ).tag(input=True, in_db=False)
 
     info = Dict(
         help="""Provide a place to include miscellaneous information about the service,
@@ -310,7 +313,7 @@ class Service(LoggingConfigurable):
         You shouldn't generally need to change this.
         Default: `service-<name>`
         """
-    ).tag(input=True)
+    ).tag(input=True, in_db=False)
 
     @default('oauth_client_id')
     def _default_client_id(self):
@@ -331,7 +334,7 @@ class Service(LoggingConfigurable):
         You shouldn't generally need to change this.
         Default: `/services/:name/oauth_callback`
         """
-    ).tag(input=True)
+    ).tag(input=True, in_db=False)
 
     @default('oauth_redirect_uri')
     def _default_redirect_uri(self):
