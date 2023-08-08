@@ -157,6 +157,25 @@ class Authenticator(LoggingConfigurable):
         """
     ).tag(config=True)
 
+    otp_prompt = Any(
+        "OTP:",
+        help="""
+        The prompt string for the extra OTP (One Time Password) field.
+
+        .. versionadded:: 5.0
+        """,
+    ).tag(config=True)
+
+    request_otp = Bool(
+        False,
+        config=True,
+        help="""
+        Prompt for OTP (One Time Password) in the login form.
+
+        .. versionadded:: 5.0
+        """,
+    )
+
     _deprecated_aliases = {
         "whitelist": ("allowed_users", "1.2"),
         "blacklist": ("blocked_users", "1.2"),
@@ -1104,9 +1123,16 @@ class PAMAuthenticator(LocalAuthenticator):
         Return None otherwise.
         """
         username = data['username']
+        password = data["password"]
+        if "otp" in data:
+            # OTP given, pass as tuple (requires pamela 1.1)
+            password = (data["password"], data["otp"])
         try:
             pamela.authenticate(
-                username, data['password'], service=self.service, encoding=self.encoding
+                username,
+                password,
+                service=self.service,
+                encoding=self.encoding,
             )
         except pamela.PAMError as e:
             if handler is not None:
