@@ -2358,20 +2358,23 @@ class JupyterHub(Application):
     def service_from_orm(
         self,
         orm_service: orm.Service,
-        domain: str,
-        host: str,
     ) -> Service:
         """Create the service instance and related objects from
         ORM data.
 
         Args:
             orm_service (orm.Service): The `orm.Service` object
-            domain (str): The domain of Hub session
-            host (str):  The host of Hub session
 
         Returns:
             Service: the created service
         """
+
+        if self.domain:
+            domain = 'services.' + self.domain
+            parsed = urlparse(self.subdomain_host)
+            host = f'{parsed.scheme}://services.{parsed.netloc}'
+        else:
+            domain = host = ''
 
         name = orm_service.name
         service = Service(
@@ -2404,8 +2407,6 @@ class JupyterHub(Application):
         self,
         spec: Dict,
         from_config=True,
-        domain: Optional[str] = None,
-        host: Optional[str] = None,
     ) -> Optional[Service]:
         """Create the service instance and related objects from
         config data.
@@ -2415,25 +2416,17 @@ class JupyterHub(Application):
             from_config (bool, optional): `True` if the service will be created
             from the config file, `False` if it is created from REST API.
             Defaults to `True`.
-            domain (Optional[str]): The domain of Hub session. Defaults to None.
-            host (Optional[str]): The host of Hub session. Defaults to None.
 
         Returns:
             Optional[Service]: The created service
         """
 
-        if domain is None:
-            if self.domain:
-                domain = 'services.' + self.domain
-            else:
-                domain = ''
-
-        if host is None:
-            if self.domain:
-                parsed = urlparse(self.subdomain_host)
-                host = f'{parsed.scheme}://services.{parsed.netloc}'
-            else:
-                host = ''
+        if self.domain:
+            domain = 'services.' + self.domain
+            parsed = urlparse(self.subdomain_host)
+            host = f'{parsed.scheme}://services.{parsed.netloc}'
+        else:
+            domain = host = ''
 
         if 'name' not in spec:
             raise ValueError('service spec must have a name: %r' % spec)
@@ -2560,15 +2553,8 @@ class JupyterHub(Application):
 
     def init_services(self):
         self._service_map.clear()
-        if self.domain:
-            domain = 'services.' + self.domain
-            parsed = urlparse(self.subdomain_host)
-            host = f'{parsed.scheme}://services.{parsed.netloc}'
-        else:
-            domain = host = ''
-
         for spec in self.services:
-            self.service_from_spec(spec, from_config=True, domain=domain, host=host)
+            self.service_from_spec(spec, from_config=True)
 
         for service_orm in self.db.query(orm.Service):
             if service_orm.from_config:
@@ -2577,7 +2563,7 @@ class JupyterHub(Application):
                 if service_orm.name not in self._service_map:
                     self.db.delete(service_orm)
             else:
-                self.service_from_orm(service_orm, domain, host)
+                self.service_from_orm(service_orm)
 
         self.db.commit()
 
