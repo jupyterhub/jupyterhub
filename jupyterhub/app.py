@@ -2490,6 +2490,11 @@ class JupyterHub(Application):
 
         if service.url:
             parsed = urlparse(service.url)
+            if parsed.scheme not in {"http", "https"}:
+                raise ValueError(
+                    f"Unsupported scheme in URL for service {name}: {service.url}. Must be http[s]"
+                )
+
             port = None
             if parsed.port is not None:
                 port = parsed.port
@@ -2498,19 +2503,14 @@ class JupyterHub(Application):
             elif parsed.scheme == 'https':
                 port = 443
 
-            if port is not None:
-                server = service.orm.server = orm.Server(
-                    proto=parsed.scheme,
-                    ip=parsed.hostname,
-                    port=port,
-                    cookie_name=service.oauth_client_id,
-                    base_url=service.prefix,
-                )
-                self.db.add(server)
-            else:
-                self.log.error(
-                    f"Can not detect server port for service named {name}, the server is ignored!"
-                )
+            server = service.orm.server = orm.Server(
+                proto=parsed.scheme,
+                ip=parsed.hostname,
+                port=port,
+                cookie_name=service.oauth_client_id,
+                base_url=service.prefix,
+            )
+            self.db.add(server)
         else:
             service.orm.server = None
 
