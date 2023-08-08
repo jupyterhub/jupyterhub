@@ -22,6 +22,21 @@ started.
 If this configuration value is not set, then **all authenticated users will be allowed into your hub**.
 ```
 
+## One Time Passwords ( request_otp )
+
+By setting `request_otp` to true, the login screen will show and additional password input field
+to accept an OTP:
+
+```python
+c.Authenticator.request_otp = True
+```
+
+By default, the prompt label is `OTP:`, but this can be changed by setting `otp_prompt`:
+
+```python
+c.Authenticator.otp_prompt = 'Google Authenticator:'
+```
+
 ## Configure admins (`admin_users`)
 
 ```{note}
