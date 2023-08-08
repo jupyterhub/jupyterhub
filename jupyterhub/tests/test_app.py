@@ -15,11 +15,10 @@ import pytest
 import traitlets
 from traitlets.config import Config
 
-from .. import orm, roles
+from .. import orm
 from ..app import COOKIE_SECRET_BYTES, JupyterHub
 from .mocking import MockHub
 from .test_api import add_user
-from .utils import api_request, auth_header
 
 
 def test_help_all():
@@ -221,7 +220,7 @@ def test_cookie_secret_env(tmpdir, request):
     assert not os.path.exists(hub.cookie_secret_file)
 
 
-def test_cookie_secret_string_():
+def test_cookie_secret_string():
     cfg = Config()
 
     cfg.JupyterHub.cookie_secret = "not hex"
@@ -271,18 +270,41 @@ async def test_load_groups(tmpdir, request):
     )
 
 
-async def test_resume_spawners(tmpdir, request):
-    if not os.getenv('JUPYTERHUB_TEST_DB_URL'):
-        p = patch.dict(
-            os.environ,
-            {
-                'JUPYTERHUB_TEST_DB_URL': 'sqlite:///%s'
-                % tmpdir.join('jupyterhub.sqlite')
-            },
-        )
-        p.start()
-        request.addfinalizer(p.stop)
+@pytest.fixture
+def persist_db(tmpdir):
+    """ensure db will persist (overrides default sqlite://:memory:)"""
+    if os.getenv('JUPYTERHUB_TEST_DB_URL'):
+        # already using a db, no need
+        yield
+        return
+    with patch.dict(
+        os.environ,
+        {'JUPYTERHUB_TEST_DB_URL': f"sqlite:///{tmpdir.join('jupyterhub.sqlite')}"},
+    ):
+        yield
 
+
+@pytest.fixture
+def new_hub(request, tmpdir, persist_db):
+    """Fixture to launch a new hub for testing"""
+
+    async def new_hub():
+        kwargs = {}
+        ssl_enabled = getattr(request.module, "ssl_enabled", False)
+        if ssl_enabled:
+            kwargs['internal_certs_location'] = str(tmpdir)
+        app = MockHub(test_clean_db=False, **kwargs)
+        app.config.ConfigurableHTTPProxy.should_start = False
+        app.config.ConfigurableHTTPProxy.auth_token = 'unused'
+        request.addfinalizer(app.stop)
+        await app.initialize([])
+
+        return app
+
+    return new_hub
+
+
+async def test_resume_spawners(tmpdir, request, new_hub):
     async def new_hub():
         kwargs = {}
         ssl_enabled = getattr(request.module, "ssl_enabled", False)
@@ -476,100 +498,26 @@ async def test_user_creation(tmpdir, request):
     }
 
 
-@pytest.fixture(scope='module')
-def db_temp_path(tmp_path_factory):
-    fn = tmp_path_factory.mktemp("db") / "jupyterhub.sqlite"
-    return fn
+async def test_recreate_service_from_database(
+    request, new_hub, service_name, service_data
+):
+    # create a hub and add a service (not from config)
+    app = await new_hub()
+    app.service_from_spec(service_data, from_config=False)
+    app.stop()
 
+    # new hub, should load service from db
+    app = await new_hub()
+    assert service_name in app._service_map
 
-async def test_add_service_at_runtime(request, db_temp_path, service_data):
-    if not os.getenv('JUPYTERHUB_TEST_DB_URL'):
-        p = patch.dict(
-            os.environ,
-            {'JUPYTERHUB_TEST_DB_URL': 'sqlite:///%s' % str(db_temp_path)},
-        )
-        p.start()
-        request.addfinalizer(p.stop)
+    # verify keys
+    service = app._service_map[service_name]
+    for key, value in service_data.items():
+        if key in {'api_token'}:
+            # skip some keys
+            continue
+        assert getattr(service, key) == value
 
-    kwargs = {"test_clean_db": False}
-    ssl_enabled = getattr(request.module, "ssl_enabled", False)
-    if ssl_enabled:
-        kwargs['internal_certs_location'] = db_temp_path.parents[0]
-    app = MockHub(**kwargs)
-
-    def end():
-        app.log.handlers = []
-        MockHub.clear_instance()
-        try:
-            app.stop()
-        except Exception as e:
-            print("Error stopping Hub: %s" % e, file=sys.stderr)
-
-    request.addfinalizer(end)
-
-    await app.initialize([])
-    await app.start()
-    db = app.db
-
-    user_name = 'admin_services'
-    service_role = {
-        'name': 'admin-services-role',
-        'description': '',
-        'users': [user_name],
-        'scopes': ['admin:services'],
-    }
-    roles.create_role(app.db, service_role)
-    user = add_user(app.db, name=user_name)
-    roles.update_roles(app.db, user, roles=['admin-services-role'])
-
-    service_name = 'service-from-api'
-
-    r = await api_request(
-        app,
-        f'services/{service_name}',
-        headers=auth_header(db, user_name),
-        data=json.dumps(service_data),
-        method='post',
-    )
-    assert r.status_code == 201
-    assert r.json()['name'] == service_name
-    oauth_client = (
-        app.db.query(orm.OAuthClient)
-        .filter_by(identifier=service_data['oauth_client_id'])
-        .first()
-    )
-    assert oauth_client.redirect_uri == service_data['oauth_redirect_uri']
-
-
-async def test_recreate_service_from_database(request, db_temp_path, service_data):
-    if not os.getenv('JUPYTERHUB_TEST_DB_URL'):
-        p = patch.dict(
-            os.environ,
-            {'JUPYTERHUB_TEST_DB_URL': 'sqlite:///%s' % str(db_temp_path)},
-        )
-        p.start()
-        request.addfinalizer(p.stop)
-    kwargs = {"test_clean_db": False}
-
-    ssl_enabled = getattr(request.module, "ssl_enabled", False)
-    if ssl_enabled:
-        kwargs['internal_certs_location'] = db_temp_path.parents[0]
-    app = MockHub(**kwargs)
-
-    def end():
-        app.log.handlers = []
-        MockHub.clear_instance()
-        try:
-            app.stop()
-        except Exception as e:
-            print("Error stopping Hub: %s" % e, file=sys.stderr)
-
-    request.addfinalizer(end)
-
-    await app.initialize([])
-    await app.start()
-
-    assert 'service-from-api' in app._service_map
     assert (
         service_data['oauth_client_id'] in app.tornado_settings['oauth_no_confirm_list']
     )
@@ -579,3 +527,11 @@ async def test_recreate_service_from_database(request, db_temp_path, service_dat
         .first()
     )
     assert oauth_client.redirect_uri == service_data['oauth_redirect_uri']
+
+    # delete service from db, start one more
+    app.db.delete(service.orm)
+    app.db.commit()
+
+    # start one more, service should be gone
+    app = await new_hub()
+    assert service_name not in app._service_map

@@ -167,6 +167,8 @@ async def cleanup_after(request, io_loop):
         app = MockHub.instance()
         if app.db_file.closed:
             return
+
+        # cleanup users
         for uid, user in list(app.users.items()):
             for name, spawner in list(user.spawners.items()):
                 if spawner.active:
@@ -181,6 +183,16 @@ async def cleanup_after(request, io_loop):
         # delete groups
         for group in app.db.query(orm.Group):
             app.db.delete(group)
+
+        # clear services
+        for name, service in app._service_map.items():
+            if service.managed:
+                service.stop()
+        for orm_service in app.db.query(orm.Service):
+            if orm_service.oauth_client:
+                app.oauth_provider.remove_client(orm_service.oauth_client_id)
+            app.db.delete(orm_service)
+        app._service_map.clear()
         app.db.commit()
 
 
@@ -262,10 +274,7 @@ class MockServiceSpawner(jupyterhub.services.service._ServiceSpawner):
     poll_interval = 1
 
 
-_mock_service_counter = 0
-
-
-async def _mockservice(request, app, external=False, url=False):
+async def _mockservice(request, app, name, external=False, url=False):
     """
     Add a service to the application
 
@@ -281,9 +290,6 @@ async def _mockservice(request, app, external=False, url=False):
           If True, register the service at a URL
           (as opposed to headless, API-only).
     """
-    global _mock_service_counter
-    _mock_service_counter += 1
-    name = 'mock-service-%i' % _mock_service_counter
     spec = {'name': name, 'command': mockservice_cmd, 'admin': True}
     if url:
         if app.internal_ssl:
@@ -330,22 +336,33 @@ async def _mockservice(request, app, external=False, url=False):
     return service
 
 
+_service_name_counter = 0
+
+
 @fixture
-async def mockservice(request, app):
+def service_name():
+    global _service_name_counter
+    _service_name_counter += 1
+    name = f'test-service-{_service_name_counter}'
+    return name
+
+
+@fixture
+async def mockservice(request, app, service_name):
     """Mock a service with no external service url"""
-    yield await _mockservice(request, app, url=False)
+    yield await _mockservice(request, app, name=service_name, url=False)
 
 
 @fixture
-async def mockservice_external(request, app):
+async def mockservice_external(request, app, service_name):
     """Mock an externally managed service (don't start anything)"""
-    yield await _mockservice(request, app, external=True, url=False)
+    yield await _mockservice(request, app, name=service_name, external=True, url=False)
 
 
 @fixture
-async def mockservice_url(request, app):
+async def mockservice_url(request, app, service_name):
     """Mock a service with its own url to test external services"""
-    yield await _mockservice(request, app, url=True)
+    yield await _mockservice(request, app, name=service_name, url=True)
 
 
 @fixture
@@ -537,12 +554,14 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
 
 
 @fixture
-def service_data():
+def service_data(service_name):
     """Data used to create service at runtime"""
     return {
-        "oauth_client_id": "service-oauth-client-from-api",
-        "api_token": "api_token-from-api",
+        "name": service_name,
+        "oauth_client_id": f"service-{service_name}",
+        "api_token": f"api_token-{service_name}",
         "oauth_redirect_uri": "http://127.0.0.1:5555/oauth_callback-from-api",
         "oauth_no_confirm": True,
+        "oauth_client_allowed_scopes": ["inherit"],
         "info": {'foo': 'bar'},
     }

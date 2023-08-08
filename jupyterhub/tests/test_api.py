@@ -2099,9 +2099,8 @@ def service_admin_user(create_user_with_scopes):
 
 
 @mark.services
-async def test_create_service(app, service_admin_user, service_data):
+async def test_create_service(app, service_admin_user, service_name, service_data):
     db = app.db
-    service_name = 'service-from-api'
     r = await api_request(
         app,
         f'services/{service_name}',
@@ -2131,9 +2130,8 @@ async def test_create_service(app, service_admin_user, service_data):
 
 
 @mark.services
-async def test_create_service_no_role(app, service_data):
+async def test_create_service_no_role(app, service_name, service_data):
     db = app.db
-    service_name = 'service-from-api'
     r = await api_request(
         app,
         f'services/{service_name}',
@@ -2146,9 +2144,10 @@ async def test_create_service_no_role(app, service_data):
 
 
 @mark.services
-async def test_create_service_conflict(app, service_admin_user, service_data):
+async def test_create_service_conflict(
+    app, service_admin_user, mockservice, service_data, service_name
+):
     db = app.db
-    service_name = 'service-from-config'
     app.services = [{'name': service_name}]
     app.init_services()
 
@@ -2164,9 +2163,19 @@ async def test_create_service_conflict(app, service_admin_user, service_data):
 
 
 @mark.services
-async def test_create_service_duplication(app, service_admin_user, service_data):
+async def test_create_service_duplication(
+    app, service_admin_user, service_name, service_data
+):
     db = app.db
-    service_name = 'service-from-api'
+
+    r = await api_request(
+        app,
+        f'services/{service_name}',
+        headers=auth_header(db, service_admin_user.name),
+        data=json.dumps(service_data),
+        method='post',
+    )
+    assert r.status_code == 201
 
     r = await api_request(
         app,
@@ -2179,9 +2188,10 @@ async def test_create_service_duplication(app, service_admin_user, service_data)
 
 
 @mark.services
-async def test_create_managed_service(app, service_admin_user, service_data):
+async def test_create_managed_service(
+    app, service_admin_user, service_name, service_data
+):
     db = app.db
-    service_name = 'managed-service-from-api'
     managed_service_data = deepcopy(service_data)
     managed_service_data['command'] = ['foo']
     r = await api_request(
@@ -2199,9 +2209,8 @@ async def test_create_managed_service(app, service_admin_user, service_data):
 
 
 @mark.services
-async def test_create_admin_service(app, admin_user, service_data):
+async def test_create_admin_service(app, admin_user, service_name, service_data):
     db = app.db
-    service_name = 'admin-service-from-api'
     managed_service_data = deepcopy(service_data)
     managed_service_data['admin'] = True
     r = await api_request(
@@ -2219,10 +2228,9 @@ async def test_create_admin_service(app, admin_user, service_data):
 
 @mark.services
 async def test_create_admin_service_without_admin_right(
-    app, service_admin_user, service_data
+    app, service_admin_user, service_data, service_name
 ):
     db = app.db
-    service_name = 'managed-service-from-api'
     managed_service_data = deepcopy(service_data)
     managed_service_data['admin'] = True
     r = await api_request(
@@ -2240,9 +2248,10 @@ async def test_create_admin_service_without_admin_right(
 
 
 @mark.services
-async def test_create_service_with_scope(app, create_user_with_scopes, service_data):
+async def test_create_service_with_scope(
+    app, create_user_with_scopes, service_name, service_data
+):
     db = app.db
-    service_name = 'service-with-scope'
     managed_service_data = deepcopy(service_data)
     managed_service_data['oauth_client_allowed_scopes'] = ["admin:users"]
     managed_service_data['oauth_client_id'] = "service-client-with-scope"
@@ -2262,10 +2271,12 @@ async def test_create_service_with_scope(app, create_user_with_scopes, service_d
 
 @mark.services
 async def test_create_service_without_requested_scope(
-    app, service_admin_user, service_data
+    app,
+    service_admin_user,
+    service_data,
+    service_name,
 ):
     db = app.db
-    service_name = 'service-without-requested-scope'
     managed_service_data = deepcopy(service_data)
     managed_service_data['oauth_client_allowed_scopes'] = ["admin:users"]
     r = await api_request(
@@ -2283,9 +2294,16 @@ async def test_create_service_without_requested_scope(
 
 
 @mark.services
-async def test_remove_service(app, service_admin_user, service_data):
+async def test_remove_service(app, service_admin_user, service_name, service_data):
     db = app.db
-    service_name = 'service-from-api'
+    r = await api_request(
+        app,
+        f'services/{service_name}',
+        headers=auth_header(db, service_admin_user.name),
+        data=json.dumps(service_data),
+        method='post',
+    )
+    assert r.status_code == 201
 
     r = await api_request(
         app,
@@ -2309,9 +2327,9 @@ async def test_remove_service(app, service_admin_user, service_data):
 
 
 @mark.services
-async def test_remove_service_from_config(app, service_admin_user):
+async def test_remove_service_from_config(app, service_admin_user, mockservice):
     db = app.db
-    service_name = 'service-from-config'
+    service_name = mockservice.name
     r = await api_request(
         app,
         f'services/{service_name}',
@@ -2319,15 +2337,10 @@ async def test_remove_service_from_config(app, service_admin_user):
         method='delete',
     )
     assert r.status_code == 405
-    assert (
-        r.json()['message']
-        == 'Service service-from-config is not modifiable at runtime'
-    )
+    assert r.json()['message'] == f'Service {service_name} is not modifiable at runtime'
 
 
 async def test_root_api(app):
-    base_url = app.hub.url
-    url = ujoin(base_url, 'api')
     kwargs = {}
     if app.internal_ssl:
         kwargs['cert'] = (app.internal_ssl_cert, app.internal_ssl_key)
