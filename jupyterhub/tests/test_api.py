@@ -2064,7 +2064,7 @@ async def test_get_services(app, mockservice_url):
 async def test_get_service(app, mockservice_url):
     mockservice = mockservice_url
     db = app.db
-    r = await api_request(app, 'services/%s' % mockservice.name)
+    r = await api_request(app, f"services/{mockservice.name}")
     r.raise_for_status()
     assert r.status_code == 200
 
@@ -2083,14 +2083,18 @@ async def test_get_service(app, mockservice_url):
     }
     r = await api_request(
         app,
-        'services/%s' % mockservice.name,
+        f"services/{mockservice.name}",
         headers={'Authorization': 'token %s' % mockservice.api_token},
     )
     r.raise_for_status()
+
     r = await api_request(
-        app, 'services/%s' % mockservice.name, headers=auth_header(db, 'user')
+        app, f"services/{mockservice.name}", headers=auth_header(db, 'user')
     )
     assert r.status_code == 403
+
+    r = await api_request(app, "services/nosuchservice")
+    assert r.status_code == 404
 
 
 @pytest.fixture
@@ -2294,7 +2298,7 @@ async def test_create_service_without_requested_scope(
 
 
 @mark.services
-async def test_remove_service(app, service_admin_user, service_name, service_data):
+async def test_delete_service(app, service_admin_user, service_name, service_data):
     db = app.db
     r = await api_request(
         app,
@@ -2325,9 +2329,12 @@ async def test_remove_service(app, service_admin_user, service_name, service_dat
 
     assert service_name not in app._service_map
 
+    r = await api_request(app, f"services/{service_name}", method="delete")
+    assert r.status_code == 404
+
 
 @mark.services
-async def test_remove_service_from_config(app, service_admin_user, mockservice):
+async def test_delete_service_from_config(app, service_admin_user, mockservice):
     db = app.db
     service_name = mockservice.name
     r = await api_request(

@@ -31,6 +31,8 @@ class ServiceListAPIHandler(APIHandler):
 class ServiceAPIHandler(APIHandler):
     @needs_scope('read:services', 'read:services:name', 'read:roles:services')
     def get(self, service_name):
+        if service_name not in self.services:
+            raise web.HTTPError(404, f"No such service: {service_name}")
         service = self.services[service_name]
         self.write(json.dumps(self.service_model(service)))
 
@@ -160,14 +162,6 @@ class ServiceAPIHandler(APIHandler):
 
         if service.oauth_client:
             self.oauth_provider.remove_client(service.oauth_client_id)
-
-        if service.api_token is not None:
-            # Remove api token from database
-            orm_token = (
-                self.db.query(orm.APIToken).filter_by(service_id=orm_service.id).first()
-            )
-            if orm_token is not None:
-                self.db.delete(orm_token)
 
         if orm_service._server_id is not None:
             orm_server = (
