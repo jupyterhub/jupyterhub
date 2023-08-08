@@ -18,7 +18,7 @@ from .utils import add_user, api_request, get_page
     ],
 )
 def test_metrics_prefix(metric_object, expected_names):
-    for metric, expected_name in zip(metric_obj.describe(), expected_names):
+    for metric, expected_name in zip(metric_object.describe(), expected_names):
         assert metric.name == expected_name
 
 
