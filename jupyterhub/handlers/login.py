@@ -105,6 +105,7 @@ class LoginHandler(BaseHandler):
                     'next': self.get_argument('next', ''),
                 },
             ),
+            "authenticator": self.authenticator,
             "xsrf": self.xsrf_token.decode('ascii'),
         }
         custom_html = Template(

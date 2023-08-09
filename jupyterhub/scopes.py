@@ -123,6 +123,10 @@ scope_definitions = {
     'delete:groups': {
         'description': "Delete groups.",
     },
+    'admin:services': {
+        'description': 'Create, read, update, delete services, not including services defined from config files.',
+        'subscopes': ['list:services', 'read:services', 'read:roles:services'],
+    },
     'list:services': {
         'description': 'List services, including at least their names.',
         'subscopes': ['read:services:name'],
@@ -435,7 +439,7 @@ def _expand_self_scope(username):
 
 @lru_cache(maxsize=65535)
 def _expand_scope(scope):
-    """Returns a scope and all all subscopes
+    """Returns a scope and all subscopes
 
     Arguments:
       scope (str): the scope to expand

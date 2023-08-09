@@ -174,6 +174,47 @@ c.JupyterHub.services = [
 In this case, the `url` field will be passed along to the Service as
 `JUPYTERHUB_SERVICE_URL`.
 
+## Adding or removing services at runtime
+
+Only externally-managed services can be added at runtime by using JupyterHub’s REST API.
+
+### Add a new service
+
+To add a new service, send a POST request to this endpoint
+
+```
+POST /hub/api/services/:servicename
+```
+
+**Required scope: `admin:services`**
+
+**Payload**: The payload should contain the definition of the service to be created. The endpoint supports the same properties as externally-managed services defined in the config file.
+
+**Possible responses**
+
+- `201 Created`: The service and related objects are created (and started in case of a Hub-managed one) successfully.
+- `400 Bad Request`: The payload is invalid or JupyterHub can not create the service.
+- `409 Conflict`: The service with the same name already exists.
+
+### Remove an existing service
+
+To remove an existing service, send a DELETE request to this endpoint
+
+```
+DELETE /hub/api/services/:servicename
+```
+
+**Required scope: `admin:services`**
+
+**Payload**: `None`
+
+**Possible responses**
+
+- `200 OK`: The service and related objects are removed (and stopped in case of a Hub-managed one) successfully.
+- `400 Bad Request`: JupyterHub can not remove the service.
+- `404 Not Found`: The requested service does not exist.
+- `405 Not Allowed`: The requested service is created from the config file, it can not be removed at runtime.
+
 ## Writing your own Services
 
 When writing your own services, you have a few decisions to make (in addition

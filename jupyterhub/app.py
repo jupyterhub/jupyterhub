@@ -21,6 +21,7 @@ from functools import partial
 from getpass import getuser
 from operator import itemgetter
 from textwrap import dedent
+from typing import Optional
 from urllib.parse import unquote, urlparse, urlunparse
 
 if sys.version_info[:2] < (3, 3):
@@ -32,6 +33,7 @@ from dateutil.parser import parse as parse_date
 from jinja2 import ChoiceLoader, Environment, FileSystemLoader, PrefixLoader
 from jupyter_telemetry.eventlog import EventLog
 from sqlalchemy.exc import OperationalError, SQLAlchemyError
+from sqlalchemy.orm import joinedload
 from tornado import gen, web
 from tornado.httpclient import AsyncHTTPClient
 from tornado.ioloop import IOLoop, PeriodicCallback
@@ -2250,22 +2252,53 @@ class JupyterHub(Application):
 
         db.commit()
         if self.authenticator.allowed_users:
-            self.log.debug(
-                f"Assigning {len(self.authenticator.allowed_users)} allowed_users to the user role"
-            )
-            allowed_users = db.query(orm.User).filter(
+            user_role = orm.Role.find(db, "user")
+            self.log.debug("Assigning allowed_users to the user role")
+            # query only those that need the user role _and don't have it_
+            needs_user_role = db.query(orm.User).filter(
                 orm.User.name.in_(self.authenticator.allowed_users)
+                & ~orm.User.roles.any(id=user_role.id)
             )
-            for user in allowed_users:
-                roles.grant_role(db, user, 'user')
+            if self.log.isEnabledFor(logging.DEBUG):
+                # filter on isEnabledFor to skip the extra `count()` query if we aren't going to log it
+                self.log.debug(
+                    f"Assigning {needs_user_role.count()} allowed_users to the user role"
+                )
+
+            for user in needs_user_role:
+                roles.grant_role(db, user, user_role)
+
         admin_role = orm.Role.find(db, 'admin')
         for kind in admin_role_objects:
             Class = orm.get_class(kind)
-            for admin_obj in db.query(Class).filter_by(admin=True):
+
+            # sync obj.admin with admin role
+            # query only those objects that do not match config
+            # to avoid expensive query for no-op updates
+
+            # always: in admin role sets admin = True
+            for is_admin in db.query(Class).filter(
+                (Class.admin == False) & Class.roles.any(id=admin_role.id)
+            ):
+                self.log.info(f"Setting admin=True on {is_admin}")
+                is_admin.admin = True
+
+            # iterate over users with admin=True
+            # who are not in the admin role.
+            for not_admin_obj in db.query(Class).filter(
+                (Class.admin == True) & ~Class.roles.any(id=admin_role.id)
+            ):
                 if has_admin_role_spec[kind]:
-                    admin_obj.admin = admin_role in admin_obj.roles
+                    # role membership specified exactly in config,
+                    # already populated above.
+                    # make sure user.admin matches admin role
+                    # setting .admin=False for anyone no longer in admin role
+                    self.log.warning(f"Removing admin=True from {not_admin_obj}")
+                    not_admin_obj.admin = False
                 else:
-                    roles.grant_role(db, admin_obj, 'admin')
+                    # no admin role membership declared,
+                    # populate admin role from admin attribute (the old way, only additive)
+                    roles.grant_role(db, not_admin_obj, admin_role)
         db.commit()
         # make sure that on hub upgrade, all users, services and tokens have at least one role (update with default)
         if getattr(self, '_rbac_upgrade', False):
@@ -2291,7 +2324,7 @@ class JupyterHub(Application):
                 if not self.authenticator.validate_username(name):
                     raise ValueError("Token user name %r is not valid" % name)
             if kind == 'service':
-                if not any(service["name"] == name for service in self.services):
+                if not any(service_name == name for service_name in self._service_map):
                     self.log.warning(
                         f"service {name} not in services, creating implicitly. It is recommended to register services using services list."
                     )
@@ -2354,8 +2387,20 @@ class JupyterHub(Application):
         )
         pc.start()
 
-    def init_services(self):
-        self._service_map.clear()
+    def service_from_orm(
+        self,
+        orm_service: orm.Service,
+    ) -> Service:
+        """Create the service instance and related objects from
+        ORM data.
+
+        Args:
+            orm_service (orm.Service): The `orm.Service` object
+
+        Returns:
+            Service: the created service
+        """
+
         if self.domain:
             domain = 'services.' + self.domain
             parsed = urlparse(self.subdomain_host)
@@ -2363,118 +2408,208 @@ class JupyterHub(Application):
         else:
             domain = host = ''
 
-        for spec in self.services:
-            if 'name' not in spec:
-                raise ValueError('service spec must have a name: %r' % spec)
-            name = spec['name']
-            # get/create orm
-            orm_service = orm.Service.find(self.db, name=name)
-            if orm_service is None:
-                # not found, create a new one
-                orm_service = orm.Service(name=name)
-                self.db.add(orm_service)
-                if spec.get('admin', False):
-                    self.log.warning(
-                        f"Service {name} sets `admin: True`, which is deprecated in JupyterHub 2.0."
-                        " You can assign now assign roles via `JupyterHub.load_roles` configuration."
-                        " If you specify services in the admin role configuration, "
-                        "the Service admin flag will be ignored."
+        name = orm_service.name
+        service = Service(
+            parent=self,
+            app=self,
+            base_url=self.base_url,
+            db=self.db,
+            orm=orm_service,
+            roles=orm_service.roles,
+            domain=domain,
+            host=host,
+            hub=self.hub,
+        )
+        traits = service.traits(input=True)
+        for key, trait in traits.items():
+            if not trait.metadata.get("in_db", True):
+                continue
+            orm_value = getattr(orm_service, key)
+            if orm_value is not None:
+                setattr(service, key, orm_value)
+
+        if orm_service.oauth_client is not None:
+            service.oauth_client_id = orm_service.oauth_client.identifier
+            service.oauth_redirect_uri = orm_service.oauth_client.redirect_uri
+
+        self._service_map[name] = service
+
+        return service
+
+    def service_from_spec(
+        self,
+        spec: Dict,
+        from_config=True,
+    ) -> Optional[Service]:
+        """Create the service instance and related objects from
+        config data.
+
+        Args:
+            spec (Dict): The spec of service, defined in the config file.
+            from_config (bool, optional): `True` if the service will be created
+            from the config file, `False` if it is created from REST API.
+            Defaults to `True`.
+
+        Returns:
+            Optional[Service]: The created service
+        """
+
+        if self.domain:
+            domain = 'services.' + self.domain
+            parsed = urlparse(self.subdomain_host)
+            host = f'{parsed.scheme}://services.{parsed.netloc}'
+        else:
+            domain = host = ''
+
+        if 'name' not in spec:
+            raise ValueError('service spec must have a name: %r' % spec)
+
+        name = spec['name']
+        # get/create orm
+        orm_service = orm.Service.find(self.db, name=name)
+        if orm_service is None:
+            # not found, create a new one
+            orm_service = orm.Service(name=name, from_config=from_config)
+            self.db.add(orm_service)
+            if spec.get('admin', False):
+                self.log.warning(
+                    f"Service {name} sets `admin: True`, which is deprecated in JupyterHub 2.0."
+                    " You can assign now assign roles via `JupyterHub.load_roles` configuration."
+                    " If you specify services in the admin role configuration, "
+                    "the Service admin flag will be ignored."
+                )
+                roles.update_roles(self.db, entity=orm_service, roles=['admin'])
+        else:
+            # Do nothing if the config file tries to modify a API-base service
+            # or vice versa.
+            if orm_service.from_config != from_config:
+                if from_config:
+                    self.log.error(
+                        f"The service {name} from the config file is trying to modify a runtime-created service with the same name"
                     )
-                    roles.update_roles(self.db, entity=orm_service, roles=['admin'])
-            orm_service.admin = spec.get('admin', False)
-            self.db.commit()
-            service = Service(
-                parent=self,
-                app=self,
-                base_url=self.base_url,
-                db=self.db,
-                orm=orm_service,
-                roles=orm_service.roles,
-                domain=domain,
-                host=host,
-                hub=self.hub,
+                else:
+                    self.log.error(
+                        f"The runtime-created service {name} is trying to modify a config-based service with the same name"
+                    )
+                return
+        orm_service.admin = spec.get('admin', False)
+
+        self.db.commit()
+        service = Service(
+            parent=self,
+            app=self,
+            base_url=self.base_url,
+            db=self.db,
+            orm=orm_service,
+            roles=orm_service.roles,
+            domain=domain,
+            host=host,
+            hub=self.hub,
+        )
+
+        traits = service.traits(input=True)
+        for key, value in spec.items():
+            trait = traits.get(key)
+            if trait is None:
+                raise AttributeError("No such service field: %s" % key)
+            setattr(service, key, value)
+            # also set the value on the orm object
+            # unless it's marked as not in the db
+            # (e.g. on the oauth object)
+            if trait.metadata.get("in_db", True):
+                setattr(orm_service, key, value)
+
+        if service.api_token:
+            self.service_tokens[service.api_token] = service.name
+        elif service.managed:
+            # generate new token
+            # TODO: revoke old tokens?
+            service.api_token = service.orm.new_api_token(note="generated at startup")
+
+        if service.url:
+            parsed = urlparse(service.url)
+            if parsed.scheme not in {"http", "https"}:
+                raise ValueError(
+                    f"Unsupported scheme in URL for service {name}: {service.url}. Must be http[s]"
+                )
+
+            port = None
+            if parsed.port is not None:
+                port = parsed.port
+            elif parsed.scheme == 'http':
+                port = 80
+            elif parsed.scheme == 'https':
+                port = 443
+
+            server = service.orm.server = orm.Server(
+                proto=parsed.scheme,
+                ip=parsed.hostname,
+                port=port,
+                cookie_name=service.oauth_client_id,
+                base_url=service.prefix,
             )
+            self.db.add(server)
+        else:
+            service.orm.server = None
 
-            traits = service.traits(input=True)
-            for key, value in spec.items():
-                if key not in traits:
-                    raise AttributeError("No such service field: %s" % key)
-                setattr(service, key, value)
-
-            if service.api_token:
-                self.service_tokens[service.api_token] = service.name
-            elif service.managed:
-                # generate new token
-                # TODO: revoke old tokens?
-                service.api_token = service.orm.new_api_token(
-                    note="generated at startup"
-                )
-
-            if service.url:
-                parsed = urlparse(service.url)
-                if parsed.port is not None:
-                    port = parsed.port
-                elif parsed.scheme == 'http':
-                    port = 80
-                elif parsed.scheme == 'https':
-                    port = 443
-                server = service.orm.server = orm.Server(
-                    proto=parsed.scheme,
-                    ip=parsed.hostname,
-                    port=port,
-                    cookie_name=service.oauth_client_id,
-                    base_url=service.prefix,
-                )
-                self.db.add(server)
-
-            else:
-                service.orm.server = None
-
-            if service.oauth_available:
-                allowed_scopes = set()
-                if service.oauth_client_allowed_scopes:
-                    allowed_scopes.update(service.oauth_client_allowed_scopes)
-                if service.oauth_roles:
-                    if not allowed_scopes:
-                        # DEPRECATED? It's still convenient and valid,
-                        # e.g. 'admin'
-                        allowed_roles = list(
-                            self.db.query(orm.Role).filter(
-                                orm.Role.name.in_(service.oauth_roles)
-                            )
+        if service.oauth_available:
+            allowed_scopes = set()
+            if service.oauth_client_allowed_scopes:
+                allowed_scopes.update(service.oauth_client_allowed_scopes)
+            if service.oauth_roles:
+                if not allowed_scopes:
+                    # DEPRECATED? It's still convenient and valid,
+                    # e.g. 'admin'
+                    allowed_roles = list(
+                        self.db.query(orm.Role).filter(
+                            orm.Role.name.in_(service.oauth_roles)
                         )
-                        allowed_scopes.update(roles.roles_to_scopes(allowed_roles))
-                    else:
-                        self.log.warning(
-                            f"Ignoring oauth_roles for {service.name}: {service.oauth_roles},"
-                            f" using oauth_client_allowed_scopes={allowed_scopes}."
-                        )
-                oauth_client = self.oauth_provider.add_client(
-                    client_id=service.oauth_client_id,
-                    client_secret=service.api_token,
-                    redirect_uri=service.oauth_redirect_uri,
-                    description="JupyterHub service %s" % service.name,
-                )
-                service.orm.oauth_client = oauth_client
-                # add access-scopes, derived from OAuthClient itself
-                allowed_scopes.update(scopes.access_scopes(oauth_client))
-                oauth_client.allowed_scopes = sorted(allowed_scopes)
+                    )
+                    allowed_scopes.update(roles.roles_to_scopes(allowed_roles))
+                else:
+                    self.log.warning(
+                        f"Ignoring oauth_roles for {service.name}: {service.oauth_roles},"
+                        f" using oauth_client_allowed_scopes={allowed_scopes}."
+                    )
+            oauth_client = self.oauth_provider.add_client(
+                client_id=service.oauth_client_id,
+                client_secret=service.api_token,
+                redirect_uri=service.oauth_redirect_uri,
+                description="JupyterHub service %s" % service.name,
+            )
+            service.orm.oauth_client = oauth_client
+            # add access-scopes, derived from OAuthClient itself
+            allowed_scopes.update(scopes.access_scopes(oauth_client))
+            oauth_client.allowed_scopes = sorted(allowed_scopes)
+        else:
+            if service.oauth_client:
+                self.db.delete(service.oauth_client)
+
+        self._service_map[name] = service
+
+        return service
+
+    def init_services(self):
+        self._service_map.clear()
+        for spec in self.services:
+            self.service_from_spec(spec, from_config=True)
+
+        for service_orm in self.db.query(orm.Service):
+            if service_orm.from_config:
+                # delete config-based services from db
+                # that are not in current config file:
+                if service_orm.name not in self._service_map:
+                    self.db.delete(service_orm)
             else:
-                if service.oauth_client:
-                    self.db.delete(service.oauth_client)
+                self.service_from_orm(service_orm)
 
-            self._service_map[name] = service
-
-        # delete services from db not in service config:
-        for service in self.db.query(orm.Service):
-            if service.name not in self._service_map:
-                self.db.delete(service)
         self.db.commit()
 
     async def check_services_health(self):
         """Check connectivity of all services"""
         for name, service in self._service_map.items():
             if not service.url:
+                # no URL to check, nothing to do
                 continue
             try:
                 await Server.from_orm(service.orm.server).wait_up(timeout=1, http=True)
@@ -2591,19 +2726,22 @@ class JupyterHub(Application):
         # Server objects can be associated with either a Spawner or a Service,
         # we are only interested in the ones associated with a Spawner
         check_futures = []
-        for orm_server in db.query(orm.Server):
-            orm_spawner = orm_server.spawner
-            if not orm_spawner:
-                # check for orphaned Server rows
-                # this shouldn't happen if we've got our sqlachemy right
-                if not orm_server.service:
-                    self.log.warning("deleting orphaned server %s", orm_server)
-                    self.db.delete(orm_server)
-                    self.db.commit()
-                continue
+
+        for orm_user, orm_spawner in (
+            self.db.query(orm.User, orm.Spawner)
+            # join filters out any Users with no Spawners
+            .join(orm.Spawner, orm.User._orm_spawners)
+            # this gets Users with *any* active server
+            .filter(orm.Spawner.server != None)
+            # pre-load relationships to avoid O(N active servers) queries
+            .options(
+                joinedload(orm.User._orm_spawners),
+                joinedload(orm.Spawner.server),
+            )
+        ):
             # instantiate Spawner wrapper and check if it's still alive
             # spawner should be running
-            user = self.users[orm_spawner.user]
+            user = self.users[orm_user]
             spawner = user.spawners[orm_spawner.name]
             self.log.debug("Loading state for %s from db", spawner._log_name)
             # signal that check is pending to avoid race conditions
@@ -2652,7 +2790,6 @@ class JupyterHub(Application):
         for user in self.users.values():
             for spawner in user.spawners.values():
                 oauth_client_ids.add(spawner.oauth_client_id)
-
         for i, oauth_client in enumerate(self.db.query(orm.OAuthClient)):
             if oauth_client.identifier not in oauth_client_ids:
                 self.log.warning("Deleting OAuth client %s", oauth_client.identifier)
@@ -3094,6 +3231,72 @@ class JupyterHub(Application):
 
         await self.proxy.check_routes(self.users, self._service_map, routes)
 
+    async def start_service(
+        self,
+        service_name: str,
+        service: Service,
+        ssl_context: Optional[ssl.SSLContext] = None,
+    ) -> bool:
+        """Start a managed service or poll for external service
+
+        Args:
+            service_name (str): Name of the service.
+            service (Service): The service object.
+
+        Returns:
+            boolean: Returns `True` if the service is started successfully,
+            returns `False` otherwise.
+        """
+        if ssl_context is None:
+            ssl_context = make_ssl_context(
+                self.internal_ssl_key,
+                self.internal_ssl_cert,
+                cafile=self.internal_ssl_ca,
+                purpose=ssl.Purpose.CLIENT_AUTH,
+            )
+
+        msg = f'{service_name} at {service.url}' if service.url else service_name
+        if service.managed:
+            self.log.info("Starting managed service %s", msg)
+            try:
+                await service.start()
+            except Exception as e:
+                self.log.critical(
+                    "Failed to start service %s", service_name, exc_info=True
+                )
+                return False
+        else:
+            self.log.info("Adding external service %s", msg)
+
+        if service.url:
+            tries = 10 if service.managed else 1
+            for i in range(tries):
+                try:
+                    await Server.from_orm(service.orm.server).wait_up(
+                        http=True, timeout=1, ssl_context=ssl_context
+                    )
+                except AnyTimeoutError:
+                    if service.managed:
+                        status = await service.spawner.poll()
+                        if status is not None:
+                            self.log.error(
+                                "Service %s exited with status %s",
+                                service_name,
+                                status,
+                            )
+                            return False
+                else:
+                    return True
+            else:
+                self.log.error(
+                    "Cannot connect to %s service %s at %s. Is it running?",
+                    service.kind,
+                    service_name,
+                    service.url,
+                )
+                return False
+        return True
+
     async def start(self):
         """Start the whole thing"""
         self.io_loop = loop = IOLoop.current()
@@ -3179,55 +3382,29 @@ class JupyterHub(Application):
 
         # start the service(s)
         for service_name, service in self._service_map.items():
-            msg = f'{service_name} at {service.url}' if service.url else service_name
-            if service.managed:
-                self.log.info("Starting managed service %s", msg)
-                try:
-                    await service.start()
-                except Exception as e:
-                    self.log.critical(
-                        "Failed to start service %s", service_name, exc_info=True
-                    )
+            service_ready = await self.start_service(service_name, service, ssl_context)
+            if not service_ready:
+                if service.from_config:
+                    # Stop the application if a config-based service failed to start.
                     self.exit(1)
-            else:
-                self.log.info("Adding external service %s", msg)
-
-            if service.url:
-                tries = 10 if service.managed else 1
-                for i in range(tries):
-                    try:
-                        await Server.from_orm(service.orm.server).wait_up(
-                            http=True, timeout=1, ssl_context=ssl_context
-                        )
-                    except AnyTimeoutError:
-                        if service.managed:
-                            status = await service.spawner.poll()
-                            if status is not None:
-                                self.log.error(
-                                    "Service %s exited with status %s",
-                                    service_name,
-                                    status,
-                                )
-                                break
-                    else:
-                        break
                 else:
+                    # Only warn for database-based service, so that admin can connect
+                    # to hub to remove the service.
                     self.log.error(
-                        "Cannot connect to %s service %s at %s. Is it running?",
-                        service.kind,
+                        "Failed to reach externally managed service %s",
                         service_name,
-                        service.url,
+                        exc_info=True,
                     )
 
         await self.proxy.check_routes(self.users, self._service_map)
 
-        if self.service_check_interval and any(
-            s.url for s in self._service_map.values()
-        ):
-            pc = PeriodicCallback(
+        # Check services health
+        self._check_services_health_callback = None
+        if self.service_check_interval:
+            self._check_services_health_callback = PeriodicCallback(
                 self.check_services_health, 1e3 * self.service_check_interval
             )
-            pc.start()
+            self._check_services_health_callback.start()
 
         if self.last_activity_interval:
             pc = PeriodicCallback(

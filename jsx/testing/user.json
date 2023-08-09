@@ -1,0 +1,142 @@
+{
+  "items": [
+    {
+      "last_activity": "2022-08-04T23:01:40.770831Z",
+      "groups": [],
+      "created": "2022-08-04T23:01:15.074531Z",
+      "roles": ["user"],
+      "auth_state": null,
+      "pending": null,
+      "kind": "user",
+      "server": null,
+      "name": "userA",
+      "servers": {
+        "": {
+          "name": "",
+          "last_activity": "2022-08-04T23:01:40.770831Z",
+          "started": null,
+          "pending": null,
+          "ready": false,
+          "stopped": true,
+          "url": "/user/usera/",
+          "user_options": null,
+          "progress_url": "/hub/api/users/usera/server/progress",
+          "state": {}
+        }
+      }
+    },
+    {
+      "last_activity": "2022-08-05T16:43:44.442068Z",
+      "groups": [],
+      "admin": true,
+      "created": "2022-08-04T23:01:27.819148Z",
+      "roles": ["user", "admin"],
+      "auth_state": null,
+      "pending": null,
+      "kind": "user",
+      "server": null,
+      "name": "userB",
+      "servers": {
+        "": {
+          "name": "",
+          "last_activity": "2022-08-05T16:43:44.442068Z",
+          "started": null,
+          "pending": null,
+          "ready": true,
+          "stopped": false,
+          "url": "/user/userb/",
+          "user_options": null,
+          "progress_url": "/hub/api/users/userb/server/progress",
+          "state": {}
+        }
+      }
+    },
+    {
+      "last_activity": "2022-08-05T16:43:44.442068Z",
+      "groups": [],
+      "created": "2022-08-04T23:01:27.819148Z",
+      "roles": ["user"],
+      "auth_state": null,
+      "pending": "spawn",
+      "kind": "user",
+      "server": null,
+      "name": "userC",
+      "servers": {
+        "": {
+          "last_activity": "2023-06-11T16:22:02.228468Z",
+          "name": "",
+          "pending": "spawn",
+          "progress_url": "/hub/api/users/userc/server/progress",
+          "ready": false,
+          "started": "2023-06-11T16:22:02.228468Z",
+          "state": { "pid": 68137 },
+          "stopped": false,
+          "url": "/user/userc/",
+          "user_options": {}
+        }
+      }
+    },
+    {
+      "last_activity": "2023-06-11T15:19:49.786502Z",
+      "groups": [],
+      "created": "2023-05-14T09:05:48.996574Z",
+      "roles": ["user"],
+      "auth_state": null,
+      "pending": null,
+      "kind": "user",
+      "server": "/user/userD/",
+      "name": "userD",
+      "servers": {
+        "": {
+          "name": "",
+          "last_activity": "2023-06-11T13:39:27.017000Z",
+          "started": "2023-06-11T13:39:24.679829Z",
+          "pending": null,
+          "ready": true,
+          "stopped": false,
+          "url": "/user/userd/",
+          "user_options": {},
+          "progress_url": "/hub/api/users/userd/server/progress",
+          "state": { "pid": 41517 }
+        },
+        "serverA": {
+          "name": "serverA",
+          "last_activity": "2023-05-14T13:59:06.931642Z",
+          "started": null,
+          "pending": null,
+          "ready": false,
+          "stopped": true,
+          "url": "/user/userd/servera/",
+          "user_options": null,
+          "progress_url": "/hub/api/users/userd/servers/servera/progress",
+          "state": {}
+        },
+        "serverB": {
+          "last_activity": "2023-06-11T16:22:02.228468Z",
+          "name": "serverB",
+          "pending": "spawn",
+          "progress_url": "/hub/api/users/userb/servers/serverb/progress",
+          "ready": false,
+          "started": "2023-06-11T16:22:02.228468Z",
+          "state": { "pid": 68137 },
+          "stopped": false,
+          "url": "/user/userd/serverb/",
+          "user_options": {}
+        },
+        "serverC": {
+          "name": "serverC",
+          "last_activity": "2023-05-14T13:59:06.931642Z",
+          "started": null,
+          "pending": null,
+          "ready": true,
+          "stopped": false,
+          "url": "/user/userd/serverc/",
+          "user_options": null,
+          "progress_url": "/hub/api/users/userd/servers/serverc/progress",
+          "state": {}
+        }
+      }
+    }
+  ],
+  "_pagination": { "offset": 0, "limit": 50, "total": 4, "next": null }
+}

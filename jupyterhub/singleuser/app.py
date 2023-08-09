@@ -6,7 +6,7 @@
 .. versionchanged:: 2.0
 
     Default app changed to launch `jupyter labhub`.
-    Use JUPYTERHUB_SINGLEUSER_APP=notebook.notebookapp.NotebookApp for the legacy 'classic' notebook server.
+    Use JUPYTERHUB_SINGLEUSER_APP='notebook' for the legacy 'classic' notebook server (requires notebook<7).
 """
 import os
 
@@ -27,7 +27,25 @@ JUPYTERHUB_SINGLEUSER_APP = _app_shortcuts.get(
     JUPYTERHUB_SINGLEUSER_APP.replace("_", "-"), JUPYTERHUB_SINGLEUSER_APP
 )
 
+
 if JUPYTERHUB_SINGLEUSER_APP:
+    if JUPYTERHUB_SINGLEUSER_APP in {"notebook", _app_shortcuts["notebook"]}:
+        # better error for notebook v7, which uses jupyter-server
+        # when the legacy notebook server is requested
+        try:
+            from notebook import __version__
+        except ImportError:
+            # will raise later
+            pass
+        else:
+            # check if this failed because of notebook v7
+            _notebook_major_version = int(__version__.split(".", 1)[0])
+            if _notebook_major_version >= 7:
+                raise ImportError(
+                    f"JUPYTERHUB_SINGLEUSER_APP={JUPYTERHUB_SINGLEUSER_APP} is not valid with notebook>=7 (have notebook=={__version__}).\n"
+                    f"Leave $JUPYTERHUB_SINGLEUSER_APP unspecified (or use the default JUPYTERHUB_SINGLEUSER_APP=jupyter-server), "
+                    'and set `c.Spawner.default_url = "/tree"` to make notebook v7 the default UI.'
+                )
     App = import_item(JUPYTERHUB_SINGLEUSER_APP)
 else:
     App = None

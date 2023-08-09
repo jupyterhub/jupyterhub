@@ -421,6 +421,23 @@ class APIHandler(BaseHandler):
 
     _group_model_types = {'name': str, 'users': list, 'roles': list}
 
+    _service_model_types = {
+        'name': str,
+        'admin': bool,
+        'url': str,
+        'oauth_client_allowed_scopes': list,
+        'api_token': str,
+        'info': dict,
+        'display': bool,
+        'oauth_no_confirm': bool,
+        'command': list,
+        'cwd': str,
+        'environment': dict,
+        'user': str,
+        'oauth_client_id': str,
+        'oauth_redirect_uri': str,
+    }
+
     def _check_model(self, model, model_types, name):
         """Check a model provided by a REST API request
 
@@ -458,6 +475,15 @@ class APIHandler(BaseHandler):
                 raise web.HTTPError(
                     400, ("group names must be str, not %r", type(groupname))
                 )
+
+    def _check_service_model(self, model):
+        """Check a request-provided service model from a REST API"""
+        self._check_model(model, self._service_model_types, 'service')
+        service_name = model.get('name')
+        if not isinstance(service_name, str):
+            raise web.HTTPError(
+                400, ("Service name must be str, not %r", type(service_name))
+            )
 
     def get_api_pagination(self):
         default_limit = self.settings["api_page_default_limit"]

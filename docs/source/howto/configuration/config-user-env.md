@@ -45,7 +45,7 @@ additional packages.
 
 ## Configuring Jupyter and IPython
 
-[Jupyter](https://jupyter-notebook.readthedocs.io/en/stable/config_overview.html)
+[Jupyter](https://jupyter-notebook.readthedocs.io/en/stable/configuring/config_overview.html)
 and [IPython](https://ipython.readthedocs.io/en/stable/development/config.html)
 have their own configuration systems.
 
@@ -212,12 +212,30 @@ By default, the single-user server launches JupyterLab,
 which is based on [Jupyter Server][].
 
 This is the default server when running JupyterHub ≥ 2.0.
-To switch to using the legacy Jupyter Notebook server, you can set the `JUPYTERHUB_SINGLEUSER_APP` environment variable
+To switch to using the legacy Jupyter Notebook server (notebook < 7.0), you can set the `JUPYTERHUB_SINGLEUSER_APP` environment variable
 (in the single-user environment) to:
 
 ```bash
 export JUPYTERHUB_SINGLEUSER_APP='notebook.notebookapp.NotebookApp'
 ```
+
+:::{note}
+
+```
+JUPYTERHUB_SINGLEUSER_APP='notebook.notebookapp.NotebookApp'
+```
+
+is only valid for notebook < 7. notebook v7 is based on jupyter-server,
+and the default jupyter-server application must be used.
+Selecting the new notebook UI is no longer a matter of selecting the server app to launch,
+but only the default URL for users to visit.
+To use notebook v7 with JupyterHub, leave the default singleuser app config alone (or specify `JUPYTERHUB_SINGLEUSER_APP=jupyter-server`) and set the default _URL_ for user servers:
+
+```python
+c.Spawner.default_url = '/tree/'
+```
+
+:::
 
 [jupyter server]: https://jupyter-server.readthedocs.io
 [jupyter notebook]: https://jupyter-notebook.readthedocs.io
