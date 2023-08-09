@@ -267,7 +267,7 @@ async def test_notebook_dir(
     elif notebook_dir == "~/sub":
         assert 'subfile.txt' in root_contents
     else:
-        raise ValueError(f"No contents check for {notebook_dir=}")
+        raise ValueError(f"No contents check for {notebook_dir}")
 
 
 def test_help_output():
