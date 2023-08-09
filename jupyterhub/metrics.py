@@ -6,6 +6,8 @@ conventions for metrics & labels. We generally prefer naming them
 `<noun>_<verb>_<type_suffix>`. So a histogram that's tracking
 the duration (in seconds) of servers spawning would be called
 server_spawn_duration_seconds.
+A namespace prefix is always added, so this metric is accessed as
+`jupyterhub_server_spawn_duration_seconds` by default.
 
 We also create an Enum for each 'status' type label in every metric
 we collect. This is to make sure that the metrics exist regardless
