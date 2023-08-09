@@ -220,7 +220,7 @@ def test_cookie_secret_env(tmpdir, request):
     assert not os.path.exists(hub.cookie_secret_file)
 
 
-def test_cookie_secret_string_():
+def test_cookie_secret_string():
     cfg = Config()
 
     cfg.JupyterHub.cookie_secret = "not hex"
@@ -270,18 +270,41 @@ async def test_load_groups(tmpdir, request):
     )
 
 
-async def test_resume_spawners(tmpdir, request):
-    if not os.getenv('JUPYTERHUB_TEST_DB_URL'):
-        p = patch.dict(
-            os.environ,
-            {
-                'JUPYTERHUB_TEST_DB_URL': 'sqlite:///%s'
-                % tmpdir.join('jupyterhub.sqlite')
-            },
-        )
-        p.start()
-        request.addfinalizer(p.stop)
+@pytest.fixture
+def persist_db(tmpdir):
+    """ensure db will persist (overrides default sqlite://:memory:)"""
+    if os.getenv('JUPYTERHUB_TEST_DB_URL'):
+        # already using a db, no need
+        yield
+        return
+    with patch.dict(
+        os.environ,
+        {'JUPYTERHUB_TEST_DB_URL': f"sqlite:///{tmpdir.join('jupyterhub.sqlite')}"},
+    ):
+        yield
 
+
+@pytest.fixture
+def new_hub(request, tmpdir, persist_db):
+    """Fixture to launch a new hub for testing"""
+
+    async def new_hub():
+        kwargs = {}
+        ssl_enabled = getattr(request.module, "ssl_enabled", False)
+        if ssl_enabled:
+            kwargs['internal_certs_location'] = str(tmpdir)
+        app = MockHub(test_clean_db=False, **kwargs)
+        app.config.ConfigurableHTTPProxy.should_start = False
+        app.config.ConfigurableHTTPProxy.auth_token = 'unused'
+        request.addfinalizer(app.stop)
+        await app.initialize([])
+
+        return app
+
+    return new_hub
+
+
+async def test_resume_spawners(tmpdir, request, new_hub):
     async def new_hub():
         kwargs = {}
         ssl_enabled = getattr(request.module, "ssl_enabled", False)
@@ -473,3 +496,42 @@ async def test_user_creation(tmpdir, request):
         "in-group",
         "in-role",
     }
+
+
+async def test_recreate_service_from_database(
+    request, new_hub, service_name, service_data
+):
+    # create a hub and add a service (not from config)
+    app = await new_hub()
+    app.service_from_spec(service_data, from_config=False)
+    app.stop()
+
+    # new hub, should load service from db
+    app = await new_hub()
+    assert service_name in app._service_map
+
+    # verify keys
+    service = app._service_map[service_name]
+    for key, value in service_data.items():
+        if key in {'api_token'}:
+            # skip some keys
+            continue
+        assert getattr(service, key) == value
+
+    assert (
+        service_data['oauth_client_id'] in app.tornado_settings['oauth_no_confirm_list']
+    )
+    oauth_client = (
+        app.db.query(orm.OAuthClient)
+        .filter_by(identifier=service_data['oauth_client_id'])
+        .first()
+    )
+    assert oauth_client.redirect_uri == service_data['oauth_redirect_uri']
+
+    # delete service from db, start one more
+    app.db.delete(service.orm)
+    app.db.commit()
+
+    # start one more, service should be gone
+    app = await new_hub()
+    assert service_name not in app._service_map

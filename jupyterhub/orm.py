@@ -394,6 +394,26 @@ class Service(Base):
         'Role', secondary='service_role_map', back_populates='services'
     )
 
+    url = Column(Unicode(2047), nullable=True)
+
+    oauth_client_allowed_scopes = Column(JSONList, nullable=True)
+
+    info = Column(JSONDict, nullable=True)
+
+    display = Column(Boolean, nullable=True)
+
+    oauth_no_confirm = Column(Boolean, nullable=True)
+
+    command = Column(JSONList, nullable=True)
+
+    cwd = Column(Unicode(4095), nullable=True)
+
+    environment = Column(JSONDict, nullable=True)
+
+    user = Column(Unicode(255), nullable=True)
+
+    from_config = Column(Boolean, default=True)
+
     api_tokens = relationship(
         "APIToken", back_populates="service", cascade="all, delete-orphan"
     )
@@ -416,6 +436,7 @@ class Service(Base):
             ondelete='SET NULL',
         ),
     )
+
     oauth_client = relationship(
         'OAuthClient',
         back_populates="service",

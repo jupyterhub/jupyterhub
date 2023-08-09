@@ -34,6 +34,7 @@ def get_default_roles():
                 'admin-ui',
                 'admin:users',
                 'admin:servers',
+                'admin:services',
                 'tokens',
                 'admin:groups',
                 'list:services',
