@@ -236,11 +236,13 @@ class BaseHandler(RequestHandler):
     def check_xsrf_cookie(self):
         try:
             return super().check_xsrf_cookie()
-        except Exception as e:
-            # ensure _juptyerhub_user is defined on rejected requests
+        except web.HTTPError as e:
+            # ensure _jupyterhub_user is defined on rejected requests
             if not hasattr(self, "_jupyterhub_user"):
                 self._jupyterhub_user = None
             self._resolve_roles_and_scopes()
+            # rewrite message because we use this on methods other than POST
+            e.log_message = e.log_message.replace("POST", self.request.method)
             raise
 
     @property

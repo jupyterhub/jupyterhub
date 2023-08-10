@@ -89,6 +89,11 @@ class APIHandler(BaseHandler):
         if not hasattr(self, '_jupyterhub_user'):
             # called too early to check if we're token-authenticated
             return
+        if self._jupyterhub_user is None and 'Origin' not in self.request.headers:
+            # don't raise xsrf if auth failed
+            # don't apply this shortcut to actual cross-site requests, which have an 'Origin' header,
+            # which would reveal if there are credentials present
+            return
         if getattr(self, '_token_authenticated', False):
             # if token-authenticated, ignore XSRF
             return
