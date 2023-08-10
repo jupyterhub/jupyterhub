@@ -1840,7 +1840,7 @@ async def test_group_get(app):
     app.db.commit()
     group = orm.Group.find(app.db, name='alphaflight')
     user = add_user(app.db, app=app, name='sasquatch')
-    group.users.append(user)
+    group.users.append(user.orm_user)
     app.db.commit()
 
     r = await api_request(app, 'groups/runaways')
@@ -1998,7 +1998,7 @@ async def test_group_properties(app, group):
 
 @mark.group
 async def test_auth_managed_groups(request, app, group, user):
-    group.users.append(user)
+    group.users.append(user.orm_user)
     app.db.commit()
     app.authenticator.manage_groups = True
     request.addfinalizer(lambda: setattr(app.authenticator, "manage_groups", False))

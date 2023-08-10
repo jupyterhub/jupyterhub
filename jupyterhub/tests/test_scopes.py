@@ -383,7 +383,7 @@ async def test_user_filter_with_group(app, create_user_with_scopes):
         group = orm.Group(name=group_name)
         app.db.add(group)
     for user in {user1, user2}:
-        group.users.append(user)
+        group.users.append(user.orm_user)
     app.db.commit()
 
     r = await api_request(app, 'users', headers=auth_header(app.db, user1.name))
@@ -548,7 +548,7 @@ async def test_server_state_access(
         if not group:
             group = orm.Group(name=group_name)
             app.db.add(group)
-        group.users.append(user)
+        group.users.append(user.orm_user)
         app.db.commit()
         server_names = ['bianca', 'terry']
         for server_name in server_names:
@@ -974,7 +974,7 @@ async def test_list_users_filter(
     # create users:
     for i in (1, 2):
         user = add_user(app.db, app, name=f'in-{i}')
-        group.users.append(user)
+        group.users.append(user.orm_user)
         add_user(app.db, app, name=f'out-{i}')
     app.db.commit()
 

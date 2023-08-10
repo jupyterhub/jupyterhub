@@ -220,15 +220,17 @@ async def test_spawn_other_user(
     cookies = await app.login_user(username)
     requester = app.users[username]
     name = user.name
+    assert username != user.name
 
     if has_access:
         if has_access == "group":
-            group.users.append(user)
+            group.users.append(user.orm_user)
             app.db.commit()
             scopes = [
                 f"access:servers!group={group.name}",
                 f"servers!group={group.name}",
             ]
+            assert group in user.orm_user.groups
         elif has_access == "all":
             scopes = ["access:servers", "servers"]
         elif has_access == "user":
@@ -305,7 +307,7 @@ async def test_spawn_page_access(
     requester = app.users[username]
     if has_access:
         if has_access == "group":
-            group.users.append(user)
+            group.users.append(user.orm_user)
             app.db.commit()
             scopes = [
                 f"access:servers!group={group.name}",
@@ -408,7 +410,7 @@ async def test_spawn_form_other_user(
     requester = app.users[username]
     if has_access:
         if has_access == "group":
-            group.users.append(user)
+            group.users.append(user.orm_user)
             app.db.commit()
             scopes = [
                 f"access:servers!group={group.name}",
@@ -635,7 +637,7 @@ async def test_other_user_url(app, username, user, group, create_temp_role, has_
     other_user_url = f"/user/{other_user.name}"
     if has_access:
         if has_access == "group":
-            group.users.append(other_user)
+            group.users.append(other_user.orm_user)
             app.db.commit()
             scopes = [f"access:servers!group={group.name}"]
         elif has_access == "all":

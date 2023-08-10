@@ -31,6 +31,7 @@ from sqlalchemy.orm import (
     Session,
     declarative_base,
     interfaces,
+    joinedload,
     object_session,
     relationship,
     sessionmaker,
@@ -219,7 +220,9 @@ class Group(Base):
     name = Column(Unicode(255), unique=True)
     users = relationship('User', secondary='user_group_map', back_populates='groups')
     properties = Column(JSONDict, default={})
-    roles = relationship('Role', secondary='group_role_map', back_populates='groups')
+    roles = relationship(
+        'Role', secondary='group_role_map', back_populates='groups', lazy="selectin"
+    )
 
     def __repr__(self):
         return f"<{self.__class__.__name__} {self.name}>"
@@ -259,7 +262,12 @@ class User(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(Unicode(255), unique=True)
 
-    roles = relationship('Role', secondary='user_role_map', back_populates='users')
+    roles = relationship(
+        'Role',
+        secondary='user_role_map',
+        back_populates='users',
+        lazy="selectin",
+    )
 
     _orm_spawners = relationship(
         "Spawner", back_populates="user", cascade="all, delete-orphan"
@@ -280,6 +288,7 @@ class User(Base):
         "Group",
         secondary='user_group_map',
         back_populates="users",
+        lazy="selectin",
     )
     oauth_codes = relationship(
         "OAuthCode", back_populates="user", cascade="all, delete-orphan"
@@ -328,6 +337,7 @@ class Spawner(Base):
     server = relationship(
         Server,
         back_populates="spawner",
+        lazy="joined",
         single_parent=True,
         cascade="all, delete-orphan",
     )
@@ -391,7 +401,7 @@ class Service(Base):
     name = Column(Unicode(255), unique=True)
     admin = Column(Boolean(create_constraint=False), default=False)
     roles = relationship(
-        'Role', secondary='service_role_map', back_populates='services'
+        'Role', secondary='service_role_map', back_populates='services', lazy="selectin"
     )
 
     url = Column(Unicode(2047), nullable=True)
@@ -578,7 +588,10 @@ class Hashed(Expiring):
         `kind='user'` only returns API tokens for users
         `kind='service'` only returns API tokens for services
         """
-        prefix_match = cls.find_prefix(db, token)
+        prefix_match = cls.find_prefix(db, token).options(
+            joinedload(cls.user), joinedload(cls.service)
+        )
+
         for orm_token in prefix_match:
             if orm_token.match(token):
                 return orm_token
@@ -823,14 +836,20 @@ class OAuthCode(Expiring, Base):
     client_id = Column(
         Unicode(255), ForeignKey('oauth_clients.identifier', ondelete='CASCADE')
     )
-    client = relationship("OAuthClient", back_populates="codes")
+    client = relationship(
+        "OAuthClient",
+        back_populates="codes",
+    )
     code = Column(Unicode(36))
     expires_at = Column(Integer)
     redirect_uri = Column(Unicode(1023))
     session_id = Column(Unicode(255))
     # state = Column(Unicode(1023))
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'))
-    user = relationship("User", back_populates="oauth_codes")
+    user = relationship(
+        "User",
+        back_populates="oauth_codes",
+    )
 
     scopes = Column(JSONList, default=[])
 
@@ -844,6 +863,10 @@ class OAuthCode(Expiring, Base):
             db.query(cls)
             .filter(cls.code == code)
             .filter(or_(cls.expires_at == None, cls.expires_at >= cls.now()))
+            .options(
+                # load user with the code
+                joinedload(cls.user, innerjoin=True),
+            )
             .first()
         )
 
@@ -865,8 +888,16 @@ class OAuthClient(Base):
     def client_id(self):
         return self.identifier
 
-    spawner = relationship("Spawner", back_populates="oauth_client", uselist=False)
-    service = relationship("Service", back_populates="oauth_client", uselist=False)
+    spawner = relationship(
+        "Spawner",
+        back_populates="oauth_client",
+        uselist=False,
+    )
+    service = relationship(
+        "Service",
+        back_populates="oauth_client",
+        uselist=False,
+    )
     access_tokens = relationship(
         APIToken, back_populates='oauth_client', cascade='all, delete-orphan'
     )

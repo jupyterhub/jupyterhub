@@ -9,6 +9,7 @@ from datetime import datetime, timedelta, timezone
 from async_generator import aclosing
 from dateutil.parser import parse as parse_date
 from sqlalchemy import func, or_
+from sqlalchemy.orm import joinedload, selectinload
 from tornado import web
 from tornado.iostream import StreamClosedError
 
@@ -90,6 +91,10 @@ class UserListAPIHandler(APIHandler):
         # post_filter
         post_filter = None
 
+        # starting query
+        # fetch users and groups, which will be used for filters
+        query = self.db.query(orm.User).outerjoin(orm.Group, orm.User.groups)
+
         if state_filter in {"active", "ready"}:
             # only get users with active servers
             # an 'active' Spawner has a server record in the database
@@ -97,9 +102,9 @@ class UserListAPIHandler(APIHandler):
             # it may still be in a pending start/stop state.
             # join filters out users with no Spawners
             query = (
-                self.db.query(orm.User)
+                query
                 # join filters out any Users with no Spawners
-                .join(orm.Spawner)
+                .join(orm.Spawner, orm.User._orm_spawners)
                 # this implicitly gets Users with *any* active server
                 .filter(orm.Spawner.server != None)
             )
@@ -114,9 +119,8 @@ class UserListAPIHandler(APIHandler):
             # this is the complement to the above query.
             # how expensive is this with lots of servers?
             query = (
-                self.db.query(orm.User)
-                .outerjoin(orm.Spawner)
-                .outerjoin(orm.Server)
+                query.outerjoin(orm.Spawner, orm.User._orm_spawners)
+                .outerjoin(orm.Server, orm.Spawner.server)
                 .group_by(orm.User.id)
                 .having(func.count(orm.Server.id) == 0)
             )
@@ -124,7 +128,16 @@ class UserListAPIHandler(APIHandler):
             raise web.HTTPError(400, "Unrecognized state filter: %r" % state_filter)
         else:
             # no filter, return all users
-            query = self.db.query(orm.User)
+            query = query.outerjoin(orm.Spawner, orm.User._orm_spawners).outerjoin(
+                orm.Server, orm.Spawner.server
+            )
+
+        # apply eager load options
+        query = query.options(
+            selectinload(orm.User.roles),
+            selectinload(orm.User.groups),
+            joinedload(orm.User._orm_spawners),
+        )
 
         sub_scope = self.parsed_scopes['list:users']
         if sub_scope != scopes.Scope.ALL:
