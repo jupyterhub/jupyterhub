@@ -2,31 +2,34 @@ from docker import APIClient
 from docker.tls import TLSConfig
 from docker.utils import kwargs_from_env
 from dockerspawner import DockerSpawner
-from jupyterhub.auth import DummyAuthenticator
 from traitlets import Dict
+
+from jupyterhub.auth import DummyAuthenticator
 
 tls_config_by_host = {
     'a.example.com': {
         'base_url': 'https://a.example.com:2376',
         'tls_config': {
             'ca_cert': '/certs/a.example.com/ca.pem',
-            'client_cert': ('/certs/a.example.com/cert.pem',
-                            '/certs/a.example.com/key.pem',)
-        }
+            'client_cert': (
+                '/certs/a.example.com/cert.pem',
+                '/certs/a.example.com/key.pem',
+            ),
+        },
     },
-    'b.example.com': {
-        'base_url': 'tcp://b.example.com:2375'
-    },
+    'b.example.com': {'base_url': 'tcp://b.example.com:2375'},
     'c.example.com': {
         'base_url': 'https://c.example.com:2376',
         'tls_config': {
             'ca_cert': '/certs/c.example.com/ca.pem',
-            'client_cert': ('/certs/c.example.com/cert.pem',
-                            '/certs/c.example.com/key.pem',),
+            'client_cert': (
+                '/certs/c.example.com/cert.pem',
+                '/certs/c.example.com/key.pem',
+            ),
             'assert_hostname': False,
-            'verify': False
-        }
-    }
+            'verify': False,
+        },
+    },
 }
 
 
@@ -57,8 +60,11 @@ class MultiHostDockerSpawner(DockerSpawner):
 
     @property
     def client(self):
-        tls_config = [v['tls_config'] for _, v in self.tls_config_by_host.items()
-                      if v['base_url'] == self.client_kwargs.get('base_url') and 'tls_config' in v]
+        tls_config = [
+            v['tls_config']
+            for _, v in self.tls_config_by_host.items()
+            if v['base_url'] == self.client_kwargs.get('base_url') and 'tls_config' in v
+        ]
         kwargs = {"version": "auto"}
         if tls_config:
             kwargs["tls"] = TLSConfig(**tls_config[0])
@@ -70,8 +76,8 @@ class MultiHostDockerSpawner(DockerSpawner):
 c = get_config()
 
 c.JupyterHub.hub_ip = '0.0.0.0'
-c.JupyterHub.hub_connect_ip = '192.168.0.10' # Your jupyterhub public ip here.
-                                             # It is used in nb container.
+c.JupyterHub.hub_connect_ip = '192.168.0.10'  # Your jupyterhub public ip here.
+# It is used in nb container.
 c.JupyterHub.authenticator_class = DummyAuthenticator
 c.JupyterHub.spawner_class = MultiHostDockerSpawner
 
