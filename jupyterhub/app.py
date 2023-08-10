@@ -2469,14 +2469,16 @@ class JupyterHub(Application):
             Service: the created service
         """
 
+        name = orm_service.name
         if self.domain:
-            domain = 'services.' + self.domain
-            parsed = urlparse(self.subdomain_host)
-            host = f'{parsed.scheme}://services.{parsed.netloc}'
+            parsed_host = urlparse(self.subdomain_host)
+            domain = self.subdomain_hook(name, self.domain, kind="service")
+            host = f"{parsed_host.scheme}://{domain}"
+            if parsed_host.port:
+                host = f"{host}:{parsed_host.port}"
         else:
             domain = host = ''
 
-        name = orm_service.name
         service = Service(
             parent=self,
             app=self,
@@ -2522,17 +2524,20 @@ class JupyterHub(Application):
             Optional[Service]: The created service
         """
 
+        if 'name' not in spec:
+            raise ValueError(f'service spec must have a name: {spec}')
+
+        name = spec['name']
+
         if self.domain:
-            domain = 'services.' + self.domain
-            parsed = urlparse(self.subdomain_host)
-            host = f'{parsed.scheme}://services.{parsed.netloc}'
+            parsed_host = urlparse(self.subdomain_host)
+            domain = self.subdomain_hook(name, self.domain, kind="service")
+            host = f"{parsed_host.scheme}://{domain}"
+            if parsed_host.port:
+                host = f"{host}:{parsed_host.port}"
         else:
             domain = host = ''
 
-        if 'name' not in spec:
-            raise ValueError('service spec must have a name: %r' % spec)
-
-        name = spec['name']
         # get/create orm
         orm_service = orm.Service.find(self.db, name=name)
         if orm_service is None:
