@@ -548,7 +548,7 @@ async def test_server_state_access(
         if not group:
             group = orm.Group(name=group_name)
             app.db.add(group)
-        group.users.append(user)
+        group.users.append(user.orm_user)
         app.db.commit()
         server_names = ['bianca', 'terry']
         for server_name in server_names:
