@@ -21,14 +21,6 @@ import "./server-dashboard.css";
 import { timeSince } from "../../util/timeSince";
 import PaginationFooter from "../PaginationFooter/PaginationFooter";
 
-const AccessServerButton = ({ url }) => (
-  <a href={url || ""}>
-    <button className="btn btn-primary btn-xs" style={{ marginRight: 20 }}>
-      Access Server
-    </button>
-  </a>
-);
-
 const RowListItem = ({ text }) => (
   <span className="server-dashboard-row-list-item">{text}</span>
 );
@@ -56,7 +48,6 @@ const ServerDashboard = (props) => {
 
   var [errorAlert, setErrorAlert] = useState(null);
   var [sortMethod, setSortMethod] = useState(null);
-  var [disabledButtons, setDisabledButtons] = useState({});
   var [collapseStates, setCollapseStates] = useState({});
 
   var user_data = useSelector((state) => state.user_data),
@@ -128,15 +119,15 @@ const ServerDashboard = (props) => {
     user_data = sortMethod(user_data);
   }
 
-  const StopServerButton = ({ serverName, userName }) => {
+  const ServerButton = ({ server, user, action, name, extraClass }) => {
     var [isDisabled, setIsDisabled] = useState(false);
     return (
       <button
-        className="btn btn-danger btn-xs stop-button"
-        disabled={isDisabled}
+        className={`btn btn-xs ${extraClass}`}
+        disabled={isDisabled || server.pending}
         onClick={() => {
           setIsDisabled(true);
-          stopServer(userName, serverName)
+          action(user.name, server.name)
             .then((res) => {
               if (res.status < 300) {
                 updateUsers(...slice)
@@ -152,103 +143,87 @@ const ServerDashboard = (props) => {
                     setErrorAlert(`Failed to update users list.`);
                   });
               } else {
-                setErrorAlert(`Failed to stop server.`);
+                setErrorAlert(`Failed to ${name.toLowerCase()}.`);
                 setIsDisabled(false);
               }
               return res;
             })
             .catch(() => {
-              setErrorAlert(`Failed to stop server.`);
+              setErrorAlert(`Failed to ${name.toLowerCase()}.`);
               setIsDisabled(false);
             });
         }}
       >
-        Stop Server
+        {name}
       </button>
     );
   };
 
-  const DeleteServerButton = ({ serverName, userName }) => {
-    if (serverName === "") {
+  const StopServerButton = ({ server, user }) => {
+    if (!server.ready) {
       return null;
     }
-    var [isDisabled, setIsDisabled] = useState(false);
+    return ServerButton({
+      server,
+      user,
+      action: stopServer,
+      name: "Stop Server",
+      extraClass: "btn-danger stop-button",
+    });
+  };
+  const DeleteServerButton = ({ server, user }) => {
+    if (server.name === "") {
+      // It's not possible to delete unnamed servers
+      return null;
+    }
+    if (server.ready || server.pending) {
+      return null;
+    }
+    return ServerButton({
+      server,
+      user,
+      action: deleteServer,
+      name: "Delete Server",
+      extraClass: "btn-danger stop-button",
+    });
+  };
+
+  const StartServerButton = ({ server, user }) => {
+    if (server.ready) {
+      return null;
+    }
+    return ServerButton({
+      server,
+      user,
+      action: startServer,
+      name: server.pending ? "Server is pending" : "Start Server",
+      extraClass: "btn-success start-button",
+    });
+  };
+
+  const SpawnPageButton = ({ server, user }) => {
+    if (server.ready) {
+      return null;
+    }
     return (
-      <button
-        className="btn btn-danger btn-xs stop-button"
-        // It's not possible to delete unnamed servers
-        disabled={isDisabled}
-        onClick={() => {
-          setIsDisabled(true);
-          deleteServer(userName, serverName)
-            .then((res) => {
-              if (res.status < 300) {
-                updateUsers(...slice)
-                  .then((data) => {
-                    dispatchPageUpdate(
-                      data.items,
-                      data._pagination,
-                      name_filter,
-                    );
-                  })
-                  .catch(() => {
-                    setIsDisabled(false);
-                    setErrorAlert(`Failed to update users list.`);
-                  });
-              } else {
-                setErrorAlert(`Failed to delete server.`);
-                setIsDisabled(false);
-              }
-              return res;
-            })
-            .catch(() => {
-              setErrorAlert(`Failed to delete server.`);
-              setIsDisabled(false);
-            });
-        }}
+      <a
+        href={`${base_url}spawn/${user.name}${
+          server.name ? "/" + server.name : ""
+        }`}
       >
-        Delete Server
-      </button>
+        <button className="btn btn-light btn-xs">Spawn Page</button>
+      </a>
     );
   };
 
-  const StartServerButton = ({ serverName, userName }) => {
-    var [isDisabled, setIsDisabled] = useState(false);
+  const AccessServerButton = ({ server }) => {
+    if (!server.ready) {
+      return null;
+    }
     return (
-      <button
-        className="btn btn-success btn-xs start-button"
-        disabled={isDisabled}
-        onClick={() => {
-          setIsDisabled(true);
-          startServer(userName, serverName)
-            .then((res) => {
-              if (res.status < 300) {
-                updateUsers(...slice)
-                  .then((data) => {
-                    dispatchPageUpdate(
-                      data.items,
-                      data._pagination,
-                      name_filter,
-                    );
-                  })
-                  .catch(() => {
-                    setErrorAlert(`Failed to update users list.`);
-                    setIsDisabled(false);
-                  });
-              } else {
-                setErrorAlert(`Failed to start server.`);
-                setIsDisabled(false);
-              }
-              return res;
-            })
-            .catch(() => {
-              setErrorAlert(`Failed to start server.`);
-              setIsDisabled(false);
-            });
-        }}
-      >
-        Start Server
-      </button>
+      <a href={server.url || ""}>
+        <button className="btn btn-primary btn-xs">Access Server</button>
+      </a>
     );
   };
 
@@ -358,43 +333,16 @@ const ServerDashboard = (props) => {
         <td data-testid="user-row-last-activity">
           {server.last_activity ? timeSince(server.last_activity) : "Never"}
         </td>
-        <td data-testid="user-row-server-activity">
-          {server.ready ? (
-            // Stop Single-user server
-            <>
-              <StopServerButton serverName={server.name} userName={user.name} />
-              <AccessServerButton url={server.url} />
-            </>
-          ) : (
-            // Start Single-user server
-            <>
-              <StartServerButton
-                serverName={server.name}
-                userName={user.name}
-                style={{ marginRight: 20 }}
-              />
-              <DeleteServerButton
-                serverName={server.name}
-                userName={user.name}
-              />
-              <a
-                href={`${base_url}spawn/${user.name}${
-                  server.name ? "/" + server.name : ""
-                }`}
-              >
-                <button
-                  className="btn btn-secondary btn-xs"
-                  style={{ marginRight: 20 }}
-                >
-                  Spawn Page
-                </button>
-              </a>
-            </>
-          )}
+        <td data-testid="user-row-server-activity" className="actions">
+          <StartServerButton server={server} user={user} />
+          <StopServerButton server={server} user={user} />
+          <DeleteServerButton server={server} user={user} />
+          <AccessServerButton server={server} />
+          <SpawnPageButton server={server} user={user} />
         </td>
         <EditUserCell user={user} />
       </tr>,
-      <tr>
+      <tr key={`${userServerName}-detail`}>
         <td
           colSpan={6}
           style={{ padding: 0 }}
@@ -514,9 +462,11 @@ const ServerDashboard = (props) => {
           <tbody>
             <tr className="noborder">
               <td>
-                <Button variant="light" className="add-users-button">
-                  <Link to="/add-users">Add Users</Link>
-                </Button>
+                <Link to="/add-users">
+                  <Button variant="light" className="add-users-button">
+                    Add Users
+                  </Button>
+                </Link>
               </td>
               <td></td>
               <td></td>
@@ -611,6 +561,7 @@ const ServerDashboard = (props) => {
                   Shutdown Hub
                 </Button>
               </td>
+              <td></td>
             </tr>
             {servers.flatMap(([user, server]) => serverRow(user, server))}
           </tbody>

@@ -145,7 +145,7 @@ There is additional configuration required for MySQL that is not needed for Post
 
 For example, to connect to a postgres database with psycopg2:
 
-1. install psycopg2: `pip instal psycopg2` (or `psycopg2-binary` to avoid compilation, which is [not recommended for production][psycopg2-binary])
+1. install psycopg2: `pip install psycopg2` (or `psycopg2-binary` to avoid compilation, which is [not recommended for production][psycopg2-binary])
 2. set authentication via environment variables `PGUSER` and `PGPASSWORD`
 3. configure [](JupyterHub.db_url):
 

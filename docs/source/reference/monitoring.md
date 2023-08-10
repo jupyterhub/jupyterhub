@@ -18,3 +18,17 @@ tool like [Grafana](https://grafana.com).
 
 /reference/metrics
 ```
+
+## Customizing the metrics prefix
+
+JupyterHub metrics all have a `jupyterhub_` prefix.
+As of JupyterHub 5.0, this can be overridden with `$JUPYTERHUB_METRICS_PREFIX` environment variable
+in the Hub's environment.
+
+For example,
+
+```bash
+export JUPYTERHUB_METRICS_PREFIX=jupyterhub_prod
+```
+
+would result in the metric `jupyterhub_prod_active_users`, etc.

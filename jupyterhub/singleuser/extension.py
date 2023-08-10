@@ -483,6 +483,11 @@ class JupyterHubSingleUser(ExtensionApp):
         cfg.answer_yes = True
         self.config.FileContentsManager.delete_to_trash = False
 
+        # load Spawner.notebook_dir configuration, if given
+        root_dir = os.getenv("JUPYTERHUB_ROOT_DIR", None)
+        if root_dir:
+            cfg.root_dir = os.path.expanduser(root_dir)
+
         # load http server config from environment
         url = urlparse(os.environ['JUPYTERHUB_SERVICE_URL'])
         if url.port:
@@ -617,7 +622,9 @@ class JupyterHubSingleUser(ExtensionApp):
         app.web_app.settings[
             "page_config_hook"
         ] = app.identity_provider.page_config_hook
-        app.web_app.settings["log_function"] = log_request
+        # if the user has configured a log function in the tornado settings, do not override it
+        if not 'log_function' in app.config.ServerApp.get('tornado_settings', {}):
+            app.web_app.settings["log_function"] = log_request
         # add jupyterhub version header
         headers = app.web_app.settings.setdefault("headers", {})
         headers["X-JupyterHub-Version"] = __version__
@@ -637,7 +644,7 @@ class JupyterHubSingleUser(ExtensionApp):
     disable_user_config = Bool()
 
     @default("disable_user_config")
-    def _defaut_disable_user_config(self):
+    def _default_disable_user_config(self):
         return _bool_env("JUPYTERHUB_DISABLE_USER_CONFIG")
 
     @classmethod

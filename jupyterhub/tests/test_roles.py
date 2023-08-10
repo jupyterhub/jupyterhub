@@ -236,6 +236,16 @@ def test_orm_roles_delete_cascade(db):
             ['tokens!group=hobbits'],
             {'tokens!group=hobbits', 'read:tokens!group=hobbits'},
         ),
+        (
+            ['admin:services'],
+            {
+                'read:roles:services',
+                'read:services:name',
+                'admin:services',
+                'list:services',
+                'read:services',
+            },
+        ),
     ],
 )
 def test_get_expanded_scopes(db, scopes, expected_scopes):

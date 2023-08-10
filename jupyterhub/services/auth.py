@@ -596,6 +596,9 @@ class HubAuth(SingletonConfigurable):
         - in URL parameters: ?token=<token>
         - in header: Authorization: token <token>
         - in cookie (stored after oauth), if in_cookie is True
+
+        Args:
+            handler (tornado.web.RequestHandler): the current request handler
         """
 
         user_token = handler.get_argument('token', '')
@@ -623,6 +626,9 @@ class HubAuth(SingletonConfigurable):
         """Get the jupyterhub session id
 
         from the jupyterhub-session-id cookie.
+
+        Args:
+            handler (tornado.web.RequestHandler): the current request handler
         """
         return handler.get_cookie('jupyterhub-session-id', '')
 
@@ -944,7 +950,11 @@ class HubOAuth(HubAuth):
         handler.set_secure_cookie(self.cookie_name, access_token, **kwargs)
 
     def clear_cookie(self, handler):
-        """Clear the OAuth cookie"""
+        """Clear the OAuth cookie
+
+        Args:
+            handler (tornado.web.RequestHandler): the current request handler
+        """
         handler.clear_cookie(self.cookie_name, path=self.base_url)
 
 

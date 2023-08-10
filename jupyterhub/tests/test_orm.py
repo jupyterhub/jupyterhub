@@ -549,7 +549,11 @@ def test_expiring_oauth_code(app, user):
     db = app.db
     code = "abc123"
     now = orm.OAuthCode.now
-    orm_code = orm.OAuthCode(code=code, expires_at=now() + 30)
+    client = orm.OAuthClient(
+        identifier="expiring_oauth_code", secret="expiring_oauth_code-yyy"
+    )
+    db.add(client)
+    orm_code = orm.OAuthCode(code=code, expires_at=now() + 30, client=client, user=user)
     db.add(orm_code)
     db.commit()
 

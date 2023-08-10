@@ -89,6 +89,11 @@ class APIHandler(BaseHandler):
         if not hasattr(self, '_jupyterhub_user'):
             # called too early to check if we're token-authenticated
             return
+        if self._jupyterhub_user is None and 'Origin' not in self.request.headers:
+            # don't raise xsrf if auth failed
+            # don't apply this shortcut to actual cross-site requests, which have an 'Origin' header,
+            # which would reveal if there are credentials present
+            return
         if getattr(self, '_token_authenticated', False):
             # if token-authenticated, ignore XSRF
             return
@@ -263,17 +268,43 @@ class APIHandler(BaseHandler):
         return self._include_stopped_servers
 
     def user_model(self, user):
-        """Get the JSON model for a User object"""
+        """Get the JSON model for a User object
+
+        User may be either a high-level User wrapper,
+        or a low-level orm.User.
+        """
+        is_orm = False
         if isinstance(user, orm.User):
-            user = self.users[user.id]
+            if user.id in self.users:
+                # if it's an 'active' user, it's in the users dict,
+                # get the wrapper so we can get 'pending' state, etc.
+                user = self.users[user.id]
+            else:
+                # don't create wrapper of low-level orm object
+                is_orm = True
+
+        if is_orm:
+            # if it's not in the users dict,
+            # we know it has no running servers
+            running = False
+            spawners = {}
+        if not is_orm:
+            running = user.running
+            spawners = user.spawners
+
         include_stopped_servers = self.include_stopped_servers
+        # TODO: we shouldn't fetch fields we can't read and then filter them out,
+        # which may be wasted database queries
+        # we should check and then fetch.
+        # but that's tricky for e.g. server filters
+
         model = {
             'kind': 'user',
             'name': user.name,
             'admin': user.admin,
             'roles': [r.name for r in user.roles],
             'groups': [g.name for g in user.groups],
-            'server': user.url if user.running else None,
+            'server': user.url if running else None,
             'pending': None,
             'created': isoformat(user.created),
             'last_activity': isoformat(user.last_activity),
@@ -303,12 +334,12 @@ class APIHandler(BaseHandler):
             model, access_map, user, kind='user', keys=allowed_keys
         )
         if model:
-            if '' in user.spawners and 'pending' in allowed_keys:
-                model['pending'] = user.spawners[''].pending
+            if '' in spawners and 'pending' in allowed_keys:
+                model['pending'] = spawners[''].pending
 
             servers = {}
             scope_filter = self.get_scope_filter('read:servers')
-            for name, spawner in user.spawners.items():
+            for name, spawner in spawners.items():
                 # include 'active' servers, not just ready
                 # (this includes pending events)
                 if (spawner.active or include_stopped_servers) and scope_filter(
@@ -390,6 +421,23 @@ class APIHandler(BaseHandler):
 
     _group_model_types = {'name': str, 'users': list, 'roles': list}
 
+    _service_model_types = {
+        'name': str,
+        'admin': bool,
+        'url': str,
+        'oauth_client_allowed_scopes': list,
+        'api_token': str,
+        'info': dict,
+        'display': bool,
+        'oauth_no_confirm': bool,
+        'command': list,
+        'cwd': str,
+        'environment': dict,
+        'user': str,
+        'oauth_client_id': str,
+        'oauth_redirect_uri': str,
+    }
+
     def _check_model(self, model, model_types, name):
         """Check a model provided by a REST API request
 
@@ -427,6 +475,15 @@ class APIHandler(BaseHandler):
                 raise web.HTTPError(
                     400, ("group names must be str, not %r", type(groupname))
                 )
+
+    def _check_service_model(self, model):
+        """Check a request-provided service model from a REST API"""
+        self._check_model(model, self._service_model_types, 'service')
+        service_name = model.get('name')
+        if not isinstance(service_name, str):
+            raise web.HTTPError(
+                400, ("Service name must be str, not %r", type(service_name))
+            )
 
     def get_api_pagination(self):
         default_limit = self.settings["api_page_default_limit"]

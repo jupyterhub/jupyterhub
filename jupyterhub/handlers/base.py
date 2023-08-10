@@ -236,11 +236,13 @@ class BaseHandler(RequestHandler):
     def check_xsrf_cookie(self):
         try:
             return super().check_xsrf_cookie()
-        except Exception as e:
-            # ensure _juptyerhub_user is defined on rejected requests
+        except web.HTTPError as e:
+            # ensure _jupyterhub_user is defined on rejected requests
             if not hasattr(self, "_jupyterhub_user"):
                 self._jupyterhub_user = None
             self._resolve_roles_and_scopes()
+            # rewrite message because we use this on methods other than POST
+            e.log_message = e.log_message.replace("POST", self.request.method)
             raise
 
     @property
@@ -1430,6 +1432,12 @@ class UserUrlHandler(BaseHandler):
 
     # accept token auth for API requests that are probably to non-running servers
     _accept_token_auth = True
+
+    # don't consider these redirects 'activity'
+    # if the redirect is followed and the subsequent action taken,
+    # _that_ is activity
+    def _record_activity(self, obj, timestamp=None):
+        return False
 
     def _fail_api_request(self, user_name='', server_name=''):
         """Fail an API request to a not-running server"""
