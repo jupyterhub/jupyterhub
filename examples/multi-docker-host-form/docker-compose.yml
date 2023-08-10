@@ -1,0 +1,19 @@
+version: "3"
+
+services:
+  jupyterhub:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: jupyterhub
+    container_name: jupyterhub
+    volumes:
+      - "./jupyterhub_config.py:/srv/jupyterhub/jupyterhub_config.py:ro"
+      - "./certs:/certs"
+    ports:
+      - "8000:8000"
+      - "8081:8081"
+    extra_hosts:
+      - "a.example.com:192.168.0.11"
+      - "b.example.com:192.168.0.12"
+      - "c.example.com:192.168.0.13"
