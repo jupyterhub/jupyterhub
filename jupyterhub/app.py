@@ -743,7 +743,7 @@ class JupyterHub(Application):
 
     subdomain_hook = Union(
         [Callable(), Unicode()],
-        default_value="legacy",
+        default_value="idna",
         config=True,
         help="""
         Hook for constructing subdomains for users and services.
@@ -751,8 +751,8 @@ class JupyterHub(Application):
 
         There are two predefined hooks, which can be selected by name:
 
-        - 'legacy' (default, deprecated)
-        - 'idna' (more robust, will become default in the future)
+        - 'legacy' (deprecated)
+        - 'idna' (default, more robust. No change for _most_ usernames)
 
         Otherwise, should be a function which must not be async.
         A custom subdomain_hook should have the signature:
@@ -787,11 +787,7 @@ class JupyterHub(Application):
 
     @default("subdomain_hook")
     def _default_subdomain_hook(self):
-        if self.subdomain_host:
-            self.log.warning(
-                "Using deprecated legacy subdomain hook. subdomain_hook = 'idna' is added in JupyterHub 5.0 and will become the default in a future JupyterHub release."
-            )
-        return subdomain_hook_legacy
+        return subdomain_hook_idna
 
     @validate("subdomain_hook")
     def _subdomain_hook(self, proposal):
@@ -800,6 +796,10 @@ class JupyterHub(Application):
         if hook == "idna":
             return subdomain_hook_idna
         if hook == "legacy":
+            if self.subdomain_host:
+                self.log.warning(
+                    "Using deprecated 'legacy' subdomain hook. JupyterHub.subdomain_hook = 'idna' is the new default, added in JupyterHub 5."
+                )
             return subdomain_hook_legacy
         if not callable(hook):
             raise ValueError(
