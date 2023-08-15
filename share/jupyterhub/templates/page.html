@@ -132,7 +132,7 @@
               <ul class="dropdown-menu">
               {% for service in services %}
               {% block service scoped %}
-                <li><a class="dropdown-item" href="{{service.prefix}}">{{service.name}}</a></li>
+                <li><a class="dropdown-item" href="{{service.href}}">{{service.name}}</a></li>
               {% endblock %}
               {% endfor %}
               </ul>

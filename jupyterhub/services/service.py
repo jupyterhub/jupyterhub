@@ -366,6 +366,14 @@ class Service(LoggingConfigurable):
         return url_path_join(self.base_url, 'services', self.name + '/')
 
     @property
+    def href(self):
+        """Convenient 'href' to use for links to this service"""
+        if self.domain:
+            return f"//{self.domain}{self.prefix}"
+        else:
+            return self.prefix
+
+    @property
     def proxy_spec(self):
         if not self.server:
             return ''

@@ -93,6 +93,8 @@ from .utils import (
     maybe_future,
     print_ps_info,
     print_stacks,
+    subdomain_hook_idna,
+    subdomain_hook_legacy,
     url_path_join,
 )
 
@@ -738,6 +740,72 @@ class JupyterHub(Application):
         if not self.subdomain_host:
             return ''
         return urlparse(self.subdomain_host).hostname
+
+    subdomain_hook = Union(
+        [Callable(), Unicode()],
+        default_value="idna",
+        config=True,
+        help="""
+        Hook for constructing subdomains for users and services.
+        Only used when `JupyterHub.subdomain_host` is set.
+
+        There are two predefined hooks, which can be selected by name:
+
+        - 'legacy' (deprecated)
+        - 'idna' (default, more robust. No change for _most_ usernames)
+
+        Otherwise, should be a function which must not be async.
+        A custom subdomain_hook should have the signature:
+
+        def subdomain_hook(name, domain, kind) -> str:
+            ...
+
+        and should return a unique, valid domain name for all usernames.
+
+        - `name` is the original name, which may need escaping to be safe as a domain name label
+        - `domain` is the domain of the Hub itself
+        - `kind` will be one of 'user' or 'service'
+
+        JupyterHub itself puts very little limit on usernames
+        to accommodate a wide variety of Authenticators,
+        but your identity provider is likely much more strict,
+        allowing you to make assumptions about the name.
+
+        The default behavior is to have all services
+        on a single `services.{domain}` subdomain,
+        and each user on `{username}.{domain}`.
+        This is the 'legacy' scheme,
+        and doesn't work for all usernames.
+
+        The 'idna' scheme is a new scheme that should produce a valid domain name for any user,
+        using IDNA encoding for unicode usernames, and a truncate-and-hash approach for
+        any usernames that can't be easily encoded into a domain component.
+
+        .. versionadded:: 5.0
+        """,
+    )
+
+    @default("subdomain_hook")
+    def _default_subdomain_hook(self):
+        return subdomain_hook_idna
+
+    @validate("subdomain_hook")
+    def _subdomain_hook(self, proposal):
+        # shortcut `subdomain_hook = "idna"` config
+        hook = proposal.value
+        if hook == "idna":
+            return subdomain_hook_idna
+        if hook == "legacy":
+            if self.subdomain_host:
+                self.log.warning(
+                    "Using deprecated 'legacy' subdomain hook. JupyterHub.subdomain_hook = 'idna' is the new default, added in JupyterHub 5."
+                )
+            return subdomain_hook_legacy
+        if not callable(hook):
+            raise ValueError(
+                f"subdomain_hook must be 'idna', 'legacy', or a callable, got {hook!r}"
+            )
+        return hook
 
     logo_file = Unicode(
         '',
@@ -2401,14 +2469,16 @@ class JupyterHub(Application):
             Service: the created service
         """
 
+        name = orm_service.name
         if self.domain:
-            domain = 'services.' + self.domain
-            parsed = urlparse(self.subdomain_host)
-            host = f'{parsed.scheme}://services.{parsed.netloc}'
+            parsed_host = urlparse(self.subdomain_host)
+            domain = self.subdomain_hook(name, self.domain, kind="service")
+            host = f"{parsed_host.scheme}://{domain}"
+            if parsed_host.port:
+                host = f"{host}:{parsed_host.port}"
         else:
             domain = host = ''
 
-        name = orm_service.name
         service = Service(
             parent=self,
             app=self,
@@ -2454,17 +2524,20 @@ class JupyterHub(Application):
             Optional[Service]: The created service
         """
 
+        if 'name' not in spec:
+            raise ValueError(f'service spec must have a name: {spec}')
+
+        name = spec['name']
+
         if self.domain:
-            domain = 'services.' + self.domain
-            parsed = urlparse(self.subdomain_host)
-            host = f'{parsed.scheme}://services.{parsed.netloc}'
+            parsed_host = urlparse(self.subdomain_host)
+            domain = self.subdomain_hook(name, self.domain, kind="service")
+            host = f"{parsed_host.scheme}://{domain}"
+            if parsed_host.port:
+                host = f"{host}:{parsed_host.port}"
         else:
             domain = host = ''
 
-        if 'name' not in spec:
-            raise ValueError('service spec must have a name: %r' % spec)
-
-        name = spec['name']
         # get/create orm
         orm_service = orm.Service.find(self.db, name=name)
         if orm_service is None:
@@ -2895,6 +2968,7 @@ class JupyterHub(Application):
             static_path=os.path.join(self.data_files_path, 'static'),
             static_url_prefix=url_path_join(self.hub.base_url, 'static/'),
             static_handler_class=CacheControlStaticFilesHandler,
+            subdomain_hook=self.subdomain_hook,
             template_path=self.template_paths,
             template_vars=self.template_vars,
             jinja2_env=jinja_env,
