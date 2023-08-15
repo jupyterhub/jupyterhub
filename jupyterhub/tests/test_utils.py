@@ -141,7 +141,7 @@ def test_browser_protocol(x_scheme, x_forwarded_proto, forwarded, expected):
     ],
 )
 def test_subdomain_hook_idna(name, expected):
-    expected_domain = expected + "--user.domain"
+    expected_domain = expected + ".domain"
     resolved = utils.subdomain_hook_idna(name, "domain", "user")
     assert resolved == expected_domain
 
