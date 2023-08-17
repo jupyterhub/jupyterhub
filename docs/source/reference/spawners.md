@@ -31,6 +31,7 @@ Some examples include:
 - [SSHSpawner](https://github.com/NERSC/sshspawner) to spawn notebooks
   on a remote server using SSH
 - [KubeSpawner](https://github.com/jupyterhub/kubespawner) to spawn notebook servers on kubernetes cluster.
+- [NomadSpawner](https://github.com/mxab/jupyterhub-nomad-spawner) to spawn a notebook server as a Nomad job inside HashiCorp's Nomad cluster
 
 ## Spawner control methods
 
