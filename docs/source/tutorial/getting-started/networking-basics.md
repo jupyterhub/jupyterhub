@@ -39,6 +39,21 @@ Note that `c.JupyterHub.ip` and `c.JupyterHub.port` are single values,
 not tuples or lists – JupyterHub listens to only a single IP address and
 port.
 
+# c.JupyterHub.port is now deprecated:
+
+Note for the users: Please note `c.JupyterHub.port` is now deprecated:
+The public facing port of the proxy.
+
+          This is the port on which the proxy will listen.
+          This is the only port through which JupyterHub
+          should be accessed by users.
+
+          .. deprecated: 0.9
+              Use JupyterHub.bind_url
+
+Default: 8000
+c.JupyterHub.port = 8000
+
 ## Set the Proxy's REST API communication URL (optional)
 
 By default, the proxy's REST API listens on port 8081 of `localhost` only.
