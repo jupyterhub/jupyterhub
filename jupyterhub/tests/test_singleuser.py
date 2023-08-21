@@ -137,7 +137,9 @@ async def test_singleuser_auth(
     await user.stop(server_name)
 
 
-@pytest.mark.skipif(IS_JUPYVERSE, reason="jupyverse doesn't look up directories for configuration files")
+@pytest.mark.skipif(
+    IS_JUPYVERSE, reason="jupyverse doesn't look up directories for configuration files"
+)
 async def test_disable_user_config(request, app, tmpdir, full_spawn):
     # login, start the server
     cookies = await app.login_user('nandy')
@@ -204,7 +206,9 @@ async def test_disable_user_config(request, app, tmpdir, full_spawn):
 
 @pytest.mark.parametrize("extension", [True, False])
 @pytest.mark.parametrize("notebook_dir", ["", "~", "~/sub", "ABS"])
-@pytest.mark.skipif(IS_JUPYVERSE, reason="jupyverse has not notebook directory configuration")
+@pytest.mark.skipif(
+    IS_JUPYVERSE, reason="jupyverse has not notebook directory configuration"
+)
 async def test_notebook_dir(
     request, app, tmpdir, user, full_spawn, extension, notebook_dir
 ):
