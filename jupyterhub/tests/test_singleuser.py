@@ -137,6 +137,7 @@ async def test_singleuser_auth(
     await user.stop(server_name)
 
 
+@pytest.mark.skipif(IS_JUPYVERSE, reason="jupyverse doesn't look up directories for configuration files")
 async def test_disable_user_config(request, app, tmpdir, full_spawn):
     # login, start the server
     cookies = await app.login_user('nandy')
@@ -146,8 +147,6 @@ async def test_disable_user_config(request, app, tmpdir, full_spawn):
         print("stopping")
         await user.stop()
     # start with new config:
-    if IS_JUPYVERSE:
-        user.spawner.default_url = "/lab"
     user.spawner.debug = True
     user.spawner.disable_user_config = True
     home_dir = tmpdir.join("home")
@@ -172,10 +171,6 @@ async def test_disable_user_config(request, app, tmpdir, full_spawn):
         url_path_join('/user/nandy', user.spawner.default_url or "/tree")
     )
     assert r.status_code == 200
-
-    if IS_JUPYVERSE:
-        # the remaining is jupyter-server specific
-        return
 
     r = await async_requests.get(
         url_path_join(public_url(app, user), 'jupyterhub-test-info'), cookies=cookies
@@ -209,12 +204,10 @@ async def test_disable_user_config(request, app, tmpdir, full_spawn):
 
 @pytest.mark.parametrize("extension", [True, False])
 @pytest.mark.parametrize("notebook_dir", ["", "~", "~/sub", "ABS"])
+@pytest.mark.skipif(IS_JUPYVERSE, reason="jupyverse has not notebook directory configuration")
 async def test_notebook_dir(
     request, app, tmpdir, user, full_spawn, extension, notebook_dir
 ):
-    if IS_JUPYVERSE:
-        pytest.skip("jupyter-server specific test")
-
     if extension:
         try:
             import jupyter_server  # noqa
@@ -283,20 +276,16 @@ async def test_notebook_dir(
         raise ValueError(f"No contents check for {notebook_dir=}")
 
 
+@pytest.mark.skipif(IS_JUPYVERSE, reason="jupyverse has no --help-all")
 def test_help_output():
-    if IS_JUPYVERSE:
-        pytest.skip("jupyter-server specific test")
-
     out = check_output(
         [sys.executable, '-m', 'jupyterhub.singleuser', '--help-all']
     ).decode('utf8', 'replace')
     assert 'JupyterHub' in out
 
 
+@pytest.mark.skipif(IS_JUPYVERSE, reason="jupyverse has not --version")
 def test_version():
-    if IS_JUPYVERSE:
-        pytest.skip("jupyter-server specific test")
-
     out = check_output(
         [sys.executable, '-m', 'jupyterhub.singleuser', '--version']
     ).decode('utf8', 'replace')
@@ -362,10 +351,8 @@ def test_singleuser_app_class(JUPYTERHUB_SINGLEUSER_APP):
         assert '--NotebookApp.' not in out
 
 
+@pytest.mark.skipif(IS_JUPYVERSE, reason="nbclassic specific test")
 async def test_nbclassic_control_panel(app, user, full_spawn):
-    if IS_JUPYVERSE:
-        pytest.skip("nbclassic specific test")
-
     # login, start the server
     await user.spawn()
     cookies = await app.login_user(user.name)
