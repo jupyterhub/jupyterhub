@@ -314,7 +314,7 @@ async def test_get_users_pagination(
     expected_count,
     default_page_limit,
     max_page_limit,
-    include_stopped_servers
+    include_stopped_servers,
 ):
     db = app.db
 
@@ -342,7 +342,7 @@ async def test_get_users_pagination(
         params['limit'] = limit
     url = url_concat(url, params)
     if include_stopped_servers:
-        # assumes limit is set. There doesn't seem to be a way to set valueless query 
+        # assumes limit is set. There doesn't seem to be a way to set valueless query
         # params using url_cat
         url += "&include_stopped_servers"
 
