@@ -183,11 +183,7 @@ jobs:
               pip install "jupyter_server==${{ matrix.jupyter_server }}"
           fi
           if [ "${{ matrix.jupyverse }}" != "" ]; then
-              pip install "git+https://github.com/davidbrochart/jupyverse.git@jupyterhub#egg=fps_auth_jupyterhub&subdirectory=plugins/auth_jupyterhub"
-              pip install "git+https://github.com/jupyter-server/jupyverse.git#egg=jupyverse_api&subdirectory=jupyverse_api" --ignore-installed
-              pip install "git+https://github.com/jupyter-server/jupyverse.git#egg=fps_kernels&subdirectory=plugins/kernels"
               pip install "jupyverse[jupyterlab,auth-jupyterhub]"
-              pip install -e .
           fi
           if [ "${{ matrix.db }}" == "mysql" ]; then
               pip install mysqlclient
