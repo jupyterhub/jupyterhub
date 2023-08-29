@@ -184,6 +184,7 @@ jobs:
           fi
           if [ "${{ matrix.jupyverse }}" != "" ]; then
               pip install "jupyverse[jupyterlab,auth-jupyterhub]"
+              pip install -e .
           fi
           if [ "${{ matrix.db }}" == "mysql" ]; then
               pip install mysqlclient
