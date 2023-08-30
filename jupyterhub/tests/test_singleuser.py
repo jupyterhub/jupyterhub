@@ -17,6 +17,8 @@ from ..utils import url_path_join
 from .mocking import public_url
 from .utils import AsyncSession, async_requests, get_page
 
+IS_JUPYVERSE = os.environ.get("JUPYTERHUB_SINGLEUSER_APP") == "jupyverse"
+
 
 @pytest.mark.parametrize(
     "access_scopes, server_name, expect_success",
@@ -63,6 +65,8 @@ async def test_singleuser_auth(
         await user.spawn(server_name)
         await app.proxy.add_user(user, server_name)
     spawner = user.spawners[server_name]
+    if IS_JUPYVERSE:
+        spawner.default_url = "/lab"
     url = url_path_join(public_url(app, user), server_name)
 
     # no cookies, redirects to login page
@@ -133,6 +137,9 @@ async def test_singleuser_auth(
     await user.stop(server_name)
 
 
+@pytest.mark.skipif(
+    IS_JUPYVERSE, reason="jupyverse doesn't look up directories for configuration files"
+)
 async def test_disable_user_config(request, app, tmpdir, full_spawn):
     # login, start the server
     cookies = await app.login_user('nandy')
@@ -199,6 +206,9 @@ async def test_disable_user_config(request, app, tmpdir, full_spawn):
 
 @pytest.mark.parametrize("extension", [True, False])
 @pytest.mark.parametrize("notebook_dir", ["", "~", "~/sub", "ABS"])
+@pytest.mark.skipif(
+    IS_JUPYVERSE, reason="jupyverse has not notebook directory configuration"
+)
 async def test_notebook_dir(
     request, app, tmpdir, user, full_spawn, extension, notebook_dir
 ):
@@ -270,6 +280,7 @@ async def test_notebook_dir(
         raise ValueError(f"No contents check for {notebook_dir=}")
 
 
+@pytest.mark.skipif(IS_JUPYVERSE, reason="jupyverse has no --help-all")
 def test_help_output():
     out = check_output(
         [sys.executable, '-m', 'jupyterhub.singleuser', '--help-all']
@@ -277,6 +288,7 @@ def test_help_output():
     assert 'JupyterHub' in out
 
 
+@pytest.mark.skipif(IS_JUPYVERSE, reason="jupyverse has not --version")
 def test_version():
     out = check_output(
         [sys.executable, '-m', 'jupyterhub.singleuser', '--version']
@@ -343,6 +355,7 @@ def test_singleuser_app_class(JUPYTERHUB_SINGLEUSER_APP):
         assert '--NotebookApp.' not in out
 
 
+@pytest.mark.skipif(IS_JUPYVERSE, reason="nbclassic specific test")
 async def test_nbclassic_control_panel(app, user, full_spawn):
     # login, start the server
     await user.spawn()

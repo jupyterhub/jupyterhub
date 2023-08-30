@@ -26,7 +26,7 @@ _app_shortcuts = {
 JUPYTERHUB_SINGLEUSER_APP = _app_shortcuts.get(
     JUPYTERHUB_SINGLEUSER_APP.replace("_", "-"), JUPYTERHUB_SINGLEUSER_APP
 )
-
+JUPYVERSE = JUPYTERHUB_SINGLEUSER_APP == "jupyverse"
 
 if JUPYTERHUB_SINGLEUSER_APP:
     if JUPYTERHUB_SINGLEUSER_APP in {"notebook", _app_shortcuts["notebook"]}:
@@ -46,7 +46,7 @@ if JUPYTERHUB_SINGLEUSER_APP:
                     f"Leave $JUPYTERHUB_SINGLEUSER_APP unspecified (or use the default JUPYTERHUB_SINGLEUSER_APP=jupyter-server), "
                     'and set `c.Spawner.default_url = "/tree"` to make notebook v7 the default UI.'
                 )
-    App = import_item(JUPYTERHUB_SINGLEUSER_APP)
+    App = None if JUPYVERSE else import_item(JUPYTERHUB_SINGLEUSER_APP)
 else:
     App = None
     _import_error = None
@@ -66,7 +66,10 @@ else:
         raise _import_error
 
 
-SingleUserNotebookApp = make_singleuser_app(App)
+if App is None:
+    SingleUserNotebookApp = None
+else:
+    SingleUserNotebookApp = make_singleuser_app(App)
 
 
 def main():
@@ -92,5 +95,10 @@ def main():
             version_tuple = tuple(int(v) for v in m.groups())
             if version_tuple >= (3, 1):
                 return SingleUserLabApp.launch_instance()
+
+    if JUPYVERSE:
+        from fps_auth_jupyterhub import launch
+
+        return launch()
 
     return SingleUserNotebookApp.launch_instance()
