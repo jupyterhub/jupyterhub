@@ -1754,7 +1754,7 @@ class LocalProcessSpawner(Spawner):
             self.clear_state()
             return 0
 
-        # We use pustil.pid_exists on windows
+        # We use psutil.pid_exists on windows
         if os.name == 'nt':
             alive = psutil.pid_exists(self.pid)
         else:
