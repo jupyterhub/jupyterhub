@@ -7,7 +7,7 @@ import uuid
 from copy import deepcopy
 from datetime import datetime, timedelta
 from unittest import mock
-from urllib.parse import quote, urlparse
+from urllib.parse import parse_qs, quote, urlparse
 
 import pytest
 from pytest import fixture, mark
@@ -274,8 +274,8 @@ def max_page_limit(app):
         (10, None, None, True, 10, False),
         (10, 5, None, True, 5, False),
         (10, 5, None, False, 5, False),
-        (2, 0, 1, True, 2, True),
-        (10, 5, 1, True, 1, False),
+        (10, None, 5, True, 5, True),
+        (10, 5, 1, True, 1, True),
         (10, 10, 10, True, 0, False),
         (  # default page limit, pagination expected
             30,
@@ -358,8 +358,11 @@ async def test_get_users_pagination(
             "_pagination",
         }
         pagination = response["_pagination"]
-        if include_stopped_servers:
-            assert "include_stopped_servers" in pagination["next"]["url"]
+        if include_stopped_servers and pagination["next"]:
+            next_query = parse_qs(
+                urlparse(pagination["next"]["url"]).query, keep_blank_values=True
+            )
+            assert "include_stopped_servers" in next_query
         users = response["items"]
     else:
         users = response
