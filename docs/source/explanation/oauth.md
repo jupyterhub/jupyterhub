@@ -1,3 +1,5 @@
+(jupyterhub-oauth)=
+
 # JupyterHub and OAuth
 
 JupyterHub uses [OAuth 2](https://oauth.net/2/) as an internal mechanism for authenticating users.
