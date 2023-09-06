@@ -54,6 +54,7 @@ from traitlets import (
     List,
     Unicode,
     default,
+    observe,
     validate,
 )
 from traitlets.config import LoggingConfigurable
@@ -306,6 +307,7 @@ class Service(LoggingConfigurable):
     cookie_options = Dict()
 
     oauth_provider = Any()
+    _oauth_specified = List(help="List of oauth config fields specified via config.")
 
     oauth_client_id = Unicode(
         help="""OAuth client ID for this service.
@@ -342,12 +344,20 @@ class Service(LoggingConfigurable):
             return ''
         return self.host + url_path_join(self.prefix, 'oauth_callback')
 
+    @observe("oauth_client_id", "oauth_redirect_uri")
+    def _oauth_config_set(self, change):
+        # record that some oauth config is specified
+        self._oauth_specified.append(change.name)
+
     @property
     def oauth_available(self):
         """Is OAuth available for this client?
 
         Returns True if a server is defined or oauth_redirect_uri is specified manually
         """
+        if self._oauth_specified:
+            # if any oauth config is set, oauth should be available
+            return True
         return bool(self.server is not None or self.oauth_redirect_uri)
 
     @property
