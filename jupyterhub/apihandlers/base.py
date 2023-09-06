@@ -532,7 +532,7 @@ class APIHandler(BaseHandler):
         if next_offset < total_count:
             # if there's a next page
             next_url_parsed = urlparse(self.request.full_url())
-            query = parse_qs(next_url_parsed.query)
+            query = parse_qs(next_url_parsed.query, keep_blank_values=True)
             query['offset'] = [next_offset]
             query['limit'] = [limit]
             next_url_parsed = next_url_parsed._replace(

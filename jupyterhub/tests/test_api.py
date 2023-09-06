@@ -7,7 +7,7 @@ import uuid
 from copy import deepcopy
 from datetime import datetime, timedelta
 from unittest import mock
-from urllib.parse import quote, urlparse
+from urllib.parse import parse_qs, quote, urlparse
 
 import pytest
 from pytest import fixture, mark
@@ -268,20 +268,22 @@ def max_page_limit(app):
 @mark.user
 @mark.role
 @mark.parametrize(
-    "n, offset, limit, accepts_pagination, expected_count",
+    "n, offset, limit, accepts_pagination, expected_count, include_stopped_servers",
     [
-        (10, None, None, False, 10),
-        (10, None, None, True, 10),
-        (10, 5, None, True, 5),
-        (10, 5, None, False, 5),
-        (10, 5, 1, True, 1),
-        (10, 10, 10, True, 0),
+        (10, None, None, False, 10, False),
+        (10, None, None, True, 10, False),
+        (10, 5, None, True, 5, False),
+        (10, 5, None, False, 5, False),
+        (10, None, 5, True, 5, True),
+        (10, 5, 1, True, 1, True),
+        (10, 10, 10, True, 0, False),
         (  # default page limit, pagination expected
             30,
             None,
             None,
             True,
             'default',
+            False,
         ),
         (
             # default max page limit, pagination not expected
@@ -290,6 +292,7 @@ def max_page_limit(app):
             None,
             False,
             'max',
+            False,
         ),
         (
             # limit exceeded
@@ -298,6 +301,7 @@ def max_page_limit(app):
             500,
             False,
             'max',
+            False,
         ),
     ],
 )
@@ -310,6 +314,7 @@ async def test_get_users_pagination(
     expected_count,
     default_page_limit,
     max_page_limit,
+    include_stopped_servers,
 ):
     db = app.db
 
@@ -336,6 +341,11 @@ async def test_get_users_pagination(
     if limit:
         params['limit'] = limit
     url = url_concat(url, params)
+    if include_stopped_servers:
+        # assumes limit is set. There doesn't seem to be a way to set valueless query
+        # params using url_cat
+        url += "&include_stopped_servers"
+
     headers = auth_header(db, 'admin')
     if accepts_pagination:
         headers['Accept'] = PAGINATION_MEDIA_TYPE
@@ -348,6 +358,11 @@ async def test_get_users_pagination(
             "_pagination",
         }
         pagination = response["_pagination"]
+        if include_stopped_servers and pagination["next"]:
+            next_query = parse_qs(
+                urlparse(pagination["next"]["url"]).query, keep_blank_values=True
+            )
+            assert "include_stopped_servers" in next_query
         users = response["items"]
     else:
         users = response
