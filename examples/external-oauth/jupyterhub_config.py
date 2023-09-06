@@ -1,16 +1,5 @@
 import os
 
-# Allow anyone to authenticate
-from jupyterhub.auth import DummyAuthenticator
-
-c.JupyterHub.authenticator_class = DummyAuthenticator
-
-# Optionally set a global password that all users must use
-# c.DummyAuthenticator.password = "your_password"
-
-# only listen on localhost for testing.
-c.JupyterHub.bind_url = 'http://127.0.0.1:8000'
-
 # get the oauth client's API token.
 # this could come from anywhere
 api_token = os.getenv("JUPYTERHUB_API_TOKEN")
@@ -38,3 +27,17 @@ c.JupyterHub.load_roles = [
     }
 
 ]
+
+# Boilerplate to make sure the example runs - this is not relevant
+# to external oauth services.
+
+# Allow authentication with any username and any password
+from jupyterhub.auth import DummyAuthenticator
+
+c.JupyterHub.authenticator_class = DummyAuthenticator
+
+# Optionally set a global password that all users must use
+# c.DummyAuthenticator.password = "your_password"
+
+# only listen on localhost for testing.
+c.JupyterHub.bind_url = 'http://127.0.0.1:8000'
