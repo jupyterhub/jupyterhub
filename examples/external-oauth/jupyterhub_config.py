@@ -25,7 +25,6 @@ c.JupyterHub.load_roles = [
         'description': 'Allow all users to access all services',
         'scopes': ['access:services', 'self'],
     }
-
 ]
 
 # Boilerplate to make sure the example runs - this is not relevant
