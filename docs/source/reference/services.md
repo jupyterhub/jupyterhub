@@ -29,9 +29,10 @@ Currently, these characteristics distinguish two types of Services:
 A Service may have the following properties:
 
 - `name: str` - the name of the service
-- `url: str (default - None)` - The URL where the service is/should be.
-  If a url is specified for where the Service runs its own web server,
-  the service will be added to the proxy at `/services/:name`
+- `url: str (default - None)` - The URL where the service should be running (from the proxy's perspective).
+  Typically a localhost URL for Hub-managed services.
+  If a url is specified,
+  the service will be added to the proxy at `/services/:name`.
 - `api_token: str (default - None)` - For Externally-Managed Services,
   you need to specify an API token to perform API requests to the Hub.
   For Hub-managed services, this token is generated at startup,
@@ -39,15 +40,23 @@ A Service may have the following properties:
   For OAuth services, this is the client secret.
 - `display: bool (default - True)` - When set to true, display a link to the
   service's URL under the 'Services' dropdown in users' hub home page.
-
+  Only has an effect if `url` is also specified.
 - `oauth_no_confirm: bool (default - False)` - When set to true,
   skip the OAuth confirmation page when users access this service.
-
   By default, when users authenticate with a service using JupyterHub,
   they are prompted to confirm that they want to grant that service
   access to their credentials.
   Skipping the confirmation page is useful for admin-managed services that are considered part of the Hub
   and shouldn't need extra prompts for login.
+- `oauth_client_id: str (default - 'service-$name')` -
+  This never needs to be set,
+  but you can specify a service's OAuth client id.
+- `oauth_redirect_uri: str (default: '/services/$name/oauth_redirect')` -
+  Set the OAuth redirect URI.
+  Required if it differs from the default proxied prefix URI,
+  e.g. the redirect handler is not at `/$prefix/oauth_redirect`,
+  and/or the service is not to be added to the proxy at `/services/$name`
+  (i.e. `url` is not set, but there is still a public web service using OAuth).
 
 If a service is also to be managed by the Hub, it has a few extra options:
 
@@ -61,7 +70,7 @@ If a service is also to be managed by the Hub, it has a few extra options:
 ## Hub-Managed Services
 
 A **Hub-Managed Service** is started by the Hub, and the Hub is responsible
-for the Service's actions. A Hub-Managed Service can only be a local
+for the Service's operation. A Hub-Managed Service can only be a local
 subprocess of the Hub. The Hub will take care of starting the process and
 restart the service if the service stops.
 
