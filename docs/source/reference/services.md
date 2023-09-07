@@ -49,8 +49,8 @@ A Service may have the following properties:
   Skipping the confirmation page is useful for admin-managed services that are considered part of the Hub
   and shouldn't need extra prompts for login.
 - `oauth_client_id: str (default - 'service-$name')` -
-  This never needs to be set,
-  but you can specify a service's OAuth client id.
+  This never needs to be set, but you can specify a service's OAuth client id.
+  It must start with `service-`.
 - `oauth_redirect_uri: str (default: '/services/$name/oauth_redirect')` -
   Set the OAuth redirect URI.
   Required if it differs from the default proxied prefix URI,
@@ -219,7 +219,7 @@ This token enables the service to act _on behalf of_ the user.
 
 When an oauthenticated service makes a request to the Hub (or other Hub-authenticated service), it has two credentials available to authenticate the request:
 
-- the service's own api*token, which acts \_as* the service,
+- the service's own `api_token`, which acts _as_ the service,
   and is governed by the service's own role assignments.
 - the user's oauth token issued to the service during the oauth flow,
   which acts _as_ the user.
