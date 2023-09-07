@@ -51,11 +51,9 @@ A Service may have the following properties:
 - `oauth_client_id: str (default - 'service-$name')` -
   This never needs to be set, but you can specify a service's OAuth client id.
   It must start with `service-`.
-- `oauth_redirect_uri: str (default: '/services/$name/oauth_redirect')` -
+- `oauth_redirect_uri: str (default: '/services/:name/oauth_redirect')` -
   Set the OAuth redirect URI.
-  Required if it differs from the default proxied prefix URI,
-  e.g. the redirect handler is not at `/$prefix/oauth_redirect`,
-  and/or the service is not to be added to the proxy at `/services/$name`
+  Required if the redirect URI differs from the default or the service is not to be added to the proxy at `/services/:name`
   (i.e. `url` is not set, but there is still a public web service using OAuth).
 
 If a service is also to be managed by the Hub, it has a few extra options:
