@@ -16,8 +16,6 @@ Please submit pull requests to update information or to add new institutions or 
 
 - [BIDS - Berkeley Institute for Data Science](https://bids.berkeley.edu/)
 
-  - [Teaching with Jupyter notebooks and JupyterHub](https://bids.berkeley.edu/resources/videos/teaching-ipythonjupyter-notebooks-and-jupyterhub)
-
 - [Data 8](http://data8.org/)
 
   - [GitHub organization](https://github.com/data-8)
