@@ -163,8 +163,8 @@ to perform its API requests. Each Externally-Managed Service will need a
 unique API token, because the Hub authenticates each API request and the API
 token is used to identify the originating Service or user.
 
-A configuration example of an Externally-Managed Service with admin access and
-running its own web server is:
+A configuration example of an Externally-Managed Service running its own web
+server is:
 
 ```python
 c.JupyterHub.services = [
@@ -385,7 +385,7 @@ There are two levels of authentication with the Hub:
   This should be used for any service that serves pages that should be visited with a browser.
 
 To use HubAuth, you must set the `.api_token` instance variable. This can be
-done either programmatically when constructing the class, or via the
+done via the HubAuth constructor, direct assignment to a HubAuth object, or via the
 `JUPYTERHUB_API_TOKEN` environment variable. A number of the examples in the
 root of the jupyterhub git repository set the `JUPYTERHUB_API_TOKEN` variable
 so consider having a look at those for further reading
@@ -445,7 +445,7 @@ for more details.
 ### Authenticating tornado services with JupyterHub
 
 Since most Jupyter services are written with tornado,
-we include a mixin class, [`HubOAuthenticated`][huboauthenticated],
+we include a mixin class, {class}`.HubOAuthenticated`,
 for quickly authenticating your own tornado services with JupyterHub.
 
 Tornado's {py:func}`~.tornado.web.authenticated` decorator calls a Handler's {py:meth}`~.tornado.web.RequestHandler.get_current_user`
