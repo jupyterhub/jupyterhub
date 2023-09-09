@@ -338,7 +338,7 @@ for more details.
 ### Authenticating tornado services with JupyterHub
 
 Since most Jupyter services are written with tornado,
-we include a mixin class, {class}`~.HubOAuthenticated`,
+we include a mixin class, {class}`.HubOAuthenticated`,
 for quickly authenticating your own tornado services with JupyterHub.
 
 Tornado's {py:func}`~.tornado.web.authenticated` decorator calls a Handler's {py:meth}`~.tornado.web.RequestHandler.get_current_user`
