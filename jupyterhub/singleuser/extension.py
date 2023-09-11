@@ -149,6 +149,31 @@ class JupyterHubIdentityProvider(IdentityProvider):
 
         handler.get_login_url = get_login_url
 
+    def _persist_url_token(self, handler):
+        """Persist ?token=... from URL in cookie
+
+        for use in future requests.
+
+        Allows initiating an authenticated session
+        via /user/name/?token=abc...,
+        otherwise only the initial request will be authenticated.
+        """
+        # store ?token=... tokens passed via url in a cookie for future requests
+        url_token = handler.get_argument('token', '')
+        if not url_token:
+            return
+        # only do this if the token in the URL is the source of authentication
+        if not getattr(handler, '_token_authenticated', False):
+            return
+        if not hasattr(self.hub_auth, 'set_cookie'):
+            # only HubOAuth can persist cookies
+            return
+        self.log.info(
+            "Storing token from url in cookie for %s",
+            handler.request.remote_ip,
+        )
+        self.hub_auth.set_cookie(handler, url_token)
+
     async def get_user(self, handler):
         if hasattr(handler, "_jupyterhub_user"):
             return handler._jupyterhub_user
@@ -187,6 +212,8 @@ class JupyterHubIdentityProvider(IdentityProvider):
 
             return None
         handler._jupyterhub_user = JupyterHubUser(user)
+        if handler.get_argument('token', ''):
+            self.hub_auth._persist_url_token(handler)
         return handler._jupyterhub_user
 
     def get_handlers(self):
