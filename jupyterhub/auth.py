@@ -299,8 +299,9 @@ class Authenticator(LoggingConfigurable):
         This function is called after the user has passed all authentication checks
         and is ready to successfully authenticate. This function must return the
         auth_model dict reguardless of changes to it.
+        The hook is called with 3 positional arguments: `(authenticator, handler, auth_model)`.
 
-        This maybe a coroutine.
+        This may be a coroutine.
 
         .. versionadded: 1.0
 
