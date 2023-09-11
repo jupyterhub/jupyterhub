@@ -483,6 +483,11 @@ class JupyterHubSingleUser(ExtensionApp):
         cfg.answer_yes = True
         self.config.FileContentsManager.delete_to_trash = False
 
+        # load Spawner.notebook_dir configuration, if given
+        root_dir = os.getenv("JUPYTERHUB_ROOT_DIR", None)
+        if root_dir:
+            cfg.root_dir = os.path.expanduser(root_dir)
+
         # load http server config from environment
         url = urlparse(os.environ['JUPYTERHUB_SERVICE_URL'])
         if url.port:
@@ -639,7 +644,7 @@ class JupyterHubSingleUser(ExtensionApp):
     disable_user_config = Bool()
 
     @default("disable_user_config")
-    def _defaut_disable_user_config(self):
+    def _default_disable_user_config(self):
         return _bool_env("JUPYTERHUB_DISABLE_USER_CONFIG")
 
     @classmethod

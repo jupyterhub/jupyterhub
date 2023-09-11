@@ -274,8 +274,6 @@ class Spawner(LoggingConfigurable):
     api_token = Unicode()
     oauth_client_id = Unicode()
 
-    oauth_scopes = List(Unicode())
-
     @property
     def oauth_scopes(self):
         warnings.warn(
@@ -838,6 +836,27 @@ class Spawner(LoggingConfigurable):
         does **not** implement this support. A custom spawner **must** add
         support for this setting for it to be enforced.
         """,
+    ).tag(config=True)
+
+    progress_ready_hook = Any(
+        help="""
+        An optional hook function that you can implement to modify the
+        ready event, which will be shown to the user on the spawn progress page when their server
+        is ready.
+
+        This can be set independent of any concrete spawner implementation.
+
+        This maybe a coroutine.
+
+        Example::
+
+            async def my_ready_hook(spawner, ready_event):
+                ready_event["html_message"] = f"Server {spawner.name} is ready for {spawner.user.name}"
+                return ready_event
+
+            c.Spawner.progress_ready_hook = my_ready_hook
+
+        """
     ).tag(config=True)
 
     pre_spawn_hook = Any(
@@ -1735,7 +1754,7 @@ class LocalProcessSpawner(Spawner):
             self.clear_state()
             return 0
 
-        # We use pustil.pid_exists on windows
+        # We use psutil.pid_exists on windows
         if os.name == 'nt':
             alive = psutil.pid_exists(self.pid)
         else:

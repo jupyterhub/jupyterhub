@@ -157,6 +157,25 @@ class Authenticator(LoggingConfigurable):
         """
     ).tag(config=True)
 
+    otp_prompt = Any(
+        "OTP:",
+        help="""
+        The prompt string for the extra OTP (One Time Password) field.
+
+        .. versionadded:: 5.0
+        """,
+    ).tag(config=True)
+
+    request_otp = Bool(
+        False,
+        config=True,
+        help="""
+        Prompt for OTP (One Time Password) in the login form.
+
+        .. versionadded:: 5.0
+        """,
+    )
+
     _deprecated_aliases = {
         "whitelist": ("allowed_users", "1.2"),
         "blacklist": ("blocked_users", "1.2"),
@@ -485,6 +504,8 @@ class Authenticator(LoggingConfigurable):
          - `authenticate` turns formdata into a username
          - `normalize_username` normalizes the username
          - `check_allowed` checks against the allowed usernames
+         - `check_blocked_users` check against the blocked usernames
+         - `is_admin` check if a user is an admin
 
         .. versionchanged:: 0.8
             return dict instead of username
@@ -603,8 +624,7 @@ class Authenticator(LoggingConfigurable):
                 The Authenticator may return a dict instead, which MUST have a
                 key `name` holding the username, and MAY have additional keys:
 
-                - `auth_state`, a dictionary of of auth state that will be
-                  persisted;
+                - `auth_state`, a dictionary of auth state that will be persisted;
                 - `admin`, the admin setting value for the user
                 - `groups`, the list of group names the user should be a member of,
                   if Authenticator.manage_groups is True.
@@ -1103,9 +1123,16 @@ class PAMAuthenticator(LocalAuthenticator):
         Return None otherwise.
         """
         username = data['username']
+        password = data["password"]
+        if "otp" in data:
+            # OTP given, pass as tuple (requires pamela 1.1)
+            password = (data["password"], data["otp"])
         try:
             pamela.authenticate(
-                username, data['password'], service=self.service, encoding=self.encoding
+                username,
+                password,
+                service=self.service,
+                encoding=self.encoding,
             )
         except pamela.PAMError as e:
             if handler is not None:

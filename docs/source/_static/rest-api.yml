@@ -6,7 +6,7 @@ info:
   description: The REST API for JupyterHub
   license:
     name: BSD-3-Clause
-  version: 4.1.0.dev
+  version: 5.0.0.dev
 servers:
   - url: /hub/api
 security:
@@ -1498,6 +1498,9 @@ components:
             read:groups: Read group models.
             read:groups:name: Read group names.
             delete:groups: Delete groups.
+            admin:services:
+              Create, read, update, delete services, not including services
+              defined from config files.
             list:services: List services, including at least their names.
             read:services: Read service models.
             read:services:name: Read service names.

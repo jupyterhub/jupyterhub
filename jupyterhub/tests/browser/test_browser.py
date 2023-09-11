@@ -2,6 +2,7 @@
 
 import json
 import re
+from unittest import mock
 from urllib.parse import parse_qs, urlparse
 
 import pytest
@@ -141,6 +142,53 @@ async def test_login_with_invalid_credantials(app, browser, username, pass_w):
     await expect(locator).to_be_visible()
     await expect(locator).to_contain_text(expected_error_message)
     await expect(browser).to_have_url(re.compile(".*/hub/login"))
+
+
+@pytest.mark.parametrize("request_otp", [True, False])
+async def test_login_otp(request, app, browser, username, request_otp):
+    def _reset():
+        app.authenticator.request_otp = False
+
+    request.addfinalizer(_reset)
+
+    app.authenticator.request_otp = request_otp
+    login_url = url_concat(
+        url_path_join(public_host(app), app.hub.base_url, "login"),
+        {"next": ujoin(public_url(app), "/hub/home/")},
+    )
+    await browser.goto(login_url)
+    # check for otp element
+    otp_label = browser.locator("label[for=otp_input]")
+    otp_input = browser.locator("input#otp_input")
+    if not request_otp:
+        # request_otp is False, no OTP prompt
+        assert await otp_label.count() == 0
+        assert await otp_input.count() == 0
+        return
+
+    await expect(otp_label).to_be_visible()
+    await expect(otp_input).to_be_visible()
+    await expect(otp_label).to_have_text(app.authenticator.otp_prompt)
+
+    # fill it out
+    await browser.get_by_label("Username:").fill(username)
+    await browser.get_by_label("Password:").fill(username)
+    await browser.get_by_label("OTP:").fill("otp!")
+
+    # submit form
+    with mock.patch(
+        "jupyterhub.tests.mocking.mock_authenticate",
+        spec=True,
+        return_value={"username": username},
+    ) as mock_otp_auth:
+        await browser.get_by_role("button", name="Sign in").click()
+        expected_url = ujoin(public_url(app), "/hub/home/")
+        await expect(browser).to_have_url(expected_url)
+
+    # check that OTP was passed
+    assert mock_otp_auth.called
+    assert mock_otp_auth.call_args.args[0] == username
+    assert mock_otp_auth.call_args.args[1] == (username, "otp!")
 
 
 # SPAWNING
@@ -985,7 +1033,7 @@ async def test_start_stop_server_on_admin_page(
 
     async def click_spawn_page(browser, username):
         """spawn the server for one user via the Spawn page button, index = 0 or 1"""
-        spawn_btn_xpath = f'//a[contains(@href, "spawn/{username}")]/button[contains(@class, "secondary")]'
+        spawn_btn_xpath = f'//a[contains(@href, "spawn/{username}")]/button[contains(@class, "btn-light")]'
         spawn_btn = browser.locator(spawn_btn_xpath)
         await expect(spawn_btn).to_be_enabled()
         async with browser.expect_navigation(url=f"**/user/{username}/"):
@@ -993,7 +1041,7 @@ async def test_start_stop_server_on_admin_page(
 
     async def click_access_server(browser, username):
         """access to the server for users via the Access Server button"""
-        access_btn_xpath = f'//a[contains(@href, "user/{username}")]/button[contains(@class, "primary")]'
+        access_btn_xpath = f'//a[contains(@href, "user/{username}")]/button[contains(@class, "btn-primary")]'
         access_btn = browser.locator(access_btn_xpath)
         await expect(access_btn).to_be_enabled()
         await access_btn.click()

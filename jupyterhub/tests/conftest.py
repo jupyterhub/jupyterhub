@@ -34,6 +34,7 @@ from subprocess import TimeoutExpired
 from unittest import mock
 
 from pytest import fixture, raises
+from sqlalchemy import event
 from tornado.httpclient import HTTPError
 from tornado.platform.asyncio import AsyncIOMainLoop
 
@@ -166,7 +167,10 @@ async def cleanup_after(request, io_loop):
         app = MockHub.instance()
         if app.db_file.closed:
             return
-        for uid, user in list(app.users.items()):
+
+        # cleanup users
+        for orm_user in app.db.query(orm.User):
+            user = app.users[orm_user]
             for name, spawner in list(user.spawners.items()):
                 if spawner.active:
                     try:
@@ -176,10 +180,20 @@ async def cleanup_after(request, io_loop):
                     print(f"Stopping leftover server {spawner._log_name}")
                     await user.stop(name)
             if user.name not in {'admin', 'user'}:
-                app.users.delete(uid)
+                app.users.delete(user.id)
         # delete groups
         for group in app.db.query(orm.Group):
             app.db.delete(group)
+
+        # clear services
+        for name, service in app._service_map.items():
+            if service.managed:
+                service.stop()
+        for orm_service in app.db.query(orm.Service):
+            if orm_service.oauth_client:
+                app.oauth_provider.remove_client(orm_service.oauth_client_id)
+            app.db.delete(orm_service)
+        app._service_map.clear()
         app.db.commit()
 
 
@@ -261,10 +275,7 @@ class MockServiceSpawner(jupyterhub.services.service._ServiceSpawner):
     poll_interval = 1
 
 
-_mock_service_counter = 0
-
-
-async def _mockservice(request, app, external=False, url=False):
+async def _mockservice(request, app, name, external=False, url=False):
     """
     Add a service to the application
 
@@ -280,9 +291,6 @@ async def _mockservice(request, app, external=False, url=False):
           If True, register the service at a URL
           (as opposed to headless, API-only).
     """
-    global _mock_service_counter
-    _mock_service_counter += 1
-    name = 'mock-service-%i' % _mock_service_counter
     spec = {'name': name, 'command': mockservice_cmd, 'admin': True}
     if url:
         if app.internal_ssl:
@@ -329,22 +337,33 @@ async def _mockservice(request, app, external=False, url=False):
     return service
 
 
+_service_name_counter = 0
+
+
 @fixture
-async def mockservice(request, app):
+def service_name():
+    global _service_name_counter
+    _service_name_counter += 1
+    name = f'test-service-{_service_name_counter}'
+    return name
+
+
+@fixture
+async def mockservice(request, app, service_name):
     """Mock a service with no external service url"""
-    yield await _mockservice(request, app, url=False)
+    yield await _mockservice(request, app, name=service_name, url=False)
 
 
 @fixture
-async def mockservice_external(request, app):
+async def mockservice_external(request, app, service_name):
     """Mock an externally managed service (don't start anything)"""
-    yield await _mockservice(request, app, external=True, url=False)
+    yield await _mockservice(request, app, name=service_name, external=True, url=False)
 
 
 @fixture
-async def mockservice_url(request, app):
+async def mockservice_url(request, app, service_name):
     """Mock a service with its own url to test external services"""
-    yield await _mockservice(request, app, url=True)
+    yield await _mockservice(request, app, name=service_name, url=True)
 
 
 @fixture
@@ -484,3 +503,66 @@ def preserve_scopes():
     scope_definitions = copy.deepcopy(scopes.scope_definitions)
     yield scope_definitions
     scopes.scope_definitions = scope_definitions
+
+
+# collect db query counts and report the top N tests by db query count
+@fixture(autouse=True)
+def count_db_executions(request, record_property):
+    if 'app' in request.fixturenames:
+        app = request.getfixturevalue("app")
+        initial_count = app.db_query_count
+        yield
+        # populate property, collected later in pytest_terminal_summary
+        record_property("db_executions", app.db_query_count - initial_count)
+    elif 'db' in request.fixturenames:
+        # some use the 'db' fixture directly for one-off database tests
+        count = 0
+        engine = request.getfixturevalue("db").get_bind()
+
+        @event.listens_for(engine, "before_execute")
+        def before_execute(conn, clauseelement, multiparams, params, execution_options):
+            nonlocal count
+            count += 1
+
+        yield
+        record_property("db_executions", count)
+    else:
+        # nothing to do, still have to yield
+        yield
+
+
+def pytest_terminal_summary(terminalreporter, exitstatus, config):
+    # collect db_executions property
+    # populated by the count_db_executions fixture
+    db_counts = {}
+    for report in terminalreporter.getreports(""):
+        properties = dict(report.user_properties)
+        db_executions = properties.get("db_executions", 0)
+        if db_executions:
+            db_counts[report.nodeid] = db_executions
+
+    total_queries = sum(db_counts.values())
+    if total_queries == 0:
+        # nothing to report (e.g. test subset)
+        return
+    n = min(10, len(db_counts))
+    terminalreporter.section(f"top {n} database queries")
+    terminalreporter.line(f"{total_queries:<6} (total)")
+    for nodeid in sorted(db_counts, key=db_counts.get, reverse=True)[:n]:
+        queries = db_counts[nodeid]
+        if queries:
+            terminalreporter.line(f"{queries:<6} {nodeid}")
+
+
+@fixture
+def service_data(service_name):
+    """Data used to create service at runtime"""
+    return {
+        "name": service_name,
+        "oauth_client_id": f"service-{service_name}",
+        "api_token": f"api_token-{service_name}",
+        "oauth_redirect_uri": "http://127.0.0.1:5555/oauth_callback-from-api",
+        "oauth_no_confirm": True,
+        "oauth_client_allowed_scopes": ["inherit"],
+        "info": {'foo': 'bar'},
+    }

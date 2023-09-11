@@ -10,6 +10,34 @@ command line for details.
 
 ## 4.0
 
+### 4.0.2 - 2023-08-10
+
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/4.0.1...4.0.2))
+
+#### Enhancements made
+
+- avoid counting failed requests to not-running servers as 'activity' [#4491](https://github.com/jupyterhub/jupyterhub/pull/4491) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- improve permission-denied errors for various cases [#4489](https://github.com/jupyterhub/jupyterhub/pull/4489) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+
+#### Bugs fixed
+
+- set root_dir when using singleuser extension [#4503](https://github.com/jupyterhub/jupyterhub/pull/4503) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio), [@manics](https://github.com/manics))
+- Allow setting custom log_function in tornado_settings in SingleUserServer [#4475](https://github.com/jupyterhub/jupyterhub/pull/4475) ([@grios-stratio](https://github.com/grios-stratio), [@minrk](https://github.com/minrk))
+
+#### Documentation improvements
+
+- doc: update notebook config URL [#4523](https://github.com/jupyterhub/jupyterhub/pull/4523) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics))
+- document how to use notebook v7 with jupyterhub [#4522](https://github.com/jupyterhub/jupyterhub/pull/4522) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics))
+
+#### Contributors to this release
+
+The following people contributed discussions, new ideas, code and documentation contributions, and review.
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/#how-does-this-tool-define-contributions-in-the-reports).
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2023-06-08&to=2023-08-10&type=c))
+
+@agelosnm ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aagelosnm+updated%3A2023-06-08..2023-08-10&type=Issues)) | @consideRatio ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3AconsideRatio+updated%3A2023-06-08..2023-08-10&type=Issues)) | @diocas ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Adiocas+updated%3A2023-06-08..2023-08-10&type=Issues)) | @grios-stratio ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Agrios-stratio+updated%3A2023-06-08..2023-08-10&type=Issues)) | @jhgoebbert ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ajhgoebbert+updated%3A2023-06-08..2023-08-10&type=Issues)) | @jtpio ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ajtpio+updated%3A2023-06-08..2023-08-10&type=Issues)) | @kosmonavtus ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Akosmonavtus+updated%3A2023-06-08..2023-08-10&type=Issues)) | @kreuzert ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Akreuzert+updated%3A2023-06-08..2023-08-10&type=Issues)) | @manics ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amanics+updated%3A2023-06-08..2023-08-10&type=Issues)) | @martinRenou ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3AmartinRenou+updated%3A2023-06-08..2023-08-10&type=Issues)) | @minrk ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk+updated%3A2023-06-08..2023-08-10&type=Issues)) | @opoplawski ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aopoplawski+updated%3A2023-06-08..2023-08-10&type=Issues)) | @Ph0tonic ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3APh0tonic+updated%3A2023-06-08..2023-08-10&type=Issues)) | @sgaist ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Asgaist+updated%3A2023-06-08..2023-08-10&type=Issues)) | @trungleduc ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Atrungleduc+updated%3A2023-06-08..2023-08-10&type=Issues)) | @yuvipanda ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ayuvipanda+updated%3A2023-06-08..2023-08-10&type=Issues))
+
 ### 4.0.1 - 2023-06-08
 
 ([full changelog](https://github.com/jupyterhub/jupyterhub/compare/4.0.0...4.0.1))

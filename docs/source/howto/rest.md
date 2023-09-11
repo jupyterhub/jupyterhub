@@ -24,6 +24,7 @@ such as:
 
 - Checking which users are active
 - Adding or removing users
+- Adding or removing services
 - Stopping or starting single user notebook servers
 - Authenticating services
 - Communicating with an individual Jupyter server's REST API

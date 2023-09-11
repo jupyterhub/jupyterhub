@@ -2,6 +2,7 @@
 import os
 import sys
 from contextlib import nullcontext
+from pprint import pprint
 from subprocess import CalledProcessError, check_output
 from unittest import mock
 from urllib.parse import urlencode, urlparse
@@ -15,6 +16,8 @@ from .. import orm
 from ..utils import url_path_join
 from .mocking import public_url
 from .utils import AsyncSession, async_requests, get_page
+
+IS_JUPYVERSE = os.environ.get("JUPYTERHUB_SINGLEUSER_APP") == "jupyverse"
 
 
 @pytest.mark.parametrize(
@@ -62,6 +65,8 @@ async def test_singleuser_auth(
         await user.spawn(server_name)
         await app.proxy.add_user(user, server_name)
     spawner = user.spawners[server_name]
+    if IS_JUPYVERSE:
+        spawner.default_url = "/lab"
     url = url_path_join(public_url(app, user), server_name)
 
     # no cookies, redirects to login page
@@ -132,6 +137,9 @@ async def test_singleuser_auth(
     await user.stop(server_name)
 
 
+@pytest.mark.skipif(
+    IS_JUPYVERSE, reason="jupyverse doesn't look up directories for configuration files"
+)
 async def test_disable_user_config(request, app, tmpdir, full_spawn):
     # login, start the server
     cookies = await app.login_user('nandy')
@@ -171,9 +179,7 @@ async def test_disable_user_config(request, app, tmpdir, full_spawn):
     )
     r.raise_for_status()
     info = r.json()
-    import pprint
-
-    pprint.pprint(info)
+    pprint(info)
     assert info['disable_user_config']
     server_config = info['config']
     settings = info['settings']
@@ -198,6 +204,83 @@ async def test_disable_user_config(request, app, tmpdir, full_spawn):
                 assert_not_in_home(path, key)
 
 
+@pytest.mark.parametrize("extension", [True, False])
+@pytest.mark.parametrize("notebook_dir", ["", "~", "~/sub", "ABS"])
+@pytest.mark.skipif(
+    IS_JUPYVERSE, reason="jupyverse has not notebook directory configuration"
+)
+async def test_notebook_dir(
+    request, app, tmpdir, user, full_spawn, extension, notebook_dir
+):
+    if extension:
+        try:
+            import jupyter_server  # noqa
+        except ImportError:
+            pytest.skip("needs jupyter-server 2")
+        else:
+            if jupyter_server.version_info < (2,):
+                pytest.skip("needs jupyter-server 2")
+
+    token = user.new_api_token(scopes=["access:servers!user"])
+    headers = {"Authorization": f"Bearer {token}"}
+
+    spawner = user.spawner
+    if extension:
+        user.spawner.environment["JUPYTERHUB_SINGLEUSER_EXTENSION"] = "1"
+    else:
+        user.spawner.environment["JUPYTERHUB_SINGLEUSER_EXTENSION"] = "0"
+
+    home_dir = tmpdir.join("home").mkdir()
+    sub_dir = home_dir.join("sub").mkdir()
+    with sub_dir.join("subfile.txt").open("w") as f:
+        f.write("txt\n")
+    abs_dir = tmpdir.join("abs").mkdir()
+    with abs_dir.join("absfile.txt").open("w") as f:
+        f.write("absfile\n")
+
+    if notebook_dir:
+        expected_root_dir = notebook_dir.replace("ABS", str(abs_dir)).replace(
+            "~", str(home_dir)
+        )
+    else:
+        expected_root_dir = str(home_dir)
+
+    spawner.notebook_dir = notebook_dir.replace("ABS", str(abs_dir))
+
+    # home_dir is defined on SimpleSpawner
+    user.spawner.home_dir = home = str(home_dir)
+    spawner.environment["HOME"] = home
+    await user.spawn()
+    await app.proxy.add_user(user)
+    url = public_url(app, user)
+    r = await async_requests.get(
+        url_path_join(public_url(app, user), 'jupyterhub-test-info'), headers=headers
+    )
+    r.raise_for_status()
+    info = r.json()
+    pprint(info)
+
+    assert info["root_dir"] == expected_root_dir
+    # secondary check: make sure it has the intended effect on root_dir
+    r = await async_requests.get(
+        url_path_join(public_url(app, user), 'api/contents/'), headers=headers
+    )
+    r.raise_for_status()
+    root_contents = sorted(item['name'] for item in r.json()['content'])
+
+    # check contents
+    if not notebook_dir or notebook_dir == "~":
+        # use any to avoid counting possible automatically created files in $HOME
+        assert 'sub' in root_contents
+    elif notebook_dir == "ABS":
+        assert 'absfile.txt' in root_contents
+    elif notebook_dir == "~/sub":
+        assert 'subfile.txt' in root_contents
+    else:
+        raise ValueError(f"No contents check for {notebook_dir=}")
+
+
+@pytest.mark.skipif(IS_JUPYVERSE, reason="jupyverse has no --help-all")
 def test_help_output():
     out = check_output(
         [sys.executable, '-m', 'jupyterhub.singleuser', '--help-all']
@@ -205,6 +288,7 @@ def test_help_output():
     assert 'JupyterHub' in out
 
 
+@pytest.mark.skipif(IS_JUPYVERSE, reason="jupyverse has not --version")
 def test_version():
     out = check_output(
         [sys.executable, '-m', 'jupyterhub.singleuser', '--version']
@@ -271,6 +355,7 @@ def test_singleuser_app_class(JUPYTERHUB_SINGLEUSER_APP):
         assert '--NotebookApp.' not in out
 
 
+@pytest.mark.skipif(IS_JUPYVERSE, reason="nbclassic specific test")
 async def test_nbclassic_control_panel(app, user, full_spawn):
     # login, start the server
     await user.spawn()

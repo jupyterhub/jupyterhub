@@ -4,20 +4,19 @@
 
 ## Definition of a Service
 
-When working with JupyterHub, a **Service** is defined as a process that interacts
-with the Hub's REST API. A Service may perform a specific
-action or task. For example, the following tasks can each be a unique Service:
+When working with JupyterHub, a **Service** is defined as something (usually a process) that can interact with the Hub's REST API.
+A Service may perform a specific action or task.
+For example, the following tasks can each be a unique Service:
 
-- shutting down individuals' single user notebook servers that have been idle
-  for some time
-- registering additional web servers which should use the Hub's authentication
-  and be served behind the Hub's proxy.
+- shutting down individuals' single user notebook servers that have been idle for some time
+- an additional web application which uses the Hub as an OAuth provider to authenticate and authorize user access
+- a script run once in a while, which performs any API action
+- automating requests to running user servers, such as activity data collection
 
-Two key features help define a Service:
+Two key features help differentiate Services:
 
 - Is the Service **managed** by JupyterHub?
-- Does the Service have a web server that should be added to the proxy's
-  table?
+- Does the Service have a web server that should be added to the proxy's table?
 
 Currently, these characteristics distinguish two types of Services:
 
@@ -30,24 +29,32 @@ Currently, these characteristics distinguish two types of Services:
 A Service may have the following properties:
 
 - `name: str` - the name of the service
-- `admin: bool (default - false)` - whether the service should have
-  administrative privileges
-- `url: str (default - None)` - The URL where the service is/should be. If a
-  url is specified for where the Service runs its own web server,
-  the service will be added to the proxy at `/services/:name`
-- `api_token: str (default - None)` - For Externally-Managed Services you need to specify
-  an API token to perform API requests to the Hub
+- `url: str (default - None)` - The URL where the service should be running (from the proxy's perspective).
+  Typically a localhost URL for Hub-managed services.
+  If a url is specified,
+  the service will be added to the proxy at `/services/:name`.
+- `api_token: str (default - None)` - For Externally-Managed Services,
+  you need to specify an API token to perform API requests to the Hub.
+  For Hub-managed services, this token is generated at startup,
+  and available via `$JUPYTERHUB_API_TOKEN`.
+  For OAuth services, this is the client secret.
 - `display: bool (default - True)` - When set to true, display a link to the
-  service's URL under the 'Services' dropdown in user's hub home page.
-
+  service's URL under the 'Services' dropdown in users' hub home page.
+  Only has an effect if `url` is also specified.
 - `oauth_no_confirm: bool (default - False)` - When set to true,
   skip the OAuth confirmation page when users access this service.
-
   By default, when users authenticate with a service using JupyterHub,
   they are prompted to confirm that they want to grant that service
   access to their credentials.
   Skipping the confirmation page is useful for admin-managed services that are considered part of the Hub
   and shouldn't need extra prompts for login.
+- `oauth_client_id: str (default - 'service-$name')` -
+  This never needs to be set, but you can specify a service's OAuth client id.
+  It must start with `service-`.
+- `oauth_redirect_uri: str (default: '/services/:name/oauth_redirect')` -
+  Set the OAuth redirect URI.
+  Required if the redirect URI differs from the default or the service is not to be added to the proxy at `/services/:name`
+  (i.e. `url` is not set, but there is still a public web service using OAuth).
 
 If a service is also to be managed by the Hub, it has a few extra options:
 
@@ -55,19 +62,19 @@ If a service is also to be managed by the Hub, it has a few extra options:
   externally. - If a command is specified for launching the Service, the Service will
   be started and managed by the Hub.
 - `environment: dict` - additional environment variables for the Service.
-- `user: str` - the name of a system user to manage the Service. If
-  unspecified, run as the same user as the Hub.
+- `user: str` - the name of a system user to manage the Service.
+  If unspecified, run as the same user as the Hub.
 
 ## Hub-Managed Services
 
 A **Hub-Managed Service** is started by the Hub, and the Hub is responsible
-for the Service's actions. A Hub-Managed Service can only be a local
+for the Service's operation. A Hub-Managed Service can only be a local
 subprocess of the Hub. The Hub will take care of starting the process and
 restart the service if the service stops.
 
-While Hub-Managed Services share some similarities with notebook Spawners,
+While Hub-Managed Services share some similarities with single-user server Spawners,
 there are no plans for Hub-Managed Services to support the same spawning
-abstractions as a notebook Spawner.
+abstractions as a Spawner.
 
 If you wish to run a Service in a Docker container or other deployment
 environments, the Service can be registered as an
@@ -156,8 +163,8 @@ to perform its API requests. Each Externally-Managed Service will need a
 unique API token, because the Hub authenticates each API request and the API
 token is used to identify the originating Service or user.
 
-A configuration example of an Externally-Managed Service with admin access and
-running its own web server is:
+A configuration example of an Externally-Managed Service running its own web
+server is:
 
 ```python
 c.JupyterHub.services = [
@@ -173,6 +180,147 @@ c.JupyterHub.services = [
 
 In this case, the `url` field will be passed along to the Service as
 `JUPYTERHUB_SERVICE_URL`.
+
+## Service credentials
+
+A service has direct access to the Hub API via its `api_token`.
+Exactly what actions the service can take are governed by the service's [role assignments](define-role-target):
+
+```python
+c.JupyterHub.services = [
+    {
+        "name": "user-lister",
+        "command": ["python3", "/path/to/user-lister"],
+    }
+]
+
+c.JupyterHub.load_roles = [
+    {
+        "name": "list-users",
+        "scopes": ["list:users", "read:users"],
+        "services": ["user-lister"]
+    }
+]
+```
+
+When a service has a configured URL or explicit `oauth_client_id` or `oauth_redirect_uri`, it can operate as an [OAuth client](jupyterhub-oauth).
+When a user visits an oauth-authenticated service,
+completion of authentication results in issuing an oauth token.
+
+This token is:
+
+- owned by the authenticated user
+- associated with the oauth client of the service
+- governed by the service's `oauth_client_allowed_scopes` configuration
+
+This token enables the service to act _on behalf of_ the user.
+
+When an oauthenticated service makes a request to the Hub (or other Hub-authenticated service), it has two credentials available to authenticate the request:
+
+- the service's own `api_token`, which acts _as_ the service,
+  and is governed by the service's own role assignments.
+- the user's oauth token issued to the service during the oauth flow,
+  which acts _as_ the user.
+
+Choosing which one to use depends on "who" should be considered taking the action represented by the request.
+
+A service's own permissions governs how it can act without any involvement of a user.
+The service's `oauth_client_allowed_scopes` configuration allows individual users to _delegate_ permission for the service to act on their behalf.
+This allows services to have little to no permissions of their own,
+but allow users to take actions _via_ the service,
+using their own credentials.
+
+An example of such a service would be a web application for instructors,
+presenting a dashboard of actions which can be taken for students in their courses.
+The service would need no permission to do anything with the JupyterHub API on its own,
+but it could employ the user's oauth credentials to list users,
+manage student servers, etc.
+
+This service might look like:
+
+```python
+c.JupyterHub.services = [
+    {
+        "name": "grader-dashboard",
+        "command": ["python3", "/path/to/grader-dashboard"],
+        "url": "http://127.0.0.1:12345",
+        "oauth_client_allowed_scopes": [
+            "list:users",
+            "read:users",
+        ]
+    }
+]
+
+c.JupyterHub.load_roles = [
+    {
+        "name": "grader",
+        "scopes": [
+            "list:users!group=class-a",
+            "read:users!group=class-a",
+            "servers!group=class-a",
+            "access:servers!group=class-a",
+            "access:services",
+        ],
+        "groups": ["graders"]
+    }
+]
+```
+
+In this example, the `grader-dashboard` service does not have permission to take any actions with the Hub API on its own because it has not been assigned any role.
+But when a grader accesses the service,
+the dashboard will have a token with permission to list and read information about any users that the grader can access.
+The dashboard will _not_ have permission to do additional things as the grader.
+
+The dashboard will be able to:
+
+- list users in class A (`list:users!group=class-a`)
+- read information about users in class A (`read:users!group=class-a`)
+
+The dashboard will _not_ be able to:
+
+- start, stop, or access user servers (`servers`, `access:servers`), even though the grader has this permission (it's not in `oauth_client_allowed_scopes`)
+- take any action without the grader granting permission via oauth
+
+## Adding or removing services at runtime
+
+Only externally-managed services can be added at runtime by using JupyterHub’s REST API.
+
+### Add a new service
+
+To add a new service, send a POST request to this endpoint
+
+```
+POST /hub/api/services/:servicename
+```
+
+**Required scope: `admin:services`**
+
+**Payload**: The payload should contain the definition of the service to be created. The endpoint supports the same properties as externally-managed services defined in the config file.
+
+**Possible responses**
+
+- `201 Created`: The service and related objects are created (and started in case of a Hub-managed one) successfully.
+- `400 Bad Request`: The payload is invalid or JupyterHub can not create the service.
+- `409 Conflict`: The service with the same name already exists.
+
+### Remove an existing service
+
+To remove an existing service, send a DELETE request to this endpoint
+
+```
+DELETE /hub/api/services/:servicename
+```
+
+**Required scope: `admin:services`**
+
+**Payload**: `None`
+
+**Possible responses**
+
+- `200 OK`: The service and related objects are removed (and stopped in case of a Hub-managed one) successfully.
+- `400 Bad Request`: JupyterHub can not remove the service.
+- `404 Not Found`: The requested service does not exist.
+- `405 Not Allowed`: The requested service is created from the config file, it can not be removed at runtime.
 
 ## Writing your own Services
 
@@ -237,16 +385,14 @@ There are two levels of authentication with the Hub:
   This should be used for any service that serves pages that should be visited with a browser.
 
 To use HubAuth, you must set the `.api_token` instance variable. This can be
-done either programmatically when constructing the class, or via the
+done via the HubAuth constructor, direct assignment to a HubAuth object, or via the
 `JUPYTERHUB_API_TOKEN` environment variable. A number of the examples in the
 root of the jupyterhub git repository set the `JUPYTERHUB_API_TOKEN` variable
-so consider having a look at those for futher reading
+so consider having a look at those for further reading
 ([cull-idle](https://github.com/jupyterhub/jupyterhub/tree/master/examples/cull-idle),
 [external-oauth](https://github.com/jupyterhub/jupyterhub/tree/master/examples/external-oauth),
 [service-notebook](https://github.com/jupyterhub/jupyterhub/tree/master/examples/service-notebook)
-and [service-whoiami](https://github.com/jupyterhub/jupyterhub/tree/master/examples/service-whoami))
-
-(TODO: Where is this API TOKen set?)
+and [service-whoami](https://github.com/jupyterhub/jupyterhub/tree/master/examples/service-whoami))
 
 Most of the logic for authentication implementation is found in the
 {meth}`.HubAuth.user_for_token` methods,
@@ -299,7 +445,7 @@ for more details.
 ### Authenticating tornado services with JupyterHub
 
 Since most Jupyter services are written with tornado,
-we include a mixin class, [`HubOAuthenticated`][huboauthenticated],
+we include a mixin class, {class}`.HubOAuthenticated`,
 for quickly authenticating your own tornado services with JupyterHub.
 
 Tornado's {py:func}`~.tornado.web.authenticated` decorator calls a Handler's {py:meth}`~.tornado.web.RequestHandler.get_current_user`

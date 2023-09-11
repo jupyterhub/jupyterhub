@@ -65,7 +65,7 @@ jobs:
         #   unencrypted HTTP
         #
         # main_dependencies:
-        #   Tests everything when the we use the latest available dependencies
+        #   Tests everything when we use the latest available dependencies
         #   from: traitlets.
         #
         # NOTE: Since only the value of these parameters are presented in the
@@ -74,7 +74,7 @@ jobs:
         # Python versions available at:
         #   https://github.com/actions/python-versions/blob/HEAD/versions-manifest.json
         include:
-          - python: "3.7"
+          - python: "3.8"
             oldest_dependencies: oldest_dependencies
             legacy_notebook: legacy_notebook
           - python: "3.8"
@@ -90,6 +90,9 @@ jobs:
           - python: "3.11"
             ssl: ssl
             serverextension: serverextension
+          - python: "3.11"
+            jupyverse: jupyverse
+            subset: singleuser
           - python: "3.11"
             subdomain: subdomain
             noextension: noextension
@@ -129,6 +132,9 @@ jobs:
               echo "JUPYTERHUB_SINGLEUSER_EXTENSION=1" >> $GITHUB_ENV
           elif [ "${{ matrix.noextension }}" != "" ]; then
               echo "JUPYTERHUB_SINGLEUSER_EXTENSION=0" >> $GITHUB_ENV
+          fi
+          if [ "${{ matrix.jupyverse }}" != "" ]; then
+              echo "JUPYTERHUB_SINGLEUSER_APP=jupyverse" >> $GITHUB_ENV
           fi
       - uses: actions/checkout@v3
       # NOTE: actions/setup-node@v3 make use of a cache within the GitHub base
@@ -175,6 +181,10 @@ jobs:
           fi
           if [ "${{ matrix.jupyter_server }}" != "" ]; then
               pip install "jupyter_server==${{ matrix.jupyter_server }}"
+          fi
+          if [ "${{ matrix.jupyverse }}" != "" ]; then
+              pip install "jupyverse[jupyterlab,auth-jupyterhub]"
+              pip install -e .
           fi
           if [ "${{ matrix.db }}" == "mysql" ]; then
               pip install mysqlclient
