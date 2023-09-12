@@ -379,6 +379,9 @@ async def test_nbclassic_control_panel(app, user, full_spawn):
     assert link["href"] == url_path_join(prefix, "hub/home")
 
 
+@pytest.mark.skipif(
+    IS_JUPYVERSE, reason="jupyverse doesn't implement token authentication"
+)
 async def test_token_url_cookie(app, user, full_spawn):
     await user.spawn()
     token = user.new_api_token(scopes=["access:servers!user"])
