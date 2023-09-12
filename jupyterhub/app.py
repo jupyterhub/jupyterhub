@@ -2785,9 +2785,13 @@ class JupyterHub(Application):
                         "%s appears to have stopped while the Hub was down",
                         spawner._log_name,
                     )
-                    # remove server entry from db
-                    db.delete(spawner.orm_spawner.server)
-                    spawner.server = None
+                    try:
+                        await user.stop(name)
+                    except Exception:
+                        self.log.exception(
+                            f"Failed to cleanup {spawner._log_name} which appeared to stop while the Hub was down.",
+                            exc_info=True,
+                        )
                 else:
                     self.log.debug("%s not running", spawner._log_name)
 
