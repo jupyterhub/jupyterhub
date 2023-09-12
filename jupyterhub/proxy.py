@@ -48,7 +48,7 @@ from jupyterhub.traitlets import Command
 from . import utils
 from .metrics import CHECK_ROUTES_DURATION_SECONDS, PROXY_POLL_DURATION_SECONDS
 from .objects import Server
-from .utils import AnyTimeoutError, exponential_backoff, url_escape_path, url_path_join
+from .utils import exponential_backoff, url_escape_path, url_path_join
 
 
 def _one_at_a_time(method):
@@ -766,24 +766,36 @@ class ConfigurableHTTPProxy(Proxy):
 
         self._write_pid_file()
 
-        def _check_process():
-            status = self.proxy_process.poll()
-            if status is not None:
-                with self.proxy_process:
-                    e = RuntimeError("Proxy failed to start with exit code %i" % status)
-                    raise e from None
+        async def watch_process():
+            """Watch proxy process for early termination
 
-        for server in (public_server, api_server):
-            for i in range(10):
-                _check_process()
-                try:
-                    await server.wait_up(1)
-                except AnyTimeoutError:
-                    continue
-                else:
-                    break
-            await server.wait_up(1)
-        _check_process()
+            so we don't keep waiting for connections after the proxy exits
+            """
+            while True:
+                status = self.proxy_process.poll()
+                if status is not None:
+                    with self.proxy_process:
+                        e = RuntimeError(
+                            f"Proxy failed to start with exit code {status}"
+                        )
+                        raise e from None
+
+                await asyncio.wait([servers_ready], timeout=0.5)
+                # stop watching the process when the connections
+                # have finished (success or failure)
+                if servers_ready.done():
+                    return
+
+        servers_ready = asyncio.gather(
+            *(server.wait_up(10) for server in (public_server, api_server))
+        )
+
+        process_ended = asyncio.ensure_future(watch_process())
+        # wait for process to crash or servers to be ready,
+        # whichever comes first
+        # don't need to handle exceptions here,
+        # as the underlying exceptions have informative error messages
+        await asyncio.wait_for(asyncio.gather(process_ended, servers_ready), timeout=15)
         self.log.debug("Proxy started and appears to be up")
         pc = PeriodicCallback(self.check_running, 1e3 * self.check_running_interval)
         self._check_running_callback = pc
