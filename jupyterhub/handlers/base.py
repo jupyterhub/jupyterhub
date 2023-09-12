@@ -518,13 +518,18 @@ class BaseHandler(RequestHandler):
 
     def clear_login_cookie(self, name=None):
         kwargs = {}
-        if self.subdomain_host:
-            kwargs['domain'] = self.domain
         user = self.get_current_user_cookie()
         session_id = self.get_session_cookie()
         if session_id:
             # clear session id
-            self.clear_cookie(SESSION_COOKIE_NAME, path=self.base_url, **kwargs)
+            session_cookie_kwargs = {}
+            session_cookie_kwargs.update(kwargs)
+            if self.subdomain_host:
+                session_cookie_kwargs['domain'] = self.domain
+
+            self.clear_cookie(
+                SESSION_COOKIE_NAME, path=self.base_url, **session_cookie_kwargs
+            )
 
             if user:
                 # user is logged in, clear any tokens associated with the current session
@@ -573,8 +578,6 @@ class BaseHandler(RequestHandler):
         kwargs = {'httponly': True}
         if self.request.protocol == 'https':
             kwargs['secure'] = True
-        if self.subdomain_host:
-            kwargs['domain'] = self.domain
 
         kwargs.update(self.settings.get('cookie_options', {}))
         kwargs.update(overrides)
@@ -609,8 +612,18 @@ class BaseHandler(RequestHandler):
         so other services on this domain can read it.
         """
         session_id = uuid.uuid4().hex
+        # if using subdomains, set session cookie on the domain,
+        # which allows it to be shared by subdomains.
+        # if domain is unspecified, it is _more_ restricted to only the setting domain
+        kwargs = {}
+        if self.subdomain_host:
+            kwargs['domain'] = self.domain
         self._set_cookie(
-            SESSION_COOKIE_NAME, session_id, encrypted=False, path=self.base_url
+            SESSION_COOKIE_NAME,
+            session_id,
+            encrypted=False,
+            path=self.base_url,
+            **kwargs,
         )
         return session_id
 
