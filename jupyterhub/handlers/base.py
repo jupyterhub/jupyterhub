@@ -138,6 +138,10 @@ class BaseHandler(RequestHandler):
         return self.settings['domain']
 
     @property
+    def public_url(self):
+        return self.settings['public_url']
+
+    @property
     def db(self):
         return self.settings['db']
 
@@ -578,8 +582,9 @@ class BaseHandler(RequestHandler):
         else:
             if self.request.protocol == 'https':
                 kwargs['secure'] = True
-            if self.subdomain_host:
-                kwargs['domain'] = self.domain
+
+        if self.subdomain_host:
+            kwargs['domain'] = self.domain
 
         kwargs.update(self.settings.get('cookie_options', {}))
         kwargs.update(overrides)

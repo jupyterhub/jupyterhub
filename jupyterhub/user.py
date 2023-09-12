@@ -4,7 +4,7 @@ import json
 import warnings
 from collections import defaultdict
 from datetime import datetime, timedelta
-from urllib.parse import quote, urlparse
+from urllib.parse import quote, urlparse, urlunparse
 
 from sqlalchemy import inspect
 from tornado import gen, web
@@ -437,6 +437,20 @@ class User:
             )
             spawn_kwargs.update(ssl_kwargs)
 
+        # public URLs
+        if self.settings.get("public_url"):
+            public_url = self.settings["public_url"]
+            hub = self.settings.get('hub')
+            if hub is None:
+                # only in mock tests
+                hub_path = "/hub/"
+            else:
+                hub_path = hub.base_url
+            spawn_kwargs["public_hub_url"] = urlunparse(
+                public_url._replace(path=hub_path)
+            )
+        spawn_kwargs["public_url"] = self.public_url(server_name)
+
         # update with kwargs. Mainly for testing.
         spawn_kwargs.update(kwargs)
         spawner = spawner_class(**spawn_kwargs)
@@ -540,12 +554,19 @@ class User:
     @property
     def host(self):
         """Get the *host* for my server (proto://domain[:port])"""
-        # FIXME: escaped_name probably isn't escaped enough in general for a domain fragment
-        parsed = urlparse(self.settings['subdomain_host'])
-        h = f'{parsed.scheme}://{self.domain}'
-        if parsed.port:
-            h += ':%i' % parsed.port
-        return h
+        # if subodmains are used, use our domain
+
+        if self.settings.get('subdomain_host'):
+            parsed = urlparse(self.settings['subdomain_host'])
+            h = f"{parsed.scheme}://{self.domain}"
+            if parsed.port:
+                h = f"{h}:{parsed.port}"
+            return h
+        elif self.settings.get("public_url"):
+            # no subdomain, use public host url without path
+            return urlunparse(self.settings["public_url"]._replace(path=""))
+        else:
+            return ""
 
     @property
     def url(self):
@@ -553,8 +574,8 @@ class User:
 
         Full name.domain/path if using subdomains, otherwise just my /base/url
         """
-        if self.settings.get('subdomain_host'):
-            return f'{self.host}{self.base_url}'
+        if self.settings.get("subdomain_host"):
+            return f"{self.host}{self.base_url}"
         else:
             return self.base_url
 
@@ -564,6 +585,24 @@ class User:
             return self.url
         else:
             return url_path_join(self.url, url_escape_path(server_name), "/")
+
+    def public_url(self, server_name=''):
+        """Get the public URL of a server by name
+
+        Like server_url, but empty if no public URL is specified
+        """
+        # server_url will be a full URL if using subdomains
+        url = self.server_url(server_name)
+        if "://" not in url:
+            # not using subdomains, public URL may be specified
+            if self.settings.get("public_url"):
+                # add server's base_url path prefix to public host
+                url = urlunparse(self.settings["public_url"]._replace(path=url))
+            else:
+                # no public url (from subdomain or host),
+                # leave unspecified
+                url = ""
+        return url
 
     def progress_url(self, server_name=''):
         """API URL for progress endpoint for a server with a given name"""

@@ -138,6 +138,14 @@ JUPYTERHUB_OAUTH_SCOPES:   JSON-serialized list of scopes to use for allowing ac
                            (deprecated in 3.0, use JUPYTERHUB_OAUTH_ACCESS_SCOPES).
 JUPYTERHUB_OAUTH_ACCESS_SCOPES: JSON-serialized list of scopes to use for allowing access to the service (new in 3.0).
 JUPYTERHUB_OAUTH_CLIENT_ALLOWED_SCOPES: JSON-serialized list of scopes that can be requested by the oauth client on behalf of users (new in 3.0).
+JUPYTERHUB_PUBLIC_URL: the public URL of the service,
+  e.g. `https://jupyterhub.horse/services/name/`.
+  Empty if no public URL is specified (default).
+  Will be available if subdomains are configured.
+JUPYTERHUB_PUBLIC_HUB_URL: the public URL of JupyterHub as a whole,
+  e.g. `https://jupyterhub.horse/`.
+  Empty if no public URL is specified (default).
+  Will be available if subdomains are configured.
 ```
 
 For the previous 'cull idle' Service example, these environment variables

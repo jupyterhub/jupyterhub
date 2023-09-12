@@ -724,6 +724,14 @@ class JupyterHub(Application):
         """,
     )
 
+    @default("public_url")
+    def _default_public_url(self):
+        if self.subdomain_host:
+            # if subdomain_host is specified, use it by default
+            return self.subdomain_host + self.base_url
+        else:
+            return ""
+
     @validate("public_url")
     def _validate_public_url(self, proposal):
         url = proposal.value
@@ -734,9 +742,23 @@ class JupyterHub(Application):
             # ensure we have a trailing slash
             # for consistency with base_url
             url = url + "/"
+        if not url.endswith(self.base_url):
+            if not urlparse(url).path.strip("/"):
+                # no path specified, add base_url and warn
+                url = url.rstrip("/") + self.base_url
+                self.log.warning(
+                    f"Adding missing base_url {self.base_url!r} to JupyterHub.public_url = {url!r}"
+                )
+            else:
+                # path specified but it doesn't match, raise
+                raise ValueError(
+                    f"JupyterHub.public_url = {url!r} must include base_url: {self.base_url!r}"
+                )
         if "://" not in url:
-            raise ValueError(
-                f"JupyterHub.public_url '{url}' is missing protocol. It should probably start with 'https://'"
+            # https by default; should be specified
+            url = 'https://' + url
+            self.log.warning(
+                f"Adding missing protocol 'https://' to JupyterHub.public_url = {url!r}"
             )
         return url
 
@@ -763,15 +785,18 @@ class JupyterHub(Application):
             # host should include '://'
             # if not specified, assume https: You have to be really explicit about HTTP!
             new = 'https://' + new
+            self.log.warning(
+                f"Adding missing protocol 'https://' to JupyterHub.subdomain_host = {new!r}"
+            )
         return new
 
     domain = Unicode(help="domain name, e.g. 'example.com' (excludes protocol, port)")
 
     @default('domain')
     def _domain_default(self):
-        if not self.subdomain_host:
+        if not (self.public_url or self.subdomain_host):
             return ''
-        return urlparse(self.subdomain_host).hostname
+        return urlparse(self.public_url or self.subdomain_host).hostname
 
     subdomain_hook = Union(
         [Callable(), Unicode()],
@@ -1981,10 +2006,15 @@ class JupyterHub(Application):
 
     def init_hub(self):
         """Load the Hub URL config"""
+        if self.public_url:
+            # host = scheme://hostname:port (no path)
+            public_host = urlunparse(urlparse(self.public_url)._replace(path=""))
+        else:
+            public_host = self.subdomain_host
         hub_args = dict(
             base_url=self.hub_prefix,
             routespec=self.hub_routespec,
-            public_host=self.subdomain_host,
+            public_host=public_host,
             certfile=self.internal_ssl_cert,
             keyfile=self.internal_ssl_key,
             cafile=self.internal_ssl_ca,
@@ -2502,9 +2532,9 @@ class JupyterHub(Application):
         """
 
         name = orm_service.name
-        if self.domain:
+        if self.subdomain_host:
             parsed_host = urlparse(self.subdomain_host)
-            domain = self.subdomain_hook(name, self.domain, kind="service")
+            domain = self.subdomain_hook(name, parsed_host.hostname, kind="service")
             host = f"{parsed_host.scheme}://{domain}"
             if parsed_host.port:
                 host = f"{host}:{parsed_host.port}"
@@ -2561,9 +2591,9 @@ class JupyterHub(Application):
 
         name = spec['name']
 
-        if self.domain:
+        if self.subdomain_host:
             parsed_host = urlparse(self.subdomain_host)
-            domain = self.subdomain_hook(name, self.domain, kind="service")
+            domain = self.subdomain_hook(name, parsed_host.hostname, kind="service")
             host = f"{parsed_host.scheme}://{domain}"
             if parsed_host.port:
                 host = f"{host}:{parsed_host.port}"
