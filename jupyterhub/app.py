@@ -2501,6 +2501,11 @@ class JupyterHub(Application):
         if orm_service.oauth_client is not None:
             service.oauth_client_id = orm_service.oauth_client.identifier
             service.oauth_redirect_uri = orm_service.oauth_client.redirect_uri
+            oauth_msg = f"with ouath_client_id={orm_service.oauth_client.identifier}"
+        else:
+            oauth_msg = "without oauth"
+
+        self.log.info(f"Loaded service {service.name} from database {oauth_msg}.")
 
         self._service_map[name] = service
 
@@ -2626,6 +2631,15 @@ class JupyterHub(Application):
             service.orm.server = None
 
         if service.oauth_available:
+            self.log.info(
+                f"Creating service {service.name} with oauth_client_id={service.oauth_client_id}"
+            )
+            if not service.oauth_redirect_uri:
+                # redirect uri has a default value if a URL is configured,
+                # but must be specified explicitly for external services
+                raise ValueError(
+                    f"Service {service.name} has oauth configured, but is missing required oauth_redirect_uri."
+                )
             allowed_scopes = set()
             if service.oauth_client_allowed_scopes:
                 allowed_scopes.update(service.oauth_client_allowed_scopes)
@@ -2655,7 +2669,11 @@ class JupyterHub(Application):
             allowed_scopes.update(scopes.access_scopes(oauth_client))
             oauth_client.allowed_scopes = sorted(allowed_scopes)
         else:
+            self.log.info(f"Creating service {service.name} without oauth.")
             if service.oauth_client:
+                self.log.warning(
+                    f"Deleting unused oauth client for service {service.name} with client_id={service.oauth_client.identifier}"
+                )
                 self.db.delete(service.oauth_client)
 
         self._service_map[name] = service
