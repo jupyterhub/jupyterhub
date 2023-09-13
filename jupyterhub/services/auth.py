@@ -686,14 +686,16 @@ class HubAuth(SingletonConfigurable):
         """Check whether the user has required scope(s)"""
         return check_scopes(required_scopes, set(user["scopes"]))
 
-    def _persist_url_token(self, handler):
-        """Persist ?token=... from URL in cookie
+    def _persist_url_token_if_set(self, handler):
+        """Persist ?token=... from URL in cookie if set
 
         for use in future cookie-authenticated requests.
 
         Allows initiating an authenticated session
         via /user/name/?token=abc...,
         otherwise only the initial request will be authenticated.
+
+        No-op if no token URL parameter is given.
         """
         url_token = handler.get_argument('token', '')
         if not url_token:
@@ -1200,8 +1202,7 @@ class HubAuthenticated:
             self._hub_auth_user_cache = None
             raise
 
-        if self.get_argument('token', ''):
-            self.hub_auth._persist_url_token(self)
+        self.hub_auth._persist_url_token_if_set(self)
         return self._hub_auth_user_cache
 
 
