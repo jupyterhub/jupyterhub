@@ -187,6 +187,7 @@ class JupyterHubIdentityProvider(IdentityProvider):
 
             return None
         handler._jupyterhub_user = JupyterHubUser(user)
+        self.hub_auth._persist_url_token_if_set(handler)
         return handler._jupyterhub_user
 
     def get_handlers(self):

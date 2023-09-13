@@ -686,6 +686,33 @@ class HubAuth(SingletonConfigurable):
         """Check whether the user has required scope(s)"""
         return check_scopes(required_scopes, set(user["scopes"]))
 
+    def _persist_url_token_if_set(self, handler):
+        """Persist ?token=... from URL in cookie if set
+
+        for use in future cookie-authenticated requests.
+
+        Allows initiating an authenticated session
+        via /user/name/?token=abc...,
+        otherwise only the initial request will be authenticated.
+
+        No-op if no token URL parameter is given.
+        """
+        url_token = handler.get_argument('token', '')
+        if not url_token:
+            # no token to persist
+            return
+        # only do this if the token in the URL is the source of authentication
+        if not getattr(handler, '_token_authenticated', False):
+            return
+        if not hasattr(self, 'set_cookie'):
+            # only HubOAuth can persist cookies
+            return
+        self.log.info(
+            "Storing token from url in cookie for %s",
+            handler.request.remote_ip,
+        )
+        self.set_cookie(handler, url_token)
+
 
 class HubOAuth(HubAuth):
     """HubAuth using OAuth for login instead of cookies set by the Hub.
@@ -1175,18 +1202,7 @@ class HubAuthenticated:
             self._hub_auth_user_cache = None
             raise
 
-        # store ?token=... tokens passed via url in a cookie for future requests
-        url_token = self.get_argument('token', '')
-        if (
-            user_model
-            and url_token
-            and getattr(self, '_token_authenticated', False)
-            and hasattr(self.hub_auth, 'set_cookie')
-        ):
-            # authenticated via `?token=`
-            # set a cookie for future requests
-            # hub_auth.set_cookie is only available on HubOAuth
-            self.hub_auth.set_cookie(self, url_token)
+        self.hub_auth._persist_url_token_if_set(self)
         return self._hub_auth_user_cache
 
 
