@@ -766,10 +766,15 @@ class ConfigurableHTTPProxy(Proxy):
 
         self._write_pid_file()
 
-        async def watch_process():
+        async def wait_for_process():
             """Watch proxy process for early termination
 
-            so we don't keep waiting for connections after the proxy exits
+            Runs forever, checking every 0.5s if the process has exited
+            so we don't keep waiting for endpoints after the proxy has stopped.
+
+            Raises RuntimeError if/when the proxy process exits,
+            otherwise runs forever.
+            Should be cancelled when servers become ready.
             """
             while True:
                 status = self.proxy_process.poll()
@@ -779,23 +784,49 @@ class ConfigurableHTTPProxy(Proxy):
                             f"Proxy failed to start with exit code {status}"
                         )
                         raise e from None
+                await asyncio.sleep(0.5)
 
-                await asyncio.wait([servers_ready], timeout=0.5)
-                # stop watching the process when the connections
-                # have finished (success or failure)
-                if servers_ready.done():
-                    return
+        # process_exited can only resolve with a RuntimeError when the process has exited,
+        # otherwise it must be cancelled.
+        process_exited = asyncio.ensure_future(wait_for_process())
 
-        servers_ready = asyncio.gather(
-            *(server.wait_up(10) for server in (public_server, api_server))
-        )
+        # wait for both servers to be ready (or one server to fail)
+        server_futures = [
+            asyncio.ensure_future(server.wait_up(10))
+            for server in (public_server, api_server)
+        ]
+        servers_ready = asyncio.gather(*server_futures)
 
-        process_ended = asyncio.ensure_future(watch_process())
         # wait for process to crash or servers to be ready,
         # whichever comes first
-        # don't need to handle exceptions here,
-        # as the underlying exceptions have informative error messages
-        await asyncio.wait_for(asyncio.gather(process_ended, servers_ready), timeout=15)
+        wait_timeout = 15
+        ready, pending = await asyncio.wait(
+            [
+                process_exited,
+                servers_ready,
+            ],
+            return_when=asyncio.FIRST_COMPLETED,
+            timeout=wait_timeout,
+        )
+        for task in [servers_ready, process_exited] + server_futures:
+            # cancel any pending tasks
+            if not task.done():
+                task.cancel()
+        if not ready:
+            # timeouts passed to wait_up should prevent this,
+            # but weird things like DNS delays may result in
+            # wait_up taking a lot longer than it should
+            raise TimeoutError(
+                f"Waiting for proxy endpoints didn't complete in {wait_timeout}s"
+            )
+        if process_exited in ready:
+            # process exited, this will raise RuntimeError
+            await process_exited
+        else:
+            # if we got here, servers_ready is done
+            # await it to make sure exceptions are raised
+            await servers_ready
+
         self.log.debug("Proxy started and appears to be up")
         pc = PeriodicCallback(self.check_running, 1e3 * self.check_running_interval)
         self._check_running_callback = pc
