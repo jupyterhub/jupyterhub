@@ -624,9 +624,6 @@ class JupyterHub(Application):
         This is the address on which the proxy will listen. The default is to
         listen on all interfaces. This is the only address through which JupyterHub
         should be accessed by users.
-
-        .. deprecated: 0.9
-            Use JupyterHub.bind_url
         """,
     ).tag(config=True)
 
@@ -637,9 +634,6 @@ class JupyterHub(Application):
         This is the port on which the proxy will listen.
         This is the only port through which JupyterHub
         should be accessed by users.
-
-        .. deprecated: 0.9
-            Use JupyterHub.bind_url
         """,
     ).tag(config=True)
 
@@ -649,9 +643,6 @@ class JupyterHub(Application):
 
         Add this to the beginning of all JupyterHub URLs.
         Use base_url to run JupyterHub within an existing website.
-
-        .. deprecated: 0.9
-            Use JupyterHub.bind_url
         """,
     ).tag(config=True)
 
@@ -677,9 +668,7 @@ class JupyterHub(Application):
             if self.bind_url != self._bind_url_default():
                 self.log.warning(
                     "Both bind_url and ip/port/base_url have been configured. "
-                    "JupyterHub.ip, JupyterHub.port, JupyterHub.base_url are"
-                    " deprecated in JupyterHub 0.9,"
-                    " please use JupyterHub.bind_url instead."
+                    " please use just one or the other."
                 )
             self.bind_url = bind_url
 
