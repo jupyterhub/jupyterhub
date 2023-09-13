@@ -3,7 +3,7 @@
 # Distributed under the terms of the Modified BSD License.
 import socket
 import warnings
-from urllib.parse import urlparse, urlunparse, urljoin
+from urllib.parse import urlparse, urlunparse
 
 from traitlets import HasTraits, Instance, Integer, Unicode, default, observe, validate
 
@@ -174,7 +174,7 @@ class Server(HasTraits):
             )
 
             return wait_for_http_server(
-                urljoin(self.url, extra_path), timeout=timeout, ssl_context=ssl_context
+                url_path_join(self.url, extra_path), timeout=timeout, ssl_context=ssl_context
             )
         else:
             return wait_for_server(
