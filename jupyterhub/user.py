@@ -901,7 +901,10 @@ class User:
         ssl_context = make_ssl_context(key, cert, cafile=ca)
         try:
             resp = await server.wait_up(
-                http=True, timeout=spawner.http_timeout, ssl_context=ssl_context, extra_path="api",
+                http=True,
+                timeout=spawner.http_timeout,
+                ssl_context=ssl_context,
+                extra_path="api",
             )
         except Exception as e:
             if isinstance(e, AnyTimeoutError):

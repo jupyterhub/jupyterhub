@@ -174,7 +174,9 @@ class Server(HasTraits):
             )
 
             return wait_for_http_server(
-                url_path_join(self.url, extra_path), timeout=timeout, ssl_context=ssl_context
+                url_path_join(self.url, extra_path),
+                timeout=timeout,
+                ssl_context=ssl_context,
             )
         else:
             return wait_for_server(
