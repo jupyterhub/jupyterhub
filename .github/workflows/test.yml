@@ -177,7 +177,7 @@ jobs:
           fi
           if [ "${{ matrix.legacy_notebook }}" != "" ]; then
               pip uninstall jupyter_server --yes
-              pip install 'notebook<7'
+              pip install 'notebook<7' 'traitlets<5'
           fi
           if [ "${{ matrix.jupyter_server }}" != "" ]; then
               pip install "jupyter_server==${{ matrix.jupyter_server }}"
