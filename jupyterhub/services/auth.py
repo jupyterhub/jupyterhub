@@ -1255,6 +1255,7 @@ class HubOAuthCallbackHandler(HubOAuthenticated, RequestHandler):
         )
         if user_model is None:
             raise HTTPError(500, "oauth callback failed to identify a user")
-        app_log.info("Logged-in user %s", user_model)
+        app_log.info("Logged-in user %s", user_model['name'])
+        app_log.debug("User model %s", user_model)
         self.hub_auth.set_cookie(self, token)
         self.redirect(next_url or self.hub_auth.base_url)
