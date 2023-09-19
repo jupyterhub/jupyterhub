@@ -317,27 +317,29 @@ class Authenticator(LoggingConfigurable):
 
         This function is called after the user has passed all authentication checks
         and is ready to successfully authenticate. This function must return the
-        authentication dict reguardless of changes to it.
+        auth_model dict reguardless of changes to it.
+        The hook is called with 3 positional arguments: `(authenticator, handler, auth_model)`.
 
-        This maybe a coroutine.
+        This may be a coroutine.
 
         .. versionadded: 1.0
 
         Example::
 
-            import os, pwd
-            def my_hook(authenticator, handler, authentication):
-                user_data = pwd.getpwnam(authentication['name'])
+            import os
+            import pwd
+            def my_hook(authenticator, handler, auth_model):
+                user_data = pwd.getpwnam(auth_model['name'])
                 spawn_data = {
                     'pw_data': user_data
-                    'gid_list': os.getgrouplist(authentication['name'], user_data.pw_gid)
+                    'gid_list': os.getgrouplist(auth_model['name'], user_data.pw_gid)
                 }
 
-                if authentication['auth_state'] is None:
-                    authentication['auth_state'] = {}
-                authentication['auth_state']['spawn_data'] = spawn_data
+                if auth_model['auth_state'] is None:
+                    auth_model['auth_state'] = {}
+                auth_model['auth_state']['spawn_data'] = spawn_data
 
-                return authentication
+                return auth_model
 
             c.Authenticator.post_auth_hook = my_hook
 
@@ -416,7 +418,7 @@ class Authenticator(LoggingConfigurable):
 
                 setattr(self, old_name, partial(wrapped_method, old_method))
 
-    async def run_post_auth_hook(self, handler, authentication):
+    async def run_post_auth_hook(self, handler, auth_model):
         """
         Run the post_auth_hook if defined
 
@@ -424,17 +426,17 @@ class Authenticator(LoggingConfigurable):
 
         Args:
             handler (tornado.web.RequestHandler): the current request handler
-            authentication (dict): User authentication data dictionary. Contains the
+            auth_model (dict): User authentication data dictionary. Contains the
                 username ('name'), admin status ('admin'), and auth state dictionary ('auth_state').
         Returns:
-            Authentication (dict):
-                The hook must always return the authentication dict
+            auth_model (dict):
+                The hook must always return the auth_model dict
         """
         if self.post_auth_hook is not None:
-            authentication = await maybe_future(
-                self.post_auth_hook(self, handler, authentication)
+            auth_model = await maybe_future(
+                self.post_auth_hook(self, handler, auth_model)
             )
-        return authentication
+        return auth_model
 
     def normalize_username(self, username):
         """Normalize the given username and return it
