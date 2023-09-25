@@ -912,6 +912,22 @@ def test_intersect_expanded_scopes(left, right, expected, should_warn, recwarn):
             ["read:users!user=uy"],
             {"gx": ["ux"], "gy": ["uy"]},
         ),
+        (
+            # make sure the group > user > server hierarchy
+            # is managed
+            ["read:servers!server=ux/server", "read:servers!group=gy"],
+            ["read:servers!server=uy/server", "read:servers!user=ux"],
+            ["read:servers!server=ux/server", "read:servers!server=uy/server"],
+            {"gx": ["ux"], "gy": ["uy"]},
+        ),
+        (
+            # make sure the group > user hierarchy
+            # is managed
+            ["read:servers!user=ux", "read:servers!group=gy"],
+            ["read:servers!user=uy", "read:servers!group=gx"],
+            ["read:servers!user=ux", "read:servers!user=uy"],
+            {"gx": ["ux"], "gy": ["uy"]},
+        ),
     ],
 )
 def test_intersect_groups(request, db, left, right, expected, groups):
