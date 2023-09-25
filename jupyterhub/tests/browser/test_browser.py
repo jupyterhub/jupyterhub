@@ -418,6 +418,12 @@ async def test_token_request_form_and_panel(app, browser, user):
     selected_value = dropdown.locator('option[selected]')
     await expect(selected_value).to_have_text("Never")
 
+    # check scopes field
+    scopes_input = browser.get_by_label("Permissions")
+    await expect(scopes_input).to_be_editable()
+    await expect(scopes_input).to_be_enabled()
+    await expect(scopes_input).to_be_empty()
+
     # verify that "Your new API Token" panel shows up with the new API token
     await request_btn.click()
     await browser.wait_for_load_state("load")
@@ -472,10 +478,8 @@ async def test_request_token_expiration(app, browser, token_opt, note, user):
             note_field = browser.get_by_role("textbox").first
             await note_field.fill(note)
         # click on Request token button
-        reqeust_btn = browser.locator('//div[@class="text-center"]').get_by_role(
-            "button"
-        )
-        await reqeust_btn.click()
+        request_button = browser.locator('//button[@type="submit"]')
+        await request_button.click()
         # wait for token response to show up on the page
         await browser.wait_for_load_state("load")
         token_result = browser.locator("#token-result")
@@ -483,7 +487,7 @@ async def test_request_token_expiration(app, browser, token_opt, note, user):
         # reload the page
         await browser.reload(wait_until="load")
     # API Tokens table: verify that elements are displayed
-    api_token_table_area = browser.locator('//div[@class="row"]').nth(2)
+    api_token_table_area = browser.locator("div#api-tokens-section").nth(0)
     await expect(api_token_table_area.get_by_role("table")).to_be_visible()
     await expect(api_token_table_area.locator("tr.token-row")).to_have_count(1)
 
@@ -498,26 +502,30 @@ async def test_request_token_expiration(app, browser, token_opt, note, user):
     else:
         expected_note = "Requested via token page"
     assert orm_token.note == expected_note
+
     note_on_page = (
         await api_token_table_area.locator("tr.token-row")
         .get_by_role("cell")
         .nth(0)
         .inner_text()
     )
+
     assert note_on_page == expected_note
+
     last_used_text = (
         await api_token_table_area.locator("tr.token-row")
         .get_by_role("cell")
-        .nth(1)
-        .inner_text()
-    )
-    expires_at_text = (
-        await api_token_table_area.locator("tr.token-row")
-        .get_by_role("cell")
-        .nth(3)
+        .nth(2)
         .inner_text()
     )
     assert last_used_text == "Never"
+
+    expires_at_text = (
+        await api_token_table_area.locator("tr.token-row")
+        .get_by_role("cell")
+        .nth(4)
+        .inner_text()
+    )
 
     if token_opt == "Never":
         assert orm_token.expires_at is None
@@ -533,13 +541,75 @@ async def test_request_token_expiration(app, browser, token_opt, note, user):
         assert expires_at_text == "Never"
     # verify that the button for revoke is presented
     revoke_btn = (
-        api_token_table_area.locator("tr.token-row")
-        .get_by_role("cell")
-        .nth(4)
-        .get_by_role("button")
+        api_token_table_area.locator("tr.token-row").get_by_role("button").nth(0)
     )
     await expect(revoke_btn).to_be_visible()
     await expect(revoke_btn).to_have_text("revoke")
+
+
+@pytest.mark.parametrize(
+    "permissions_str, granted",
+    [
+        ("", {"inherit"}),
+        ("inherit", {"inherit"}),
+        ("read:users!user, ", {"read:users!user"}),
+        (
+            "read:users!user, access:servers!user",
+            {"read:users!user", "access:servers!user"},
+        ),
+        (
+            "read:users:name!user access:servers!user ,,   read:servers!user",
+            {"read:users:name!user", "access:servers!user", "read:servers!user"},
+        ),
+        # errors
+        ("nosuchscope", "does not exist"),
+        ("inherit, nosuchscope", "does not exist"),
+        ("admin:users", "Not assigning requested scopes"),
+    ],
+)
+async def test_request_token_permissions(app, browser, permissions_str, granted, user):
+    """verify request token with the different options"""
+
+    # open the token page
+    await open_token_page(app, browser, user)
+    scopes_input = browser.get_by_label("Permissions")
+    await scopes_input.fill(permissions_str)
+    request_button = browser.locator('//button[@type="submit"]')
+    await request_button.click()
+
+    if isinstance(granted, str):
+        expected_error = granted
+        granted = False
+
+    if not granted:
+        error_dialog = browser.locator("#error-dialog")
+        await expect(error_dialog).to_be_visible()
+        error_message = await error_dialog.locator(".modal-body").inner_text()
+        assert "API request failed (400)" in error_message
+        assert expected_error in error_message
+        return
+
+    await browser.reload(wait_until="load")
+
+    # API Tokens table: verify that elements are displayed
+    api_token_table_area = browser.locator("div#api-tokens-section").nth(0)
+    await expect(api_token_table_area.get_by_role("table")).to_be_visible()
+    await expect(api_token_table_area.locator("tr.token-row")).to_have_count(1)
+
+    # getting values from DB to compare with values on UI
+    assert len(user.api_tokens) == 1
+    orm_token = user.api_tokens[-1]
+    assert set(orm_token.scopes) == granted
+
+    permissions_on_page = (
+        await api_token_table_area.locator("tr.token-row")
+        .get_by_role("cell")
+        .nth(1)
+        .locator('//pre[@class="token-scope"]')
+        .all_text_contents()
+    )
+    # specifically use list to test that entries don't appear twice
+    assert sorted(permissions_on_page) == sorted(granted)
 
 
 @pytest.mark.parametrize(

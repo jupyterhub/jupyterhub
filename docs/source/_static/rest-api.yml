@@ -552,7 +552,11 @@ paths:
         - oauth2:
             - read:tokens
     post:
-      summary: Create a new token for the user
+      summary: |
+        Create a new token for the user.
+        Permissions can be limited by specifying a list of `scopes` in the JSON request body
+        (starting in JupyerHub 3.0; previously, permissions could be specified as `roles` could be specified,
+        which is deprecated in 3.0).
       parameters:
         - name: name
           in: path
