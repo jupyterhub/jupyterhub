@@ -439,6 +439,18 @@ class UserTokenListAPIHandler(APIHandler):
         token_roles = body.get("roles")
         token_scopes = body.get("scopes")
 
+        # check type of permissions
+        for key in ("roles", "scopes"):
+            value = body.get(key)
+            if value is None:
+                continue
+            if not isinstance(value, list) or not all(
+                isinstance(item, str) for item in value
+            ):
+                raise web.HTTPError(
+                    400, f"token {key} must be null or a list of strings, not {value!r}"
+                )
+
         try:
             api_token = user.new_api_token(
                 note=note,
@@ -446,7 +458,7 @@ class UserTokenListAPIHandler(APIHandler):
                 roles=token_roles,
                 scopes=token_scopes,
             )
-        except ValueError as e:
+        except (ValueError, KeyError) as e:
             raise web.HTTPError(400, str(e))
         if requester is not user:
             self.log.info(
