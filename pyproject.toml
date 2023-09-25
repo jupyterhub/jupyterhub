@@ -36,6 +36,8 @@ Source = "https://github.com/jupyterhub/jupyterhub"
 Tracker = "https://github.com/jupyterhub/jupyterhub/issues"
 
 [project.optional-dependencies]
+# note: updating test dependencies here
+# may require matching updates in ci/oldest-dependencies/
 test = [
   "beautifulsoup4[html5lib]",
   "coverage",
