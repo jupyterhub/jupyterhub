@@ -163,7 +163,7 @@ jobs:
           if [ "${{ matrix.oldest_dependencies }}" != "" ]; then
             # frozen env with oldest dependencies
             # make sure our `>=` pins really do express our minimum supported versions
-            pip install -r ci/oldest-dependencies/requirements.txt -e .
+            pip install -r ci/oldest-dependencies/requirements.old -e .
           else
             pip install -e ".[test]"
           fi
