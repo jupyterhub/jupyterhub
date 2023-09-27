@@ -176,7 +176,7 @@ class Service(LoggingConfigurable):
         Command for JupyterHub to spawn the service.
         Only use this if the service should be a subprocess.
         If command is not specified, it is assumed to be managed
-        by a
+        by an external prozess.
     - environment: dict
         Additional environment variables for the service.
     - user: str
@@ -194,9 +194,12 @@ class Service(LoggingConfigurable):
         If the service has an http endpoint, it
         """
     ).tag(input=True)
-    admin = Bool(False, help="Does the service need admin-access to the Hub API?").tag(
-        input=True
-    )
+
+    admin = Bool(
+        False,
+        help="Does the service need admin-access to the Hub API?"
+    ).tag(input=True)
+
     url = Unicode(
         help="""URL of the service.
 
@@ -209,7 +212,7 @@ class Service(LoggingConfigurable):
         help="""OAuth allowed roles.
 
         DEPRECATED in 3.0: use oauth_client_allowed_scopes
-      """
+        """
     ).tag(input=True, in_db=False)
 
     oauth_client_allowed_scopes = List(
@@ -222,7 +225,7 @@ class Service(LoggingConfigurable):
 
         Default is an empty list, meaning minimal permissions to identify users,
         no actions can be taken on their behalf.
-      """
+        """
     ).tag(input=True)
 
     api_token = Unicode(
@@ -239,7 +242,8 @@ class Service(LoggingConfigurable):
     ).tag(input=True)
 
     display = Bool(
-        True, help="""Whether to list the service on the JupyterHub UI"""
+        True,
+        help="""Whether to list the service on the JupyterHub UI"""
     ).tag(input=True)
 
     display_filters = Dict(
@@ -289,17 +293,21 @@ class Service(LoggingConfigurable):
         """
         return 'managed' if self.managed else 'external'
 
-    command = Command(minlen=0, help="Command to spawn this service, if managed.").tag(
-        input=True
-    )
-    cwd = Unicode(help="""The working directory in which to run the service.""").tag(
-        input=True
-    )
+    command = Command(
+        minlen=0,
+        help="Command to spawn this service, if managed."
+    ).tag(input=True)
+
+    cwd = Unicode(
+        help="""The working directory in which to run the service."""
+    ).tag(input=True)
+
     environment = Dict(
         help="""Environment variables to pass to the service.
         Only used if the Hub is spawning the service.
         """
     ).tag(input=True)
+
     user = Unicode(
         "",
         help="""The user to become when launching the service.
