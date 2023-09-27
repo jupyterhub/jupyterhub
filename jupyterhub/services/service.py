@@ -242,6 +242,21 @@ class Service(LoggingConfigurable):
         True, help="""Whether to list the service on the JupyterHub UI"""
     ).tag(input=True)
 
+    display_filters = Dict(
+        per_key_traits={
+            "usernames": Unicode() | List(Unicode()),
+            "groups": Unicode() | List(Unicode()),
+            "roles": Unicode() | List(Unicode())
+        }, help="""Filters for visibility.
+
+        This sets a list of filters to be used for the visibility of the service in the JupyterHub UI.
+        Only users where all filters apply will be shown the service in the UI.
+        Note: The global visibility is handled by the boolean value 'display'. If this value is set to 'False' filtering is omitted.
+
+        Default is an empty dictionary, meaning minimal restrictions for the visibility.
+        """
+    ).tag(input=True)
+
     oauth_no_confirm = Bool(
         False,
         help="""Skip OAuth confirmation when users access this service.
