@@ -189,7 +189,7 @@ Within CERN, there are two noteworthy JupyterHub deployments in operation:
 ### Sirepo
 
 - Sirepo is an online Computer-Aided Engineering gateway that contains a JupyterHub instance. Sirepo is provided at no cost for community use, but users must request login access.
-- [Sirepo.com](www.sirepo.com)
+- [Sirepo.com](https://www.sirepo.com)
 - [Sirepo Jupyter](https://www.sirepo.com/jupyter)
 
 ## Miscellaneous
