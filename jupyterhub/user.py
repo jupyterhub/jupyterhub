@@ -264,6 +264,10 @@ class User:
             spawner = self.spawners[server_name]
         return spawner
 
+    def get_groups(self):
+        """Get groups"""
+        return {g.name for g in self.orm_user.groups}
+
     def sync_groups(self, group_names):
         """Synchronize groups with database"""
 
