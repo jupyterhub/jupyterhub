@@ -21,6 +21,7 @@ COL_DATA = [
     {'name': 'oauth_client_allowed_scopes', 'type': JSONDict()},
     {'name': 'info', 'type': JSONDict()},
     {'name': 'display', 'type': sa.Boolean},
+    {'name': 'display_filters', 'type': JSONDict()},
     {'name': 'oauth_no_confirm', 'type': sa.Boolean},
     {'name': 'command', 'type': JSONList()},
     {'name': 'cwd', 'type': sa.Unicode(length=2047)},
