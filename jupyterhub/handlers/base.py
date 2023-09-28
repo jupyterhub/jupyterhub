@@ -1328,12 +1328,22 @@ class BaseHandler(RequestHandler):
 
             # check if filter for groups is set and if any group of the user is in filter of groups
             if service.display_filters.get('groups') is not None:
-                if not any([group in service.display_filters.get('groups') for group in user_groups]):
+                if not any(
+                    [
+                        group in service.display_filters.get('groups')
+                        for group in user_groups
+                    ]
+                ):
                     continue
 
             # check if filter for roles is set and if any role of the user is in filter of roles
             if service.display_filters.get('roles') is not None:
-                if not any([role in service.display_filters.get('roles') for role in user_roles]):
+                if not any(
+                    [
+                        role in service.display_filters.get('roles')
+                        for role in user_roles
+                    ]
+                ):
                     continue
 
             accessible_services.append(service)
