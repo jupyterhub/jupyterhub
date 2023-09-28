@@ -412,6 +412,8 @@ class Service(Base):
 
     display = Column(Boolean, nullable=True)
 
+    display_filters = Column(JSONDict, nullable=True)
+
     oauth_no_confirm = Column(Boolean, nullable=True)
 
     command = Column(JSONList, nullable=True)
