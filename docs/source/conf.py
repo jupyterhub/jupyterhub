@@ -187,7 +187,7 @@ linkcheck_ignore = [
     "https://github.com/jupyterhub/jupyterhub/compare/",  # too many comparisons in changelog
     r"https?://(localhost|127.0.0.1).*",  # ignore localhost references in auto-links
     r".*/rest-api.html#.*",  # ignore javascript-resolved internal rest-api links
-    r"https://jupyter.chameleoncloud.org",  # FIXME: ignore (presumably) short-term SSL issue
+    r"https://linux.die.net/.*",  # linux.die.net seems to block requests from CI with 403 sometimes
 ]
 linkcheck_anchors_ignore = [
     "/#!",
