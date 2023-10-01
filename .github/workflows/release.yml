@@ -32,7 +32,7 @@ jobs:
   build-release:
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
           python-version: "3.9"
@@ -103,7 +103,7 @@ jobs:
               echo "REGISTRY=localhost:5000/" >> $GITHUB_ENV
           fi
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       # Setup docker to build for multiple platforms, see:
       # https://github.com/docker/build-push-action/tree/v2.4.0#usage
