@@ -136,7 +136,7 @@ jobs:
           if [ "${{ matrix.jupyverse }}" != "" ]; then
               echo "JUPYTERHUB_SINGLEUSER_APP=jupyverse" >> $GITHUB_ENV
           fi
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       # NOTE: actions/setup-node@v3 make use of a cache within the GitHub base
       #       environment and setup in a fraction of a second.
       - name: Install Node v14
@@ -257,7 +257,7 @@ jobs:
     timeout-minutes: 20
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: build images
         run: |
