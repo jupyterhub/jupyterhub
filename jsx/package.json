@@ -6,7 +6,7 @@
   "author": "nabarber",
   "license": "BSD-3-Clause",
   "scripts": {
-    "build": "yarn && webpack",
+    "build": "webpack",
     "hot": "webpack && webpack-dev-server",
     "place": "cp build/admin-react.js* ../share/jupyterhub/static/js/",
     "test": "jest --verbose",
