@@ -44,6 +44,7 @@ RUN apt-get update -qq \
     build-essential \
     ca-certificates \
     curl \
+    git \
     locales \
     python3-dev \
     python3-pip \
