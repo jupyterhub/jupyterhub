@@ -67,6 +67,11 @@ ARG PIP_CACHE_DIR=/tmp/pip-cache
 RUN --mount=type=cache,target=${PIP_CACHE_DIR} \
     python3 -m build --wheel
 
+# verify installed files
+RUN --mount=type=cache,target=${PIP_CACHE_DIR} \
+    python3 -m pip install ./dist/*.whl \
+ && cd ci \
+ && python3 check_installed_data.py
 
 ######################################################################
 # All other wheels required by JupyterHub, some are platform specific
