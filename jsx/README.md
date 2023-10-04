@@ -7,11 +7,11 @@ admin dashboard codebase.
 
 ### Build Commands
 
-- `yarn build`: Installs all dependencies and bundles the application
-- `yarn hot`: Bundles the application and runs a mock (serverless) version on port 8000
-- `yarn lint`: Lints JSX with ESLint
-- `yarn lint --fix`: Lints and fixes errors JSX with ESLint / formats with Prettier
-- `yarn place`: Copies the transpiled React bundle to /share/jupyterhub/static/js/admin-react.js for use.
+- `npm run build`: Installs all dependencies and bundles the application
+- `npm run hot`: Bundles the application and runs a mock (serverless) version on port 8000
+- `npm run lint`: Lints JSX with ESLint
+- `npm run lint --fix`: Lints and fixes errors JSX with ESLint / formats with Prettier
+- `npm run place`: Copies the transpiled React bundle to share/jupyterhub/static/js/admin-react.js for use.
 
 ### Good To Know
 

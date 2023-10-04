@@ -198,32 +198,26 @@ class JSX(BaseCommand):
             print("JSX admin app is up to date")
             return
 
-        # jlpm is a version of yarn bundled with JupyterLab
-        if shutil.which('yarn'):
-            yarn = 'yarn'
-        elif shutil.which('jlpm'):
-            print("yarn not found, using jlpm")
-            yarn = 'jlpm'
-        else:
-            raise Exception('JSX needs to be updated but yarn is not installed')
+        if not shutil.which('npm'):
+            raise Exception('JSX needs to be updated but npm is not installed')
 
         print("Installing JSX admin app requirements")
         check_call(
-            [yarn],
+            ['npm', 'install', '--progress=false', '--unsafe-perm'],
             cwd=self.jsx_dir,
             shell=shell,
         )
 
         print("Building JSX admin app")
         check_call(
-            [yarn, 'build'],
+            ["npm", "run", "build"],
             cwd=self.jsx_dir,
             shell=shell,
         )
 
         print("Copying JSX admin app to static/js")
         check_call(
-            [yarn, 'place'],
+            ["npm", "run", "place"],
             cwd=self.jsx_dir,
             shell=shell,
         )

@@ -19,7 +19,6 @@ jsx/build/
 jupyterhub_cookie_secret
 jupyterhub.sqlite
 jupyterhub.sqlite*
-package-lock.json
 share/jupyterhub/static/components
 share/jupyterhub/static/css/style.min.css
 share/jupyterhub/static/css/style.min.css.map
