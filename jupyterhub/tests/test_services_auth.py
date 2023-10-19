@@ -2,6 +2,7 @@
 import copy
 import os
 import sys
+import time
 from binascii import hexlify
 from unittest import mock
 from urllib.parse import parse_qs, urlparse
@@ -530,12 +531,21 @@ async def test_oauth_cookie_collision(app, mockservice_url, create_user_with_sco
     state_cookie_name = 'service-%s-oauth-state' % service.name
     service_cookie_name = 'service-%s' % service.name
     oauth_1 = await s.get(url)
-    print(oauth_1.headers)
-    print(oauth_1.cookies, oauth_1.url, url)
     assert state_cookie_name in s.cookies
     state_cookies = [c for c in s.cookies.keys() if c.startswith(state_cookie_name)]
     # only one state cookie
     assert state_cookies == [state_cookie_name]
+    # create dict of Cookie objects, so we can check properties
+    # cookies.__getitem__ returns only cookie _value_, but we want to check expiration
+    cookie_dict = {cookie.name: cookie for cookie in s.cookies}
+    state_cookie = cookie_dict[state_cookie_name]
+
+    # check state cookie properties
+    # should expire in 10 minutes (600 seconds)
+    assert time.time() < state_cookie.expires < time.time() + 630
+    # path is set right
+    assert state_cookie.path == service.prefix
+
     state_1 = s.cookies[state_cookie_name]
 
     # start second oauth login before finishing the first
