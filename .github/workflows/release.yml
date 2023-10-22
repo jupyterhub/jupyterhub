@@ -119,17 +119,13 @@ jobs:
 
       - name: Setup push rights to Docker Hub
         # This was setup by...
-        # 1. Creating a Docker Hub service account "jupyterhubbot"
-        # 2. Creating a access token for the service account specific to this
-        #    repository: https://hub.docker.com/settings/security
-        # 3. Making the account part of the "bots" team, and granting that team
-        #    permissions to push to the relevant images:
-        #    https://hub.docker.com/orgs/jupyterhub/teams/bots/permissions
-        # 4. Registering the username and token as a secret for this repo:
-        #    https://github.com/jupyterhub/jupyterhub/settings/secrets/actions
+        # 1. Creating a [Robot Account](https://quay.io/organization/jupyterhub?tab=robots) in the JupyterHub
+        # .  quay.io org
+        # 2. Giving it enough permissions to push to the jupyterhub and singleuser images
+        # 3. Putting the robot account's username and password in GitHub actions environment
         if: env.REGISTRY != 'localhost:5000/'
         run: |
-          docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" -p "${{ secrets.DOCKERHUB_TOKEN }}"
+          docker login -u "${{ secrets.QUAY_USERNAME }}" -p "${{ secrets.QUAY_PASSWORD }}" "${{ env.REGISTRY }}"
 
       # image: jupyterhub/jupyterhub
       #
