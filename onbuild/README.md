@@ -2,7 +2,7 @@
 
 If you base a Dockerfile on this image:
 
-    FROM quay.io/jupyterhub/jupyterhub-onbuild:1.4.0
+    FROM quay.io/jupyterhub/jupyterhub-onbuild:latest
     ...
 
 then your `jupyterhub_config.py` adjacent to your Dockerfile will be loaded into the image and used by JupyterHub.
