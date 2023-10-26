@@ -23,12 +23,13 @@ them manually here.
 """
 
 import os
+import time
 from datetime import timedelta
 from enum import Enum
 
 from prometheus_client import Gauge, Histogram
 from tornado.ioloop import PeriodicCallback
-from traitlets import Any, Bool, Integer
+from traitlets import Any, Bool, Dict, Float, Integer
 from traitlets.config import LoggingConfigurable
 
 from . import orm
@@ -231,6 +232,13 @@ for s in ActiveUserPeriods:
     ACTIVE_USERS.labels(period=s.value)
 
 
+EVENT_LOOP_INTERVAL_SECONDS = Histogram(
+    'event_loop_interval_seconds',
+    'Distribution of measured event loop intervals',
+    namespace=metrics_prefix,
+)
+
+
 def prometheus_log_method(handler):
     """
     Tornado log handler for recording RED metrics.
@@ -281,6 +289,37 @@ class PeriodicMetricsCollector(LoggingConfigurable):
         config=True,
     )
 
+    event_loop_interval_enabled = Bool(
+        True,
+        config=True,
+        help="""
+        Enable event_loop_interval_seconds metric.
+        
+        Measures event-loop responsiveness.
+        """,
+    )
+    event_loop_interval_resolution = Float(
+        0.02,
+        config=True,
+        help="""
+        Interval (in seconds) on which to measure the event loop interval.
+        
+        This is the _sensitivity_ of the event_loop_interval metric.
+        Setting it too low (e.g. below 10ms) can end up slowing down the whole event loop
+        by measuring too often,
+        while setting it too high (e.g. above 1s) will limit its resolution and usefulness.
+        """,
+    )
+    event_loop_interval_log_threshold = Float(
+        1,
+        config=True,
+        help="""Log when the event loop blocks for at least this many seconds.""",
+    )
+
+    # internal state
+    _last_tick = Float()
+    _periodic_callbacks = Dict()
+
     db = Any(help="SQLAlchemy db session to use for performing queries")
 
     def update_active_users(self):
@@ -303,18 +342,50 @@ class PeriodicMetricsCollector(LoggingConfigurable):
             self.log.info(f'Found {value} active users in the last {period}')
             ACTIVE_USERS.labels(period=period.value).set(value)
 
+    def _event_loop_tick(self):
+        """Measure a single tick of the event loop
+
+        This measures the time since the last tick
+        """
+        now = time.perf_counter()
+        tick_duration = now - self._last_tick
+        self._last_tick = now
+        EVENT_LOOP_INTERVAL_SECONDS.observe(tick_duration)
+        if tick_duration >= self.event_loop_interval_log_threshold:
+            # warn about slow ticks
+            self.log.warning("Event loop was unresponsive for %.2fs!", tick_duration)
+
     def start(self):
         """
         Start the periodic update process
         """
         if self.active_users_enabled:
             # Setup periodic refresh of the metric
-            pc = PeriodicCallback(
+            self._periodic_callbacks["active_users"] = PeriodicCallback(
                 self.update_active_users,
                 self.active_users_update_interval * 1000,
                 jitter=0.01,
             )
-            pc.start()
 
             # Update the metrics once on startup too
             self.update_active_users()
+
+        if self.event_loop_interval_enabled:
+            now = time.perf_counter()
+            self._last_tick = self._last_tick_collect = now
+            self._tick_durations = []
+            self._periodic_callbacks["event_loop_tick"] = PeriodicCallback(
+                self._event_loop_tick,
+                self.event_loop_interval_resolution * 1000,
+            )
+
+        # start callbacks
+        for pc in self._periodic_callbacks.values():
+            pc.start()
+
+    def stop(self):
+        """
+        Stop collecting metrics
+        """
+        for pc in self._periodic_callbacks.values():
+            pc.stop()
