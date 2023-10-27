@@ -1314,8 +1314,20 @@ class HubOAuthCallbackHandler(HubOAuthenticated, RequestHandler):
         # clear cookie state now that we've consumed it
         if cookie_state:
             self.clear_cookie(cookie_name, path=self.hub_auth.base_url)
+        else:
+            # completing oauth with stale state, but already logged in.
+            # stop here and redirect to default URL
+            # don't complete oauth (no new token), but do complete redirecting to the destination
+            if self.current_user:
+                app_log.warning("Attempting oauth completion after already logging in.")
+                self.hub_auth.clear_oauth_state_cookies(self)
+                next_url = self.hub_auth.get_next_url(arg_state)
+                self.redirect(next_url)
+                return
+
         if isinstance(cookie_state, bytes):
             cookie_state = cookie_state.decode('ascii', 'replace')
+
         # check that state matches
         if arg_state != cookie_state:
             app_log.warning("oauth state %r != %r", arg_state, cookie_state)
@@ -1323,10 +1335,10 @@ class HubOAuthCallbackHandler(HubOAuthenticated, RequestHandler):
         next_url = self.hub_auth.get_next_url(cookie_state)
         # clear consumed state from _oauth_states cache now that we're done with it
         self.hub_auth.clear_oauth_state(cookie_state)
-        # clear _all_ oauth state cookies on success ?
+        # clear _all_ oauth state cookies on success
         # This prevents multiple concurrent logins in the same browser,
         # which is probably okay.
-        # self.hub_auth.clear_oauth_state_cookies(self)
+        self.hub_auth.clear_oauth_state_cookies(self)
 
         token = await self.hub_auth.token_for_code(code, sync=False)
         session_id = self.hub_auth.get_session_id(self)
