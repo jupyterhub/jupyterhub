@@ -53,6 +53,7 @@ test = [
   "pytest>=3.3",
   "pytest-asyncio>=0.17",
   "pytest-cov",
+  "pytest-rerunfailures",
   "requests-mock",
   "playwright",
   "virtualenv",
