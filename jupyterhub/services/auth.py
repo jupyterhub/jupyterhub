@@ -974,7 +974,7 @@ class HubOAuth(HubAuth):
         if get_browser_protocol(handler.request) == 'https':
             kwargs['secure'] = True
         # load user cookie overrides
-        for key, value in self.cookie_options:
+        for key, value in self.cookie_options.items():
             # don't include overrides
             if key.lower() not in no_override_keys:
                 kwargs[key] = value
