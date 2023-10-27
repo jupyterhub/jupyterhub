@@ -363,6 +363,7 @@ def test_singleuser_app_class(JUPYTERHUB_SINGLEUSER_APP):
 async def test_nbclassic_control_panel(app, user, full_spawn):
     # login, start the server
     await user.spawn()
+    await app.proxy.add_user(user)
     cookies = await app.login_user(user.name)
     next_url = url_path_join(user.url, "tree/")
     url = '/?' + urlencode({'next': next_url})
@@ -384,6 +385,7 @@ async def test_nbclassic_control_panel(app, user, full_spawn):
 )
 async def test_token_url_cookie(app, user, full_spawn):
     await user.spawn()
+    await app.proxy.add_user(user)
     token = user.new_api_token(scopes=["access:servers!user"])
     url = url_path_join(public_url(app, user), user.spawner.default_url or "/tree/")
 
