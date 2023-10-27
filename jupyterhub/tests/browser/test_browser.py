@@ -428,7 +428,7 @@ async def test_token_request_form_and_panel(app, browser, user):
     await expect(token_area_heading).to_have_text(expected_panel_token_heading)
     token_result = browser.locator('#token-result')
     await expect(token_result).not_to_be_empty()
-    await expect(token_area).to_be_visible()
+    await expect(token_result).to_be_visible()
     # verify that "Your new API Token" panel is hidden after refresh the page
     await browser.reload(wait_until="load")
     await expect(token_area).to_be_hidden()
@@ -476,6 +476,11 @@ async def test_request_token_expiration(app, browser, token_opt, note, user):
             "button"
         )
         await reqeust_btn.click()
+        # wait for token response to show up on the page
+        await browser.wait_for_load_state("load")
+        token_result = browser.locator("#token-result")
+        await expect(token_result).to_be_visible()
+        # reload the page
         await browser.reload(wait_until="load")
     # API Tokens table: verify that elements are displayed
     api_token_table_area = browser.locator('//div[@class="row"]').nth(2)
@@ -546,7 +551,7 @@ async def test_request_token_expiration(app, browser, token_opt, note, user):
     ],
 )
 async def test_revoke_token(app, browser, token_type, user):
-    """verify API Tokens table contant in case the server is started"""
+    """verify API Tokens table content in case the server is started"""
 
     # open the home page
     await open_home_page(app, browser, user)
@@ -557,12 +562,18 @@ async def test_revoke_token(app, browser, token_type, user):
     # open the token page
     next_url = url_path_join(public_host(app), app.base_url, '/hub/token')
     await browser.goto(next_url)
+    await browser.wait_for_load_state("load")
     await expect(browser).to_have_url(re.compile(".*/hub/token"))
     if token_type == "both" or token_type == "request_by_user":
         request_btn = browser.locator('//div[@class="text-center"]').get_by_role(
             "button"
         )
         await request_btn.click()
+        # wait for token response to show up on the page
+        await browser.wait_for_load_state("load")
+        token_result = browser.locator("#token-result")
+        await expect(token_result).to_be_visible()
+        # reload the page
         await browser.reload(wait_until="load")
 
     revoke_btns = browser.get_by_role("button", name="revoke")
