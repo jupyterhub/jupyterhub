@@ -46,13 +46,13 @@ things like inspect other users' servers or modify the user list at runtime).
 ### JupyterHub Docker container is not accessible at localhost
 
 Even though the command to start your Docker container exposes port 8000
-(`docker run -p 8000:8000 -d --name jupyterhub jupyterhub/jupyterhub jupyterhub`),
+(`docker run -p 8000:8000 -d --name jupyterhub quay.io/jupyterhub/jupyterhub jupyterhub`),
 it is possible that the IP address itself is not accessible/visible. As a result,
 when you try http://localhost:8000 in your browser, you are unable to connect
 even though the container is running properly. One workaround is to explicitly
 tell Jupyterhub to start at `0.0.0.0` which is visible to everyone. Try this
 command:
-`docker run -p 8000:8000 -d --name jupyterhub jupyterhub/jupyterhub jupyterhub --ip 0.0.0.0 --port 8000`
+`docker run -p 8000:8000 -d --name jupyterhub quay.io/jupyterhub/jupyterhub jupyterhub --ip 0.0.0.0 --port 8000`
 
 ### How can I kill ports from JupyterHub-managed services that have been orphaned?
 
@@ -347,12 +347,12 @@ In order to resolve this issue, there are two potential options.
 
 ### Where do I find Docker images and Dockerfiles related to JupyterHub?
 
-Docker images can be found at the [JupyterHub organization on DockerHub](https://hub.docker.com/u/jupyterhub/).
-The Docker image [jupyterhub/singleuser](https://hub.docker.com/r/jupyterhub/singleuser/)
+Docker images can be found at the [JupyterHub organization on Quay.io](https://quay.io/organization/jupyterhub).
+The Docker image [jupyterhub/singleuser](https://quay.io/repository/jupyterhub/singleuser)
 provides an example single-user notebook server for use with DockerSpawner.
 
 Additional single-user notebook server images can be found at the [Jupyter
-organization on DockerHub](https://hub.docker.com/r/jupyter/) and information
+organization on Quay.io](https://quay.io/organization/jupyter) and information
 about each image at the [jupyter/docker-stacks repo](https://github.com/jupyter/docker-stacks).
 
 ### How can I view the logs for JupyterHub or the user's Notebook servers when using the DockerSpawner?
