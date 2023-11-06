@@ -347,12 +347,12 @@ In order to resolve this issue, there are two potential options.
 
 ### Where do I find Docker images and Dockerfiles related to JupyterHub?
 
-Docker images can be found at the [JupyterHub organization on quay.io](https://quay.io/organization/jupyterhub).
+Docker images can be found at the [JupyterHub organization on Quay.io](https://quay.io/organization/jupyterhub).
 The Docker image [jupyterhub/singleuser](https://quay.io/repository/jupyterhub/singleuser)
 provides an example single-user notebook server for use with DockerSpawner.
 
 Additional single-user notebook server images can be found at the [Jupyter
-organization on quay.io](https://quay.io/organization/jupyter) and information
+organization on Quay.io](https://quay.io/organization/jupyter) and information
 about each image at the [jupyter/docker-stacks repo](https://github.com/jupyter/docker-stacks).
 
 ### How can I view the logs for JupyterHub or the user's Notebook servers when using the DockerSpawner?

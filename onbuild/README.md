@@ -9,7 +9,7 @@ then your `jupyterhub_config.py` adjacent to your Dockerfile will be loaded into
 
 > [!NOTE]
 > Inherit from a tag that corresponds to the version of JupyterHub you want to use.
-> See our [quay.io page](https://quay.io/repository/jupyterhub/jupyterhub?tab=tags) for the list of
+> See our [Quay.io page](https://quay.io/repository/jupyterhub/jupyterhub?tab=tags) for the list of
 > available tags.
 
 > [!WARNING]

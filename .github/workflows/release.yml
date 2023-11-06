@@ -120,7 +120,7 @@ jobs:
       - name: Setup push rights to Docker Hub
         # This was setup by...
         # 1. Creating a [Robot Account](https://quay.io/organization/jupyterhub?tab=robots) in the JupyterHub
-        # .  quay.io org
+        # .  Quay.io org
         # 2. Giving it enough permissions to push to the jupyterhub and singleuser images
         # 3. Putting the robot account's username and password in GitHub actions environment
         if: env.REGISTRY != 'localhost:5000/'
