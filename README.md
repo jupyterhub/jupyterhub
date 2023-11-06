@@ -14,7 +14,6 @@
 [![Latest conda-forge version](https://img.shields.io/conda/vn/conda-forge/jupyterhub?logo=conda-forge)](https://anaconda.org/conda-forge/jupyterhub)
 [![Documentation build status](https://img.shields.io/readthedocs/jupyterhub?logo=read-the-docs)](https://jupyterhub.readthedocs.org/en/latest/)
 [![GitHub Workflow Status - Test](https://img.shields.io/github/workflow/status/jupyterhub/jupyterhub/Test?logo=github&label=tests)](https://github.com/jupyterhub/jupyterhub/actions)
-[![DockerHub build status](https://img.shields.io/docker/build/jupyterhub/jupyterhub?logo=docker&label=build)](https://hub.docker.com/r/jupyterhub/jupyterhub/tags)
 [![Test coverage of code](https://codecov.io/gh/jupyterhub/jupyterhub/branch/main/graph/badge.svg)](https://codecov.io/gh/jupyterhub/jupyterhub)
 [![GitHub](https://img.shields.io/badge/issue_tracking-github-blue?logo=github)](https://github.com/jupyterhub/jupyterhub/issues)
 [![Discourse](https://img.shields.io/badge/help_forum-discourse-blue?logo=discourse)](https://discourse.jupyter.org/c/jupyterhub)
@@ -160,10 +159,10 @@ To start the Hub on a specific url and port `10.0.1.2:443` with **https**:
 
 ## Docker
 
-A starter [**docker image for JupyterHub**](https://hub.docker.com/r/jupyterhub/jupyterhub/)
+A starter [**docker image for JupyterHub**](https://quay.io/repository/jupyterhub/jupyterhub)
 gives a baseline deployment of JupyterHub using Docker.
 
-**Important:** This `jupyterhub/jupyterhub` image contains only the Hub itself,
+**Important:** This `quay.io/jupyterhub/jupyterhub` image contains only the Hub itself,
 with no configuration. In general, one needs to make a derivative image, with
 at least a `jupyterhub_config.py` setting up an Authenticator and/or a Spawner.
 To run the single-user servers, which may be on the same system as the Hub or
@@ -171,7 +170,7 @@ not, Jupyter Notebook version 4 or greater must be installed.
 
 The JupyterHub docker image can be started with the following command:
 
-    docker run -p 8000:8000 -d --name jupyterhub jupyterhub/jupyterhub jupyterhub
+    docker run -p 8000:8000 -d --name jupyterhub quay.io/jupyterhub/jupyterhub jupyterhub
 
 This command will create a container named `jupyterhub` that you can
 **stop and resume** with `docker stop/start`.

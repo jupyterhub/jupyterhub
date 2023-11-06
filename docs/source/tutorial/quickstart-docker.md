@@ -1,9 +1,9 @@
 # Install JupyterHub with Docker
 
-The JupyterHub [docker image](https://hub.docker.com/r/jupyterhub/jupyterhub/) is the fastest way to set up Jupyterhub in your local development environment.
+The JupyterHub [docker image](https://quay.io/repository/jupyterhub/jupyterhub) is the fastest way to set up Jupyterhub in your local development environment.
 
 :::{note}
-This `jupyterhub/jupyterhub` docker image is only an image for running
+This `quay.io/jupyterhub/jupyterhub` docker image is only an image for running
 the Hub service itself. It does not provide the other Jupyter components,
 such as Notebook installation, which are needed by the single-user servers.
 To run the single-user servers, which may be on the same system as the Hub or
@@ -24,7 +24,7 @@ You should have [Docker] installed on a Linux/Unix based system.
 To pull the latest JupyterHub image and start the `jupyterhub` container, run this command in your terminal.
 
 ```
-docker run -d -p 8000:8000 --name jupyterhub jupyterhub/jupyterhub jupyterhub
+docker run -d -p 8000:8000 --name jupyterhub quay.io/jupyterhub/jupyterhub jupyterhub
 ```
 
 This command exposes the Jupyter container on port:8000. Navigate to `http://localhost:8000` in a web browser to access the JupyterHub console.
