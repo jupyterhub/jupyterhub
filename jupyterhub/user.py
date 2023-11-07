@@ -187,7 +187,7 @@ class UserDict(dict):
 
         Returns dict with counts of active/pending/ready servers
         """
-        counts = defaultdict(lambda: 0)
+        counts = defaultdict(int)
         for user in self.values():
             for spawner in user.spawners.values():
                 pending = spawner.pending
