@@ -1481,7 +1481,7 @@ def set_user_setuid(username, chdir=True):
     uid = user.pw_uid
     gid = user.pw_gid
     home = user.pw_dir
-    gids = [g.gr_gid for g in grp.getgrall() if username in g.gr_mem]
+    gids = os.getgrouplist(username, gid)
 
     def preexec():
         """Set uid/gid of current process
