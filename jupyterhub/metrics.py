@@ -236,6 +236,30 @@ EVENT_LOOP_INTERVAL_SECONDS = Histogram(
     'event_loop_interval_seconds',
     'Distribution of measured event loop intervals',
     namespace=metrics_prefix,
+    # Increase resolution to 5ms below 50ms
+    # because this is where we are most sensitive.
+    # No need to have buckets below 25, since we only measure every 20ms.
+    buckets=[
+        # 5ms from 25-50ms
+        25e-3,
+        30e-3,
+        35e-3,
+        40e-3,
+        45e-3,
+        50e-3,
+        # from here, default prometheus buckets
+        75e-3,
+        0.1,
+        0.25,
+        0.5,
+        0.75,
+        1,
+        2.5,
+        5,
+        7.5,
+        10,
+        float("inf"),
+    ],
 )
 
 
