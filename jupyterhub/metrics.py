@@ -329,9 +329,14 @@ class PeriodicMetricsCollector(LoggingConfigurable):
         Interval (in seconds) on which to measure the event loop interval.
         
         This is the _sensitivity_ of the event_loop_interval metric.
-        Setting it too low (e.g. below 10ms) can end up slowing down the whole event loop
+        Setting it too low (e.g. below 20ms) can end up slowing down the whole event loop
         by measuring too often,
-        while setting it too high (e.g. above 1s) will limit its resolution and usefulness.
+        while setting it too high (e.g. above a few seconds) may limit its resolution and usefulness.
+        The Prometheus Histogram populated by this metric
+        doesn't resolve differences below 25ms,
+        so setting this below ~20ms won't result in increased resolution of the histogram metric,
+        except for the average value, computed by:
+            event_loop_interval_seconds_sum / event_loop_interval_seconds_count
         """,
     )
     event_loop_interval_log_threshold = Float(
