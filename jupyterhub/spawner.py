@@ -1474,14 +1474,13 @@ def set_user_setuid(username, chdir=True):
     Returned preexec_fn will set uid/gid, and attempt to chdir to the target user's
     home directory.
     """
-    import grp
     import pwd
 
     user = pwd.getpwnam(username)
     uid = user.pw_uid
     gid = user.pw_gid
     home = user.pw_dir
-    gids = [g.gr_gid for g in grp.getgrall() if username in g.gr_mem]
+    gids = os.getgrouplist(username, gid)
 
     def preexec():
         """Set uid/gid of current process
