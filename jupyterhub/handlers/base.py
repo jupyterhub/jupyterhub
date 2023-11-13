@@ -1312,16 +1312,18 @@ class BaseHandler(RequestHandler):
         if user is None:
             return accessible_services
 
-        user_scopes = scopes.get_scopes_for(user.orm_user)
-
-        for service in self.services.values():
-            service_scope = frozenset({f'access:services!service={service.name}'})
-
+        for service_name, service in self.services.items():
             if not service.url:
                 continue
             if not service.display:
                 continue
-            if not service_scope.issubset(user_scopes):
+
+            # only display links to services users have access to
+            service_scopes = {
+                "access:services",
+                f"access:services!service={service.name}",
+            }
+            if not service_scopes.intersection(self.expanded_scopes):
                 continue
 
             accessible_services.append(service)
