@@ -127,7 +127,6 @@ popular services:
 - [Globus](https://oauthenticator.readthedocs.io/en/latest/reference/api/gen/oauthenticator.globus.html)
 - [Google](https://oauthenticator.readthedocs.io/en/latest/reference/api/gen/oauthenticator.google.html)
 - [MediaWiki](https://oauthenticator.readthedocs.io/en/latest/reference/api/gen/oauthenticator.mediawiki.html)
-- [Okpy](https://oauthenticator.readthedocs.io/en/latest/reference/api/gen/oauthenticator.okpy.html)
 - [OpenShift](https://oauthenticator.readthedocs.io/en/latest/reference/api/gen/oauthenticator.openshift.html)
 
 A [generic implementation](https://oauthenticator.readthedocs.io/en/latest/reference/api/gen/oauthenticator.generic.html), which you can use for OAuth authentication

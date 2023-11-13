@@ -1665,6 +1665,8 @@ class JupyterHub(Application):
         config=True,
     )
 
+    metrics_collector = Any()
+
     def init_handlers(self):
         h = []
         # load handlers from the authenticator
@@ -3180,8 +3182,10 @@ class JupyterHub(Application):
                 await self.proxy.check_routes(self.users, self._service_map)
 
             asyncio.ensure_future(finish_init_spawners())
-        metrics_updater = PeriodicMetricsCollector(parent=self, db=self.db)
-        metrics_updater.start()
+        metrics_collector = self.metrics_collector = PeriodicMetricsCollector(
+            parent=self, db=self.db
+        )
+        metrics_collector.start()
 
     async def cleanup(self):
         """Shutdown managed services and various subprocesses. Cleanup runtime files."""
@@ -3617,6 +3621,8 @@ class JupyterHub(Application):
             return
         if self.http_server:
             self.http_server.stop()
+        if self.metrics_collector:
+            self.metrics_collector.stop()
         self.io_loop.add_callback(self.shutdown_cancel_tasks)
 
     async def start_show_config(self):

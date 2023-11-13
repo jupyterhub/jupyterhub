@@ -30,7 +30,6 @@ popular services:
 - Globus
 - Google
 - MediaWiki
-- Okpy
 - OpenShift
 
 A [generic implementation](https://github.com/jupyterhub/oauthenticator/blob/master/oauthenticator/generic.py), which you can use for OAuth authentication with any provider, is also available.
