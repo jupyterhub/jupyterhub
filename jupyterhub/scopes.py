@@ -822,7 +822,7 @@ def parse_scopes(scope_list):
 
 @lru_cache_key(FrozenDict)
 def unparse_scopes(parsed_scopes):
-    """Turn a parsed_scopes dictionary back into a expanded scopes set"""
+    """Turn a parsed_scopes dictionary back into an expanded scopes set"""
     expanded_scopes = set()
     for base, filters in parsed_scopes.items():
         if filters == Scope.ALL:

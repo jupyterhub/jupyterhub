@@ -1324,11 +1324,21 @@ class BaseHandler(RequestHandler):
         accessible_services = []
         if user is None:
             return accessible_services
-        for service in self.services.values():
+
+        for service_name, service in self.services.items():
             if not service.url:
                 continue
             if not service.display:
                 continue
+
+            # only display links to services users have access to
+            service_scopes = {
+                "access:services",
+                f"access:services!service={service.name}",
+            }
+            if not service_scopes.intersection(self.expanded_scopes):
+                continue
+
             accessible_services.append(service)
         return accessible_services
 

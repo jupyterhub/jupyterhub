@@ -176,7 +176,7 @@ class Service(LoggingConfigurable):
         Command for JupyterHub to spawn the service.
         Only use this if the service should be a subprocess.
         If command is not specified, it is assumed to be managed
-        by a
+        by an external process.
     - environment: dict
         Additional environment variables for the service.
     - user: str
