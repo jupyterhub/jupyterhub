@@ -1288,3 +1288,37 @@ async def test_pre_spawn_start_exc_options_form(app):
         # spawning the user server should throw the pre_spawn_start error
         with pytest.raises(Exception, match="%s" % exc):
             await user.spawn()
+
+
+@pytest.mark.parametrize(
+    "scope, display, present",
+    [
+        ("access:services", True, True),
+        ("access:services!service=SERVICE", True, True),
+        ("access:services!service=SERVICE", False, False),
+        ("access:services!service=other", True, False),
+        ("", True, False),
+    ],
+)
+async def test_services_nav_links(
+    app, mockservice_url, create_user_with_scopes, scope, display, present
+):
+    service = mockservice_url
+    service.display = display
+    scopes = []
+    if scope:
+        scope = scope.replace("SERVICE", service.name)
+        scopes.append(scope)
+    user = create_user_with_scopes(*scopes)
+
+    cookies = await app.login_user(user.name)
+    r = await get_page("home", app, cookies=cookies)
+    assert r.status_code == 200
+    page = BeautifulSoup(r.text)
+    nav = page.find("ul", class_="nav")
+    # find service links
+    nav_urls = [a["href"] for a in nav.find_all("a")]
+    if present:
+        assert service.href in nav_urls
+    else:
+        assert service.href not in nav_urls
