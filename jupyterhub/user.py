@@ -187,7 +187,7 @@ class UserDict(dict):
 
         Returns dict with counts of active/pending/ready servers
         """
-        counts = defaultdict(lambda: 0)
+        counts = defaultdict(int)
         for user in self.values():
             for spawner in user.spawners.values():
                 pending = spawner.pending
@@ -263,10 +263,6 @@ class User:
             self.spawners.pop(server_name)
             spawner = self.spawners[server_name]
         return spawner
-
-    def get_groups(self):
-        """Get groups"""
-        return {g.name for g in self.orm_user.groups}
 
     def sync_groups(self, group_names):
         """Synchronize groups with database"""

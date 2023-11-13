@@ -89,34 +89,6 @@ def get_roles_for(orm_object):
     return roles
 
 
-def get_role_names_for(orm_object):
-    """Get names of roles for a given User/Group/etc.
-
-    If User, take into account the user's groups roles as well
-
-    Arguments:
-      orm_object: orm.User, orm.Service, orm.Group
-          Any role-having entity
-
-    Returns:
-      roles (list): list of names of orm.Role objects assigned to the object.
-    """
-    if not isinstance(orm_object, orm.Base):
-        raise TypeError(f"Only orm objects allowed, got {orm_object}")
-
-    roles = []
-    roles.extend(orm_object.roles)
-
-    if isinstance(orm_object, orm.User):
-        for group in orm_object.groups:
-            roles.extend(group.roles)
-
-    role_names = []
-    for role in roles:
-        role_names.append(role.name)
-    return role_names
-
-
 def roles_to_scopes(roles):
     """Returns set of raw (not expanded) scopes for a collection of roles"""
     raw_scopes = set()
