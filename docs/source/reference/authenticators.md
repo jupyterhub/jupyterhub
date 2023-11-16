@@ -65,11 +65,15 @@ from JupyterHub's login form. Unless the login form has been customized,
 - `username`
 - `password`
 
-The `authenticate` method's job is simple:
+If authentication is successful the `authenticate` method must return either:
 
-- return the username (non-empty str) of the authenticated user if
-  authentication is successful
-- return `None` otherwise
+- the username (non-empty str) of the authenticated user
+- or a dictionary with fields:
+  - `name`: the username
+  - `auth_state`: optional, a dictionary of of [auth state that will be persisted](authenticator-auth-state)
+  - `groups`: optional, a list of JupyterHub [group memberships](authenticator-groups)
+
+Otherwise, it must return `None`.
 
 Writing an Authenticator that looks up passwords in a dictionary
 requires only overriding this one method:
@@ -181,6 +185,8 @@ previously required.
 Additionally, configurable attributes for your authenticator will
 appear in jupyterhub help output and auto-generated configuration files
 via `jupyterhub --generate-config`.
+
+(authenticator-auth-state)=
 
 ### Authentication state
 
