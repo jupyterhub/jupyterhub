@@ -12,6 +12,8 @@ on:
 
       - "README.md"
       - "onbuild/README.md"
+      - "demo-image/README.md"
+      - "singleuser/README.md"
   workflow_dispatch:
 
 jobs:
