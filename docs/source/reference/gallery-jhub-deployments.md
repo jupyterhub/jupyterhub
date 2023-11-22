@@ -91,6 +91,12 @@ Within CERN, there are two noteworthy JupyterHub deployments in operation:
     - log troubleshooting
     - Profiles in IPython Clusters tab
 
+### ETH Zurich
+
+[ETH Zurich](https://ethz.ch/en.html), also known as *Federal Institute of Technology Zurich*, is
+
+- [ETH Computational Competencies: JupyterHub](https://ethz.ch/staffnet/en/teaching/academic-support/it-services-teaching/teaching-applications/jupyterhub.html)
+
 ### George Washington University
 
 - [JupyterHub](https://go.gwu.edu/jupyter) with university single-sign-on. Deployed early 2017.
