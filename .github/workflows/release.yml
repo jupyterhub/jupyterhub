@@ -137,7 +137,7 @@ jobs:
       # If GITHUB_TOKEN isn't available (e.g. in PRs) returns no tags [].
       - name: Get list of jupyterhub tags
         id: jupyterhubtags
-        uses: jupyterhub/action-major-minor-tag-calculator@v2
+        uses: jupyterhub/action-major-minor-tag-calculator@v3
         with:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           prefix: "${{ env.REGISTRY }}jupyterhub/jupyterhub:"
@@ -158,7 +158,7 @@ jobs:
       #
       - name: Get list of jupyterhub-onbuild tags
         id: onbuildtags
-        uses: jupyterhub/action-major-minor-tag-calculator@v2
+        uses: jupyterhub/action-major-minor-tag-calculator@v3
         with:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           prefix: "${{ env.REGISTRY }}jupyterhub/jupyterhub-onbuild:"
@@ -179,7 +179,7 @@ jobs:
       #
       - name: Get list of jupyterhub-demo tags
         id: demotags
-        uses: jupyterhub/action-major-minor-tag-calculator@v2
+        uses: jupyterhub/action-major-minor-tag-calculator@v3
         with:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           prefix: "${{ env.REGISTRY }}jupyterhub/jupyterhub-demo:"
@@ -203,7 +203,7 @@ jobs:
       #
       - name: Get list of jupyterhub/singleuser tags
         id: singleusertags
-        uses: jupyterhub/action-major-minor-tag-calculator@v2
+        uses: jupyterhub/action-major-minor-tag-calculator@v3
         with:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           prefix: "${{ env.REGISTRY }}jupyterhub/singleuser:"
