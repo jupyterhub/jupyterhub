@@ -93,14 +93,11 @@ Within CERN, there are two noteworthy JupyterHub deployments in operation:
 
 ### ETH Zurich
 
-[ETH Zurich](https://ethz.ch/en.html), also known as *Federal Institute of Technology Zurich*, is a public research university in Zürich, Switzerland, with focus on science, technology, engineering, and mathematics, although its 16 departments span a variety of disciplines and subjects.
+[ETH Zurich](https://ethz.ch/en.html), (Federal Institute of Technology Zurich), is a public research university in Zürich, Switzerland, with focus on science, technology, engineering, and mathematics, although its 16 departments span a variety of disciplines and subjects.
 
-The administrative unit for [Educational Development and Technology](https://ethz.ch/en/the-eth-zurich/organisation/departments/educational-development-and-technology.html) provides JupyterHubs exclusively for teaching and learning, integrated in the learning management system [Moodle](https://ethz.ch/staffnet/en/teaching/academic-support/it-services-teaching/teaching-applications/moodle-service.html). Each course gets its individually configured JupyterHub environment deployed on a on premise Kubernetes cluster. 
+The [Educational Development and Technology](https://ethz.ch/en/the-eth-zurich/organisation/departments/educational-development-and-technology.html) unit provides JupyterHub exclusively for teaching and learning, integrated in the learning management system [Moodle](https://ethz.ch/staffnet/en/teaching/academic-support/it-services-teaching/teaching-applications/moodle-service.html). Each course gets its individually configured JupyterHub environment deployed on a on-premise Kubernetes cluster. 
 
 - [ETH Computational Competencies: LET JupyterHub](https://ethz.ch/staffnet/en/teaching/academic-support/it-services-teaching/teaching-applications/jupyterhub.html)
-
-
-
 
 ### George Washington University
 
