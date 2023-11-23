@@ -97,7 +97,7 @@ Within CERN, there are two noteworthy JupyterHub deployments in operation:
 
 The [Educational Development and Technology](https://ethz.ch/en/the-eth-zurich/organisation/departments/educational-development-and-technology.html) unit provides JupyterHub exclusively for teaching and learning, integrated in the learning management system [Moodle](https://ethz.ch/staffnet/en/teaching/academic-support/it-services-teaching/teaching-applications/moodle-service.html). Each course gets its individually configured JupyterHub environment deployed on a on-premise Kubernetes cluster. 
 
-- [ETH Computational Competencies: LET JupyterHub](https://ethz.ch/staffnet/en/teaching/academic-support/it-services-teaching/teaching-applications/jupyterhub.html)
+- [ETH JupyterHub](https://ethz.ch/staffnet/en/teaching/academic-support/it-services-teaching/teaching-applications/jupyterhub.html) for teaching and learning
 
 ### George Washington University
 
