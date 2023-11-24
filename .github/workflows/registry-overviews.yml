@@ -20,7 +20,7 @@ jobs:
   update-overview:
     runs-on: ubuntu-latest
     name: update-overview (${{matrix.image}})
-    if: github.repository_owner == 'jupyter'
+    if: github.repository_owner == 'jupyterhub'
 
     steps:
       - name: Checkout Repo ⚡️
