@@ -125,6 +125,7 @@ jobs:
         if: env.REGISTRY != 'localhost:5000/'
         run: |
           docker login -u "${{ secrets.QUAY_USERNAME }}" -p "${{ secrets.QUAY_PASSWORD }}" "${{ env.REGISTRY }}"
+          docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" -p "${{ secrets.DOCKERHUB_TOKEN }}" docker.io
 
       # image: jupyterhub/jupyterhub
       #
@@ -140,7 +141,9 @@ jobs:
         uses: jupyterhub/action-major-minor-tag-calculator@v3
         with:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
-          prefix: "${{ env.REGISTRY }}jupyterhub/jupyterhub:"
+          prefix: >-
+            ${{ env.REGISTRY }}jupyterhub/jupyterhub:
+            jupyterhub/jupyterhub:
           defaultTag: "${{ env.REGISTRY }}jupyterhub/jupyterhub:noref"
           branchRegex: ^\w[\w-.]*$
 
@@ -161,7 +164,9 @@ jobs:
         uses: jupyterhub/action-major-minor-tag-calculator@v3
         with:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
-          prefix: "${{ env.REGISTRY }}jupyterhub/jupyterhub-onbuild:"
+          prefix: >-
+            ${{ env.REGISTRY }}jupyterhub/jupyterhub-onbuild:
+            jupyterhub/jupyterhub-onbuild:
           defaultTag: "${{ env.REGISTRY }}jupyterhub/jupyterhub-onbuild:noref"
           branchRegex: ^\w[\w-.]*$
 
@@ -182,7 +187,9 @@ jobs:
         uses: jupyterhub/action-major-minor-tag-calculator@v3
         with:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
-          prefix: "${{ env.REGISTRY }}jupyterhub/jupyterhub-demo:"
+          prefix: >-
+            ${{ env.REGISTRY }}jupyterhub/jupyterhub-demo:
+            jupyterhub/jupyterhub-demo:
           defaultTag: "${{ env.REGISTRY }}jupyterhub/jupyterhub-demo:noref"
           branchRegex: ^\w[\w-.]*$
 
@@ -206,7 +213,9 @@ jobs:
         uses: jupyterhub/action-major-minor-tag-calculator@v3
         with:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
-          prefix: "${{ env.REGISTRY }}jupyterhub/singleuser:"
+          prefix: >-
+            ${{ env.REGISTRY }}jupyterhub/singleuser:
+            jupyterhub/singleuser:
           defaultTag: "${{ env.REGISTRY }}jupyterhub/singleuser:noref"
           branchRegex: ^\w[\w-.]*$
 
