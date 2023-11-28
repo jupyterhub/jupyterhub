@@ -497,7 +497,7 @@ class UserTokenAPIHandler(APIHandler):
 
         orm_token = self.db.query(orm.APIToken).filter_by(id=id_).first()
         if orm_token is None or orm_token.user is not user.orm_user:
-            raise web.HTTPError(404, "Token not found %s", orm_token)
+            raise web.HTTPError(404, not_found)
         return orm_token
 
     @needs_scope('read:tokens')
@@ -505,7 +505,7 @@ class UserTokenAPIHandler(APIHandler):
         """"""
         user = self.find_user(user_name)
         if not user:
-            raise web.HTTPError(404, "No such user: %s" % user_name)
+            raise web.HTTPError(404, f"No such user: {user_name}")
         token = self.find_token_by_id(user, token_id)
         self.write(json.dumps(self.token_model(token)))
 
@@ -514,7 +514,7 @@ class UserTokenAPIHandler(APIHandler):
         """Delete a token"""
         user = self.find_user(user_name)
         if not user:
-            raise web.HTTPError(404, "No such user: %s" % user_name)
+            raise web.HTTPError(404, f"No such user: {user_name}")
         token = self.find_token_by_id(user, token_id)
         # deleting an oauth token deletes *all* oauth tokens for that client
         client_id = token.client_id
@@ -522,7 +522,11 @@ class UserTokenAPIHandler(APIHandler):
             tokens = [
                 token for token in user.api_tokens if token.client_id == client_id
             ]
+            self.log.info(
+                f"Deleting {len(tokens)} tokens for {user_name} issued by {token.client_id}"
+            )
         else:
+            self.log.info(f"Deleting token {token_id} for {user_name}")
             tokens = [token]
         for token in tokens:
             self.db.delete(token)
