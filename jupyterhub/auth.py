@@ -630,6 +630,7 @@ class Authenticator(LoggingConfigurable):
                 - `admin`, the admin setting value for the user
                 - `groups`, the list of group names the user should be a member of,
                   if Authenticator.manage_groups is True.
+                  `groups` MUST always be present if manage_groups is enabled.
         """
 
     def pre_spawn_start(self, user, spawner):
