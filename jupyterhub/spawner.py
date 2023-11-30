@@ -490,6 +490,20 @@ class Spawner(LoggingConfigurable):
         """,
     ).tag(config=True)
 
+    poll_jitter = Float(
+        0.1,
+        min=0,
+        max=1,
+        help="""
+        Jitter fraction for poll_interval.
+        
+        Avoids alignment of poll calls for many Spawners,
+        e.g. when restarting JupyterHub, which restarts all polls for running Spawners.
+
+        `poll_jitter=0` means no jitter, 0.1 means 10%, etc.
+        """,
+    ).tag(config=True)
+
     _callbacks = List()
     _poll_callback = Any()
 
@@ -1405,7 +1419,9 @@ class Spawner(LoggingConfigurable):
         self.stop_polling()
 
         self._poll_callback = PeriodicCallback(
-            self.poll_and_notify, 1e3 * self.poll_interval
+            self.poll_and_notify,
+            1e3 * self.poll_interval,
+            jitter=self.poll_jitter,
         )
         self._poll_callback.start()
 
