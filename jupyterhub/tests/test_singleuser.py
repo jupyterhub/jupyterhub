@@ -361,3 +361,16 @@ async def test_nbclassic_control_panel(app, user, full_spawn):
     else:
         prefix = app.base_url
     assert link["href"] == url_path_join(prefix, "hub/home")
+
+
+async def test_api_403_no_cookie(app, user, full_spawn):
+    """unused oauth cookies don't get set for failed requests to API handlers"""
+    await user.spawn()
+    await app.proxy.add_user(user)
+    url = url_path_join(public_url(app, user), "/api/contents/")
+    r = await async_requests.get(url, allow_redirects=False)
+    # 403, not redirect
+    assert r.status_code == 403
+    # no state cookie set
+    assert not r.cookies
+    await user.stop()
