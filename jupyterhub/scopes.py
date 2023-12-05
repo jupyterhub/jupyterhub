@@ -437,6 +437,7 @@ def expand_share_scopes(share):
         oauth_client=share.spawner.oauth_client,
     )
 
+
 @lru_cache()
 def _expand_self_scope(username):
     """
