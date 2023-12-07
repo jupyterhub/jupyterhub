@@ -53,58 +53,81 @@ class _ShareAPIHandler(APIHandler):
             "created_at": share_code.created_at,
             "expires_at": share_code.expires_at,
         }
+    
+    def _init_share_query(self):
+        """Initialize a query for Shares
         
+        before applying filters
+        
+        A method so we can consolidate joins, etc.
+        """
+        query = (
+            self.db.query(orm.Share)
+            .outerjoin(orm.User, orm.Share.user)
+            .outerjoin(orm.User, orm.Share.owner)
+            .join(orm.Spawner, orm.Share.spawner)
+        )
+        return query
+    
+    def _share_list_model(self, query):
+        """Finish a share query, returning the _model_"""
+        offset, limit = self.get_api_pagination()
 
-class ShareListAPIHandler(_ShareAPIHandler):
+        total_count = query.count()
+        query = query.order_by(orm.Share.id.asc()).offset(offset).limit(limit)
+        share_list = [self.share_model(share) for share in query]
+        return self.paginated_model(group_list, offset, limit, total_count)
+    
+    def _lookup_spawner(self, user_name, server_name):
+        """Lookup orm.Spawner for user_name/server_name
+        
+        raise 404 if not found
+        """
+        spawner = self.db.query(orm.Spawner).join(orm.User)
+        user = self.find_user(user_name)
+        if user and server_name in user.orm_spawners:
+            spawner = user.orm_spawners[server_name]
+        else:
+            raise web.HTTPError(404, f"No such server: {user.name}/{server_name}")
+
+
+class ServerShareAPIHandler(_ShareAPIHandler):
 
     @needs_scope("read:shares")
-    def get(self, user_name, server_name):
+    def get(self, user_name, server_name=None):
         """List all shares for a given owner"""
+        
+        # TODO: optimize this query
+        # we need Share and only the _names_ of users,
+        # no other user relationships
+        query = self._init_share_query()
+        if server_name is None:
+        spawner = self._lookup_spawner(user_name, server_name)
+        
+        query = query.filter_by(spawner_id=spawner.id)
+        self.finish(self._share_list_model(query))
+
+    @needs_scope("admin:shares")
+    def patch(self, user_name, server_name):
+        """List all shares for a given owner"""
+        
+        # TODO: optimize this query
+        # we need Share and only the _names_ of users,
+        # no other user relationships
         query = full_query = (
             self.db.query(orm.Share)
             .outerjoin(orm.User, orm.Share.user)
             .outerjoin(orm.Spawner, orm.Share.spawner)
         )
         
-        if not user_name:
-            # get all shares
-            # not implemented
-            raise NotImplementedError()
+        user = self.find_user(user_name)
+        if server_name in user.orm_spawners:
+            spawner = user.orm_spawners[server_name]
         else:
-            # all shares for one user
-            query = query.filter(orm.Share.owner.has(name=user_name))
+            raise web.HTTPError(404, f"No such server: {user.name}/{server_name}")
         
-        # permission filters for single all-users list of shares
-        # sub_scope = self.parsed_scopes['read:shares']
-        # if sub_scope != Scope.ALL:
-        #     filters = []
-        #     # filter groups
-        #     if 'group' in sub_scope:
-        #         # filter groups
-        #         query = query.outerjoin(orm.Group, orm.User.groups)
-        #         filters.append(orm.Group.name.in_(set(sub_scope['group'])))
-        #     if 'user' in sub_scope:
-        #         # filter users
-        #         filters.append(orm.User.name.in_(set(sub_scope['user'])))
-        #     if 'server' in sub_scope:
-        #         # filter servers
-        #         for user_server in sub_scope['server']:
-        #             username, _, servername = user_server.partition("/")
-        #             filters.append(
-        #                 and_(orm.User.name == username, orm.Spawner.name ==     servername)
-        #             )
-        #     
-        #     if filters:
-        #         query = query.filter(or_(*filters))
-        
-        scope_filter = self.get_scope_filter("read:shares")
-        offset, limit = self.get_api_pagination()
-
-        total_count = query.count()
-        query = query.order_by(orm.Share.id.asc()).offset(offset).limit(limit)
-        share_list = [self.share_model(share) for share in query]
-        model = self.paginated_model(group_list, offset, limit, total_count)
-        self.write(json.dumps(model))
+        query = query.filter_by(spawner_id=spawner.id)
+        self.finish(self._share_list_model(query))
 
 class ShareCodeListAPIHandler(_ShareAPIHandler):
 
@@ -117,15 +140,23 @@ class UserShareListAPIHandler(ShareListAPIHandler):
     
     @needs_scope("read:users:shares")
     def get(self, user_name):
-        raise NotImplementedError()
+        query = self._init_share_query()
+        user = self.find_user(user_name)
+        query = query.filter_by(orm.Share.user=user)
+        self.finish(self._share_list_model(query))
+
 
 class GroupShareListAPIHandler(ShareListAPIHandler):
     """List shares granted to a user"""
-    
+
     @needs_scope("read:groups:shares")
     def get(self, group_name):
-        raise NotImplementedError()
-        
+        query = self._init_share_query()
+        user = self.find_user(user_name)
+        query = query.filter_by(orm.Share.user=user)
+        self.finish(self._share_list_model(query))
+
+
 class ServerShareAPIHandler(_ShareAPIHandler):
     """Endpoint for shares of a single server
     
@@ -233,11 +264,15 @@ class ServerShareAPIHandler(_ShareAPIHandler):
 
 
 default_handlers = [
-    # TODO: not implementing single all-shared endpoint yet
-    # too hard
+    # TODO: not implementing single all-shared endpoint yet, too hard
     # (r"/api/shares", ShareListAPIHandler),
+    # general management of shares
     (r"/api/shares/([^/]+)", ShareListAPIHandler),
     (r"/api/shares/([^/]+)/([^/]*)", ServerShareAPIHandler),
+    # list shared_with_me for users/groups
     (r"/api/users/([^/]+)/shares", UserShareListAPIHandler),
     (r"/api/groups/([^/]+)/shares", GroupShareListAPIHandler),
+    # single-share endpoint (only for easy revocation, for now)
+    (r"/api/users/([^/]+)/shares/([^/]+)/([^/]*)", UserShareAPIHandler),
+    (r"/api/groups/([^/]+)/shares/([^/]+)/([^/]*)", GroupShareAPIHandler),
 ]
