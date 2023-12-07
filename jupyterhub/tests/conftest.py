@@ -175,11 +175,16 @@ async def cleanup_after(request, io_loop):
                     print(f"Stopping leftover server {spawner._log_name}")
                     await user.stop(name)
             if user.name not in {'admin', 'user'}:
-                print("deleting", user.name)
+                app.log.debug(f"Deleting test user {user.name}")
                 app.users.delete(user.id)
         # delete groups
         for group in app.db.query(orm.Group):
+            app.log.debug(f"Deleting test group {group.name}")
             app.db.delete(group)
+        # delete shares
+        for share in app.db.query(orm.Share):
+            app.log.debug(f"Deleting test share {share}")
+            app.db.delete(share)
 
         # clear services
         for name, service in app._service_map.items():

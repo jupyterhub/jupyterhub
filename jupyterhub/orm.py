@@ -231,6 +231,7 @@ class Group(Base):
         "Share",
         back_populates="group",
         cascade="all, delete-orphan",
+        lazy="selectin",
     )
 
     # used in some model fields to differentiate 'whoami'
@@ -324,6 +325,7 @@ class User(Base):
         back_populates="user",
         cascade="all, delete-orphan",
         foreign_keys="Share.user_id",
+        lazy="selectin",
     )
 
     @property

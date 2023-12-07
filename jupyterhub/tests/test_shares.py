@@ -2,27 +2,40 @@ from datetime import timedelta
 
 import pytest
 
-from jupyterhub import orm
+from jupyterhub import orm, scopes
 
 from .conftest import new_username
 from .utils import add_user
 
 
 @pytest.fixture
-def share(app, user):
+def share_user(app):
+    """The user to be shared with"""
+    yield add_user(app.db, name=new_username("share_with"))
+
+
+@pytest.fixture
+def share(app, user, share_user):
+    """Share access to `user`'s default server with `share_user`"""
     db = app.db
     spawner = user.spawner.orm_spawner
     owner = user.orm_user
-    share_with = add_user(db, name=new_username("share_with"))
     filter_ = f"server={owner.name}/{spawner.name}"
     scopes = [f"access:servers!{filter_}"]
-    yield orm.Share.grant(db, spawner, share_with, scopes=scopes)
-    for share in db.query(orm.Share):
-        db.delete(share)
-    user = orm.User.find(db, name=share_with.name)
-    if user:
-        db.delete(user)
-    db.commit()
+    yield orm.Share.grant(db, spawner, share_user, scopes=scopes)
+
+
+@pytest.fixture
+def group_share(app, user, group, share_user):
+    """Share with share_user via group membership"""
+    db = app.db
+    app.db.commit()
+    spawner = user.spawner.orm_spawner
+    owner = user.orm_user
+    filter_ = f"server={owner.name}/{spawner.name}"
+    scopes = [f"read:servers!{filter_}"]
+    group.users.append(share_user)
+    yield orm.Share.grant(db, spawner, group, scopes=scopes)
 
 
 def test_create_share(app, user):
@@ -118,6 +131,31 @@ def test_share_delete_cascade(to_delete, app, user, group):
         raise ValueError(f"unexpected {to_delete=}")
     # make sure it's gone
     assert db.query(orm.Share).filter_by(id=share_id).one_or_none() is None
+
+
+def test_share_scopes(app, share_user, share):
+    db = app.db
+    user_scopes = scopes.get_scopes_for(share_user)
+    assert set(share.scopes).issubset(user_scopes)
+    # delete share, no longer have scopes
+    db.delete(share)
+    db.commit()
+    user_scopes = scopes.get_scopes_for(share_user)
+    assert not set(share.scopes).intersection(user_scopes)
+
+
+def test_share_group_scopes(app, share_user, group_share):
+    # make sure share is actually in the group (make sure group_share fixture worked)
+    db = app.db
+    share = group_share
+    assert group_share.group in share_user.groups
+    user_scopes = scopes.get_scopes_for(share_user)
+    assert set(share.scopes).issubset(user_scopes)
+    # delete share, no longer have scopes
+    db.delete(share)
+    db.commit()
+    user_scopes = scopes.get_scopes_for(share_user)
+    assert not set(share.scopes).intersection(user_scopes)
 
 
 def test_share_allowed():

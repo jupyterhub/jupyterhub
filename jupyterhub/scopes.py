@@ -364,6 +364,8 @@ def get_scopes_for(orm_object):
         owner = orm_object.user or orm_object.service
         owner_roles = roles.get_roles_for(owner)
         owner_scopes = roles.roles_to_expanded_scopes(owner_roles, owner)
+        for share in owner.shared_with_me:
+            owner_scopes |= share.scopes
 
         token_scopes = set(orm_object.scopes)
         if 'inherit' in token_scopes:
@@ -419,11 +421,12 @@ def get_scopes_for(orm_object):
         )
 
         # add permissions granted from 'shares'
-        for share in orm_object.shared_with_me:
-            expanded_scopes |= expand_share_scopes(share)
+        if hasattr(orm_object, "shared_with_me"):
+            for share in orm_object.shared_with_me:
+                expanded_scopes |= expand_share_scopes(share)
         if isinstance(orm_object, orm.User):
             for group in orm_object.groups:
-                for share in orm_object.shared_with_me:
+                for share in group.shared_with_me:
                     expanded_scopes |= expand_share_scopes(share)
 
     return expanded_scopes
