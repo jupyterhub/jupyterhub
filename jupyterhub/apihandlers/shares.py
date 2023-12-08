@@ -12,6 +12,7 @@ from pydantic import (
     model_validator,
 )
 from sqlalchemy import or_
+from sqlalchemy.orm import joinedload, raiseload
 from tornado import web
 
 from .. import orm
@@ -118,11 +119,12 @@ class _ShareAPIHandler(APIHandler):
 
         A method so we can consolidate joins, etc.
         """
-        query = (
-            self.db.query(orm.Share)
-            .outerjoin(orm.User, orm.Share.user)
-            .outerjoin(orm.User, orm.Share.owner)
-            .join(orm.Spawner, orm.Share.spawner)
+        query = self.db.query(orm.Share).options(
+            joinedload(orm.Share.owner),
+            joinedload(orm.Share.user).joinedload(orm.User.groups).raiseload("*"),
+            joinedload(orm.Share.group),
+            joinedload(orm.Share.spawner).joinedload(orm.Spawner.user).raiseload("*"),
+            raiseload("*"),
         )
         return query
 
@@ -163,10 +165,12 @@ class UserShareListAPIHandler(_ShareAPIHandler):
             raise web.HTTPError(404, f"No such user: {user_name}")
         filter = orm.Share.user == user
         if user.groups:
-            filter = or_(orm.Share.user == user, orm.Share.group in user.groups)
+            filter = or_(
+                orm.Share.user == user,
+                orm.Share.group_id.in_([group.id for group in user.groups]),
+            )
         query = query.filter(filter)
-        # TODO: should this include access granted via group?
-        self.finish(self._share_list_model(query))
+        self.finish(json.dumps(self._share_list_model(query)))
 
 
 class GroupShareListAPIHandler(_ShareAPIHandler, _GroupAPIHandler):
@@ -177,7 +181,7 @@ class GroupShareListAPIHandler(_ShareAPIHandler, _GroupAPIHandler):
         group = self.find_group(group_name)
         query = self._init_share_query()
         query = query.filter(orm.Share.group == group)
-        self.finish(self._share_list_model(query))
+        self.finish(json.dumps(self._share_list_model(query)))
 
 
 class GroupShareServerAPIHandler(_ShareAPIHandler, _GroupAPIHandler):
@@ -217,7 +221,7 @@ class ServerShareAPIHandler(_ShareAPIHandler):
         spawner = self._lookup_spawner(user_name, server_name)
 
         query = query.filter_by(spawner_id=spawner.id)
-        self.finish(self._share_list_model(query))
+        self.finish(json.dumps(self._share_list_model(query)))
 
     @needs_scope('admin:shares')
     async def post(self, user_name, server_name):

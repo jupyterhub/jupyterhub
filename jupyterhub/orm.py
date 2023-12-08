@@ -686,6 +686,7 @@ class _Share:
             "User",
             back_populates=self.__tablename__,
             foreign_keys=[self.owner_id],
+            lazy="selectin",
         )
 
     # the spawner the share is for
@@ -696,6 +697,7 @@ class _Share:
         return relationship(
             "Spawner",
             back_populates=self.__tablename__,
+            lazy="selectin",
         )
 
     # the permissions granted (!server filter will always be applied)
@@ -772,12 +774,14 @@ class Share(_Share, Expiring, Base):
 
     # who the share is granted to (user or group)
     user_id = Column(Integer, ForeignKey('users.id', ondelete="CASCADE"), nullable=True)
-    user = relationship("User", back_populates="shared_with_me", foreign_keys=[user_id])
+    user = relationship(
+        "User", back_populates="shared_with_me", foreign_keys=[user_id], lazy="selectin"
+    )
 
     group_id = Column(
         Integer, ForeignKey('groups.id', ondelete="CASCADE"), nullable=True
     )
-    group = relationship("Group", back_populates="shared_with_me")
+    group = relationship("Group", back_populates="shared_with_me", lazy="selectin")
 
     @staticmethod
     def _share_with_key(share_with):
@@ -822,13 +826,20 @@ class Share(_Share, Expiring, Base):
         return self._get_log_name(self.spawner, self.user or self.group)
 
     @classmethod
-    def grant(cls, db, spawner, share_with, scopes):
+    def grant(cls, db, spawner, share_with, scopes=None):
         """Grant shared permissions for a server
 
         Updates existing Share if there is one,
         otherwise creates a new Share
         """
+        if scopes is None:
+            scopes = frozenset(
+                [f"access:servers!server={spawner.user.name}/{spawner.name}"]
+            )
         scopes = cls._apply_filter(frozenset(scopes), spawner.user.name, spawner.name)
+
+        if not scopes:
+            raise ValueError("Must specify scopes to grant.")
 
         # 1. lookup existing share and update
         share = cls.find(db, spawner, share_with)

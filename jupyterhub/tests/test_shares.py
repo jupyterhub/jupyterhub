@@ -46,6 +46,7 @@ def populate_shares(app, user, group, share_user):
     group_c = orm.Group(name=new_group_name("c"))
     app.db.add(group_a)
     app.db.add(group_b)
+    app.db.add(group_c)
     app.db.commit()
     in_a = add_user(app.db, name=new_username("in-a"))
     in_a_b = add_user(app.db, name=new_username("in-a-b"))
@@ -101,7 +102,9 @@ def populate_shares(app, user, group, share_user):
         "users": {
             in_a.name: [user_1.name, user_3.name, user_4.name],
             in_b.name: [user_2.name, user_3.name],
-            in_a_b.name: [user_1.name, user_2.name, user_3.name],
+            # shares are _not_ deduplicated if granted
+            # both via user and group
+            in_a_b.name: [user_1.name, user_2.name, user_3.name, user_3.name],
             not_in.name: [user_4.name],
         },
         "groups": {
@@ -290,20 +293,35 @@ async def test_share_create_api(
 
 
 @pytest.mark.parametrize(
-    "case",
+    "kind, case",
     [
-        "in-a",
-        "in-b",
-        "in-a-b",
-        "not-in",
+        ("users", "in-a"),
+        ("users", "in-b"),
+        ("users", "in-a-b"),
+        ("users", "not-in"),
+        ("groups", "a"),
+        ("groups", "b"),
+        ("groups", "c"),
     ],
 )
-async def test_share_api_list_user(app, populate_shares, create_user_with_scopes, case):
-    for user_name, server_names in populate_shares["users"].items():
-        r = await api_request(app, f"/users/{user_name}/shared")
-        assert r.status_code == 200
-        shares = r.json()
-        assert shares
+async def test_share_api_list_user(
+    app, populate_shares, create_user_with_scopes, kind, case
+):
+    for name, server_names in populate_shares[kind].items():
+        if name.rpartition("-")[0] == case:
+            break
+    else:
+        raise ValueError(f"Did not find {case} in {populate_shares[kind].keys()}")
+
+    r = await api_request(app, f"/{kind}/{name}/shared")
+    assert r.status_code == 200
+    shares = r.json()
+    found_shares = sorted(
+        [share["server"]["user"]["name"] for share in shares["items"]]
+    )
+    expected_shares = sorted(server_names)
+    assert found_shares == expected_shares
+    # TODO: check more about the models
 
 
 def test_share_api_list_group():
