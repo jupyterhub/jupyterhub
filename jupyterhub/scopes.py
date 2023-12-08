@@ -68,6 +68,7 @@ scope_definitions = {
             'read:users:name',
             'read:users:groups',
             'read:users:activity',
+            'read:users:shares',
         ],
     },
     'read:users:name': {'description': 'Read names of users.'},
@@ -117,7 +118,7 @@ scope_definitions = {
     },
     'read:groups': {
         'description': 'Read group models.',
-        'subscopes': ['read:groups:name'],
+        'subscopes': ['read:groups:name', 'read:groups:shares'],
     },
     'read:groups:name': {'description': 'Read group names.'},
     'delete:groups': {
@@ -143,21 +144,37 @@ scope_definitions = {
     'access:services': {
         'description': 'Access services via API or browser.',
     },
+    'users:shares': {
+        'description': "Read and revoke a user's access to shared servers.",
+        'subscopes': [
+            'read:users:shares',
+        ],
+    },
     'read:users:shares': {
         'description': "Read servers shared with a user.",
+    },
+    'groups:shares': {
+        'description': "Read and revoke a group's access to shared servers.",
+        'subscopes': [
+            'read:groups:shares',
+        ],
     },
     'read:groups:shares': {
         'description': "Read servers shared with a group.",
     },
     'read:shares': {
         'description': "Read information about shared access to servers.",
+        'subscopes': [
+            'read:users:shares',
+            'read:groups:shares',
+        ],
     },
-    'shares': {
+    'admin:shares': {
         'description': "Manage access to shared servers.",
         'subscopes': [
             'read:shares',
-            'read:user:shares',
-            'read:group:shares',
+            'users:shares',
+            'groups:shares',
         ],
     },
     'proxy': {
@@ -365,7 +382,7 @@ def get_scopes_for(orm_object):
         owner_roles = roles.get_roles_for(owner)
         owner_scopes = roles.roles_to_expanded_scopes(owner_roles, owner)
         for share in owner.shared_with_me:
-            owner_scopes |= share.scopes
+            owner_scopes |= frozenset(share.scopes)
 
         token_scopes = set(orm_object.scopes)
         if 'inherit' in token_scopes:
@@ -436,7 +453,7 @@ def expand_share_scopes(share):
     """Get expanded scopes for a Share"""
     return expand_scopes(
         share.scopes,
-        owner=share.owner,
+        owner=share.user or share.group,
         oauth_client=share.spawner.oauth_client,
     )
 

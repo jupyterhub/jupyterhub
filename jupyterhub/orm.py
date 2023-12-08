@@ -702,12 +702,13 @@ class _Share:
     scopes = Column(JSONList)
     expires_at = Column(DateTime, nullable=True)
 
-    def apply_filter(self, scopes):
+    @classmethod
+    def apply_filter(cls, scopes, spawner):
         """Apply our filter, ensures all scopes have appropriate !server filter
 
         Any other filters will raise ValueError.
         """
-        return self._apply_filter(frozenset(scopes), self.owner.name, self.spawner.name)
+        return cls._apply_filter(frozenset(scopes), spawner.user.name, spawner.name)
 
     @lru_cache
     @staticmethod
@@ -728,16 +729,17 @@ class _Share:
             filtered_scopes.append(f"{base_scope}!{server_filter}")
         return frozenset(filtered_scopes)
 
-    def verify_scopes(self, scopes, creator):
+    @classmethod
+    def verify_scopes(cls, scopes, creator, spawner):
         """Verify that our scopes may be granted by the owner
 
         raises ValueError if permissions cannot be granted.
         """
         from .scopes import _check_token_scopes, access_scopes
 
-        scopes = self.apply_filter(scopes) | access_scopes(self.spawner.oauth_client)
+        scopes = cls.apply_filter(scopes, spawner) | access_scopes(spawner.oauth_client)
         # TODO: there should be a better, clearer method for this
-        _check_token_scopes(scopes, creator, self.spawner.oauth_client)
+        _check_token_scopes(scopes, creator, spawner.oauth_client)
 
     def __repr__(self):
         if self.user:
@@ -808,6 +810,17 @@ class Share(_Share, Expiring, Base):
         }
         return db.query(Share).filter_by(**filter_by).one_or_none()
 
+    @staticmethod
+    def _get_log_name(spawner, share_with):
+        """construct log snippet to refer to the share"""
+        return (
+            f"{share_with.kind}:{share_with.name} on {spawner.user.name}/{spawner.name}"
+        )
+
+    @property
+    def _log_name(self):
+        return self._get_log_name(self.spawner, self.user or self.group)
+
     @classmethod
     def grant(cls, db, spawner, share_with, scopes):
         """Grant shared permissions for a server
@@ -817,11 +830,9 @@ class Share(_Share, Expiring, Base):
         """
         scopes = cls._apply_filter(frozenset(scopes), spawner.user.name, spawner.name)
 
-        # 1. lookup existing code and update
+        # 1. lookup existing share and update
         share = cls.find(db, spawner, share_with)
-        share_with_log = (
-            f"{share_with.kind}:{share_with.name} on {spawner.user.name}/{spawner.name}"
-        )
+        share_with_log = cls._get_log_name(spawner, share_with)
         if share is not None:
             # update existing permissions in-place
             # extend permissions
@@ -853,6 +864,47 @@ class Share(_Share, Expiring, Base):
             db.add(share)
             db.commit()
         return share
+
+    @classmethod
+    def revoke(cls, db, spawner, share_with, scopes=None):
+        """Revoke permissions for share_with on `spawner`
+
+        If scopes are not specified, all scopes are revoked
+        """
+        share = cls.find(db, spawner, share_with)
+        if share is None:
+            _log_name = cls._get_log_name(spawner, share_with)
+            app_log.info(f"No permissions to revoke from {_log_name}")
+            return
+        else:
+            _log_name = share._log_name
+
+        if scopes is None:
+            app_log.info(f"Revoked all permissions from {_log_name}")
+            db.delete(share)
+            db.commit()
+            return None
+
+        # update scopes
+        new_scopes = [scope for scope in share.scopes if scope not in scopes]
+        revoked_scopes = [scope for scope in scopes if scope in set(share.scopes)]
+        if new_scopes == share.scopes:
+            app_log.info(f"No change in scopes for {_log_name}")
+            return
+        elif not new_scopes:
+            # revoked all scopes, delete the Share
+            app_log.info(f"Revoked all permissions from {_log_name}")
+            db.delete(share)
+            db.commit()
+        else:
+            app_log.info(f"Revoked {revoked_scopes} from {_log_name}")
+            share.scopes = new_scopes
+            db.commit()
+
+        if new_scopes:
+            return share
+        else:
+            return None
 
 
 class ShareCode(_Share, Expiring, Base):

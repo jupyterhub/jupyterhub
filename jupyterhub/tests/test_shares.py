@@ -1,11 +1,12 @@
+import json
 from datetime import timedelta
 
 import pytest
 
 from jupyterhub import orm, scopes
 
-from .conftest import new_username
-from .utils import add_user
+from .conftest import new_group_name, new_username
+from .utils import add_user, api_request, async_requests, public_url
 
 
 @pytest.fixture
@@ -36,6 +37,79 @@ def group_share(app, user, group, share_user):
     scopes = [f"read:servers!{filter_}"]
     group.users.append(share_user)
     yield orm.Share.grant(db, spawner, group, scopes=scopes)
+
+
+@pytest.fixture
+def populate_shares(app, user, group, share_user):
+    group_a = orm.Group(name=new_group_name("a"))
+    group_b = orm.Group(name=new_group_name("b"))
+    group_c = orm.Group(name=new_group_name("c"))
+    app.db.add(group_a)
+    app.db.add(group_b)
+    app.db.commit()
+    in_a = add_user(app.db, name=new_username("in-a"))
+    in_a_b = add_user(app.db, name=new_username("in-a-b"))
+    in_b = add_user(app.db, name=new_username("in-b"))
+    not_in = add_user(app.db, name=new_username("not-in"))
+
+    group_a.users = [in_a, in_a_b]
+    group_b.users = [in_b, in_a_b]
+    app.db.commit()
+
+    user_1 = add_user(app.db, name=new_username("server"))
+    user_2 = add_user(app.db, name=new_username("server"))
+    user_3 = add_user(app.db, name=new_username("server"))
+    user_4 = add_user(app.db, name=new_username("server"))
+
+    # group a has access to user_1
+    # group b has access to user_2
+    # both groups have access to user_3
+    # user in-a also has access to user_4
+    orm.Share.grant(
+        app.db,
+        app.users[user_1].spawner.orm_spawner,
+        group_a,
+    )
+    orm.Share.grant(
+        app.db,
+        app.users[user_2].spawner.orm_spawner,
+        group_b,
+    )
+    orm.Share.grant(
+        app.db,
+        app.users[user_3].spawner.orm_spawner,
+        group_a,
+    )
+    orm.Share.grant(
+        app.db,
+        app.users[user_3].spawner.orm_spawner,
+        group_b,
+    )
+    orm.Share.grant(
+        app.db,
+        app.users[user_4].spawner.orm_spawner,
+        in_a,
+    )
+    orm.Share.grant(
+        app.db,
+        app.users[user_4].spawner.orm_spawner,
+        not_in,
+    )
+
+    # return a dict showing who should have access to what
+    return {
+        "users": {
+            in_a.name: [user_1.name, user_3.name, user_4.name],
+            in_b.name: [user_2.name, user_3.name],
+            in_a_b.name: [user_1.name, user_2.name, user_3.name],
+            not_in.name: [user_4.name],
+        },
+        "groups": {
+            group_a.name: [user_1.name, user_3.name],
+            group_b.name: [user_2.name, user_3.name],
+            group_c.name: [],
+        },
+    }
 
 
 def test_create_share(app, user):
@@ -166,10 +240,6 @@ def test_share_missing_user():
     pass
 
 
-def test_share_missing_spawner():
-    pass
-
-
 def test_share_code():
     pass
 
@@ -177,17 +247,121 @@ def test_share_code():
 # API tests
 
 
-def test_share_create_api():
+@pytest.mark.parametrize(
+    "have_scopes, share_scopes, with_user, with_group, status",
+    [
+        (None, None, True, False, 200),
+        (None, None, False, True, 200),
+        (None, None, False, False, 400),
+        (None, None, True, True, 400),
+    ],
+)
+async def test_share_create_api(
+    app,
+    user,
+    group,
+    share_user,
+    create_user_with_scopes,
+    have_scopes,
+    share_scopes,
+    with_user,
+    with_group,
+    status,
+):
+    # make sure default spawner exists
+    spawner = user.spawner  # noqa
+    body = {}
+    if share_scopes:
+        body["scopes"] = share_scopes
+    if with_user:
+        body["user"] = share_user.name
+    if with_group:
+        body["group"] = group.name
+
+    r = await api_request(
+        app, f"/shares/{user.name}/", method="post", data=json.dumps(body)
+    )
+    assert r.status_code == status
+    if r.status_code < 300:
+        share_model = r.json()
+        assert "scopes" in share_model
+        if share_scopes:
+            assert share_model["scopes"] == share_scopes
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        "in-a",
+        "in-b",
+        "in-a-b",
+        "not-in",
+    ],
+)
+async def test_share_api_list_user(app, populate_shares, create_user_with_scopes, case):
+    for user_name, server_names in populate_shares["users"].items():
+        r = await api_request(app, f"/users/{user_name}/shared")
+        assert r.status_code == 200
+        shares = r.json()
+        assert shares
+
+
+def test_share_api_list_group():
     pass
 
 
-def test_share_list_user():
+def test_share_api_list_server():
     pass
 
 
-def test_share_list_group():
-    pass
+async def test_share_flow_full(
+    app, full_spawn, user, share_user, create_user_with_scopes
+):
+    """Exercise the full process of sharing and then accessing a shared server"""
+    user = create_user_with_scopes(
+        "admin:shares!user", "self", f"read:users:name!user={share_user.name}"
+    )
+    # start server
+    await user.spawn("")
+    await app.proxy.add_user(user)
+    spawner = user.spawner
+    # access_scope = scopes.access_scopes(spawner.orm_spawner.oauth_client)
 
+    # grant access
+    share_url = f"shares/{user.name}/{spawner.name}"
+    r = await api_request(
+        app,
+        share_url,
+        method="post",
+        name=user.name,
+        data=json.dumps({"user": share_user.name}),
+    )
+    r.raise_for_status()
+    share_model = r.json()
 
-def test_share_list_server():
-    pass
+    # attempt to _use_ access
+    user_url = public_url(app, user) + "api/contents/"
+    print(f"{user_url=}")
+    token = share_user.new_api_token()
+    r = await async_requests.get(user_url, headers={"Authorization": f"Bearer {token}"})
+    r.raise_for_status()
+
+    # revoke access
+    r = await api_request(
+        app,
+        share_url,
+        method="patch",
+        name=user.name,
+        data=json.dumps(
+            {
+                "scopes": share_model["scopes"],
+                "user": share_user.name,
+            }
+        ),
+    )
+    r.raise_for_status()
+    # new request with new token to avoid cache
+    token = share_user.new_api_token()
+    r = await async_requests.get(user_url, headers={"Authorization": f"Bearer {token}"})
+    print(r.json())
+    assert r.status_code == 403

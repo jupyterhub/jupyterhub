@@ -33,37 +33,55 @@ In general, with shares you can:
 To modify who has access to a server, you need the permission `admin:shares` with the appropriate _server_ filter.
 You can only modify access to one server at a time.
 
-Send a PATCH request to `/api/shares/:username/:servername` to modify permissions.
-The JSON body should have at
+### Granting access to a server
+
+To grant access to a particular user, in addition to `admin:shares`, the granter must have at least `read:user:name` permission for the target user (or `read:group:name` if it's a group).
+
+Send a POST request to `/api/shares/:username/:servername` to grant permissions.
+The JSON body should specify what permissions to grant and whom to grant them to:
+
+```
+POST /api/shares/:username/:servername
+{
+    "scopes": [],
+    "user": "username", # or:
+    "group": "groupname",
+}
+```
+
+It should have exactly one of "user" or "group" defined (not both).
+The specified user or group will be _granted_ access to the target server.
+
+If `scopes` is specified, all requested scopes _must_ have the `!server=:username/:servername` filter applied.
+The default value for `scopes` is `["access:servers!server=:username/:servername"]` (i.e. the 'access scope' for the server).
+
+## Revoke access
+
+To revoke permissions, you need the permission `admin:shares` with the appropriate _server_ filter.
+You can only modify access to one server at a time.
+
+Send a PATCH request to `/api/shares/:username/:servername` to revoke permissions.
+The JSON body should have
 
 ```
 PATCH /api/shares/:username/:servername
+```
+
+```python
 {
-    "scopes": [],
-    "grant": {
-        "users": ["username"],
-        "groups": ["groupname"],
-    },
     "revoke": {
-        "users": ["username"],
-        "groups": ["groupname"],
+      "users": ["username"],
+      "groups": ["groupname"],
     }
 }
 ```
 
-Users or groups specified in `grant` will be _granted_ access to the target server.
-Users or groups specified in `revoke` will have their access to the target server _revoked_.
-
-At least one of `grant` and `revoke` must be specified.
-
-If `scopes` is specified, all requested scopes _must_ have the `!server=:username/:servername` filter applied.
-The default value for `scopes` is `["access:servers!server=:username/:servername"]` (i.e. the 'access scope').
-
+The `revoke` key should be the only top-level key in the body.
 When revoking permissions, _all_ permissions are revoked (scopes).
+Users or groups specified in `revoke` will have their access to the target server _revoked_.
 
 ### Revoke _all_ permissions
 
-To modify who has access to a server, you need the permission `admin:shares` with the appropriate _server_ filter.
 A DELETE request will revoke all shared access permissions for the target server.
 
 ```

@@ -46,6 +46,7 @@ def get_default_roles():
                 'access:servers',
                 'read:roles',
                 'read:metrics',
+                'admin:shares',
             ],
         },
         {
