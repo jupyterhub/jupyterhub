@@ -40,22 +40,20 @@ def _check_version(hub_version, singleuser_version, log):
         )
         return
 
-    # compare minor X.Y versions
+    # semver: compare major versions only
     if hub_version != singleuser_version:
         from packaging.version import parse
 
         hub = parse(hub_version)
-        hub_major_minor = (hub.major, hub.minor)
         singleuser = parse(singleuser_version)
-        singleuser_major_minor = (singleuser.major, singleuser.minor)
         extra = ""
         do_log = True
-        if singleuser_major_minor == hub_major_minor:
-            # patch-level mismatch or lower, log difference at debug-level
+        if singleuser.major == hub.major:
+            # minor-level mismatch or lower, log difference at debug-level
             # because this should be fine
             log_method = log.debug
         else:
-            # log warning-level for more significant mismatch, such as 0.8 vs 0.9, etc.
+            # log warning-level for more significant mismatch, such as 1.0.0 vs 2.0.0
             key = f'{hub_version}-{singleuser_version}'
             global _version_mismatch_warning_logged
             if _version_mismatch_warning_logged.get(key):
