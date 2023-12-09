@@ -856,13 +856,21 @@ def _patch_app_base_handlers(app):
     if BaseHandler is not None:
         base_handlers.append(BaseHandler)
 
-    # patch juptyer_server and notebook handlers if they have been imported
+    # patch jupyter_server and notebook handlers if they have been imported
     for base_handler_name in [
         "jupyter_server.base.handlers.JupyterHandler",
         "notebook.base.handlers.IPythonHandler",
     ]:
         modname, _ = base_handler_name.rsplit(".", 1)
         if modname in sys.modules:
+            root_mod = modname.partition(".")[0]
+            if root_mod == "notebook":
+                import notebook
+
+                if int(notebook.__version__.partition(".")[0]) >= 7:
+                    # notebook 7 is a server extension,
+                    # it doesn't have IPythonHandler anymore
+                    continue
             base_handlers.append(import_item(base_handler_name))
 
     if not base_handlers:
