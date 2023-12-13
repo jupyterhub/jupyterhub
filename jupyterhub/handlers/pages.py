@@ -11,9 +11,9 @@ from jinja2 import TemplateNotFound
 from tornado import web
 from tornado.httputil import url_concat
 
-from .. import __version__
+from .. import __version__, orm
 from ..metrics import SERVER_POLL_DURATION_SECONDS, ServerPollStatus
-from ..scopes import needs_scope
+from ..scopes import describe_raw_scopes, needs_scope
 from ..utils import maybe_future, url_escape_path, url_path_join
 from .base import BaseHandler
 
@@ -552,6 +552,60 @@ class TokenPageHandler(BaseHandler):
         self.finish(html)
 
 
+class AcceptShareHandler(BaseHandler):
+    @web.authenticated
+    async def get(self):
+        code = self.get_argument("code")
+        next_url = self.get_argument("next", "")
+        share_code = orm.ShareCode.find(self.db, code=code)
+        if share_code is None:
+            raise web.HTTPError(404, "Share not found or expired")
+        if share_code.owner == self.current_user.orm_user:
+            raise web.HTTPError(403, "You can't share with yourself!")
+
+        scope_descriptions = describe_raw_scopes(
+            share_code.scopes,
+            username=self.current_user.name,
+        )
+
+        html = await self.render_template(
+            'accept-share.html',
+            code=code,
+            owner=share_code.owner,
+            spawner=share_code.spawner,
+            scope_descriptions=scope_descriptions,
+            next_url=next_url,
+        )
+        self.finish(html)
+
+    @web.authenticated
+    def post(self):
+        code = self.get_argument("code")
+        self.log.debug("Looking up %s", code)
+        share_code = orm.ShareCode.find(self.db, code=code)
+        if share_code is None:
+            raise web.HTTPError(404, f"Code not found: {code}")
+        user = self.current_user
+        share = share_code.exchange(user.orm_user)
+        owner = self._user_from_orm(share.owner)
+
+        next_url = self.get_argument("next", "")
+        if not next_url:
+            # if it's active, redirect to server URL
+            if share.spawner.name in owner.spawners:
+                spawner = owner.spawners[share.spawner.name]
+                if spawner.active:
+                    # redirect to spawner url
+                    next_url = owner.server_url(spawner.name)
+        if not next_url:
+            # TODO: next_url not specified and not running, what do we do?
+            # for now, redirect as if it's running,
+            # but that's very likely to 403 on "You can't launch this server"
+            next_url = owner.server_url(spawner.name)
+
+        self.redirect(next_url)
+
+
 class ProxyErrorHandler(BaseHandler):
     """Handler for rendering proxy error pages"""
 
@@ -608,6 +662,7 @@ default_handlers = [
     (r'/spawn/([^/]+)', SpawnHandler),
     (r'/spawn/([^/]+)/([^/]+)', SpawnHandler),
     (r'/token', TokenPageHandler),
+    (r'/accept-share', AcceptShareHandler),
     (r'/error/(\d+)', ProxyErrorHandler),
     (r'/health$', HealthCheckHandler),
     (r'/api/health$', HealthCheckHandler),

@@ -2,12 +2,14 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import json
+import re
 from typing import List, Optional
 
 from pydantic import (
     BaseModel,
     ConfigDict,
     ValidationError,
+    conint,
     field_validator,
     model_validator,
 )
@@ -21,19 +23,27 @@ from ..utils import isoformat
 from .base import APIHandler
 from .groups import _GroupAPIHandler
 
+_share_code_id_pat = re.compile(r"sc_(\d+)")
 
-class ShareGrantRequest(BaseModel):
-    """Validator for requests to grant sharing permission"""
 
+class BaseShareGrantRequest(BaseModel):
     model_config = ConfigDict(extra='forbid')
     scopes: Optional[List[str]] = None
-    user: Optional[str] = None
-    group: Optional[str] = None
 
     @field_validator("scopes")
     @classmethod
     def _check_scopes_exist(cls, scopes):
-        _check_scopes_exist(scopes)
+        _check_scopes_exist(scopes, who_for="share")
+
+
+class ShareGrantRequest(BaseShareGrantRequest):
+    """Validator for requests to grant sharing permission"""
+
+    # if it's going to expire, it must expire in
+    # at least one minute and at most 10 years (avoids nonsense values)
+    expires_in: conint(ge=60, le=10 * 525600 * 60) | None = None
+    user: Optional[str] = None
+    group: Optional[str] = None
 
     @model_validator(mode='after')
     def user_group_exclusive(self):
@@ -64,6 +74,13 @@ class ShareRevokeRequest(BaseModel):
         if self.user is None and self.group is None:
             raise ValueError("Specify exactly one of `user` or `group`")
         return self
+
+
+class ShareCodeGrantRequest(BaseShareGrantRequest):
+    """Validator for requests to create sharing codes"""
+
+    # must be at least one minute, at most one year, default to one day
+    expires_in: conint(ge=60, le=525600 * 60) = 86400
 
 
 class _ShareAPIHandler(APIHandler):
@@ -102,39 +119,55 @@ class _ShareAPIHandler(APIHandler):
             "created_at": isoformat(share.created_at),
         }
 
-    def share_code_model(self, share_code):
+    def share_code_model(self, share_code, code=None):
         """Compute the REST API model for a share code"""
-        return {
+        model = {
             "server": self.server_model(share_code.spawner),
             "scopes": share_code.scopes,
-            "code": share_code.code,
+            "id": f"sc_{share_code.id}",
             "created_at": isoformat(share_code.created_at),
             "expires_at": isoformat(share_code.expires_at),
         }
+        if code:
+            model["code"] = code
+        return model
 
-    def _init_share_query(self):
+    def _init_share_query(self, kind="share"):
         """Initialize a query for Shares
 
         before applying filters
 
         A method so we can consolidate joins, etc.
         """
-        query = self.db.query(orm.Share).options(
-            joinedload(orm.Share.owner),
-            joinedload(orm.Share.user).joinedload(orm.User.groups).raiseload("*"),
-            joinedload(orm.Share.group),
-            joinedload(orm.Share.spawner).joinedload(orm.Spawner.user).raiseload("*"),
+        if kind == "share":
+            class_ = orm.Share
+        elif kind == "code":
+            class_ = orm.ShareCode
+        else:
+            raise ValueError(f"kind must be `share` or `code`, not {kind!r}")
+
+        query = self.db.query(class_).options(
+            joinedload(class_.owner),
+            joinedload(class_.user).joinedload(orm.User.groups).raiseload("*"),
+            joinedload(class_.group),
+            joinedload(class_.spawner).joinedload(orm.Spawner.user).raiseload("*"),
             raiseload("*"),
         )
         return query
 
-    def _share_list_model(self, query):
+    def _share_list_model(self, query, kind="share"):
         """Finish a share query, returning the _model_"""
         offset, limit = self.get_api_pagination()
+        if kind == "share":
+            model_method = self.share_model
+        elif kind == "code":
+            model_method = self.share_code_model
+        else:
+            raise ValueError(f"kind must be `share` or `code`, not {kind!r}")
 
         total_count = query.count()
         query = query.order_by(orm.Share.id.asc()).offset(offset).limit(limit)
-        share_list = [self.share_model(share) for share in query]
+        share_list = [model_method(share) for share in query]
         return self.paginated_model(share_list, offset, limit, total_count)
 
     def _lookup_spawner(self, user_name, server_name, raise_404=True):
@@ -218,9 +251,21 @@ class ServerShareAPIHandler(_ShareAPIHandler):
         query = self._init_share_query()
         if server_name is None:
             raise NotImplementedError("Haven't implemented listing user shares")
-        spawner = self._lookup_spawner(user_name, server_name)
 
-        query = query.filter_by(spawner_id=spawner.id)
+        if server_name is not None:
+            spawner = self._lookup_spawner(user_name, server_name)
+            query = query.filter_by(spawner_id=spawner.id)
+        else:
+            # lookup owner by id
+            owner_id = (
+                self.db.query(orm.User.id)
+                .where(orm.User.name == user_name)
+                .one_or_none()
+            )
+            if owner_id is None:
+                raise web.HTTPError(404)
+
+            query = query.filter_by(owner_id=owner_id)
         self.finish(json.dumps(self._share_list_model(query)))
 
     @needs_scope('admin:shares')
@@ -319,6 +364,90 @@ class ServerShareAPIHandler(_ShareAPIHandler):
         self.set_status(204)
 
 
+class ServerShareCodeAPIHandler(_ShareAPIHandler):
+    """Endpoint for managing sharing codes of a single server
+
+    These codes can be exchanged for actual sharing permissions by the recipient.
+    """
+
+    @needs_scope("read:shares")
+    def get(self, user_name, server_name=None):
+        """List all share codes for a given owner"""
+
+        query = self._init_share_query(kind="code")
+        if server_name is None:
+            raise NotImplementedError("Haven't implemented listing user shares")
+        spawner = self._lookup_spawner(user_name, server_name)
+
+        query = query.filter_by(spawner_id=spawner.id)
+        self.finish(json.dumps(self._share_list_model(query, kind="code")))
+
+    @needs_scope('admin:shares')
+    async def post(self, user_name, server_name):
+        """POST creates a new share code"""
+        model = self.get_json_body() or {}
+        try:
+            request = ShareCodeGrantRequest(**model)
+        except ValidationError as e:
+            raise web.HTTPError(400, str(e))
+
+        scopes = request.scopes
+        # check scopes
+        if not scopes:
+            # default scopes
+            scopes = [f"access:servers!server={user_name}/{server_name}"]
+
+        # resolve target spawner
+        spawner = self._lookup_spawner(user_name, server_name)
+
+        # validate that scopes may be granted by requesting user
+        orm.ShareCode.verify_scopes(scopes, self.current_user, spawner)
+        # issue the code
+        (share_code, code) = orm.ShareCode.new(
+            self.db, spawner, scopes=scopes, expires_in=request.expires_in
+        )
+        # return the model (including code only this one time when it's created)
+        self.finish(json.dumps(self.share_code_model(share_code, code=code)))
+
+    @needs_scope('admin:shares')
+    def delete(self, user_name, server_name):
+        code = self.get_argument("code", None)
+        share_id = self.get_argument("id", None)
+        spawner = self._lookup_spawner(user_name, server_name)
+        if code:
+            # delete one code by code
+            share_code = orm.ShareCode.find(self.db, code, spawner=spawner)
+            if share_code is None:
+                raise web.HTTPError(404, "No matching code found")
+            else:
+                self.log.info(f"Deleting share code for {spawner._log_name}")
+                self.db.delete(share_code)
+        elif share_id:
+            m = _share_code_id_pat.match(share_id)
+            four_o_four = f"No code found matching id={share_id}"
+            if not m:
+                raise web.HTTPError(404, four_o_four)
+            share_id = int(m.group(1))
+            share_code = (
+                self.db.query(orm.ShareCode)
+                .filter_by(
+                    spawner_id=spawner.id,
+                    id=share_id,
+                )
+                .one_or_none()
+            )
+            if share_code is None:
+                raise web.HTTPError(404, four_o_four)
+            else:
+                self.log.info(f"Deleting share code for {spawner._log_name}")
+                self.db.delete(share_code)
+        else:
+            self.log.info(f"Deleting all share codes for {spawner._log_name}")
+            spawner.share_codes = []
+        self.db.commit()
+        self.set_status(204)
+
+
 default_handlers = [
     # TODO: not implementing single all-shared endpoint yet, too hard
     # (r"/api/shares", ShareListAPIHandler),
@@ -328,7 +457,8 @@ default_handlers = [
     # list shared_with_me for users/groups
     (r"/api/users/([^/]+)/shared", UserShareListAPIHandler),
     (r"/api/groups/([^/]+)/shared", GroupShareListAPIHandler),
-    # single-share endpoint (only for easy revocation, for now)
+    # single-share endpoint (only for easy self-revocation, for now)
     # (r"/api/users/([^/]+)/shared/([^/]+)/([^/]*)", UserShareAPIHandler),
     # (r"/api/groups/([^/]+)/shared/([^/]+)/([^/]*)", GroupShareAPIHandler),
+    (r"/api/share-codes/([^/]+)/([^/]*)", ServerShareCodeAPIHandler),
 ]

@@ -2426,7 +2426,7 @@ class JupyterHub(Application):
         run periodically
         """
         # this should be all the subclasses of Expiring
-        for cls in (orm.APIToken, orm.OAuthCode):
+        for cls in (orm.APIToken, orm.OAuthCode, orm.Share, orm.ShareCode):
             self.log.debug(f"Purging expired {cls.__name__}s")
             cls.purge_expired(self.db)
 

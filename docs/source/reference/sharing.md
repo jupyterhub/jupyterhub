@@ -156,10 +156,8 @@ To create a share code:
 POST /api/share-code/:username/:servername
 ```
 
-where the body should include the scopes to be granted,
-and expiration. Share codes _must_ expire, and
-
-TODO: discuss expiration?
+where the body should include the scopes to be granted and expiration.
+Share codes _must_ expire.
 
 ```python
 {
@@ -184,16 +182,56 @@ The response contains the code itself:
     },
   },
 }
+```
 
 ### Accepting sharing invitations
 
 Sharing invitations can be accepted by visiting:
 
 ```
-
-/hub/accept-share/:share-code
-
+/hub/accept-share/?code=:share-code
 ```
 
 where you will be able to confirm the permissions you would like to accept.
+After accepting permissions, you will be redirected to the server.
+TODO: which may or may not be running!
+
+### Listing existing invitations
+
+You can see existing invitations for
+
+```
+GET /hub/api/share-codes/server/:username/:servername
+```
+
+which produces:
+
+```
+
+### Revoking invitations
+
+If you've finished inviting users to a server, you can revoke all invitations with:
+
+```
+
+DELETE /hub/api/share-codes/:username/:servername
+
+```
+
+or revoke a single invitation code:
+
+```
+
+DELETE /hub/api/share-codes/:username/:servername?code=:thecode
+
+```
+
+You can also revoke a code by _id_, if you non longer have the code:
+
+```
+
+DELETE /hub/api/share-codes/:username/:servername?id=sc_123
+
+```
+
 ```

@@ -596,7 +596,7 @@ class Hashed(Expiring):
 
     @property
     def token(self):
-        raise AttributeError("token is write-only")
+        raise AttributeError(f"{self.__class__.__name__}.token is write-only")
 
     @token.setter
     def token(self, token):
@@ -624,12 +624,13 @@ class Hashed(Expiring):
         """Check if a token is acceptable"""
         if len(token) < cls.min_length:
             raise ValueError(
-                "Tokens must be at least %i characters, got %r"
-                % (cls.min_length, token)
+                f"{cls.__name__}.token must be at least {cls.min_length} characters, got {len(token)}: {token[: cls.prefix_length]}..."
             )
         found = cls.find(db, token)
         if found:
-            raise ValueError("Collision on token: %s..." % token[: cls.prefix_length])
+            raise ValueError(
+                f"Collision on {cls.__name__}: {token[: cls.prefix_length]}..."
+            )
 
     @classmethod
     def find_prefix(cls, db, token):
@@ -737,10 +738,11 @@ class _Share:
 
         raises ValueError if permissions cannot be granted.
         """
-        from .scopes import _check_token_scopes, access_scopes
+        from .scopes import _check_scopes_exist, _check_token_scopes, access_scopes
 
         scopes = cls.apply_filter(scopes, spawner) | access_scopes(spawner.oauth_client)
         # TODO: there should be a better, clearer method for this
+        _check_scopes_exist(scopes, who_for="share")
         _check_token_scopes(scopes, creator, spawner.oauth_client)
 
     def __repr__(self):
@@ -918,7 +920,7 @@ class Share(_Share, Expiring, Base):
             return None
 
 
-class ShareCode(_Share, Expiring, Base):
+class ShareCode(_Share, Hashed, Base):
     """A code that can be exchanged for a Share
 
     Ultimately, the same as a Share, but has a 'code'
@@ -928,15 +930,12 @@ class ShareCode(_Share, Expiring, Base):
 
     __tablename__ = "share_codes"
 
+    hashed = Column(Unicode(255), unique=True)
+    prefix = Column(Unicode(16), index=True)
     _code_bytes = 32
-    # additional columns
-    code = Column(Unicode(128), nullable=False, unique=True)
+    default_expires_in = 86400
 
-    @property
-    def _short_code(self):
-        """Truncated code for logging"""
-        return self.code[:3] + "..."
-
+    @classmethod
     def new(
         cls,
         db,
@@ -944,24 +943,38 @@ class ShareCode(_Share, Expiring, Base):
         *,
         scopes,
         expires_in=None,
-        share_expires_in=None,
         **kwargs,
     ):
         """Create a new ShareCode"""
         app_log.info(f"Creating share code for {spawner.user.name}/{spawner.name}")
-        if expires_in:
-            kwargs["expires_at"] = utcnow() + timedelta(seconds=expires_in)
-        kwargs["code"] = secrets.token_urlsafe(cls._code_bytes)
+        kwargs["scopes"] = sorted(cls.apply_filter(scopes, spawner))
+        if not expires_in:
+            expires_in = cls.default_expires_in
+        kwargs["expires_at"] = utcnow() + timedelta(seconds=expires_in)
+        kwargs["spawner"] = spawner
+        kwargs["owner"] = spawner.user
+        code = secrets.token_urlsafe(cls._code_bytes)
 
         # create the ShareCode
         share_code = cls(**kwargs)
+        # setting Hashed.token property sets the `hashed` column in the db
+        share_code.token = code
         # verify scopes
-        share_code.check_scopes(scopes)
         share_code.scopes = scopes
         # actually put it in the db
         db.add(share_code)
         db.commit()
-        return share_code
+        return (share_code, code)
+
+    @classmethod
+    def find(cls, db, code, *, spawner=None):
+        """Lookup a single ShareCode by code"""
+        prefix_match = cls.find_prefix(db, code)
+        if spawner:
+            prefix_match = prefix_match.filter_by(spawner_id=spawner.id)
+        for share_code in prefix_match:
+            if share_code.match(code):
+                return share_code
 
     def exchange(self, share_with):
         """exchange a ShareCode for a Share
@@ -969,7 +982,7 @@ class ShareCode(_Share, Expiring, Base):
         share_with can be a User or a Group.
         """
         db = inspect(self).session
-        share_code_log = f"Share code {self.short_code}"
+        share_code_log = f"Share code {self.prefix}..."
         if self.expired:
             db.delete(self)
             db.commit()
@@ -977,7 +990,7 @@ class ShareCode(_Share, Expiring, Base):
 
         share_with_log = f"{share_with.kind}:{share_with.name} on {self.owner.name}/{self.spawner.name}"
         app_log.info(f"Exchanging {share_code_log} for {share_with_log}")
-        Share.grant(db, self.spawner, share_with, self.scopes)
+        return Share.grant(db, self.spawner, share_with, self.scopes)
 
 
 # ------------------------------------
