@@ -206,6 +206,43 @@ class UserShareListAPIHandler(_ShareAPIHandler):
         self.finish(json.dumps(self._share_list_model(query)))
 
 
+class UserShareAPIHandler(_ShareAPIHandler):
+    def _lookup_share(self, user_name, owner_name, server_name):
+        """Lookup the Share this URL represents
+
+        raises 404 if not found
+        """
+        user = self.find_user(user_name)
+        if user is None:
+            raise web.HTTPError(
+                404,
+                f"No such share for user {user_name} on {owner_name}/{server_name}",
+            )
+        spawner = self._lookup_spawner(owner_name, server_name, raise_404=False)
+        share = None
+        if spawner:
+            share = orm.Share.find(self.db, spawner, share_with=user)
+        if share is not None:
+            return share
+        else:
+            raise web.HTTPError(
+                404,
+                f"No such share for user {user_name} on {owner_name}/{server_name}",
+            )
+
+    @needs_scope("read:users:shares")
+    def get(self, user_name, owner_name, _server_name):
+        share = self._lookup_share(user_name, owner_name, _server_name)
+        self.finish(json.dumps(self.share_model(share)))
+
+    @needs_scope("users:shares")
+    def delete(self, user_name, owner_name, _server_name):
+        share = self._lookup_share(user_name, owner_name, _server_name)
+        self.db.delete(share)
+        self.db.commit()
+        self.set_status(204)
+
+
 class GroupShareListAPIHandler(_ShareAPIHandler, _GroupAPIHandler):
     """List shares granted to a group"""
 
@@ -217,22 +254,38 @@ class GroupShareListAPIHandler(_ShareAPIHandler, _GroupAPIHandler):
         self.finish(json.dumps(self._share_list_model(query)))
 
 
-class GroupShareServerAPIHandler(_ShareAPIHandler, _GroupAPIHandler):
-    @needs_scope("groups:shares")
-    def delete(self, group_name, _user_name, _server_name):
+class GroupShareAPIHandler(_ShareAPIHandler, _GroupAPIHandler):
+    """A single group's access to a single server"""
+
+    def _lookup_share(self, group_name, owner_name, server_name):
+        """Lookup the Share this URL represents
+
+        raises 404 if not found
+        """
         group = self.find_group(group_name)
-        spawner = self._lookup_spawner(_user_name, _server_name, raise_404=False)
+        spawner = self._lookup_spawner(owner_name, server_name, raise_404=False)
         share = None
         if spawner:
             share = orm.Share.find(self.db, spawner, share_with=group)
         if share is not None:
-            self.db.delete(share)
-            self.set_status(204)
+            return share
         else:
             raise web.HTTPError(
                 404,
-                f"No such share for group {group_name} on {_user_name}/{_server_name}",
+                f"No such share for group {group_name} on {owner_name}/{server_name}",
             )
+
+    @needs_scope("read:groups:shares")
+    def get(self, group_name, owner_name, _server_name):
+        share = self._lookup_share(group_name, owner_name, _server_name)
+        self.finish(json.dumps(self.share_model(share)))
+
+    @needs_scope("groups:shares")
+    def delete(self, group_name, owner_name, _server_name):
+        share = self._lookup_share(group_name, owner_name, _server_name)
+        self.db.delete(share)
+        self.db.commit()
+        self.set_status(204)
 
 
 class ServerShareAPIHandler(_ShareAPIHandler):
@@ -452,13 +505,14 @@ default_handlers = [
     # TODO: not implementing single all-shared endpoint yet, too hard
     # (r"/api/shares", ShareListAPIHandler),
     # general management of shares
-    # (r"/api/shares/([^/]+)", ServerShareAPIHandler),
+    (r"/api/shares/([^/]+)", ServerShareAPIHandler),
     (r"/api/shares/([^/]+)/([^/]*)", ServerShareAPIHandler),
     # list shared_with_me for users/groups
     (r"/api/users/([^/]+)/shared", UserShareListAPIHandler),
     (r"/api/groups/([^/]+)/shared", GroupShareListAPIHandler),
     # single-share endpoint (only for easy self-revocation, for now)
-    # (r"/api/users/([^/]+)/shared/([^/]+)/([^/]*)", UserShareAPIHandler),
-    # (r"/api/groups/([^/]+)/shared/([^/]+)/([^/]*)", GroupShareAPIHandler),
+    (r"/api/users/([^/]+)/shared/([^/]+)/([^/]*)", UserShareAPIHandler),
+    (r"/api/groups/([^/]+)/shared/([^/]+)/([^/]*)", GroupShareAPIHandler),
+    # manage sharing codes
     (r"/api/share-codes/([^/]+)/([^/]*)", ServerShareCodeAPIHandler),
 ]
