@@ -992,17 +992,28 @@ def identify_scopes(obj=None):
         raise TypeError(f"Expected orm.User or orm.Service, got {obj!r}")
 
 
-@lru_cache_key(lambda oauth_client: oauth_client.identifier)
-def access_scopes(oauth_client):
+def _access_cache_key(oauth_client=None, *, spawner=None, service=None):
+    if oauth_client:
+        return ("oauth", oauth_client.identifier)
+    elif spawner:
+        return ("spawner", spawner.user.name, spawner.name)
+    elif service:
+        return ("service", service.name)
+
+
+@lru_cache_key(_access_cache_key)
+def access_scopes(oauth_client=None, *, spawner=None, service=None):
     """Return scope(s) required to access an oauth client"""
     scopes = set()
-    if oauth_client.identifier == "jupyterhub":
+    if oauth_client and oauth_client.identifier == "jupyterhub":
         return frozenset()
-    spawner = oauth_client.spawner
+    if spawner is None and oauth_client:
+        spawner = oauth_client.spawner
     if spawner:
         scopes.add(f"access:servers!server={spawner.user.name}/{spawner.name}")
     else:
-        service = oauth_client.service
+        if service is None:
+            service = oauth_client.service
         if service:
             scopes.add(f"access:services!service={service.name}")
         else:
