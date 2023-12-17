@@ -98,20 +98,13 @@ a more detailed discussion.
    python3 -m pip install --editable ".[test]"
    ```
 
-5. Set up a database.
-
-   The default database engine is `sqlite` so if you are just trying
-   to get up and running quickly for local development that should be
-   available via [Python](https://docs.python.org/3.5/library/sqlite3.html).
-   See [The Hub's Database](hub-database) for details on other supported databases.
-
-6. You are now ready to start JupyterHub!
+5. You are now ready to start JupyterHub!
 
    ```bash
    jupyterhub
    ```
 
-7. You can access JupyterHub from your browser at
+6. You can access JupyterHub from your browser at
    `http://localhost:8000` now.
 
 Happy developing!
