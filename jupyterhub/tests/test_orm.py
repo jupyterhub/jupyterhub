@@ -183,7 +183,9 @@ def test_service_server(db):
 
 
 def test_token_find(db):
-    service = db.query(orm.Service).first()
+    service = orm.Service(name='sample')
+    db.add(service)
+    db.commit()
     user = db.query(orm.User).first()
     service_token = service.new_api_token()
     user_token = user.new_api_token()
@@ -236,7 +238,7 @@ async def test_spawn_fails(db):
 
 
 def test_groups(db):
-    user = orm.User.find(db, name='aeofel')
+    user = orm.User(name='aeofel')
     db.add(user)
 
     group = orm.Group(name='lives')
@@ -525,7 +527,8 @@ def test_share_user(db):
 
 
 def test_share_group(db):
-    assert list(db.query(orm.User)) == []
+    initial_list = list(db.query(orm.User))
+    assert len(initial_list) <= 1
     user1 = orm.User(name='user1')
     user2 = orm.User(name='user2')
     group2 = orm.Group(name='group2')

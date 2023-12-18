@@ -40,7 +40,13 @@ from tornado.platform.asyncio import AsyncIOMainLoop
 import jupyterhub.services.service
 
 from .. import crypto, orm, scopes
-from ..roles import create_role, get_default_roles, mock_roles, update_roles
+from ..roles import (
+    assign_default_roles,
+    create_role,
+    get_default_roles,
+    mock_roles,
+    update_roles,
+)
 from ..utils import random_port
 from . import mocking
 from .mocking import MockHub
@@ -109,6 +115,10 @@ def db():
     _db = app.db
     for role in get_default_roles():
         create_role(_db, role)
+    user = orm.User(name="user")
+    _db.add(user)
+    _db.commit()
+    assign_default_roles(_db, user)
     _db.commit()
     return _db
 

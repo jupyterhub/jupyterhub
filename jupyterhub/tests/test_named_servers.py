@@ -76,6 +76,7 @@ async def test_default_server(app, named_servers):
             'server': user.url,
             'servers': {
                 '': {
+                    'full_name': f"{username}/",
                     'name': '',
                     'started': TIMESTAMP,
                     'last_activity': TIMESTAMP,
@@ -164,6 +165,7 @@ async def test_create_named_server(
             'auth_state': None,
             'servers': {
                 servername: {
+                    'full_name': f"{username}/{servername}",
                     'name': name,
                     'started': TIMESTAMP,
                     'last_activity': TIMESTAMP,
