@@ -321,7 +321,7 @@ class ServerShareAPIHandler(_ShareAPIHandler):
             query = query.filter_by(owner_id=owner_id)
         self.finish(json.dumps(self._share_list_model(query)))
 
-    @needs_scope('admin:shares')
+    @needs_scope('shares')
     async def post(self, user_name, server_name):
         """PATCH modifies shares for a given server"""
         model = self.get_json_body() or {}
@@ -374,7 +374,7 @@ class ServerShareAPIHandler(_ShareAPIHandler):
         share = orm.Share.grant(self.db, spawner, share_with, scopes=scopes)
         self.finish(json.dumps(self.share_model(share)))
 
-    @needs_scope('admin:shares')
+    @needs_scope('shares')
     async def patch(self, user_name, server_name):
         """PATCH revokes single shares for a given server"""
         model = self.get_json_body() or {}
@@ -420,7 +420,7 @@ class ServerShareAPIHandler(_ShareAPIHandler):
             # empty dict if share deleted
             self.finish("{}")
 
-    @needs_scope('admin:shares')
+    @needs_scope('shares')
     async def delete(self, user_name, server_name):
         spawner = self._lookup_spawner(user_name, server_name)
         spawner.shares = []
@@ -446,7 +446,7 @@ class ServerShareCodeAPIHandler(_ShareAPIHandler):
         query = query.filter_by(spawner_id=spawner.id)
         self.finish(json.dumps(self._share_list_model(query, kind="code")))
 
-    @needs_scope('admin:shares')
+    @needs_scope('shares')
     async def post(self, user_name, server_name):
         """POST creates a new share code"""
         model = self.get_json_body() or {}
@@ -480,7 +480,7 @@ class ServerShareCodeAPIHandler(_ShareAPIHandler):
         # return the model (including code only this one time when it's created)
         self.finish(json.dumps(self.share_code_model(share_code, code=code)))
 
-    @needs_scope('admin:shares')
+    @needs_scope('shares')
     def delete(self, user_name, server_name):
         code = self.get_argument("code", None)
         share_id = self.get_argument("id", None)

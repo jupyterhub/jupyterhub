@@ -68,7 +68,6 @@ scope_definitions = {
             'read:users:name',
             'read:users:groups',
             'read:users:activity',
-            'read:users:shares',
         ],
     },
     'read:users:name': {'description': 'Read names of users.'},
@@ -118,7 +117,7 @@ scope_definitions = {
     },
     'read:groups': {
         'description': 'Read group models.',
-        'subscopes': ['read:groups:name', 'read:groups:shares'],
+        'subscopes': ['read:groups:name'],
     },
     'read:groups:name': {'description': 'Read group names.'},
     'delete:groups': {
@@ -165,7 +164,7 @@ scope_definitions = {
     'read:shares': {
         'description': "Read information about shared access to servers.",
     },
-    'admin:shares': {
+    'shares': {
         'description': "Manage access to shared servers.",
         'subscopes': [
             'access:servers',

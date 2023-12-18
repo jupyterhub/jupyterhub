@@ -13,7 +13,7 @@ In JupyterHub, shares:
 
 1. are 'granted' to a user or group
 2. grant only limited permissions (e.g. only 'access' or access and start/stop)
-3. may be revoked by anyone with the `admin:shares` permissions
+3. may be revoked by anyone with the `shares` permissions
 4. (may) expire
 
 Additionally a "share code" is a string, which has all the same properties as a share aside from the user or group.
@@ -30,12 +30,12 @@ In general, with shares you can:
 
 ## Share or revoke access to a server
 
-To modify who has access to a server, you need the permission `admin:shares` with the appropriate _server_ filter.
+To modify who has access to a server, you need the permission `shares` with the appropriate _server_ filter.
 You can only modify access to one server at a time.
 
 ### Granting access to a server
 
-To grant access to a particular user, in addition to `admin:shares`, the granter must have at least `read:user:name` permission for the target user (or `read:group:name` if it's a group).
+To grant access to a particular user, in addition to `shares`, the granter must have at least `read:user:name` permission for the target user (or `read:group:name` if it's a group).
 
 Send a POST request to `/api/shares/:username/:servername` to grant permissions.
 The JSON body should specify what permissions to grant and whom to grant them to:
@@ -57,7 +57,7 @@ The default value for `scopes` is `["access:servers!server=:username/:servername
 
 ## Revoke access
 
-To revoke permissions, you need the permission `admin:shares` with the appropriate _server_ filter.
+To revoke permissions, you need the permission `shares` with the appropriate _server_ filter.
 You can only modify access to one server at a time.
 
 Send a PATCH request to `/api/shares/:username/:servername` to revoke permissions.

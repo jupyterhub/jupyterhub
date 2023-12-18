@@ -240,17 +240,17 @@ def test_share_group_scopes(app, share_user, group_share):
     [
         (
             "",
-            "admin:shares!SERVER,read:users:name",
+            "shares!SERVER,read:users:name",
             True,
         ),
         (
             "",
-            "admin:shares!USER,read:users:name!SHARE_WITH",
+            "shares!USER,read:users:name!SHARE_WITH",
             True,
         ),
         (
             "",
-            "admin:shares",
+            "shares",
             False,
         ),
         (
@@ -260,7 +260,7 @@ def test_share_group_scopes(app, share_user, group_share):
         ),
         (
             "read:users!USER",
-            "admin:shares!SERVER",
+            "shares!SERVER",
             False,
         ),
     ],
@@ -394,7 +394,7 @@ async def test_share_api_list_user_group(
     "have_scopes, n_groups, n_users, ok",
     [
         (
-            "admin:shares",
+            "shares",
             0,
             0,
             True,
@@ -477,7 +477,7 @@ async def test_share_flow_full(
 ):
     """Exercise the full process of sharing and then accessing a shared server"""
     user = create_user_with_scopes(
-        "admin:shares!user", "self", f"read:users:name!user={share_user.name}"
+        "shares!user", "self", f"read:users:name!user={share_user.name}"
     )
     # start server
     await user.spawn("")

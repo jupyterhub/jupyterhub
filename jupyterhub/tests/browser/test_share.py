@@ -13,7 +13,7 @@ from .test_browser import login
 async def test_share_code_flow_full(app, browser, full_spawn, create_user_with_scopes):
     share_user = add_user(app.db, name=new_username("share_with"))
     user = create_user_with_scopes(
-        "admin:shares!user", "self", f"read:users:name!user={share_user.name}"
+        "shares!user", "self", f"read:users:name!user={share_user.name}"
     )
     # start server
     await user.spawn("")
