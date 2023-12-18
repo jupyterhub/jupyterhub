@@ -1,23 +1,23 @@
 """Test scopes for API handlers"""
+import types
 from operator import itemgetter
 from unittest import mock
 
 import pytest
 from pytest import mark
 from tornado import web
-from tornado.httputil import HTTPServerRequest
 
 from .. import orm, roles, scopes
 from .._memoize import FrozenDict
-from ..handlers import BaseHandler
+from ..apihandlers import APIHandler
 from ..scopes import (
     Scope,
-    _check_scope_access,
     _expand_self_scope,
     _intersect_expanded_scopes,
     _resolve_requested_scopes,
     expand_scopes,
     get_scopes_for,
+    has_scope,
     identify_scopes,
     needs_scope,
     parse_scopes,
@@ -26,7 +26,8 @@ from .utils import add_user, api_request, auth_header
 
 
 def get_handler_with_scopes(scopes):
-    handler = mock.Mock(spec=BaseHandler)
+    handler = mock.Mock(spec=APIHandler)
+    handler.has_scope = types.MethodType(APIHandler.has_scope, handler)
     handler.parsed_scopes = parse_scopes(scopes)
     return handler
 
@@ -55,47 +56,39 @@ def test_scope_precendence():
 
 def test_scope_check_present():
     handler = get_handler_with_scopes(['read:users'])
-    assert _check_scope_access(handler, 'read:users')
-    assert _check_scope_access(handler, 'read:users', user='maeby')
+    assert handler.has_scope('read:users')
+    assert handler.has_scope('read:users!user=maeby')
 
 
 def test_scope_check_not_present():
     handler = get_handler_with_scopes(['read:users!user=maeby'])
-    assert _check_scope_access(handler, 'read:users')
-    with pytest.raises(web.HTTPError):
-        _check_scope_access(handler, 'read:users', user='gob')
-    with pytest.raises(web.HTTPError):
-        _check_scope_access(handler, 'read:users', user='gob', server='server')
+    assert not handler.has_scope('read:users')
+    assert not handler.has_scope('read:users!user=gob')
+    assert not handler.has_scope('read:users!server=gob/server')
 
 
 def test_scope_filters():
     handler = get_handler_with_scopes(
         ['read:users', 'read:users!group=bluths', 'read:users!user=maeby']
     )
-    assert _check_scope_access(handler, 'read:users', group='bluth')
-    assert _check_scope_access(handler, 'read:users', user='maeby')
-
-
-def test_scope_multiple_filters():
-    handler = get_handler_with_scopes(['read:users!user=george_michael'])
-    assert _check_scope_access(
-        handler, 'read:users', user='george_michael', group='bluths'
-    )
+    assert handler.has_scope('read:users!group=bluth')
+    assert handler.has_scope('read:users!user=maeby')
 
 
 def test_scope_parse_server_name():
     handler = get_handler_with_scopes(
         ['servers!server=maeby/server1', 'read:users!user=maeby']
     )
-    assert _check_scope_access(handler, 'servers', user='maeby', server='server1')
+    assert handler.has_scope('servers!server=maeby/server1')
 
 
 class MockAPIHandler:
     def __init__(self):
         self.expanded_scopes = {'users'}
         self.parsed_scopes = {}
-        self.request = mock.Mock(spec=HTTPServerRequest)
+        self.request = mock.Mock(spec=APIHandler)
         self.request.path = '/path'
+        self.db = None
 
     def set_scopes(self, *scopes):
         self.expanded_scopes = set(scopes)
@@ -555,7 +548,7 @@ async def test_server_state_access(
             await api_request(
                 app, 'users', user.name, 'servers', server_name, method='post'
             )
-        service = create_service_with_scopes("read:users:name!user=", *scopes)
+        service = create_service_with_scopes("read:users:name!user=bianca", *scopes)
         api_token = service.new_api_token()
         headers = {'Authorization': 'token %s' % api_token}
 
@@ -667,6 +660,7 @@ async def test_server_state_access(
                 'read:users:name!user=y',
                 'read:users:groups!user=y',
                 'read:users:activity!user=y',
+                'read:users:shares!user=y',
             },
         ),
         (
@@ -678,6 +672,7 @@ async def test_server_state_access(
                 'read:users:name!user=y',
                 'read:users:groups!user=y',
                 'read:users:activity!user=y',
+                'read:users:shares!user=y',
             },
         ),
     ],
@@ -1308,3 +1303,46 @@ def test_resolve_requested_scopes(
     )
     assert allowed == expected_allowed
     assert disallowed == expected_disallowed
+
+
+@pytest.mark.parametrize(
+    "scope, have_scopes, ok",
+    [
+        # exact matches
+        ("read:users", "read:users", True),
+        ("read:users!user=USER", "read:users!user=USER", True),
+        ("read:servers!server=USER/x", "read:servers!server=USER/x", True),
+        ("read:groups!group=GROUP", "read:groups!group=GROUP", True),
+        # subscopes
+        ("read:users:name", "read:users", True),
+        # subscopes with matching filter
+        ("read:users:name!user=USER", "read:users!user=USER", True),
+        ("read:users!user=USER", "read:users!group=GROUP", True),
+        ("read:users!user=USER", "read:users", True),
+        ("read:servers!server=USER/x", "read:servers", True),
+        ("read:servers!server=USER/x", "servers!server=USER/x", True),
+        ("read:servers!server=USER/x", "servers!user=USER", True),
+        ("read:servers!server=USER/x", "servers!group=GROUP", True),
+        # shouldn't match
+        ("read:users", "read:users!user=USER", False),
+        ("read:users!user=USER", "read:users!user=other", False),
+        ("read:users!user=USER", "read:users!group=other", False),
+        ("read:servers!server=USER/x", "servers!server=other/x", False),
+        ("read:servers!server=USER/x", "servers!user=other", False),
+        ("read:servers!server=USER/x", "servers!group=other", False),
+        ("servers!server=USER/x", "read:servers!server=USER/x", False),
+    ],
+)
+def test_has_scope(app, user, group, scope, have_scopes, ok):
+    db = app.db
+    user.groups.append(group)
+    db.commit()
+
+    def _sub(scope):
+        return scope.replace("GROUP", group.name).replace("USER", user.name)
+
+    scope = _sub(scope)
+    have_scopes = [_sub(s) for s in have_scopes.split(",")]
+    print(f"{have_scopes=}")
+    parsed_scopes = parse_scopes(expand_scopes(have_scopes))
+    assert has_scope(scope, parsed_scopes, db=db) == ok

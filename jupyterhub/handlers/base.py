@@ -485,6 +485,10 @@ class BaseHandler(RequestHandler):
 
         return functools.partial(scopes.check_scope_filter, sub_scope)
 
+    def has_scope(self, scope):
+        """Is the current request being made with the given scope?"""
+        return scopes.has_scope(scope, self.parsed_scopes, db=self.db)
+
     @property
     def current_user(self):
         """Override .current_user accessor from tornado
