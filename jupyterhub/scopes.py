@@ -168,6 +168,7 @@ scope_definitions = {
     'admin:shares': {
         'description': "Manage access to shared servers.",
         'subscopes': [
+            'access:servers',
             'read:shares',
             'users:shares',
             'groups:shares',

@@ -235,8 +235,75 @@ def test_share_group_scopes(app, share_user, group_share):
     assert not set(share.scopes).intersection(user_scopes)
 
 
-def test_share_allowed():
-    pass
+@pytest.mark.parametrize(
+    "scopes, have_scopes, allowed",
+    [
+        (
+            "",
+            "admin:shares!SERVER,read:users:name",
+            True,
+        ),
+        (
+            "",
+            "admin:shares!USER,read:users:name!SHARE_WITH",
+            True,
+        ),
+        (
+            "",
+            "admin:shares",
+            False,
+        ),
+        (
+            "",
+            "users:shares!USER",
+            False,
+        ),
+        (
+            "read:users!USER",
+            "admin:shares!SERVER",
+            False,
+        ),
+    ],
+)
+async def test_share_allowed(
+    app, user, share_user, create_user_with_scopes, scopes, have_scopes, allowed
+):
+    def _expand_scopes(scope_str):
+        if not scope_str:
+            return []
+        return [
+            s.replace("USER", f"user={user.name}")
+            .replace("SERVER", f"server={user.name}/")
+            .replace("SHARE_WITH", f"user={share_user.name}")
+            for s in scope_str.split(",")
+        ]
+
+    have_scopes = _expand_scopes(have_scopes)
+    sharer = create_user_with_scopes(*have_scopes)
+    scopes = _expand_scopes(scopes)
+
+    # make sure spawner exists
+    user.spawner
+    params = {"user": share_user.name}
+    if scopes:
+        params["scopes"] = scopes
+
+    r = await api_request(
+        app,
+        f"/shares/{user.name}/",
+        method="post",
+        data=json.dumps(params),
+        name=sharer.name,
+    )
+    if allowed:
+        assert r.status_code == 200
+    else:
+        assert r.status_code == 403
+        return
+    got_scopes = r.json()["scopes"]
+    # access scope always included
+    expected_scopes = sorted(set(scopes) | {f"access:servers!server={user.name}/"})
+    assert sorted(got_scopes) == expected_scopes
 
 
 def test_share_missing_user():
@@ -304,7 +371,7 @@ async def test_share_create_api(
         ("groups", "c"),
     ],
 )
-async def test_share_api_list_user(
+async def test_share_api_list_user_group(
     app, populate_shares, create_user_with_scopes, kind, case
 ):
     for name, server_names in populate_shares[kind].items():
@@ -321,15 +388,88 @@ async def test_share_api_list_user(
     )
     expected_shares = sorted(server_names)
     assert found_shares == expected_shares
-    # TODO: check more about the models
 
 
-def test_share_api_list_group():
-    pass
+@pytest.mark.parametrize(
+    "have_scopes, n_groups, n_users, ok",
+    [
+        (
+            "admin:shares",
+            0,
+            0,
+            True,
+        ),
+        (
+            "read:shares",
+            0,
+            2,
+            True,
+        ),
+        (
+            "read:shares!user=USER",
+            3,
+            0,
+            True,
+        ),
+        (
+            "read:shares!server=SERVER",
+            2,
+            1,
+            True,
+        ),
+        (
+            "read:users:shares",
+            0,
+            0,
+            False,
+        ),
+    ],
+)
+async def test_share_api_list_server(
+    app, user, share_user, create_user_with_scopes, have_scopes, n_groups, n_users, ok
+):
+    db = app.db
+    spawner = user.spawner.orm_spawner
 
+    def _expand_scopes(scope_str):
+        return [
+            s.replace("USER", user.name)
+            .replace("SERVER", user.name + "/")
+            .replace("SHARE_WITH", share_user.name)
+            for s in scope_str.split(",")
+        ]
 
-def test_share_api_list_server():
-    pass
+    requester = create_user_with_scopes(*_expand_scopes(have_scopes))
+
+    expected_shares = []
+    for i in range(n_users):
+        u = create_user_with_scopes().orm_user
+        orm.Share.grant(db, spawner, u)
+        expected_shares.append(f"user:{u.name}")
+
+    for i in range(n_groups):
+        group = orm.Group(name=new_group_name())
+        db.add(group)
+        db.commit()
+        orm.Share.grant(db, spawner, group)
+        expected_shares.append(f"group:{group.name}")
+    expected_shares = sorted(expected_shares)
+    r = await api_request(app, f"/shares/{user.name}/", name=requester.name)
+    if ok:
+        assert r.status_code == 200
+    else:
+        assert r.status_code == 403
+        return
+    shares = r.json()
+    found_shares = []
+    for share in shares["items"]:
+        assert share["user"] or share["group"]
+        if share["user"]:
+            found_shares.append(f"user:{share['user']['name']}")
+        elif share["group"]:
+            found_shares.append(f"group:{share['group']['name']}")
+    found_shares = sorted(found_shares)
+    assert found_shares == expected_shares
 
 
 async def test_share_flow_full(

@@ -18,7 +18,7 @@ from sqlalchemy.orm import joinedload, raiseload
 from tornado import web
 
 from .. import orm
-from ..scopes import _check_scope_access, _check_scopes_exist, needs_scope
+from ..scopes import _check_scopes_exist, has_scope, needs_scope
 from ..utils import isoformat
 from .base import APIHandler
 from .groups import _GroupAPIHandler
@@ -340,10 +340,17 @@ class ServerShareAPIHandler(_ShareAPIHandler):
         spawner = self._lookup_spawner(user_name, server_name)
 
         # validate that scopes may be granted by requesting user
-        orm.Share.verify_scopes(scopes, self.current_user, spawner)
+        scopes = orm.Share._apply_filter(frozenset(scopes), user_name, server_name)
+        # check permissions
+        for scope in scopes:
+            if not has_scope(scope, self.parsed_scopes, db=self.db):
+                raise web.HTTPError(
+                    403, f"Do not have permission to grant share with scope {scope}"
+                )
 
         if request.user:
-            if not _check_scope_access(self, "read:users:name", user=request.user):
+            scope = f"read:users:name!user={request.user}"
+            if not has_scope(scope, self.parsed_scopes, db=self.db):
                 raise web.HTTPError(
                     403, "Need scope 'read:users:name' to share with users by name"
                 )
@@ -352,7 +359,11 @@ class ServerShareAPIHandler(_ShareAPIHandler):
                 raise web.HTTPError(400, f"No such user: {request.user}")
             share_with = share_with.orm_user
         elif request.group:
-            if not _check_scope_access(self, "read:groups:name", group=request.group):
+            if not has_scope(
+                f"read:groups:name!group={request.group}",
+                self.parsed_scopes,
+                db=self.db,
+            ):
                 raise web.HTTPError(
                     403, "Need scope 'read:groups:name' to share with groups by name"
                 )
@@ -450,11 +461,18 @@ class ServerShareCodeAPIHandler(_ShareAPIHandler):
             # default scopes
             scopes = [f"access:servers!server={user_name}/{server_name}"]
 
+        scopes = orm.ShareCode._apply_filter(frozenset(scopes), user_name, server_name)
+
+        # validate that scopes may be granted by requesting user
+        for scope in scopes:
+            if not has_scope(scope, self.parsed_scopes, db=self.db):
+                raise web.HTTPError(
+                    403, f"Do not have permission to grant share with scope {scope}"
+                )
+
         # resolve target spawner
         spawner = self._lookup_spawner(user_name, server_name)
 
-        # validate that scopes may be granted by requesting user
-        orm.ShareCode.verify_scopes(scopes, self.current_user, spawner)
         # issue the code
         (share_code, code) = orm.ShareCode.new(
             self.db, spawner, scopes=scopes, expires_in=request.expires_in

@@ -732,19 +732,6 @@ class _Share:
             filtered_scopes.append(f"{base_scope}!{server_filter}")
         return frozenset(filtered_scopes)
 
-    @classmethod
-    def verify_scopes(cls, scopes, creator, spawner):
-        """Verify that our scopes may be granted by the owner
-
-        raises ValueError if permissions cannot be granted.
-        """
-        from .scopes import _check_scopes_exist, _check_token_scopes, access_scopes
-
-        scopes = cls.apply_filter(scopes, spawner) | access_scopes(spawner.oauth_client)
-        # TODO: there should be a better, clearer method for this
-        _check_scopes_exist(scopes, who_for="share")
-        _check_token_scopes(scopes, creator, spawner.oauth_client)
-
     def __repr__(self):
         if self.user:
             kind = "user"
