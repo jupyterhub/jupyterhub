@@ -27,12 +27,14 @@ Fixtures to add functionality or spawning behavior
 # Distributed under the terms of the Modified BSD License.
 import asyncio
 import copy
+import inspect
 import os
 import sys
 from getpass import getuser
 from subprocess import TimeoutExpired
 from unittest import mock
 
+import pytest
 from pytest import fixture, raises
 from sqlalchemy import event
 from tornado.httpclient import HTTPError
@@ -118,16 +120,15 @@ def db():
     return _db
 
 
-@fixture(scope='module')
-def event_loop(request):
-    """Same as pytest-asyncio.event_loop, but re-scoped to module-level"""
-    event_loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(event_loop)
-    return event_loop
+def pytest_collection_modifyitems(config, items):
+    module_level_event_loop = pytest.mark.asyncio(scope="module")
+    for item in items:
+        if inspect.iscoroutinefunction(item.obj):
+            item.add_marker(module_level_event_loop)
 
 
 @fixture(scope='module')
-async def io_loop(event_loop, request):
+async def io_loop(request):
     """Mostly obsolete fixture for tornado event loop
 
     Main purpose is to register cleanup (close) after we're done with the loop.
@@ -135,8 +136,7 @@ async def io_loop(event_loop, request):
     happens before the io_loop is closed.
     """
     io_loop = AsyncIOMainLoop()
-    assert asyncio.get_event_loop() is event_loop
-    assert io_loop.asyncio_loop is event_loop
+    assert asyncio.get_running_loop() is io_loop.asyncio_loop
 
     def _close():
         io_loop.close(all_fds=True)
