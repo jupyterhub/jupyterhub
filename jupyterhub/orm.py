@@ -95,6 +95,10 @@ class JSONDict(TypeDecorator):
 class JSONList(JSONDict):
     """Represents an immutable structure as a json-encoded string (to be used for list type columns).
 
+    Accepts list, tuple, sets for assignment
+
+    Always read as a tuple
+
     Usage::
 
         JSONList(JSONDict)
@@ -102,15 +106,19 @@ class JSONList(JSONDict):
     """
 
     def process_bind_param(self, value, dialect):
-        if isinstance(value, list) and value is not None:
+        if isinstance(value, (list, tuple)):
             value = json.dumps(value)
+        if isinstance(value, set):
+            # serialize sets as ordered lists
+            value = json.dumps(sorted(value))
+
         return value
 
     def process_result_value(self, value, dialect):
         if value is None:
-            return []
+            return ()
         else:
-            value = json.loads(value)
+            value = tuple(json.loads(value))
         return value
 
 
@@ -947,7 +955,7 @@ class ShareCode(_Share, Hashed, Base):
         # setting Hashed.token property sets the `hashed` column in the db
         share_code.token = code
         # verify scopes
-        share_code.scopes = scopes
+        share_code.scopes = sorted(scopes)
         # actually put it in the db
         db.add(share_code)
         db.commit()
