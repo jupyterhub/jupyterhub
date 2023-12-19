@@ -1,5 +1,6 @@
 import json
 from datetime import timedelta
+from unittest import mock
 
 import pytest
 
@@ -306,15 +307,113 @@ async def test_share_allowed(
     assert sorted(got_scopes) == expected_scopes
 
 
-def test_share_missing_user():
-    pass
+def test_share_code(app, user, share_user):
+    spawner = user.spawner.orm_spawner
+    user = spawner.user
+    code_scopes = sorted(
+        [
+            f"read:servers!server={user.name}/",
+            f"access:servers!server={user.name}/",
+        ]
+    )
+    orm_code, code = orm.ShareCode.new(
+        app.db,
+        spawner,
+        scopes=code_scopes,
+    )
+    assert sorted(orm_code.scopes) == code_scopes
+    assert orm_code.owner is user
+    assert orm_code.spawner is spawner
+    assert orm_code in spawner.share_codes
+    assert orm_code in user.share_codes
+
+    share_with_scopes = scopes.get_scopes_for(share_user)
+    for scope in code_scopes:
+        assert scope not in share_with_scopes
+
+    orm_code.exchange(share_user)
+    share_with_scopes = scopes.get_scopes_for(share_user)
+    for scope in code_scopes:
+        assert scope in share_with_scopes
 
 
-def test_share_code():
-    pass
+def test_share_code_expires(app, user):
+    db = app.db
+    spawner = user.spawner.orm_spawner
+    user = spawner.user
+    orm_code, code = orm.ShareCode.new(
+        db,
+        spawner,
+        scopes=[
+            f"access:servers!server={user.name}/",
+        ],
+    )
+    # check expiration
+    assert orm_code.expires_at
+    now = orm_code.now()
+    assert (
+        now - timedelta(10)
+        <= orm_code.expires_at
+        <= now + timedelta(seconds=orm.ShareCode.default_expires_in + 10)
+    )
+    orm.ShareCode.purge_expired(db)
+    found = orm.ShareCode.find(db, code=code)
+    assert found
+    assert found.id == orm_code.id
+
+    with mock.patch('jupyterhub.orm.ShareCode.now', lambda: now + timedelta(hours=1)):
+        orm.ShareCode.purge_expired(db)
+        found = orm.ShareCode.find(db, code=code)
+        assert found
+        assert found.id == orm_code.id
+
+    with mock.patch('jupyterhub.orm.ShareCode.now', lambda: now + timedelta(hours=25)):
+        found = orm.ShareCode.find(db, code=code)
+        assert found is None
+        orm.ShareCode.purge_expired(db)
+
+    # expired code, should have been deleted
+    found = orm.ShareCode.find(db, code=code)
+    assert found is None
+    assert db.query(orm.ShareCode).filter_by(id=orm_code.id).one_or_none() is None
 
 
 # API tests
+
+
+@pytest.mark.parametrize(
+    "have_scopes, share_scopes, with_user, with_group, status",
+    [
+        (None, None, True, False, 400),
+        (None, None, False, True, 400),
+    ],
+)
+async def test_share_user_doesnt_exist(
+    app,
+    user,
+    group,
+    share_user,
+    create_user_with_scopes,
+    have_scopes,
+    share_scopes,
+    with_user,
+    with_group,
+    status,
+):
+    # make sure default spawner exists
+    spawner = user.spawner  # noqa
+    body = {}
+    if share_scopes:
+        body["scopes"] = share_scopes
+    if with_user:
+        body["user"] = "nosuchuser"
+    if with_group:
+        body["group"] = "nosuchgroup"
+
+    r = await api_request(
+        app, f"/shares/{user.name}/", method="post", data=json.dumps(body)
+    )
+    assert r.status_code == status
 
 
 @pytest.mark.parametrize(

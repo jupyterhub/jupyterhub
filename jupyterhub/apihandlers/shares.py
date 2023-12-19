@@ -336,11 +336,12 @@ class ServerShareAPIHandler(_ShareAPIHandler):
             # default scopes
             scopes = [f"access:servers!server={user_name}/{server_name}"]
 
+        # validate that scopes may be granted by requesting user
+        scopes = orm.Share._apply_filter(frozenset(scopes), user_name, server_name)
+
         # resolve target spawner
         spawner = self._lookup_spawner(user_name, server_name)
 
-        # validate that scopes may be granted by requesting user
-        scopes = orm.Share._apply_filter(frozenset(scopes), user_name, server_name)
         # check permissions
         for scope in scopes:
             if not has_scope(scope, self.parsed_scopes, db=self.db):

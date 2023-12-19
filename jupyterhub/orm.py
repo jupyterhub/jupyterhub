@@ -740,24 +740,6 @@ class _Share:
             filtered_scopes.append(f"{base_scope}!{server_filter}")
         return frozenset(filtered_scopes)
 
-    def __repr__(self):
-        if self.user:
-            kind = "user"
-            name = self.user.name
-        elif self.group:
-            kind = "group"
-            name = self.group.name
-        else:
-            kind = "deleted"
-            name = "unknown"
-
-        if self.owner and self.spawner:
-            server_name = f"{self.owner.name}/{self.spawner.name}"
-        else:
-            server_name = "unknown/deleted"
-
-        return f"<{self.__class__.__name__}(server={server_name}, scopes={self.scopes}, {kind}={name})>"
-
 
 class Share(_Share, Expiring, Base):
     """A single record of a sharing permission
@@ -779,6 +761,24 @@ class Share(_Share, Expiring, Base):
         Integer, ForeignKey('groups.id', ondelete="CASCADE"), nullable=True
     )
     group = relationship("Group", back_populates="shared_with_me", lazy="selectin")
+
+    def __repr__(self):
+        if self.user:
+            kind = "user"
+            name = self.user.name
+        elif self.group:
+            kind = "group"
+            name = self.group.name
+        else:
+            kind = "deleted"
+            name = "unknown"
+
+        if self.owner and self.spawner:
+            server_name = f"{self.owner.name}/{self.spawner.name}"
+        else:
+            server_name = "unknown/deleted"
+
+        return f"<{self.__class__.__name__}(server={server_name}, scopes={self.scopes}, {kind}={name})>"
 
     @staticmethod
     def _share_with_key(share_with):
@@ -929,6 +929,14 @@ class ShareCode(_Share, Hashed, Base):
     prefix = Column(Unicode(16), index=True)
     _code_bytes = 32
     default_expires_in = 86400
+
+    def __repr__(self):
+        if self.owner and self.spawner:
+            server_name = f"{self.owner.name}/{self.spawner.name}"
+        else:
+            server_name = "unknown/deleted"
+
+        return f"<{self.__class__.__name__}(server={server_name}, scopes={self.scopes}, expires_at={self.expires_at})>"
 
     @classmethod
     def new(

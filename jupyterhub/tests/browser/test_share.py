@@ -1,5 +1,6 @@
 import re
 
+import pytest
 from playwright.async_api import expect
 from tornado.httputil import url_concat
 
@@ -8,6 +9,8 @@ from jupyterhub.utils import url_path_join
 from ..conftest import new_username
 from ..utils import add_user, api_request, public_host
 from .test_browser import login
+
+pytestmark = pytest.mark.browser
 
 
 async def test_share_code_flow_full(app, browser, full_spawn, create_user_with_scopes):
