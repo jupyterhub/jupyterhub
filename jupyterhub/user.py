@@ -3,7 +3,7 @@
 import json
 import warnings
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import timedelta
 from urllib.parse import quote, urlparse
 
 from sqlalchemy import inspect
@@ -25,6 +25,7 @@ from .utils import (
     subdomain_hook_legacy,
     url_escape_path,
     url_path_join,
+    utcnow,
 )
 
 # detailed messages about the most common failure-to-start errors,
@@ -757,7 +758,7 @@ class User:
             # update spawner start time, and activity for both spawner and user
             self.last_activity = (
                 spawner.orm_spawner.started
-            ) = spawner.orm_spawner.last_activity = datetime.utcnow()
+            ) = spawner.orm_spawner.last_activity = utcnow(with_tz=False)
             db.commit()
             # wait for spawner.start to return
             # run optional preparation work to bootstrap the notebook
@@ -964,7 +965,9 @@ class User:
             status = await spawner.poll()
             if status is None:
                 await spawner.stop()
-            self.last_activity = spawner.orm_spawner.last_activity = datetime.utcnow()
+            self.last_activity = spawner.orm_spawner.last_activity = utcnow(
+                with_tz=False
+            )
             # remove server entry from db
             spawner.server = None
             if not spawner.will_resume:

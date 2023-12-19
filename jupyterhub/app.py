@@ -96,6 +96,7 @@ from .utils import (
     subdomain_hook_idna,
     subdomain_hook_legacy,
     url_path_join,
+    utcnow,
 )
 
 common_aliases = {
@@ -2093,7 +2094,7 @@ class JupyterHub(Application):
                 # we don't want to allow user.created to be undefined,
                 # so initialize it to last_activity (if defined) or now.
                 if not user.created:
-                    user.created = user.last_activity or datetime.utcnow()
+                    user.created = user.last_activity or utcnow(with_tz=False)
         db.commit()
 
         # The allowed_users set and the users in the db are now the same.
@@ -3273,7 +3274,7 @@ class JupyterHub(Application):
         routes = await self.proxy.get_all_routes()
         users_count = 0
         active_users_count = 0
-        now = datetime.utcnow()
+        now = utcnow(with_tz=False)
         for prefix, route in routes.items():
             route_data = route['data']
             if 'user' not in route_data:

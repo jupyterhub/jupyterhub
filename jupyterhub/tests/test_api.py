@@ -2444,7 +2444,7 @@ async def test_update_server_activity(app, user, server_name, fresh):
     # we use naive utc internally
     # initialize last_activity for one named and the default server
     for name in ("", "exists"):
-        user.spawners[name].orm_spawner.last_activity = now.replace(tzinfo=None)
+        user.spawners[name].orm_spawner.last_activity = internal_now
     app.db.commit()
 
     td = timedelta(minutes=1)
