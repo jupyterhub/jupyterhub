@@ -1554,6 +1554,12 @@ components:
             read:hub: Read detailed information about the Hub.
             access:servers: Access user servers via API or browser.
             access:services: Access services via API or browser.
+            users:shares: Read and revoke a user's access to shared servers.
+            read:users:shares: Read servers shared with a user.
+            groups:shares: Read and revoke a group's access to shared servers.
+            read:groups:shares: Read servers shared with a group.
+            read:shares: Read information about shared access to servers.
+            shares: Manage access to shared servers.
             proxy:
               Read information about the proxy’s routing table, sync the Hub
               with the proxy and notify the Hub about a new proxy.
