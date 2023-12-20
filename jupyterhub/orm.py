@@ -97,7 +97,7 @@ class JSONList(JSONDict):
 
     Accepts list, tuple, sets for assignment
 
-    Always read as a tuple
+    Always read as a list
 
     Usage::
 
@@ -116,9 +116,9 @@ class JSONList(JSONDict):
 
     def process_result_value(self, value, dialect):
         if value is None:
-            return ()
+            return []
         else:
-            value = tuple(json.loads(value))
+            value = json.loads(value)
         return value
 
 
