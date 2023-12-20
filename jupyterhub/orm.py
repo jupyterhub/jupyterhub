@@ -898,7 +898,7 @@ class Share(_Share, Expiring, Base):
         revoked_scopes = [scope for scope in scopes if scope in set(share.scopes)]
         if new_scopes == share.scopes:
             app_log.info(f"No change in scopes for {_log_name}")
-            return
+            return share
         elif not new_scopes:
             # revoked all scopes, delete the Share
             app_log.info(f"Revoked all permissions from {_log_name}")

@@ -26,17 +26,20 @@ from .groups import _GroupAPIHandler
 _share_code_id_pat = re.compile(r"sc_(\d+)")
 
 
-class BaseShareGrantRequest(BaseModel):
+class BaseShareRequest(BaseModel):
     model_config = ConfigDict(extra='forbid')
     scopes: Optional[List[str]] = None
 
     @field_validator("scopes")
     @classmethod
     def _check_scopes_exist(cls, scopes):
+        if not scopes:
+            return None
         _check_scopes_exist(scopes, who_for="share")
+        return scopes
 
 
-class ShareGrantRequest(BaseShareGrantRequest):
+class ShareGrantRequest(BaseShareRequest):
     """Validator for requests to grant sharing permission"""
 
     # if it's going to expire, it must expire in
@@ -54,18 +57,11 @@ class ShareGrantRequest(BaseShareGrantRequest):
         return self
 
 
-class ShareRevokeRequest(BaseModel):
+class ShareRevokeRequest(BaseShareRequest):
     """Validator for `revoke` field of requests to revoke shares"""
 
-    model_config = ConfigDict(extra='forbid')
-    scopes: Optional[List[str]] = None
     user: Optional[str] = None
     group: Optional[str] = None
-
-    @field_validator("scopes")
-    @classmethod
-    def _check_scopes_exist(cls, scopes):
-        _check_scopes_exist(scopes)
 
     @model_validator(mode='after')
     def user_group_exclusive(self):
@@ -76,7 +72,7 @@ class ShareRevokeRequest(BaseModel):
         return self
 
 
-class ShareCodeGrantRequest(BaseShareGrantRequest):
+class ShareCodeGrantRequest(BaseShareRequest):
     """Validator for requests to create sharing codes"""
 
     # must be at least one minute, at most one year, default to one day
@@ -221,7 +217,7 @@ class UserShareAPIHandler(_ShareAPIHandler):
         spawner = self._lookup_spawner(owner_name, server_name, raise_404=False)
         share = None
         if spawner:
-            share = orm.Share.find(self.db, spawner, share_with=user)
+            share = orm.Share.find(self.db, spawner, share_with=user.orm_user)
         if share is not None:
             return share
         else:
@@ -337,7 +333,10 @@ class ServerShareAPIHandler(_ShareAPIHandler):
             scopes = [f"access:servers!server={user_name}/{server_name}"]
 
         # validate that scopes may be granted by requesting user
-        scopes = orm.Share._apply_filter(frozenset(scopes), user_name, server_name)
+        try:
+            scopes = orm.Share._apply_filter(frozenset(scopes), user_name, server_name)
+        except ValueError as e:
+            raise web.HTTPError(400, str(e))
 
         # resolve target spawner
         spawner = self._lookup_spawner(user_name, server_name)

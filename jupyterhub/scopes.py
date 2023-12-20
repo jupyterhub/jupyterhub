@@ -522,8 +522,6 @@ def _expand_scope(scope):
 
     # reapply !filter
     if filter_:
-        if filter_ == "user=":
-            raise ValueError(f"NOOOO {filter_}")
         expanded_scopes = {
             f"{scope_name}!{filter_}"
             for scope_name in expanded_scope_names
@@ -790,7 +788,7 @@ def has_scope(scope, have_scopes, *, post_filter=False, db=None):
             user_name = filter_value.partition("/")[0]
         else:
             raise ValueError(
-                "filter_ should be 'user' or 'server' here, not {filter_!r}"
+                f"filter_ should be 'user' or 'server' here, not {filter_!r}"
             )
         group_names = have_scope_filters['group']
         have_group_query = (

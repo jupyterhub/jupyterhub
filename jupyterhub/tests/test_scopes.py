@@ -287,7 +287,7 @@ async def test_exceeding_user_permissions(
     api_token = user.new_api_token()
     orm_api_token = orm.APIToken.find(app.db, token=api_token)
     # store scopes user does not have
-    orm_api_token.scopes = orm_api_token.scopes + ['list:users', 'read:users']
+    orm_api_token.scopes = list(orm_api_token.scopes) + ['list:users', 'read:users']
     headers = {'Authorization': 'token %s' % api_token}
     r = await api_request(app, 'users', headers=headers)
     assert r.status_code == 200
@@ -482,7 +482,7 @@ async def test_metascope_inherit_expansion(app, create_user_with_scopes):
     assert user_scope_set == token_scope_set
 
     # Check no roles means no permissions
-    token.scopes.clear()
+    token.scopes = []
     app.db.commit()
     token_scope_set = get_scopes_for(token)
     assert isinstance(token_scope_set, frozenset)
@@ -660,7 +660,6 @@ async def test_server_state_access(
                 'read:users:name!user=y',
                 'read:users:groups!user=y',
                 'read:users:activity!user=y',
-                'read:users:shares!user=y',
             },
         ),
         (
@@ -672,7 +671,6 @@ async def test_server_state_access(
                 'read:users:name!user=y',
                 'read:users:groups!user=y',
                 'read:users:activity!user=y',
-                'read:users:shares!user=y',
             },
         ),
     ],
@@ -1325,6 +1323,7 @@ def test_resolve_requested_scopes(
         ("read:servers!server=USER/x", "servers!group=GROUP", True),
         # shouldn't match
         ("read:users", "read:users!user=USER", False),
+        ("read:users", "read:users!user=USER", False),
         ("read:users!user=USER", "read:users!user=other", False),
         ("read:users!user=USER", "read:users!group=other", False),
         ("read:servers!server=USER/x", "servers!server=other/x", False),
@@ -1343,6 +1342,23 @@ def test_has_scope(app, user, group, scope, have_scopes, ok):
 
     scope = _sub(scope)
     have_scopes = [_sub(s) for s in have_scopes.split(",")]
-    print(f"{have_scopes=}")
     parsed_scopes = parse_scopes(expand_scopes(have_scopes))
     assert has_scope(scope, parsed_scopes, db=db) == ok
+
+
+@pytest.mark.parametrize(
+    "scope, have_scopes, ok",
+    [
+        ("read:users", "read:users", True),
+        ("read:users", "read:users!user=x", True),
+        ("read:users", "read:groups!user=x", False),
+        ("read:users!user=x", "read:users!group=y", ValueError),
+    ],
+)
+def test_has_scope_post_filter(scope, have_scopes, ok):
+    have_scopes = have_scopes.split(",")
+    if ok not in (True, False):
+        with pytest.raises(ok):
+            has_scope(scope, have_scopes, post_filter=True)
+    else:
+        assert has_scope(scope, have_scopes, post_filter=True) == ok
