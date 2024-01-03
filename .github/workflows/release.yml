@@ -67,7 +67,7 @@ jobs:
           docker run --rm -v $PWD/dist:/dist:ro docker.io/library/python:3.9-slim-bullseye bash -c 'pip install /dist/jupyterhub-*.tar.gz'
 
       # ref: https://github.com/actions/upload-artifact#readme
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: jupyterhub-${{ github.sha }}
           path: "dist/*"
