@@ -42,9 +42,12 @@ class BaseShareRequest(BaseModel):
 class ShareGrantRequest(BaseShareRequest):
     """Validator for requests to grant sharing permission"""
 
+    # directly granted shares don't expire
+    # since Shares are _modifications_ of permissions,
+    # expiration can get weird
     # if it's going to expire, it must expire in
     # at least one minute and at most 10 years (avoids nonsense values)
-    expires_in: conint(ge=60, le=10 * 525600 * 60) | None = None
+    # expires_in: conint(ge=60, le=10 * 525600 * 60) | None = None
     user: Optional[str] = None
     group: Optional[str] = None
 
