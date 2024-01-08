@@ -321,8 +321,13 @@ class ServerShareAPIHandler(_ShareAPIHandler):
         self.finish(json.dumps(self._share_list_model(query)))
 
     @needs_scope('shares')
-    async def post(self, user_name, server_name):
-        """PATCH modifies shares for a given server"""
+    async def post(self, user_name, server_name=None):
+        """POST grants permissions for a given server"""
+
+        if server_name is None:
+            # only GET supported `/shares/{user}` without specified server
+            raise web.HTTPError(404)
+
         model = self.get_json_body() or {}
         try:
             request = ShareGrantRequest(**model)
@@ -378,8 +383,13 @@ class ServerShareAPIHandler(_ShareAPIHandler):
         self.finish(json.dumps(self.share_model(share)))
 
     @needs_scope('shares')
-    async def patch(self, user_name, server_name):
+    async def patch(self, user_name, server_name=None):
         """PATCH revokes single shares for a given server"""
+
+        if server_name is None:
+            # only GET supported `/shares/{user}` without specified server
+            raise web.HTTPError(404)
+
         model = self.get_json_body() or {}
         try:
             request = ShareRevokeRequest(**model)
@@ -450,8 +460,13 @@ class ServerShareCodeAPIHandler(_ShareAPIHandler):
         self.finish(json.dumps(self._share_list_model(query, kind="code")))
 
     @needs_scope('shares')
-    async def post(self, user_name, server_name):
+    async def post(self, user_name, server_name=None):
         """POST creates a new share code"""
+
+        if server_name is None:
+            # only GET supported `/share-codes/{user}` without specified server
+            raise web.HTTPError(404)
+
         model = self.get_json_body() or {}
         try:
             request = ShareCodeGrantRequest(**model)
@@ -484,7 +499,11 @@ class ServerShareCodeAPIHandler(_ShareAPIHandler):
         self.finish(json.dumps(self.share_code_model(share_code, code=code)))
 
     @needs_scope('shares')
-    def delete(self, user_name, server_name):
+    def delete(self, user_name, server_name=None):
+        if server_name is None:
+            # only GET supported `/share-codes/{user}` without specified server
+            raise web.HTTPError(404)
+
         code = self.get_argument("code", None)
         share_id = self.get_argument("id", None)
         spawner = self._lookup_spawner(user_name, server_name)
