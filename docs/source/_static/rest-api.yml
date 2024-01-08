@@ -523,6 +523,53 @@ paths:
         - oauth2:
             - servers
       # x-codegen-request-body-name: body
+
+  /users/{user}/shared:
+    get:
+      summary: List shares granting `user` access to servers
+        (new in 5.0)
+      responses:
+        200:
+          description: Shared access granted to the user
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Share"
+      security:
+        - oauth2:
+            - read:users:shares
+
+  /users/{user}/shared/{owner}/{server}:
+    get:
+      summary: |
+        Get the Share representing a single user's access to a single server
+        (new in 5.0)
+      responses:
+        200:
+          description: The permissions granted to `user` on `owner/server`.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Share"
+      security:
+        - oauth2:
+            - read:users:shares
+    delete:
+      summary: |
+        'Leave' a share by revoking a user's permissions from a single server
+        (new in 5.0)
+      responses:
+        204:
+          description: |
+            Permission has been revoked,
+            the user no longer has access to the server.
+          content: {}
+      security:
+        - oauth2:
+            - users:shares
+
   /users/{name}/tokens:
     get:
       summary: List tokens for the user
@@ -750,6 +797,53 @@ paths:
       security:
         - oauth2:
             - admin:groups
+
+  /groups/{group}/shared:
+    get:
+      summary: List shares granting `group` access to servers
+        (new in 5.0)
+      responses:
+        200:
+          description: Shared access granted to the group
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Share"
+      security:
+        - oauth2:
+            - read:groups:shares
+
+  /groups/{group}/shared/{owner}/{server}:
+    get:
+      summary: |
+        Get the Share representing a single group's access to a single server
+        (new in 5.0)
+      responses:
+        200:
+          description: The permissions granted to members of `group` on `owner/server`
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Share"
+      security:
+        - oauth2:
+            - read:groups:shares
+    delete:
+      summary: |
+        Leave a share by revoking a group's permissions on a single server
+        (new in 5.0)
+      responses:
+        204:
+          description: |
+            Permission has been revoked,
+            the user no longer has access to the server.
+          content: {}
+      security:
+        - oauth2:
+            - groups:shares
+
   /groups/{name}/users:
     post:
       summary: Add users to a group
@@ -825,6 +919,7 @@ paths:
         - oauth2:
             - groups
       x-codegen-request-body-name: body
+
   /groups/{name}/properties:
     put:
       summary: |
@@ -861,7 +956,8 @@ paths:
 
   /shares/{user}:
     get:
-      summary: List shares granting access to a user's servers (new in 5.0)
+      summary: List shares granting access to a user's servers
+        (new in 5.0)
       responses:
         200:
           description: The share list
@@ -873,12 +969,13 @@ paths:
                   $ref: "#/components/schemas/Share"
       security:
         - oauth2:
-            - list:shares
             - read:shares
 
   /shares/{user}/{server}:
     get:
-      summary: List shares granting access to a single server (new in 5.0)
+      summary: |
+        List shares granting access to a single server
+        (new in 5.0)
       responses:
         200:
           description: The share list
@@ -890,10 +987,193 @@ paths:
                   $ref: "#/components/schemas/Share"
       security:
         - oauth2:
-            - list:shares
             - read:shares
+    post:
+      summary: |
+        Grant shared access to a single server
+        (new in 5.0)
+      requestBody:
+        description: The new group properties, as a JSON dict.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                # expires_in not implemented, for now at least
+                # expires_in:
+                #   type: number
+                #   description: |
+                #     expiration in seconds.
+                #     If unspecified, no expiration.
+                group:
+                  type: string
+                  description: |
+                    group to grant permissions to.
+                    Exactly one of 'user' and 'group' can be specified.
+                user:
+                  type: string
+                  description: |
+                    user to grant permissions to.
+                    Exactly one of 'user' and 'group' can be specified.
+                scopes:
+                  type: array
+                  description: scopes to grant
+                  items:
+                    type: string
+        required: true
+      x-codegen-request-body-name: body
+      responses:
+        200:
+          description: The updated Share permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Share"
+      security:
+        - oauth2:
+            - shares
+            - read:users:name
+            - read:groups:name
     patch:
-      summary: Modify permissions
+      summary: |
+        Revoke shared access to a single server for a single user or group
+        (new in 5.0)
+      requestBody:
+        description: The share modifications to be made, as a JSON dict.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                group:
+                  type: string
+                  description: |
+                    group to revoke permissions from.
+                    Exactly one of 'user' and 'group' must be specified.
+                user:
+                  type: string
+                  description: |
+                    user to revoke permissions from.
+                    Exactly one of 'user' and 'group' must be specified.
+                scopes:
+                  type: array
+                  description: |
+                    scopes to revoke.
+                    If no scopes are specified, all permissions are revoked.
+                  items:
+                    type: string
+        required: true
+      x-codegen-request-body-name: body
+      responses:
+        200:
+          description: |
+            The updated Share permissions.
+            An empty dict if no permissions remain.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Share"
+      security:
+        - oauth2:
+            - shares
+            - read:users:name
+            - read:groups:name
+
+  /share-codes/{user}:
+    get:
+      summary: List shares granting access to a user's servers
+        (new in 5.0)
+      responses:
+        200:
+          description: The list of share codes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ShareCode"
+      security:
+        - oauth2:
+            - read:shares
+
+  /share-codes/{user}/{server}:
+    get:
+      summary: |
+        List share codes granting access to a single server
+        (new in 5.0)
+      responses:
+        200:
+          description: The list of share codes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ShareCode"
+      security:
+        - oauth2:
+            - read:shares
+    post:
+      summary: |
+        Issue a share code, which can be exchanged for shared access to a single server
+        (new in 5.0)
+      requestBody:
+        description: The new share code properties, as a JSON dict.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                expires_in:
+                  type: number
+                  description: |
+                    expiration in seconds.
+                    If unspecified, expires in one day (86400)
+                scopes:
+                  type: array
+                  description: scopes to grant
+                  items:
+                    type: string
+        required: true
+      x-codegen-request-body-name: body
+      responses:
+        200:
+          description: The updated Share permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShareCode"
+              additionalProperties:
+                codexy:
+                  type: string
+                  description: coded???
+      security:
+        - oauth2:
+            - shares
+    delete:
+      summary: |
+        Revoke a share code by id or code.
+        Exactly one of `id` or `code` must be specified.
+        (new in 5.0)
+      parameters:
+        - in: query
+          name: code
+          description: the share code to revoke
+          schema:
+            type: string
+        - in: query
+          name: id
+          description: the id of the share code to revoke
+          schema:
+            type: string
+      responses:
+        204:
+          description: |
+            The share code has been revoked.
+          content: {}
+      security:
+        - oauth2:
+            - shares
 
   /services:
     get:
@@ -1417,6 +1697,93 @@ components:
           description: |
             Additional information a deployment can attach to a service.
             JupyterHub does not use this field.
+
+    ShareServer:
+      description: Subset of Server model present in Share responses
+      type: object
+      properties:
+        name:
+          type: string
+          description: the server name. '' for the default server.
+        url:
+          type: string
+          description: the server's URL
+        ready:
+          type: boolean
+          description: whether the server is ready
+        active:
+          type: boolean
+          description: whether the server is active
+        user:
+          type: object
+          description: the server's owner
+          properties:
+            name:
+              type: string
+
+    Share:
+      description: A single sharing permission.
+        There is at most one of these objects per (server, user) or (server, group) combination.
+      type: object
+      properties:
+        server:
+          description: the server granting shared access
+          $ref: "#/components/schemas/ShareServer"
+        scopes:
+          description: the scopes granted by this Share
+          type: array
+          items:
+            type: string
+        group:
+          description: the group being shared with (exactly one of 'user' or 'group' will be non-null, the other will be null)
+          type: object
+          nullable: true
+          properties:
+            name:
+              type: string
+        user:
+          description: the user being shared with (exactly one of 'user' or 'group' will be non-null, the other will be null)
+          type: object
+          nullable: true
+          properties:
+            name:
+              type: string
+        created_at:
+          description: when the share was first granted
+          type: string
+          format: date-time
+
+    ShareCode:
+      description: A single sharing code.
+        There is at most one of these objects per (server, user) or (server, group) combination.
+      type: object
+      properties:
+        server:
+          description: the server granting shared access
+          $ref: "#/components/schemas/ShareServer"
+        scopes:
+          description: the scopes granted by this Share
+          type: array
+          items:
+            type: string
+        id:
+          description: |
+            the share-code's id.
+            Can be used to revoke share codes.
+        code:
+          description: the code itself. Only present on the initial request.
+          nullable: true
+          type: string
+        created_at:
+          description: when the share code was issued
+          type: string
+          format: date-time
+        expires_at:
+          description: when the share code expires
+          type: string
+          nullable: true
+          format: date-time
+
     Token:
       type: object
       properties:
