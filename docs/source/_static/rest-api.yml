@@ -123,22 +123,8 @@ paths:
               - inactive
               - active
               - ready
-        - name: offset
-          in: query
-          description: |
-            Return a number users starting at the given offset.
-            Can be used with limit to paginate.
-            If unspecified, return all users.
-          schema:
-            type: number
-        - name: limit
-          in: query
-          description: |
-            Return a finite number of users.
-            Can be used with offset to paginate.
-            If unspecified, use api_page_default_limit.
-          schema:
-            type: number
+        - $ref: "#/components/parameters/paginationOffset"
+        - $ref: "#/components/parameters/paginationLimit"
         - name: include_stopped_servers
           in: query
           description: |
@@ -534,9 +520,14 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Share"
+                allOf:
+                  - $ref: "#/components/schemas/PaginatedList"
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/ShareCode"
       security:
         - oauth2:
             - read:users:shares
@@ -710,22 +701,8 @@ paths:
     get:
       summary: List groups
       parameters:
-        - name: offset
-          in: query
-          description: |
-            Return a number of groups starting at the specified offset.
-            Can be used with limit to paginate.
-            If unspecified, return all groups.
-          schema:
-            type: number
-        - name: limit
-          in: query
-          description: |
-            Return a finite number of groups.
-            Can be used with offset to paginate.
-            If unspecified, use api_page_default_limit.
-          schema:
-            type: number
+        - $ref: "#/components/parameters/paginationOffset"
+        - $ref: "#/components/parameters/paginationLimit"
       responses:
         200:
           description: The list of groups
@@ -808,9 +785,14 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Share"
+                allOf:
+                  - $ref: "#/components/schemas/PaginatedList"
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Share"
       security:
         - oauth2:
             - read:groups:shares
@@ -960,13 +942,18 @@ paths:
         (new in 5.0)
       responses:
         200:
-          description: The share list
+          description: The list of shares for any of the user's servers
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Share"
+                allOf:
+                  - $ref: "#/components/schemas/PaginatedList"
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Share"
       security:
         - oauth2:
             - read:shares
@@ -978,13 +965,18 @@ paths:
         (new in 5.0)
       responses:
         200:
-          description: The share list
+          description: The list of shares granting access to the given server
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Share"
+                allOf:
+                  - $ref: "#/components/schemas/PaginatedList"
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Share"
       security:
         - oauth2:
             - read:shares
@@ -1081,7 +1073,7 @@ paths:
 
   /share-codes/{user}:
     get:
-      summary: List shares granting access to a user's servers
+      summary: List share codes granting access to a user's servers
         (new in 5.0)
       responses:
         200:
@@ -1089,9 +1081,14 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/ShareCode"
+                allOf:
+                  - $ref: "#/components/schemas/PaginatedList"
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/ShareCode"
       security:
         - oauth2:
             - read:shares
@@ -1107,9 +1104,14 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/ShareCode"
+                allOf:
+                  - $ref: "#/components/schemas/PaginatedList"
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/ShareCode"
       security:
         - oauth2:
             - read:shares
@@ -1221,22 +1223,8 @@ paths:
         A convenience alias for getting the routing table directly from
         the proxy
       parameters:
-        - name: offset
-          in: query
-          description: |
-            Return a number of routes starting at the given offset.
-            Can be used with limit to paginate.
-            If unspecified, return all routes.
-          schema:
-            type: number
-        - name: limit
-          in: query
-          description: |
-            Return a finite number of routes.
-            Can be used with offset to paginate.
-            If unspecified, use api_page_default_limit
-          schema:
-            type: number
+        - $ref: "#/components/parameters/paginationOffset"
+        - $ref: "#/components/parameters/paginationLimit"
       responses:
         200:
           description: Routing table
@@ -1492,8 +1480,69 @@ paths:
         - oauth2:
             - shutdown
       x-codegen-request-body-name: body
+
 components:
+  parameters:
+    paginationOffset:
+      name: offset
+      in: query
+      description: |
+        Return a number of results, starting at the specified offset.
+        Can be used with limit to paginate.
+        If unspecified, return all items.
+      required: false
+      schema:
+        type: number
+    paginationLimit:
+      name: limit
+      in: query
+      description: |
+        Return a finite number of results.
+        Can be used with offset to paginate.
+        If unspecified, use api_page_default_limit.
+      required: false
+      schema:
+        type: number
+
   schemas:
+    Pagination:
+      type: object
+      description: page info for paginated endpoints
+      properties:
+        total:
+          type: number
+          description: total number of results for the query
+        limit:
+          type: number
+          description: the maximum number of results
+        offset:
+          type: number
+          description: the starting point for this
+        next:
+          description: |
+            fields for the next page, if any.
+            Null if this is the last page.
+          type: object
+          nullable: true
+          properties:
+            offset:
+              type: number
+              description: the offset for the next page
+            limit:
+              type: number
+              description: the same as the above limit, for consistency
+            url:
+              type: string
+              description: |
+                the assembled url for the next page,
+                with query parameters already included.
+    PaginatedList:
+      type: object
+      properties:
+        items:
+          type: array
+        _pagination:
+          $ref: "#/components/schemas/Pagination"
     User:
       type: object
       properties:
@@ -1698,7 +1747,7 @@ components:
             Additional information a deployment can attach to a service.
             JupyterHub does not use this field.
 
-    ShareServer:
+    SharedServer:
       description: Subset of Server model present in Share responses
       type: object
       properties:
@@ -1728,7 +1777,7 @@ components:
       properties:
         server:
           description: the server granting shared access
-          $ref: "#/components/schemas/ShareServer"
+          $ref: "#/components/schemas/SharedServer"
         scopes:
           description: the scopes granted by this Share
           type: array
@@ -1760,7 +1809,7 @@ components:
       properties:
         server:
           description: the server granting shared access
-          $ref: "#/components/schemas/ShareServer"
+          $ref: "#/components/schemas/SharedServer"
         scopes:
           description: the scopes granted by this Share
           type: array
