@@ -115,6 +115,7 @@ class _ShareAPIHandler(APIHandler):
             "scopes": share.scopes,
             "user": {"name": share.user.name} if share.user else None,
             "group": {"name": share.group.name} if share.group else None,
+            "kind": "group" if share.group else "user",
             "created_at": isoformat(share.created_at),
         }
 
@@ -149,11 +150,14 @@ class _ShareAPIHandler(APIHandler):
 
         query = self.db.query(class_).options(
             joinedload(class_.owner),
-            joinedload(class_.user).joinedload(orm.User.groups).raiseload("*"),
-            joinedload(class_.group),
             joinedload(class_.spawner).joinedload(orm.Spawner.user).raiseload("*"),
             raiseload("*"),
         )
+        if kind == 'share':
+            query = query.options(
+                joinedload(class_.user).joinedload(orm.User.groups).raiseload("*"),
+                joinedload(class_.group),
+            )
         return query
 
     def _share_list_model(self, query, kind="share"):
@@ -166,8 +170,13 @@ class _ShareAPIHandler(APIHandler):
         else:
             raise ValueError(f"kind must be `share` or `code`, not {kind!r}")
 
+        if kind == "share":
+            class_ = orm.Share
+        elif kind == "code":
+            class_ = orm.ShareCode
+
         total_count = query.count()
-        query = query.order_by(orm.Share.id.asc()).offset(offset).limit(limit)
+        query = query.order_by(class_.id.asc()).offset(offset).limit(limit)
         share_list = [model_method(share) for share in query]
         return self.paginated_model(share_list, offset, limit, total_count)
 
@@ -438,7 +447,9 @@ class ServerShareAPIHandler(_ShareAPIHandler):
     @needs_scope('shares')
     async def delete(self, user_name, server_name):
         spawner = self._lookup_spawner(user_name, server_name)
-        spawner.shares = []
+        self.db.query(orm.Share).filter_by(
+            spawner_id=spawner.id,
+        ).delete()
         self.db.commit()
         self.set_status(204)
 
@@ -515,7 +526,9 @@ class ServerShareCodeAPIHandler(_ShareAPIHandler):
             if share_code is None:
                 raise web.HTTPError(404, "No matching code found")
             else:
-                self.log.info(f"Deleting share code for {spawner._log_name}")
+                self.log.info(
+                    f"Deleting share code for {spawner.user.name}/{spawner.name}"
+                )
                 self.db.delete(share_code)
         elif share_id:
             m = _share_code_id_pat.match(share_id)
@@ -534,11 +547,17 @@ class ServerShareCodeAPIHandler(_ShareAPIHandler):
             if share_code is None:
                 raise web.HTTPError(404, four_o_four)
             else:
-                self.log.info(f"Deleting share code for {spawner._log_name}")
+                self.log.info(
+                    f"Deleting share code for {spawner.user.name}/{spawner.name}"
+                )
                 self.db.delete(share_code)
         else:
-            self.log.info(f"Deleting all share codes for {spawner._log_name}")
-            spawner.share_codes = []
+            self.log.info(
+                f"Deleting all share codes for {spawner.user.name}/{spawner.name}"
+            )
+            self.db.query(orm.ShareCode).filter_by(
+                spawner_id=spawner.id,
+            ).delete()
         self.db.commit()
         self.set_status(204)
 
