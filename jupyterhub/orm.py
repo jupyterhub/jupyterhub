@@ -927,6 +927,9 @@ class ShareCode(_Share, Hashed, Base):
 
     hashed = Column(Unicode(255), unique=True)
     prefix = Column(Unicode(16), index=True)
+    exchange_count = Column(Integer, default=0)
+    last_exchanged_at = Column(DateTime, nullable=True, default=None)
+
     _code_bytes = 32
     default_expires_in = 86400
 
@@ -993,7 +996,13 @@ class ShareCode(_Share, Hashed, Base):
 
         share_with_log = f"{share_with.kind}:{share_with.name} on {self.owner.name}/{self.spawner.name}"
         app_log.info(f"Exchanging {share_code_log} for {share_with_log}")
-        return Share.grant(db, self.spawner, share_with, self.scopes)
+        share = Share.grant(db, self.spawner, share_with, self.scopes)
+        # note: we count exchanges, even if they don't modify the permissions
+        # (e.g. one user exchanging the same code twice)
+        self.exchange_count += 1
+        self.last_exchanged_at = self.now()
+        db.commit()
+        return share
 
 
 # ------------------------------------

@@ -298,7 +298,15 @@ def test_share_code(app, user, share_user):
     for scope in code_scopes:
         assert scope not in share_with_scopes
 
+    assert orm_code.exchange_count == 0
+    assert orm_code.last_exchanged_at is None
+    # do it twice, shouldn't change anything
     orm_code.exchange(share_user)
+    assert orm_code.exchange_count == 1
+    assert orm_code.last_exchanged_at is not None
+    now = orm_code.now()
+    assert now - timedelta(10) <= orm_code.last_exchanged_at <= now + timedelta(10)
+
     share_with_scopes = scopes.get_scopes_for(share_user)
     for scope in code_scopes:
         assert scope in share_with_scopes

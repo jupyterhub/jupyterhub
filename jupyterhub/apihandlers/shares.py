@@ -126,6 +126,8 @@ class _ShareAPIHandler(APIHandler):
             "id": f"sc_{share_code.id}",
             "created_at": isoformat(share_code.created_at),
             "expires_at": isoformat(share_code.expires_at),
+            "exchange_count": share_code.exchange_count,
+            "last_exchanged_at": isoformat(share_code.last_exchanged_at),
         }
         if code:
             model["code"] = code
