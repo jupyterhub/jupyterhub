@@ -1,3 +1,5 @@
+(sharing-reference)=
+
 # Sharing access to user servers
 
 In order to make use of features like JupyterLab's real-time collaboration (RTC), multiple users must have access to a single server.
@@ -14,9 +16,9 @@ In JupyterHub, shares:
 1. are 'granted' to a user or group
 2. grant only limited permissions (e.g. only 'access' or access and start/stop)
 3. may be revoked by anyone with the `shares` permissions
-4. (may) expire
+4. may always be revoked by the shared-with user or group
 
-Additionally a "share code" is a string, which has all the same properties as a share aside from the user or group.
+Additionally a "share code" is a random string, which has all the same properties as a Share aside from the user or group.
 The code can be exchanged for actual sharing permission, to enable the pattern of sharing permissions without needing to know the username(s) of who you'd like to share with (e.g. email a link).
 
 There is not yet _UI_ to create shares, but they can be managed via JupyterHub's [REST API][].
@@ -30,7 +32,8 @@ In general, with shares you can:
 
 ## Share or revoke access to a server
 
-To modify who has access to a server, you need the permission `shares` with the appropriate _server_ filter.
+To modify who has access to a server, you need the permission `shares` with the appropriate _server_ filter,
+and access to read the name of the target user or group (`read:users:name` or `read:groups:name`).
 You can only modify access to one server at a time.
 
 ### Granting access to a server
@@ -55,40 +58,40 @@ The specified user or group will be _granted_ access to the target server.
 If `scopes` is specified, all requested scopes _must_ have the `!server=:username/:servername` filter applied.
 The default value for `scopes` is `["access:servers!server=:username/:servername"]` (i.e. the 'access scope' for the server).
 
-## Revoke access
+### Revoke access
 
-To revoke permissions, you need the permission `shares` with the appropriate _server_ filter.
+To revoke permissions, you need the permission `shares` with the appropriate _server_ filter,
+and `read:users:name` (or `read:groups:name`) for the user or group to modify.
 You can only modify access to one server at a time.
 
 Send a PATCH request to `/api/shares/:username/:servername` to revoke permissions.
-The JSON body should have
 
 ```
 PATCH /api/shares/:username/:servername
 ```
 
-```python
+The JSON body should specify the scopes to revoke
+
+```
+POST /api/shares/:username/:servername
 {
-    "revoke": {
-      "users": ["username"],
-      "groups": ["groupname"],
-    }
+    "scopes": [],
+    "user": "username", # or:
+    "group": "groupname",
 }
 ```
 
-The `revoke` key should be the only top-level key in the body.
-When revoking permissions, _all_ permissions are revoked (scopes).
-Users or groups specified in `revoke` will have their access to the target server _revoked_.
+If `scopes` is empty or unspecified, _all_ scopes are revoked from the target user or group.
 
-### Revoke _all_ permissions
+#### Revoke _all_ permissions
 
-A DELETE request will revoke all shared access permissions for the target server.
+A DELETE request will revoke all shared access permissions for the given server.
 
 ```
 DELETE /api/shares/:username/:servername
 ```
 
-## View shares for a server
+### View shares for a server
 
 To view shares for a given server, you need the permission `read:shares` with the appropriate _server_ filter.
 
@@ -96,19 +99,85 @@ To view shares for a given server, you need the permission `read:shares` with th
 GET /api/shares/:username/:servername
 ```
 
-This is a paginated endpoint.
+This is a paginated endpoint, so responses look like:
 
-## View servers shared with user or group
+```python
+{
+  "items": [
+      {
+      "server": {
+          "name": "servername",
+          "user": {
+            "name": "ownername"
+          },
+          "url": "/users/ownername/servername/",
+          "ready": False,
+      },
+      "scopes": ["access:servers!server=username/servername"],
+      "user": { # or null
+          "name": "username",
+      },
+      "group": None, # or {"name": "groupname"},
+      "created_at": "2023-10-02T13:27Z",
+    }
+  ],
+  "_pagination": {
+    "total": 5,
+    "limit": 50,
+    "offset": 0,
+    "next": None,
+  },
+}
 
-To review servers shared with a given user or group, you need the permission `read:user:shares` or `read:group:shares` with the appropriate _user_ or _group_ filter.
+
+### View servers shared with user or group
+
+To review servers shared with a given user or group, you need the permission `read:users:shares` or `read:groups:shares` with the appropriate _user_ or _group_ filter.
 
 ```
-GET /api/users/:username/shares
+
+GET /api/users/:username/shared
+
 # or
-GET /api/groups/:groupname/shares
+
+GET /api/groups/:groupname/shared
+
 ```
 
 This is a paginated endpoint.
+
+### Access permission for a single user on a single server
+
+```
+
+GET /api/users/:username/shared/:ownername/:servername
+
+# or
+
+GET /api/groups/:groupname/shared/:ownername/:servername
+
+```
+
+will return the _single_ Share info for the given user or group for the server specified by `ownername/servername`,
+or 404 if no access is granted.
+
+### Revoking one's own permissions for a server
+
+To revoke sharing permissions from the perspective of the user or group being shared with,
+you need the permissions `users:shares` or `groups:shares` with the appropriate _user_ or _group_ filter.
+This allows users to 'leave' shared servers, without needing permission to manage the server's sharing permissions.
+
+```
+
+DELETE /api/users/:username/shared/:ownername/:servername
+
+# or
+
+DELETE /api/groups/:groupname/shared/:ownername/:servername
+
+````
+
+will revoke all permissions granted to the user or group for the specified server.
 
 ## The Share model
 
@@ -120,7 +189,10 @@ A Share returned in the REST API has the following structure:
         "name": "servername",
         "user": {
           "name": "ownername"
-        }
+        },
+        "url": "/users/ownername/servername/",
+        "ready": True,
+
     },
     "scopes": ["access:servers!server=username/servername"],
     "user": { # or null
@@ -129,7 +201,7 @@ A Share returned in the REST API has the following structure:
     "group": None, # or {"name": "groupname"},
     "created_at": "2023-10-02T13:27Z",
 }
-```
+````
 
 where exactly one of `user` and `group` is not null and the other is null.
 
@@ -174,11 +246,12 @@ The response contains the code itself:
 ```python
 {
   "code": "abc13334....",
+  "id": "sc_1234",
   "scopes": ["access:servers!server=username/servername"],
   "server": {
     "name": "",
     "user": {
-      "name": "",
+      "name": "username",
     },
   },
 }
@@ -201,11 +274,32 @@ TODO: which may or may not be running!
 You can see existing invitations for
 
 ```
-GET /hub/api/share-codes/server/:username/:servername
+GET /hub/api/share-codes/:username/:servername
 ```
 
-which produces:
+which produces a paginated list of share codes (_excluding_ the codes themselves, which are not stored by jupyterhub):
 
+```python
+{
+  "items": [
+    {
+      "id": "sc_1234",
+      "scopes": ["access:servers!server=username/servername"],
+      "server": {
+        "name": "",
+        "user": {
+          "name": "username",
+        },
+      },
+    }
+  ],
+  "_pagination": {
+    "total": 5,
+    "limit": 50,
+    "offset": 0,
+    "next": None,
+  }
+}
 ```
 
 ### Revoking invitations
@@ -213,25 +307,19 @@ which produces:
 If you've finished inviting users to a server, you can revoke all invitations with:
 
 ```
-
 DELETE /hub/api/share-codes/:username/:servername
-
 ```
 
 or revoke a single invitation code:
 
 ```
-
 DELETE /hub/api/share-codes/:username/:servername?code=:thecode
-
 ```
 
 You can also revoke a code by _id_, if you non longer have the code:
 
 ```
-
 DELETE /hub/api/share-codes/:username/:servername?id=sc_123
-
 ```
 
-```
+where the `id` is retrieved from the share-code model, e.g. when listing current share codes.
