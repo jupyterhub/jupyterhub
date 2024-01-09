@@ -4,7 +4,7 @@
 
 In order to make use of features like JupyterLab's real-time collaboration (RTC), multiple users must have access to a single server.
 There are a few ways to do this, but ultimately both users must have the appropriate `access:servers` scope.
-Prior to JupyterHub 5.0, this could only be granted via static role assignments.
+Prior to JupyterHub 5.0, this could only be granted via static role assignments in JupyterHub configuration.
 JupyterHub 5.0 adds the concept of a 'share', allowing _users_ to grant each other limited access to their servers.
 
 :::{seealso}
@@ -29,6 +29,40 @@ In general, with shares you can:
 2. grant access to your servers
 3. see servers shared with you
 4. review and revoke permissions for servers you manage
+
+## Enable sharing
+
+For safety, users do not have permission to share access to their servers by default.
+To grant this permission, a user must have the `shares` scope for their servers.
+To grant all users permission to share access to their servers:
+
+```python
+c.JupyterHub.load_roles = [
+    {
+        "name": "user",
+        "scopes": ["self", "shares!user"],
+    },
+]
+```
+
+With this, only the sharing via invitation code described below will be available.
+
+Additionally, to share access with a **specific user or group** (more below),
+a user must have permission to read that user or group's name.
+To enable the _full_ sharing API for all users:
+
+```python
+c.JupyterHub.load_roles = [
+    {
+        "name": "user",
+        "scopes": ["self", "shares!user", "read:users:name", "read:groups:name"],
+    },
+]
+```
+
+Note that this exposes the ability for all users to _discover_ existing user and group names,
+which is part of why we have the share-by-code pattern,
+so users don't need this ability to share with each other.
 
 ## Share or revoke access to a server
 
@@ -245,8 +279,11 @@ The response contains the code itself:
 
 ```python
 {
-  "code": "abc13334....",
+  "code": "abc1234....",
+  "accept_url": "/hub/accept-share?code=abc1234",
   "id": "sc_1234",
+  "exchange_count": 1,
+  "last_exchanged_at": "2023-12-31T23:59:59Z",
   "scopes": ["access:servers!server=username/servername"],
   "server": {
     "name": "",
@@ -284,6 +321,8 @@ which produces a paginated list of share codes (_excluding_ the codes themselves
   "items": [
     {
       "id": "sc_1234",
+      "exchange_count": 0,
+      "last_exchanged_at": null,
       "scopes": ["access:servers!server=username/servername"],
       "server": {
         "name": "",
