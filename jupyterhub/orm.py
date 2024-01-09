@@ -683,9 +683,13 @@ class _Share:
     id = Column(Integer, primary_key=True, autoincrement=True)
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
+    # TODO: owner_id and spawner_id columns don't need `@declared_attr` when we can require sqlalchemy 2
+
     # the owner of the shared server
     # this is redundant with spawner.user, but saves a join
-    owner_id = Column(Integer, ForeignKey('users.id', ondelete="CASCADE"))
+    @declared_attr
+    def owner_id(self):
+        return Column(Integer, ForeignKey('users.id', ondelete="CASCADE"))
 
     @declared_attr
     def owner(self):
@@ -699,7 +703,9 @@ class _Share:
         )
 
     # the spawner the share is for
-    spawner_id = Column(Integer, ForeignKey('spawners.id', ondelete="CASCADE"))
+    @declared_attr
+    def spawner_id(self):
+        return Column(Integer, ForeignKey('spawners.id', ondelete="CASCADE"))
 
     @declared_attr
     def spawner(self):
