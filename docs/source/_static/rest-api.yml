@@ -189,12 +189,7 @@ paths:
     get:
       summary: Get a user by name
       parameters:
-        - name: name
-          in: path
-          description: username
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/userName"
         - name: include_stopped_servers
           in: query
           description: Include stopped servers in user model(s).
@@ -221,12 +216,7 @@ paths:
     post:
       summary: Create a single user
       parameters:
-        - name: name
-          in: path
-          description: username
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/userName"
       responses:
         201:
           description: The user has been created
@@ -240,12 +230,7 @@ paths:
     delete:
       summary: Delete a user
       parameters:
-        - name: name
-          in: path
-          description: username
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/userName"
       responses:
         204:
           description: The user has been deleted
@@ -257,12 +242,7 @@ paths:
       summary: Modify a user
       description: Change a user's name or admin status
       parameters:
-        - name: name
-          in: path
-          description: username
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/userName"
       requestBody:
         description:
           Updated user info. At least one key to be updated (name or admin)
@@ -296,17 +276,12 @@ paths:
       x-codegen-request-body-name: body
   /users/{name}/activity:
     post:
-      summary: Notify Hub of activity for a given user.
+      summary: Notify Hub of activity for a given user
       description:
         Notify the Hub of activity by the user, e.g. accessing a service
         or (more likely) actively using a server.
       parameters:
-        - name: name
-          in: path
-          description: username
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/userName"
       requestBody:
         content:
           application/json:
@@ -362,12 +337,7 @@ paths:
     post:
       summary: Start a user's single-user notebook server
       parameters:
-        - name: name
-          in: path
-          description: username
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/userName"
       requestBody:
         description: |
           Spawn options can be passed as a JSON body
@@ -397,12 +367,7 @@ paths:
     delete:
       summary: Stop a user's server
       parameters:
-        - name: name
-          in: path
-          description: username
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/userName"
       responses:
         202:
           description:
@@ -417,23 +382,10 @@ paths:
             - servers
   /users/{name}/servers/{server_name}:
     post:
-      summary: Start a user's single-user named-server notebook server
+      summary: Start a user's named server
       parameters:
-        - name: name
-          in: path
-          description: username
-          required: true
-          schema:
-            type: string
-        - name: server_name
-          in: path
-          description: |
-            name given to a named-server.
-
-            Note that depending on your JupyterHub infrastructure there are chracterter size limitation to `server_name`. Default spawner with K8s pod will not allow Jupyter Notebooks to be spawned with a name that contains more than 253 characters (keep in mind that the pod will be spawned with extra characters to identify the user and hub).
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/userName"
+        - $ref: "#/components/parameters/serverName"
       requestBody:
         description: |
           Spawn options can be passed as a JSON body
@@ -468,18 +420,8 @@ paths:
         {"remove": true}
         ```
       parameters:
-        - name: name
-          in: path
-          description: username
-          required: true
-          schema:
-            type: string
-        - name: server_name
-          in: path
-          description: name given to a named-server
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/userName"
+        - $ref: "#/components/parameters/serverName"
 
       # FIXME: openapi 3.1 is required for requestBody on DELETE
       # we probably shouldn't have request bodies on DELETE
@@ -510,10 +452,15 @@ paths:
             - servers
       # x-codegen-request-body-name: body
 
-  /users/{user}/shared:
+  /users/{name}/shared:
     get:
-      summary: List shares granting `user` access to servers
+      summary: List shared access for user
+      description:
+        Returns list of Shares granting the user access to servers owned by others
         (new in 5.0)
+      parameters:
+        - $ref: "#/components/parameters/userName"
+
       responses:
         200:
           description: Shared access granted to the user
@@ -532,11 +479,18 @@ paths:
         - oauth2:
             - read:users:shares
 
-  /users/{user}/shared/{owner}/{server}:
+  /users/{name}/shared/{owner}/{server_name}:
     get:
       summary: |
-        Get the Share representing a single user's access to a single server
+        Get user's shared access to server
+      description: |
+        Gets the Share representing a single user's access to a single server.
+        Users generally have access to this endpoint for themselves.
         (new in 5.0)
+      parameters:
+        - $ref: "#/components/parameters/userName"
+        - $ref: "#/components/parameters/sharedServerOwner"
+        - $ref: "#/components/parameters/sharedServerName"
       responses:
         200:
           description: The permissions granted to `user` on `owner/server`.
@@ -549,8 +503,15 @@ paths:
             - read:users:shares
     delete:
       summary: |
-        'Leave' a share by revoking a user's permissions from a single server
+        Leave a shared server
+      description: |
+        Revokes a user's access to a shared server by deleting.
+        Users generally have access to this endpoint for themselves.
         (new in 5.0)
+      parameters:
+        - $ref: "#/components/parameters/userName"
+        - $ref: "#/components/parameters/sharedServerOwner"
+        - $ref: "#/components/parameters/sharedServerName"
       responses:
         204:
           description: |
@@ -565,12 +526,7 @@ paths:
     get:
       summary: List tokens for the user
       parameters:
-        - name: name
-          in: path
-          description: username
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/userName"
       responses:
         200:
           description: The list of tokens
@@ -590,18 +546,14 @@ paths:
         - oauth2:
             - read:tokens
     post:
-      summary: |
-        Create a new token for the user.
+      summary: Create a new token for the user
+      description: |
+        Creates a new token owned by the user.
         Permissions can be limited by specifying a list of `scopes` in the JSON request body
         (starting in JupyerHub 3.0; previously, permissions could be specified as `roles` could be specified,
         which is deprecated in 3.0).
       parameters:
-        - name: name
-          in: path
-          description: username
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/userName"
       requestBody:
         content:
           application/json:
@@ -653,14 +605,10 @@ paths:
       x-codegen-request-body-name: token_params
   /users/{name}/tokens/{token_id}:
     get:
-      summary: Get the model for a token by id
+      summary: Get one token
+      description: Get the model for a token by id
       parameters:
-        - name: name
-          in: path
-          description: username
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/userName"
         - name: token_id
           in: path
           required: true
@@ -679,12 +627,7 @@ paths:
     delete:
       summary: Delete (revoke) a token by id
       parameters:
-        - name: name
-          in: path
-          description: username
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/userName"
         - name: token_id
           in: path
           required: true
@@ -721,12 +664,7 @@ paths:
     get:
       summary: Get a group by name
       parameters:
-        - name: name
-          in: path
-          description: group name
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/groupName"
       responses:
         200:
           description: The group model
@@ -742,12 +680,7 @@ paths:
     post:
       summary: Create a group
       parameters:
-        - name: name
-          in: path
-          description: group name
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/groupName"
       responses:
         201:
           description: The group has been created
@@ -761,12 +694,7 @@ paths:
     delete:
       summary: Delete a group
       parameters:
-        - name: name
-          in: path
-          description: group name
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/groupName"
       responses:
         204:
           description: The group has been deleted
@@ -775,10 +703,14 @@ paths:
         - oauth2:
             - admin:groups
 
-  /groups/{group}/shared:
+  /groups/{name}/shared:
     get:
-      summary: List shares granting `group` access to servers
+      summary: List servers shared with group
+      description: |
+        Lists shares granting `group` access to shared servers
         (new in 5.0)
+      parameters:
+        - $ref: "#/components/parameters/groupName"
       responses:
         200:
           description: Shared access granted to the group
@@ -797,11 +729,16 @@ paths:
         - oauth2:
             - read:groups:shares
 
-  /groups/{group}/shared/{owner}/{server}:
+  /groups/{name}/shared/{owner}/{server_name}:
     get:
-      summary: |
+      summary: Get group's shared access
+      description: |
         Get the Share representing a single group's access to a single server
         (new in 5.0)
+      parameters:
+        - $ref: "#/components/parameters/groupName"
+        - $ref: "#/components/parameters/sharedServerOwner"
+        - $ref: "#/components/parameters/sharedServerName"
       responses:
         200:
           description: The permissions granted to members of `group` on `owner/server`
@@ -813,9 +750,14 @@ paths:
         - oauth2:
             - read:groups:shares
     delete:
-      summary: |
+      summary: Leave a share (group)
+      description: |
         Leave a share by revoking a group's permissions on a single server
         (new in 5.0)
+      parameters:
+        - $ref: "#/components/parameters/groupName"
+        - $ref: "#/components/parameters/sharedServerOwner"
+        - $ref: "#/components/parameters/sharedServerName"
       responses:
         204:
           description: |
@@ -830,12 +772,7 @@ paths:
     post:
       summary: Add users to a group
       parameters:
-        - name: name
-          in: path
-          description: group name
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/groupName"
       requestBody:
         description: The users to add to the group
         content:
@@ -874,12 +811,7 @@ paths:
         ```
 
       parameters:
-        - name: name
-          in: path
-          description: group name
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/groupName"
       # requestBody:
       #   description: The users to remove from the group
       #   content:
@@ -904,17 +836,12 @@ paths:
 
   /groups/{name}/properties:
     put:
-      summary: |
-        Set the group properties.
-
-        Added in JupyterHub 3.2.
+      summary: Set group properties
+      description: |
+        Set properties on a group
+        (new in 3.2)
       parameters:
-        - name: name
-          in: path
-          description: group name
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/groupName"
       requestBody:
         description: The new group properties, as a JSON dict.
         content:
@@ -936,10 +863,16 @@ paths:
             - groups
       x-codegen-request-body-name: body
 
-  /shares/{user}:
+  /shares/{owner}:
     get:
-      summary: List shares granting access to a user's servers
+      summary: List shares by owner
+      description: |
+        List shares granting access to any of owner's servers
         (new in 5.0)
+      parameters:
+        - $ref: "#/components/parameters/sharedServerOwner"
+        - $ref: "#/components/parameters/paginationOffset"
+        - $ref: "#/components/parameters/paginationLimit"
       responses:
         200:
           description: The list of shares for any of the user's servers
@@ -958,11 +891,17 @@ paths:
         - oauth2:
             - read:shares
 
-  /shares/{user}/{server}:
+  /shares/{owner}/{server_name}:
     get:
-      summary: |
+      summary: List server shares
+      description: |
         List shares granting access to a single server
         (new in 5.0)
+      parameters:
+        - $ref: "#/components/parameters/sharedServerOwner"
+        - $ref: "#/components/parameters/sharedServerName"
+        - $ref: "#/components/parameters/paginationOffset"
+        - $ref: "#/components/parameters/paginationLimit"
       responses:
         200:
           description: The list of shares granting access to the given server
@@ -981,9 +920,13 @@ paths:
         - oauth2:
             - read:shares
     post:
-      summary: |
+      summary: Grant shared access
+      description: |
         Grant shared access to a single server
         (new in 5.0)
+      parameters:
+        - $ref: "#/components/parameters/sharedServerOwner"
+        - $ref: "#/components/parameters/sharedServerName"
       requestBody:
         description: The new group properties, as a JSON dict.
         content:
@@ -1027,9 +970,13 @@ paths:
             - read:users:name
             - read:groups:name
     patch:
-      summary: |
+      summary: Revoke shared access
+      description: |
         Revoke shared access to a single server for a single user or group
         (new in 5.0)
+      parameters:
+        - $ref: "#/components/parameters/sharedServerOwner"
+        - $ref: "#/components/parameters/sharedServerName"
       requestBody:
         description: The share modifications to be made, as a JSON dict.
         content:
@@ -1071,10 +1018,16 @@ paths:
             - read:users:name
             - read:groups:name
 
-  /share-codes/{user}:
+  /share-codes/{owner}:
     get:
-      summary: List share codes granting access to a user's servers
+      summary: List share codes by owner
+      description: |
+        List share codes granting access to a user's servers
         (new in 5.0)
+      parameters:
+        - $ref: "#/components/parameters/sharedServerOwner"
+        - $ref: "#/components/parameters/paginationOffset"
+        - $ref: "#/components/parameters/paginationLimit"
       responses:
         200:
           description: The list of share codes
@@ -1093,11 +1046,17 @@ paths:
         - oauth2:
             - read:shares
 
-  /share-codes/{user}/{server}:
+  /share-codes/{owner}/{server_name}:
     get:
-      summary: |
-        List share codes granting access to a single server
+      summary: List share codes
+      description: |
+        List share codes which can be exchanged for access to a single server
         (new in 5.0)
+      parameters:
+        - $ref: "#/components/parameters/sharedServerOwner"
+        - $ref: "#/components/parameters/sharedServerName"
+        - $ref: "#/components/parameters/paginationOffset"
+        - $ref: "#/components/parameters/paginationLimit"
       responses:
         200:
           description: The list of share codes
@@ -1116,9 +1075,13 @@ paths:
         - oauth2:
             - read:shares
     post:
-      summary: |
+      summary: Issue share code
+      description: |
         Issue a share code, which can be exchanged for shared access to a single server
         (new in 5.0)
+      parameters:
+        - $ref: "#/components/parameters/sharedServerOwner"
+        - $ref: "#/components/parameters/sharedServerName"
       requestBody:
         description: The new share code properties, as a JSON dict.
         content:
@@ -1140,24 +1103,39 @@ paths:
       x-codegen-request-body-name: body
       responses:
         200:
-          description: The updated Share permissions
+          description: |
+            The Share code you just created.
+            The code itself will be in the `code` field.
+            The code is not stored by JupyterHub and cannot be retrieved a second time.
+            `accept_url` will be the actual URL to share
+            (it will look like `/hub/accept-share?code=abc123`).
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ShareCode"
-              additionalProperties:
-                codexy:
-                  type: string
-                  description: coded???
+                allOf:
+                  - $ref: "#/components/schemas/ShareCode"
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: The share code itself
+                        example: abc123
+                      accept_url:
+                        type: string
+                        description: The URL for acepting the code
+                        example: /hub/accept-share?code=abc123
       security:
         - oauth2:
             - shares
     delete:
-      summary: |
+      summary: Revoke share code
+      description: |
         Revoke a share code by id or code.
         Exactly one of `id` or `code` must be specified.
         (new in 5.0)
       parameters:
+        - $ref: "#/components/parameters/sharedServerOwner"
+        - $ref: "#/components/parameters/sharedServerName"
         - in: query
           name: code
           description: the share code to revoke
@@ -1180,6 +1158,9 @@ paths:
   /services:
     get:
       summary: List services
+      parameters:
+        - $ref: "#/components/parameters/paginationOffset"
+        - $ref: "#/components/parameters/paginationLimit"
       responses:
         200:
           description: The service list
@@ -1483,6 +1464,30 @@ paths:
 
 components:
   parameters:
+    userName:
+      name: name
+      in: path
+      description: username
+      required: true
+      schema:
+        type: string
+    groupName:
+      name: name
+      in: path
+      description: group name
+      required: true
+      schema:
+        type: string
+    serverName:
+      name: server_name
+      in: path
+      description: |
+        name given to a named-server (empty string for default server).
+
+        Note that depending on your JupyterHub infrastructure there are limitations to `server_name`. Default spawner with K8s pod will not allow Jupyter Notebooks to be spawned with a name that contains more than 253 characters (keep in mind that the pod will be spawned with extra characters to identify the user and hub).
+      required: true
+      schema:
+        type: string
     paginationOffset:
       name: offset
       in: query
@@ -1503,6 +1508,22 @@ components:
       required: false
       schema:
         type: number
+    sharedServerOwner:
+      name: owner
+      in: path
+      description: name of the user who owns the shared server
+      required: true
+      schema:
+        type: string
+    sharedServerName:
+      name: server_name
+      in: path
+      description: |
+        name of the shared server
+        (empty string for default server, which means the URL ends with a trailing '/', e.g. `/username/`).
+      required: true
+      schema:
+        type: string
 
   schemas:
     Pagination:
@@ -1819,10 +1840,6 @@ components:
           description: |
             the share-code's id.
             Can be used to revoke share codes.
-        code:
-          description: the code itself. Only present on the initial request.
-          nullable: true
-          type: string
         created_at:
           description: when the share code was issued
           type: string
