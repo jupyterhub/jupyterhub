@@ -584,7 +584,9 @@ class AcceptShareHandler(BaseHandler):
         self.log.debug("Looking up %s", code)
         share_code = orm.ShareCode.find(self.db, code=code)
         if share_code is None:
-            raise web.HTTPError(404, f"Code not found: {code}")
+            raise web.HTTPError(400, f"Invalid share code: {code}")
+        if share_code.owner == self.current_user.orm_user:
+            raise web.HTTPError(400, "You can't share with yourself!")
         user = self.current_user
         share = share_code.exchange(user.orm_user)
         owner = self._user_from_orm(share.owner)

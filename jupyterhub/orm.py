@@ -769,13 +769,13 @@ class Share(_Share, Expiring, Base):
         elif self.group:
             kind = "group"
             name = self.group.name
-        else:
+        else:  # pragma: no cover
             kind = "deleted"
             name = "unknown"
 
         if self.owner and self.spawner:
             server_name = f"{self.owner.name}/{self.spawner.name}"
-        else:
+        else:  # pragma: n cover
             server_name = "unknown/deleted"
 
         return f"<{self.__class__.__name__}(server={server_name}, scopes={self.scopes}, {kind}={name})>"

@@ -14,12 +14,12 @@ from pydantic import (
     model_validator,
 )
 from sqlalchemy import or_
-from sqlalchemy.orm import joinedload, raiseload
+from sqlalchemy.orm import joinedload
 from tornado import web
 from tornado.httputil import url_concat
 
 from .. import orm
-from ..scopes import _check_scopes_exist, has_scope, needs_scope
+from ..scopes import _check_scopes_exist, needs_scope
 from ..utils import isoformat
 from .base import APIHandler
 from .groups import _GroupAPIHandler
@@ -91,7 +91,7 @@ class _ShareAPIHandler(APIHandler):
         - Limits fields to "name", "url", "ready", "active"
           from standard server model
         """
-        user = self.users[spawner.user]
+        user = self.users[spawner.user.id]
         if spawner.name in user.spawners:
             # use Spawner wrapper if it's active
             spawner = user.spawners[spawner.name]
@@ -150,17 +150,18 @@ class _ShareAPIHandler(APIHandler):
         elif kind == "code":
             class_ = orm.ShareCode
         else:
-            raise ValueError(f"kind must be `share` or `code`, not {kind!r}")
+            raise ValueError(
+                f"kind must be `share` or `code`, not {kind!r}"
+            )  # pragma: no cover
 
         query = self.db.query(class_).options(
-            joinedload(class_.owner),
+            joinedload(class_.owner).raiseload("*"),
             joinedload(class_.spawner).joinedload(orm.Spawner.user).raiseload("*"),
-            raiseload("*"),
         )
         if kind == 'share':
             query = query.options(
                 joinedload(class_.user).joinedload(orm.User.groups).raiseload("*"),
-                joinedload(class_.group),
+                joinedload(class_.group).raiseload("*"),
             )
         return query
 
@@ -172,7 +173,9 @@ class _ShareAPIHandler(APIHandler):
         elif kind == "code":
             model_method = self.share_code_model
         else:
-            raise ValueError(f"kind must be `share` or `code`, not {kind!r}")
+            raise ValueError(
+                f"kind must be `share` or `code`, not {kind!r}"
+            )  # pragma: no cover
 
         if kind == "share":
             class_ = orm.Share
@@ -181,7 +184,7 @@ class _ShareAPIHandler(APIHandler):
 
         total_count = query.count()
         query = query.order_by(class_.id.asc()).offset(offset).limit(limit)
-        share_list = [model_method(share) for share in query]
+        share_list = [model_method(share) for share in query if not share.expired]
         return self.paginated_model(share_list, offset, limit, total_count)
 
     def _lookup_spawner(self, user_name, server_name, raise_404=True):
@@ -193,7 +196,7 @@ class _ShareAPIHandler(APIHandler):
         if user and server_name in user.orm_spawners:
             return user.orm_spawners[server_name]
         if raise_404:
-            raise web.HTTPError(404, f"No such server: {user.name}/{server_name}")
+            raise web.HTTPError(404, f"No such server: {user_name}/{server_name}")
         else:
             return None
 
@@ -316,22 +319,19 @@ class ServerShareAPIHandler(_ShareAPIHandler):
         # we need Share and only the _names_ of users/groups,
         # no any other relationships
         query = self._init_share_query()
-        if server_name is None:
-            raise NotImplementedError("Haven't implemented listing user shares")
-
         if server_name is not None:
             spawner = self._lookup_spawner(user_name, server_name)
             query = query.filter_by(spawner_id=spawner.id)
         else:
             # lookup owner by id
-            owner_id = (
+            row = (
                 self.db.query(orm.User.id)
                 .where(orm.User.name == user_name)
                 .one_or_none()
             )
-            if owner_id is None:
+            if row is None:
                 raise web.HTTPError(404)
-
+            owner_id = row[0]
             query = query.filter_by(owner_id=owner_id)
         self.finish(json.dumps(self._share_list_model(query)))
 
@@ -341,7 +341,7 @@ class ServerShareAPIHandler(_ShareAPIHandler):
 
         if server_name is None:
             # only GET supported `/shares/{user}` without specified server
-            raise web.HTTPError(404)
+            raise web.HTTPError(405)
 
         model = self.get_json_body() or {}
         try:
@@ -366,14 +366,14 @@ class ServerShareAPIHandler(_ShareAPIHandler):
 
         # check permissions
         for scope in scopes:
-            if not has_scope(scope, self.parsed_scopes, db=self.db):
+            if not self.has_scope(scope):
                 raise web.HTTPError(
                     403, f"Do not have permission to grant share with scope {scope}"
                 )
 
         if request.user:
             scope = f"read:users:name!user={request.user}"
-            if not has_scope(scope, self.parsed_scopes, db=self.db):
+            if not self.has_scope(scope):
                 raise web.HTTPError(
                     403, "Need scope 'read:users:name' to share with users by name"
                 )
@@ -382,11 +382,7 @@ class ServerShareAPIHandler(_ShareAPIHandler):
                 raise web.HTTPError(400, f"No such user: {request.user}")
             share_with = share_with.orm_user
         elif request.group:
-            if not has_scope(
-                f"read:groups:name!group={request.group}",
-                self.parsed_scopes,
-                db=self.db,
-            ):
+            if not self.has_scope(f"read:groups:name!group={request.group}"):
                 raise web.HTTPError(
                     403, "Need scope 'read:groups:name' to share with groups by name"
                 )
@@ -403,7 +399,7 @@ class ServerShareAPIHandler(_ShareAPIHandler):
 
         if server_name is None:
             # only GET supported `/shares/{user}` without specified server
-            raise web.HTTPError(404)
+            raise web.HTTPError(405)
 
         model = self.get_json_body() or {}
         try:
@@ -414,12 +410,6 @@ class ServerShareAPIHandler(_ShareAPIHandler):
         # TODO: check allowed/valid scopes
 
         scopes = request.scopes
-        # check scopes
-        if not scopes:
-            # default scopes
-            scopes = [f"access:servers!server={user_name}/{server_name}"]
-        # TODO: check allowed/valid scopes
-        scopes = set(scopes)
 
         # resolve target spawner
         spawner = self._lookup_spawner(user_name, server_name)
@@ -449,12 +439,20 @@ class ServerShareAPIHandler(_ShareAPIHandler):
             self.finish("{}")
 
     @needs_scope('shares')
-    async def delete(self, user_name, server_name):
+    async def delete(self, user_name, server_name=None):
+        if server_name is None:
+            # only GET supported `/shares/{user}` without specified server
+            raise web.HTTPError(405)
+
         spawner = self._lookup_spawner(user_name, server_name)
-        self.db.query(orm.Share).filter_by(
+        self.log.info(f"Deleting all shares for {user_name}/{server_name}")
+        q = self.db.query(orm.Share).filter_by(
             spawner_id=spawner.id,
-        ).delete()
+        )
+        res = q.delete()
+        self.log.info(f"Deleted {res} shares for {user_name}/{server_name}")
         self.db.commit()
+        assert spawner.shares == []
         self.set_status(204)
 
 
@@ -470,10 +468,20 @@ class ServerShareCodeAPIHandler(_ShareAPIHandler):
 
         query = self._init_share_query(kind="code")
         if server_name is None:
-            raise NotImplementedError("Haven't implemented listing user shares")
-        spawner = self._lookup_spawner(user_name, server_name)
+            # lookup owner by id
+            row = (
+                self.db.query(orm.User.id)
+                .where(orm.User.name == user_name)
+                .one_or_none()
+            )
+            if row is None:
+                raise web.HTTPError(404)
+            owner_id = row[0]
 
-        query = query.filter_by(spawner_id=spawner.id)
+            query = query.filter_by(owner_id=owner_id)
+        else:
+            spawner = self._lookup_spawner(user_name, server_name)
+            query = query.filter_by(spawner_id=spawner.id)
         self.finish(json.dumps(self._share_list_model(query, kind="code")))
 
     @needs_scope('shares')
@@ -482,7 +490,7 @@ class ServerShareCodeAPIHandler(_ShareAPIHandler):
 
         if server_name is None:
             # only GET supported `/share-codes/{user}` without specified server
-            raise web.HTTPError(404)
+            raise web.HTTPError(405)
 
         model = self.get_json_body() or {}
         try:
@@ -496,11 +504,16 @@ class ServerShareCodeAPIHandler(_ShareAPIHandler):
             # default scopes
             scopes = [f"access:servers!server={user_name}/{server_name}"]
 
-        scopes = orm.ShareCode._apply_filter(frozenset(scopes), user_name, server_name)
+        try:
+            scopes = orm.ShareCode._apply_filter(
+                frozenset(scopes), user_name, server_name
+            )
+        except ValueError as e:
+            raise web.HTTPError(400, str(e))
 
         # validate that scopes may be granted by requesting user
         for scope in scopes:
-            if not has_scope(scope, self.parsed_scopes, db=self.db):
+            if not self.has_scope(scope):
                 raise web.HTTPError(
                     403, f"Do not have permission to grant share with scope {scope}"
                 )
@@ -519,7 +532,7 @@ class ServerShareCodeAPIHandler(_ShareAPIHandler):
     def delete(self, user_name, server_name=None):
         if server_name is None:
             # only GET supported `/share-codes/{user}` without specified server
-            raise web.HTTPError(404)
+            raise web.HTTPError(405)
 
         code = self.get_argument("code", None)
         share_id = self.get_argument("id", None)
@@ -530,9 +543,7 @@ class ServerShareCodeAPIHandler(_ShareAPIHandler):
             if share_code is None:
                 raise web.HTTPError(404, "No matching code found")
             else:
-                self.log.info(
-                    f"Deleting share code for {spawner.user.name}/{spawner.name}"
-                )
+                self.log.info(f"Deleting share code for {user_name}/{server_name}")
                 self.db.delete(share_code)
         elif share_id:
             m = _share_code_id_pat.match(share_id)
@@ -551,17 +562,20 @@ class ServerShareCodeAPIHandler(_ShareAPIHandler):
             if share_code is None:
                 raise web.HTTPError(404, four_o_four)
             else:
-                self.log.info(
-                    f"Deleting share code for {spawner.user.name}/{spawner.name}"
-                )
+                self.log.info(f"Deleting share code for {user_name}/{server_name}")
                 self.db.delete(share_code)
         else:
-            self.log.info(
-                f"Deleting all share codes for {spawner.user.name}/{spawner.name}"
+            self.log.info(f"Deleting all share codes for {user_name}/{server_name}")
+            deleted = (
+                self.db.query(orm.ShareCode)
+                .filter_by(
+                    spawner_id=spawner.id,
+                )
+                .delete()
             )
-            self.db.query(orm.ShareCode).filter_by(
-                spawner_id=spawner.id,
-            ).delete()
+            self.log.info(
+                f"Deleted {deleted} share codes for {user_name}/{server_name}"
+            )
         self.db.commit()
         self.set_status(204)
 
@@ -579,5 +593,6 @@ default_handlers = [
     (r"/api/users/([^/]+)/shared/([^/]+)/([^/]*)", UserShareAPIHandler),
     (r"/api/groups/([^/]+)/shared/([^/]+)/([^/]*)", GroupShareAPIHandler),
     # manage sharing codes
+    (r"/api/share-codes/([^/]+)", ServerShareCodeAPIHandler),
     (r"/api/share-codes/([^/]+)/([^/]*)", ServerShareCodeAPIHandler),
 ]

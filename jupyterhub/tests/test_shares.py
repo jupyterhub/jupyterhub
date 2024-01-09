@@ -2,13 +2,16 @@ import json
 from datetime import timedelta
 from functools import partial
 from unittest import mock
+from urllib.parse import parse_qs, urlparse
 
 import pytest
+from dateutil.parser import parse as parse_date
 
 from jupyterhub import orm, scopes
+from jupyterhub.utils import url_path_join, utcnow
 
 from .conftest import new_group_name, new_username
-from .utils import add_user, api_request, async_requests, public_url
+from .utils import add_user, api_request, async_requests, get_page, public_url
 
 
 @pytest.fixture
@@ -117,11 +120,16 @@ def populate_shares(app, user, group, share_user):
     }
 
 
-def test_create_share(app, user):
+@pytest.mark.parametrize("share_with", ["user", "group"])
+def test_create_share(app, user, share_user, group, share_with):
     db = app.db
     spawner = user.spawner.orm_spawner
     owner = user.orm_user
-    share_with = add_user(db, name=new_username("share_with"))
+    share_attr = share_with
+    if share_with == "group":
+        share_with = group
+    elif share_with == "user":
+        share_with = share_user
     scopes = [f"access:servers!server={owner.name}/{spawner.name}"]
     before = orm.Share.now()
     share = orm.Share.grant(db, spawner, share_with, scopes=scopes)
@@ -129,16 +137,31 @@ def test_create_share(app, user):
     assert share.scopes == scopes
     assert share.owner is owner
     assert share.spawner is spawner
-    assert share.user is share_with
+    assert getattr(share, share_attr) is share_with
     assert share.created_at
     assert before <= share.created_at <= after
     assert share in share_with.shared_with_me
     assert share in spawner.shares
     assert share in owner.shares
-    assert share not in share_with.shares
+    if share_attr == 'user':
+        assert share not in share_with.shares
     assert share not in owner.shared_with_me
+    # compute repr for coverage
+    repr(share)
     db.delete(share_with)
     db.commit()
+
+
+def test_create_share_bad(app, user, share_user, mockservice):
+    db = app.db
+    service = mockservice
+    spawner = user.spawner.orm_spawner
+    owner = user.orm_user
+    scopes = [f"access:servers!server={owner.name}/{spawner.name}"]
+    with pytest.raises(ValueError):
+        orm.Share.grant(db, spawner, share_user, scopes=[])
+    with pytest.raises(TypeError):
+        orm.Share.grant(db, spawner, service, scopes=scopes)
 
 
 def test_update_share(app, share):
@@ -363,38 +386,56 @@ def test_share_code_expires(app, user, share_user):
 
 
 @pytest.mark.parametrize(
-    "have_scopes, share_scopes, with_user, with_group, status",
+    "kind",
     [
-        (None, None, True, False, 400),
-        (None, None, False, True, 400),
+        ("user"),
+        ("group"),
     ],
 )
-async def test_share_with_doesnt_exist(
+async def test_shares_api_user_group_doesnt_exist(
     app,
     user,
     group,
     share_user,
-    create_user_with_scopes,
-    have_scopes,
-    share_scopes,
-    with_user,
-    with_group,
-    status,
+    kind,
 ):
     # make sure default spawner exists
     spawner = user.spawner  # noqa
     body = {}
-    if share_scopes:
-        body["scopes"] = share_scopes
-    if with_user:
+    if kind == "user":
         body["user"] = "nosuchuser"
-    if with_group:
+    elif kind == "group":
         body["group"] = "nosuchgroup"
 
     r = await api_request(
         app, f"/shares/{user.name}/", method="post", data=json.dumps(body)
     )
-    assert r.status_code == status
+    assert r.status_code == 400
+
+
+@pytest.mark.parametrize(
+    "which",
+    [
+        ("user"),
+        ("server"),
+    ],
+)
+async def test_shares_api_target_doesnt_exist(
+    app,
+    user,
+    group,
+    share_user,
+    which,
+):
+    # make sure default spawner exists
+    if which == "server":
+        share_path = f"/shares/{user.name}/nosuchserver"
+    elif which == "user":
+        share_path = "/shares/nosuchuser/"
+    body = {"user": share_user.name}
+
+    r = await api_request(app, share_path, method="post", data=json.dumps(body))
+    assert r.status_code == 404
 
 
 @pytest.mark.parametrize(
@@ -410,13 +451,21 @@ async def test_share_with_doesnt_exist(
             200,
         ),
         (None, "read:servers!server=other/", False, True, 400),
+        (
+            "shares,access:servers,read:users:name",
+            "admin:servers!server=SERVER",
+            False,
+            True,
+            403,
+        ),
         (None, None, False, False, 400),
+        (None, None, "nosuchuser", False, 400),
+        (None, None, False, "nosuchgroup", 400),
         (None, None, True, True, 400),
-        (None, None, True, False, 200),
         (None, None, True, False, 200),
     ],
 )
-async def test_share_create_api(
+async def test_shares_api_create(
     app,
     user,
     group,
@@ -441,9 +490,9 @@ async def test_share_create_api(
     body = {}
     share_with = share_user
     if with_user:
-        body["user"] = share_user.name
+        body["user"] = share_user.name if with_user == True else with_user
     if with_group:
-        body["group"] = group.name
+        body["group"] = group.name if with_group == True else with_group
         share_with = group
 
     expected_scopes = _expand_scopes("access:servers!server=SERVER")
@@ -476,45 +525,150 @@ async def test_share_create_api(
 
 
 @pytest.mark.parametrize(
-    "have_scopes, share_scopes, with_user, with_group, status",
+    "have_scopes, before_scopes, revoke_scopes, after_scopes, with_user, with_group, status",
     [
-        (None, None, True, False, 200),
-        (None, None, False, True, 200),
-        (None, None, False, False, 400),
-        (None, None, True, True, 400),
+        ("read:shares", None, None, None, True, False, 403),
+        ("shares", None, None, None, True, False, 200),
+        ("shares!user=USER", None, None, None, False, True, 200),
+        (None, "read:servers!server=SERVER", None, None, True, False, 200),
+        (
+            None,
+            "access:servers!server=SERVER",
+            "read:servers!server=SERVER",
+            "access:servers!server=SERVER",
+            True,
+            False,
+            200,
+        ),
+        (None, None, None, None, "nosuchuser", False, 200),
+        (None, None, None, None, False, "nosuchgroup", 200),
+        (None, None, None, None, False, False, 400),
+        (None, None, None, None, True, True, 400),
     ],
 )
-async def test_share_revoke_api(
+async def test_shares_api_revoke(
     app,
     user,
     group,
     share_user,
     create_user_with_scopes,
     have_scopes,
-    share_scopes,
+    before_scopes,
+    revoke_scopes,
+    after_scopes,
     with_user,
     with_group,
     status,
 ):
+    db = app.db
     # make sure default spawner exists
-    spawner = user.spawner  # noqa
+    spawner = user.spawner.orm_spawner  # noqa
     body = {}
-    if share_scopes:
-        body["scopes"] = share_scopes
+    share_with = share_user
     if with_user:
-        body["user"] = share_user.name
+        body["user"] = share_user.name if with_user == True else with_user
     if with_group:
-        body["group"] = group.name
+        body["group"] = group.name if with_group == True else with_group
+        share_with = group
+
+    def _expand_scopes(scope_str):
+        return [
+            s.replace("USER", user.name)
+            .replace("SERVER", user.name + "/")
+            .replace("SHARE_WITH", share_with.name)
+            for s in scope_str.split(",")
+        ]
+
+    if revoke_scopes:
+        revoke_scopes = _expand_scopes(revoke_scopes)
+        body["scopes"] = revoke_scopes
+
+    if after_scopes:
+        after_scopes = _expand_scopes(after_scopes)
+
+    if before_scopes:
+        orm.Share.grant(db, spawner, share_with, scopes=_expand_scopes(before_scopes))
+
+    if have_scopes is None:
+        # default: needed permissions
+        have_scopes = "shares,read:users:name,read:groups:name"
+
+    requester = create_user_with_scopes(*_expand_scopes(have_scopes))
 
     r = await api_request(
-        app, f"/shares/{user.name}/", method="post", data=json.dumps(body)
+        app,
+        f"/shares/{user.name}/",
+        method="patch",
+        data=json.dumps(body),
+        name=requester.name,
     )
     assert r.status_code == status
     if r.status_code < 300:
         share_model = r.json()
-        assert "scopes" in share_model
-        if share_scopes:
-            assert share_model["scopes"] == share_scopes
+        if not after_scopes:
+            # no scopes specified, full revocation
+            assert share_model == {}
+            return
+        assert share_model["scopes"] == after_scopes
+
+
+@pytest.mark.parametrize(
+    "have_scopes, status",
+    [
+        ("shares", 204),
+        ("shares!user=USER", 204),
+        ("shares!server=SERVER", 204),
+        ("read:shares", 403),
+        ("shares!server=USER/other", 404),
+        ("shares!user=other", 404),
+    ],
+)
+async def test_shares_api_revoke_all(
+    app,
+    user,
+    group,
+    share_user,
+    create_user_with_scopes,
+    have_scopes,
+    status,
+):
+    db = app.db
+    # make sure default spawner exists
+    spawner = user.spawner.orm_spawner  # noqa
+    orm.Share.grant(db, spawner, share_user)
+    orm.Share.grant(db, spawner, group)
+
+    def _expand_scopes(scope_str):
+        return [
+            s.replace("USER", user.name).replace("SERVER", user.name + "/")
+            for s in scope_str.split(",")
+        ]
+
+    if have_scopes is None:
+        # default: needed permissions
+        have_scopes = "shares"
+
+    requester = create_user_with_scopes(*_expand_scopes(have_scopes))
+
+    r = await api_request(
+        app,
+        f"/shares/{user.name}/",
+        method="delete",
+        name=requester.name,
+    )
+    assert r.status_code == status
+
+    # get updated share list
+    r = await api_request(
+        app,
+        f"/shares/{user.name}/",
+    )
+    share_list = r.json()
+
+    if status >= 400:
+        assert len(share_list["items"]) == 2
+    else:
+        assert len(share_list["items"]) == 0
 
 
 @pytest.mark.parametrize(
@@ -531,7 +685,7 @@ async def test_share_revoke_api(
         ("groups", "notfound"),
     ],
 )
-async def test_share_api_list_user_group(
+async def test_shared_api_list_user_group(
     app, populate_shares, create_user_with_scopes, kind, case
 ):
     if case == "notfound":
@@ -575,7 +729,7 @@ async def test_share_api_list_user_group(
         ("groups", "groups:shares!group=other", 404, 404),
     ],
 )
-async def test_single_share_api(
+async def test_single_shared_api(
     app,
     user,
     share_user,
@@ -648,7 +802,7 @@ async def test_single_share_api(
         ("groups", "groups:shares!group=other", 404, 404),
     ],
 )
-async def test_single_share_api_no_such_owner(
+async def test_single_shared_api_no_such_owner(
     app,
     user,
     share_user,
@@ -662,7 +816,7 @@ async def test_single_share_api_no_such_owner(
     db = app.db
     share_user.groups.append(group)
     db.commit()
-    spawner = user.spawner.orm_spawner
+    spawner = user.spawner.orm_spawner  # noqa
 
     if kind == "users":
         share_with = share_user
@@ -692,41 +846,54 @@ async def test_single_share_api_no_such_owner(
 
 
 @pytest.mark.parametrize(
-    "have_scopes, n_groups, n_users, ok",
+    "kind",
     [
-        (
-            "shares",
-            0,
-            0,
-            True,
-        ),
-        (
-            "read:shares",
-            0,
-            2,
-            True,
-        ),
-        (
-            "read:shares!user=USER",
-            3,
-            0,
-            True,
-        ),
-        (
-            "read:shares!server=SERVER",
-            2,
-            1,
-            True,
-        ),
-        (
-            "read:users:shares",
-            0,
-            0,
-            False,
-        ),
+        ("users"),
+        ("groups"),
     ],
 )
-async def test_share_api_list_server(
+async def test_single_shared_api_no_such_target(
+    app, user, share_user, group, create_user_with_scopes, kind
+):
+    db = app.db
+    share_user.groups.append(group)
+    db.commit()
+    spawner = user.spawner.orm_spawner  # noqa
+    share_with = "nosuch" + kind
+
+    owner_name = user.name
+
+    def _expand_scopes(scope_str):
+        return [
+            s.replace("USER", owner_name)
+            .replace("SERVER", owner_name + "/")
+            .replace("SHARE_WITH", share_with)
+            for s in scope_str.split(",")
+        ]
+
+    requester = create_user_with_scopes(f"{kind}:shares")
+
+    api_url = f"/{kind}/{share_with}/shared/{user.name}/"
+
+    fetch_share = partial(api_request, app, api_url, name=requester.name)
+    r = await fetch_share()
+    assert r.status_code == 404
+
+    r = await fetch_share(method="delete")
+    assert r.status_code == 404
+
+
+@pytest.mark.parametrize(
+    "have_scopes, n_groups, n_users, ok",
+    [
+        ("shares", 0, 0, True),
+        ("read:shares", 0, 2, True),
+        ("read:shares!user=USER", 3, 0, True),
+        ("read:shares!server=SERVER", 2, 1, True),
+        ("read:users:shares", 0, 0, False),
+    ],
+)
+async def test_shares_api_list_server(
     app, user, share_user, create_user_with_scopes, have_scopes, n_groups, n_users, ok
 ):
     db = app.db
@@ -772,6 +939,93 @@ async def test_share_api_list_server(
             found_shares.append(f"group:{share['group']['name']}")
     found_shares = sorted(found_shares)
     assert found_shares == expected_shares
+
+
+@pytest.mark.parametrize(
+    "have_scopes, n_groups, n_users, status",
+    [
+        ("shares", 0, 0, 200),
+        ("read:shares", 0, 2, 200),
+        ("read:shares!user=USER", 3, 0, 200),
+        ("read:shares!user=other", 3, 0, 404),
+        ("read:shares!server=SERVER", 2, 1, 404),
+        ("read:users:shares", 0, 0, 403),
+    ],
+)
+async def test_shares_api_list_user(
+    app,
+    user,
+    share_user,
+    create_user_with_scopes,
+    have_scopes,
+    n_groups,
+    n_users,
+    status,
+):
+    db = app.db
+    spawner = user.spawner.orm_spawner
+
+    def _expand_scopes(scope_str):
+        return [
+            s.replace("USER", user.name)
+            .replace("SERVER", user.name + "/")
+            .replace("SERVER", user.name + "/")
+            .replace("SHARE_WITH", share_user.name)
+            for s in scope_str.split(",")
+        ]
+
+    requester = create_user_with_scopes(*_expand_scopes(have_scopes))
+
+    expected_shares = []
+    for i in range(n_users):
+        u = create_user_with_scopes().orm_user
+        orm.Share.grant(db, spawner, u)
+        expected_shares.append(f"user:{u.name}")
+
+    for i in range(n_groups):
+        group = orm.Group(name=new_group_name())
+        db.add(group)
+        db.commit()
+        orm.Share.grant(db, spawner, group)
+        expected_shares.append(f"group:{group.name}")
+    expected_shares = sorted(expected_shares)
+    r = await api_request(app, f"/shares/{user.name}", name=requester.name)
+    assert r.status_code == status
+    if status >= 400:
+        return
+    shares = r.json()
+    found_shares = []
+    for share in shares["items"]:
+        assert share["user"] or share["group"]
+        if share["user"]:
+            found_shares.append(f"user:{share['user']['name']}")
+        elif share["group"]:
+            found_shares.append(f"group:{share['group']['name']}")
+    found_shares = sorted(found_shares)
+    assert found_shares == expected_shares
+
+
+async def test_shares_api_list_no_such_owner(app):
+    r = await api_request(app, "/shares/nosuchuser")
+    assert r.status_code == 404
+    r = await api_request(app, "/shares/nosuchuser/")
+    assert r.status_code == 404
+    r = await api_request(app, "/shares/nosuchuser/namedserver")
+    assert r.status_code == 404
+
+
+@pytest.mark.parametrize(
+    "method",
+    [
+        "post",
+        "patch",
+        "delete",
+    ],
+)
+async def test_share_api_server_required(app, user, method):
+    """test methods defined on /shares/:user/:server not defined on /shares/:user"""
+    r = await api_request(app, f"/shares/{user.name}", method=method)
+    assert r.status_code == 405
 
 
 async def test_share_flow_full(
@@ -825,3 +1079,370 @@ async def test_share_flow_full(
     r = await async_requests.get(user_url, headers={"Authorization": f"Bearer {token}"})
     print(r.json())
     assert r.status_code == 403
+
+
+# share codes
+
+
+@pytest.mark.parametrize(
+    "method",
+    [
+        "post",
+        "delete",
+    ],
+)
+async def test_share_codes_api_server_required(app, user, method):
+    """test methods defined on /share-codes/:user/:server not defined on /share-codes/:user"""
+    r = await api_request(app, f"/share-codes/{user.name}", method=method)
+    assert r.status_code == 405
+
+
+@pytest.mark.parametrize(
+    "have_scopes, n_codes, level, status",
+    [
+        ("shares", 0, 'user', 200),
+        ("read:shares", 2, 'server', 200),
+        ("read:shares!user=USER", 3, 'user', 200),
+        ("read:shares!server=SERVER", 2, 'server', 200),
+        ("read:shares!server=SERVER", 2, 'user', 404),
+        ("read:users:shares", 0, 'user', 403),
+        ("users:shares", 1, 'server', 403),
+    ],
+)
+async def test_share_codes_api_list(
+    app, user, share_user, create_user_with_scopes, have_scopes, n_codes, level, status
+):
+    db = app.db
+    spawner = user.spawner.orm_spawner
+
+    def _expand_scopes(scope_str):
+        return [
+            s.replace("USER", user.name)
+            .replace("SERVER", user.name + "/")
+            .replace("SHARE_WITH", share_user.name)
+            for s in scope_str.split(",")
+        ]
+
+    requester = create_user_with_scopes(*_expand_scopes(have_scopes))
+
+    expected_shares = []
+    for i in range(n_codes):
+        code = orm.ShareCode(
+            spawner=spawner,
+            owner=spawner.user,
+            scopes=sorted(scopes.access_scopes(spawner=spawner)),
+        )
+        db.add(code)
+        db.commit()
+        expected_shares.append(f"sc_{code.id}")
+
+    expected_shares = sorted(expected_shares)
+    if level == 'user':
+        path = f"/share-codes/{user.name}"
+    else:
+        path = f"/share-codes/{user.name}/"
+    r = await api_request(app, path, name=requester.name)
+    assert r.status_code == status
+    if status >= 400:
+        return
+    share_codes = r.json()
+    found_shares = []
+    for share_code in share_codes["items"]:
+        assert 'code' not in share_code
+        assert 'id' in share_code
+        assert 'server' in share_code
+        found_shares.append(share_code["id"])
+    found_shares = sorted(found_shares)
+    assert found_shares == expected_shares
+
+
+async def test_share_codes_api_list_no_such_owner(app, user):
+    spawner = user.spawner.orm_spawner  # noqa
+    r = await api_request(app, "/share-codes/nosuchuser")
+    assert r.status_code == 404
+    r = await api_request(app, "/share-codes/nosuchuser/")
+    assert r.status_code == 404
+    r = await api_request(app, f"/share-codes/{user.name}/nosuchserver")
+    assert r.status_code == 404
+
+
+@pytest.mark.parametrize(
+    "have_scopes, share_scopes, status",
+    [
+        (None, None, 200),
+        ("shares", None, 200),
+        ("shares!user=other", None, 404),
+        (
+            "shares!server=SERVER,servers!server=SERVER",
+            "read:servers!server=SERVER,access:servers!server=SERVER",
+            200,
+        ),
+        (None, "read:servers!server=other/", 400),
+        (
+            "shares,access:servers",
+            "admin:servers!server=SERVER",
+            403,
+        ),
+        (None, None, 200),
+    ],
+)
+async def test_share_codes_api_create(
+    app,
+    user,
+    group,
+    share_user,
+    create_user_with_scopes,
+    have_scopes,
+    share_scopes,
+    status,
+):
+    def _expand_scopes(scope_str):
+        return [
+            s.replace("USER", user.name)
+            .replace("SERVER", user.name + "/")
+            .replace("SHARE_WITH", share_with.name)
+            for s in scope_str.split(",")
+        ]
+
+    # make sure default spawner exists
+    spawner = user.spawner  # noqa
+    body = {}
+    share_with = share_user
+
+    expected_scopes = _expand_scopes("access:servers!server=SERVER")
+    if share_scopes:
+        share_scopes = _expand_scopes(share_scopes)
+        expected_scopes.extend(share_scopes)
+        body["scopes"] = share_scopes
+
+    expected_scopes = sorted(set(expected_scopes))
+
+    if have_scopes is None:
+        # default: needed permissions
+        have_scopes = "shares"
+
+    requester = create_user_with_scopes(*_expand_scopes(have_scopes))
+
+    r = await api_request(
+        app,
+        f"/share-codes/{user.name}/",
+        method="post",
+        data=json.dumps(body),
+        name=requester.name,
+    )
+    print(r.json())
+    assert r.status_code == status
+    if r.status_code >= 400:
+        return
+
+    share_model = r.json()
+    assert "scopes" in share_model
+    assert sorted(share_model["scopes"]) == expected_scopes
+    assert "code" in share_model
+    assert "accept_url" in share_model
+    parsed_accept_url = urlparse(share_model["accept_url"])
+    accept_query = parse_qs(parsed_accept_url.query)
+    assert accept_query == {"code": [share_model["code"]]}
+    assert parsed_accept_url.path == url_path_join(app.base_url, "hub/accept-share")
+
+
+@pytest.mark.parametrize(
+    "expires_in, status",
+    [
+        (None, 200),
+        ("notanumber", 400),
+        (-1, 400),
+        (60, 200),
+        (525600 * 59, 200),
+        (525600 * 60 + 1, 400),
+    ],
+)
+async def test_share_codes_api_create_expires_in(
+    app,
+    user,
+    group,
+    create_user_with_scopes,
+    expires_in,
+    status,
+):
+    # make sure default spawner exists
+    spawner = user.spawner  # noqa
+    body = {}
+    now = utcnow()
+    if expires_in:
+        body["expires_in"] = expires_in
+
+    r = await api_request(
+        app,
+        f"/share-codes/{user.name}/",
+        method="post",
+        data=json.dumps(body),
+    )
+    assert r.status_code == status
+    if r.status_code >= 400:
+        return
+
+    share_model = r.json()
+    assert "expires_at" in share_model
+    assert share_model["expires_at"]
+    expires_at = parse_date(share_model["expires_at"])
+
+    expected_expires_at = now + timedelta(
+        seconds=expires_in or orm.ShareCode.default_expires_in
+    )
+    window = timedelta(seconds=60)
+    assert expected_expires_at - window <= expires_at <= expected_expires_at + window
+
+    async def get_code():
+        r = await api_request(
+            app,
+            f"/share-codes/{user.name}/",
+        )
+        r.raise_for_status()
+        codes = r.json()["items"]
+        assert len(codes) <= 1
+        if len(codes) == 1:
+            return codes[0]
+        else:
+            return None
+
+    code = await get_code()
+    assert code
+
+    with mock.patch(
+        'jupyterhub.orm.ShareCode.now',
+        staticmethod(lambda: (expires_at + timedelta(seconds=1)).replace(tzinfo=None)),
+    ):
+        code = await get_code()
+        assert code is None
+
+
+@pytest.mark.parametrize(
+    "have_scopes, delete_by, status",
+    [
+        (None, None, 204),
+        ("shares", "id=ID", 204),
+        (
+            "shares!server=SERVER",
+            "code=CODE",
+            204,
+        ),
+        ("shares!user=other", None, 404),
+        ("read:shares", "code=CODE", 403),
+        ("shares", "id=invalid", 404),
+        ("shares", "id=sc_9999", 404),
+        ("shares", "code=nomatch", 404),
+    ],
+)
+async def test_share_codes_api_revoke(
+    app,
+    user,
+    group,
+    share_user,
+    create_user_with_scopes,
+    have_scopes,
+    delete_by,
+    status,
+):
+    db = app.db
+    spawner = user.spawner.orm_spawner
+
+    def _expand_scopes(scope_str):
+        return [
+            s.replace("USER", user.name)
+            .replace("SERVER", user.name + "/")
+            .replace("SHARE_WITH", share_user.name)
+            for s in scope_str.split(",")
+        ]
+
+    # make sure default spawner exists
+    spawner = user.spawner.orm_spawner
+    share_code, code = orm.ShareCode.new(
+        db, spawner, scopes=list(scopes.access_scopes(spawner=spawner))
+    )
+
+    assert orm.ShareCode.find(db, code=code)
+    other_share_code, other_code = orm.ShareCode.new(
+        db, spawner, scopes=list(scopes.access_scopes(spawner=spawner))
+    )
+
+    if have_scopes is None:
+        # default: needed permissions
+        have_scopes = "shares"
+
+    requester = create_user_with_scopes(*_expand_scopes(have_scopes))
+
+    url = f"/share-codes/{user.name}/"
+    if delete_by:
+        query = delete_by.replace("CODE", code).replace("ID", f"sc_{share_code.id}")
+        url = f"{url}?{query}"
+
+    r = await api_request(
+        app,
+        url,
+        method="delete",
+        name=requester.name,
+    )
+    assert r.status_code == status
+
+    # other code unaffected
+    if r.status_code >= 400:
+        assert orm.ShareCode.find(db, code=code)
+        return
+    # code has been deleted
+    assert orm.ShareCode.find(db, code=code) is None
+    if delete_by is None:
+        assert orm.ShareCode.find(db, code=other_code) is None
+    else:
+        assert orm.ShareCode.find(db, code=other_code)
+
+
+@pytest.mark.parametrize(
+    "who, code_arg, get_status, post_status",
+    [
+        ("share", None, 400, 400),
+        ("share", "nosuchcode", 404, 400),
+        ("share", "CODE", 200, 302),
+        ("self", "CODE", 403, 400),
+    ],
+)
+async def test_accept_share_page(
+    app, user, share_user, who, code_arg, get_status, post_status
+):
+    db = app.db
+    spawner = user.spawner.orm_spawner
+    orm_code, code = orm.ShareCode.new(
+        db, spawner, scopes=list(scopes.access_scopes(spawner=spawner))
+    )
+    if who == "self":
+        cookies = await app.login_user(user.name)
+    else:
+        cookies = await app.login_user(share_user.name)
+
+    url = "accept-share"
+    form_data = {"_xsrf": cookies['_xsrf']}
+    if code_arg:
+        code_arg = code_arg.replace("CODE", code)
+        form_data["code"] = code_arg
+        url = url + f"?code={code_arg}"
+
+    r = await get_page(url, app, cookies=cookies)
+    assert r.status_code == get_status
+
+    # try submitting the form with the same inputs
+    accept_url = public_url(app) + "hub/accept-share"
+    r = await async_requests.post(
+        accept_url,
+        cookies=cookies,
+        data=form_data,
+        allow_redirects=False,
+    )
+    assert r.status_code == post_status
+    if post_status < 400:
+        assert orm_code.exchange_count == 1
+        # share is accepted
+        assert len(share_user.shared_with_me) == 1
+        assert share_user.shared_with_me[0].spawner is spawner
+    else:
+        assert orm_code.exchange_count == 0
+        assert not share_user.shared_with_me

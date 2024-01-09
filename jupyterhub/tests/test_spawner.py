@@ -382,7 +382,6 @@ async def test_spawner_bad_api_token(app):
             ["admin:groups", "users:activity"],
             [
                 "read:groups!group=x",
-                "read:groups:shares!group=x",
                 "read:groups:name!group=x",
                 "users:activity",
             ],
