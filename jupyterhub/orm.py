@@ -567,10 +567,10 @@ class Expiring:
     @property
     def expired(self):
         """Is this object expired?"""
-        if self.expires_at and self.expires_in > 0:
+        if not self.expires_at:
             return False
         else:
-            return True
+            return self.expires_in <= 0
 
     @classmethod
     def purge_expired(cls, db):
