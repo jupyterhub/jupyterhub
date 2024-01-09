@@ -1562,6 +1562,8 @@ components:
       properties:
         items:
           type: array
+          items:
+            type: object
         _pagination:
           $ref: "#/components/schemas/Pagination"
     User:
