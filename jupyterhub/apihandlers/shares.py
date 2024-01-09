@@ -16,6 +16,7 @@ from pydantic import (
 from sqlalchemy import or_
 from sqlalchemy.orm import joinedload, raiseload
 from tornado import web
+from tornado.httputil import url_concat
 
 from .. import orm
 from ..scopes import _check_scopes_exist, has_scope, needs_scope
@@ -132,6 +133,9 @@ class _ShareAPIHandler(APIHandler):
         }
         if code:
             model["code"] = code
+            model["accept_url"] = url_concat(
+                self.hub.base_url + "accept-share", {"code": code}
+            )
         return model
 
     def _init_share_query(self, kind="share"):
