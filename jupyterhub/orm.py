@@ -721,8 +721,8 @@ class _Share:
         """
         return cls._apply_filter(frozenset(scopes), spawner.user.name, spawner.name)
 
-    @lru_cache()
     @staticmethod
+    @lru_cache()
     def _apply_filter(scopes, owner_name, server_name):
         """
         implementation of Share.apply_filter
