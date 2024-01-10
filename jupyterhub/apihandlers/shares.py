@@ -155,13 +155,13 @@ class _ShareAPIHandler(APIHandler):
             )  # pragma: no cover
 
         query = self.db.query(class_).options(
-            joinedload(class_.owner).raiseload("*"),
-            joinedload(class_.spawner).joinedload(orm.Spawner.user).raiseload("*"),
+            joinedload(class_.owner).lazyload("*"),
+            joinedload(class_.spawner).joinedload(orm.Spawner.user).lazyload("*"),
         )
         if kind == 'share':
             query = query.options(
-                joinedload(class_.user).joinedload(orm.User.groups).raiseload("*"),
-                joinedload(class_.group).raiseload("*"),
+                joinedload(class_.user).joinedload(orm.User.groups).lazyload("*"),
+                joinedload(class_.group).lazyload("*"),
             )
         return query
 
