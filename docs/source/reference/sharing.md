@@ -21,7 +21,7 @@ In JupyterHub, shares:
 Additionally a "share code" is a random string, which has all the same properties as a Share aside from the user or group.
 The code can be exchanged for actual sharing permission, to enable the pattern of sharing permissions without needing to know the username(s) of who you'd like to share with (e.g. email a link).
 
-There is not yet _UI_ to create shares, but they can be managed via JupyterHub's [REST API][].
+There is not yet _UI_ to create shares, but they can be managed via JupyterHub's [REST API](jupyterhub-rest-api).
 
 In general, with shares you can:
 
@@ -162,7 +162,7 @@ This is a paginated endpoint, so responses look like:
     "next": None,
   },
 }
-
+```
 
 ### View servers shared with user or group
 
@@ -209,7 +209,7 @@ DELETE /api/users/:username/shared/:ownername/:servername
 
 DELETE /api/groups/:groupname/shared/:ownername/:servername
 
-````
+```
 
 will revoke all permissions granted to the user or group for the specified server.
 
@@ -235,7 +235,7 @@ A Share returned in the REST API has the following structure:
     "group": None, # or {"name": "groupname"},
     "created_at": "2023-10-02T13:27Z",
 }
-````
+```
 
 where exactly one of `user` and `group` is not null and the other is null.
 
