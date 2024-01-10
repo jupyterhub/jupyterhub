@@ -456,8 +456,8 @@ paths:
     get:
       summary: List shared access for user
       description:
-        Returns list of Shares granting the user access to servers owned by others
-        (new in 5.0)
+        Returns list of Shares granting the user access to servers owned
+        by others (new in 5.0)
       parameters:
         - $ref: "#/components/parameters/userName"
 
@@ -1794,7 +1794,8 @@ components:
               type: string
 
     Share:
-      description: A single sharing permission.
+      description: |
+        A single sharing permission.
         There is at most one of these objects per (server, user) or (server, group) combination.
       type: object
       properties:
@@ -1807,14 +1808,18 @@ components:
           items:
             type: string
         group:
-          description: the group being shared with (exactly one of 'user' or 'group' will be non-null, the other will be null)
+          description:
+            the group being shared with (exactly one of 'user' or 'group'
+            will be non-null, the other will be null)
           type: object
           nullable: true
           properties:
             name:
               type: string
         user:
-          description: the user being shared with (exactly one of 'user' or 'group' will be non-null, the other will be null)
+          description:
+            the user being shared with (exactly one of 'user' or 'group'
+            will be non-null, the other will be null)
           type: object
           nullable: true
           properties:
@@ -1826,8 +1831,9 @@ components:
           format: date-time
 
     ShareCode:
-      description: A single sharing code.
-        There is at most one of these objects per (server, user) or (server, group) combination.
+      description:
+        A single sharing code. There is at most one of these objects per
+        (server, user) or (server, group) combination.
       type: object
       properties:
         server:
