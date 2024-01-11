@@ -4,7 +4,7 @@
 import asyncio
 import inspect
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta, timezone
 
 from async_generator import aclosing
 from dateutil.parser import parse as parse_date
@@ -23,6 +23,7 @@ from ..utils import (
     maybe_future,
     url_escape_path,
     url_path_join,
+    utcnow,
 )
 from .base import APIHandler
 
@@ -367,7 +368,7 @@ class UserTokenListAPIHandler(APIHandler):
         if not user:
             raise web.HTTPError(404, "No such user: %s" % user_name)
 
-        now = datetime.utcnow()
+        now = utcnow(with_tz=False)
         api_tokens = []
 
         def sort_key(token):
@@ -439,6 +440,18 @@ class UserTokenListAPIHandler(APIHandler):
         token_roles = body.get("roles")
         token_scopes = body.get("scopes")
 
+        # check type of permissions
+        for key in ("roles", "scopes"):
+            value = body.get(key)
+            if value is None:
+                continue
+            if not isinstance(value, list) or not all(
+                isinstance(item, str) for item in value
+            ):
+                raise web.HTTPError(
+                    400, f"token {key} must be null or a list of strings, not {value!r}"
+                )
+
         try:
             api_token = user.new_api_token(
                 note=note,
@@ -446,7 +459,7 @@ class UserTokenListAPIHandler(APIHandler):
                 roles=token_roles,
                 scopes=token_scopes,
             )
-        except ValueError as e:
+        except (ValueError, KeyError) as e:
             raise web.HTTPError(400, str(e))
         if requester is not user:
             self.log.info(
@@ -485,7 +498,7 @@ class UserTokenAPIHandler(APIHandler):
 
         orm_token = self.db.query(orm.APIToken).filter_by(id=id_).first()
         if orm_token is None or orm_token.user is not user.orm_user:
-            raise web.HTTPError(404, "Token not found %s", orm_token)
+            raise web.HTTPError(404, not_found)
         return orm_token
 
     @needs_scope('read:tokens')
@@ -493,7 +506,7 @@ class UserTokenAPIHandler(APIHandler):
         """"""
         user = self.find_user(user_name)
         if not user:
-            raise web.HTTPError(404, "No such user: %s" % user_name)
+            raise web.HTTPError(404, f"No such user: {user_name}")
         token = self.find_token_by_id(user, token_id)
         self.write(json.dumps(self.token_model(token)))
 
@@ -502,7 +515,7 @@ class UserTokenAPIHandler(APIHandler):
         """Delete a token"""
         user = self.find_user(user_name)
         if not user:
-            raise web.HTTPError(404, "No such user: %s" % user_name)
+            raise web.HTTPError(404, f"No such user: {user_name}")
         token = self.find_token_by_id(user, token_id)
         # deleting an oauth token deletes *all* oauth tokens for that client
         client_id = token.client_id
@@ -510,7 +523,11 @@ class UserTokenAPIHandler(APIHandler):
             tokens = [
                 token for token in user.api_tokens if token.client_id == client_id
             ]
+            self.log.info(
+                f"Deleting {len(tokens)} tokens for {user_name} issued by {token.client_id}"
+            )
         else:
+            self.log.info(f"Deleting token {token_id} for {user_name}")
             tokens = [token]
         for token in tokens:
             self.db.delete(token)
@@ -827,7 +844,7 @@ def _parse_timestamp(timestamp):
         # strip timezone info to naive UTC datetime
         dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
 
-    now = datetime.utcnow()
+    now = utcnow(with_tz=False)
     if (dt - now) > timedelta(minutes=59):
         raise web.HTTPError(
             400,

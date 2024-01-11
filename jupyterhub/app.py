@@ -96,6 +96,7 @@ from .utils import (
     subdomain_hook_idna,
     subdomain_hook_legacy,
     url_path_join,
+    utcnow,
 )
 
 common_aliases = {
@@ -624,9 +625,6 @@ class JupyterHub(Application):
         This is the address on which the proxy will listen. The default is to
         listen on all interfaces. This is the only address through which JupyterHub
         should be accessed by users.
-
-        .. deprecated: 0.9
-            Use JupyterHub.bind_url
         """,
     ).tag(config=True)
 
@@ -637,9 +635,6 @@ class JupyterHub(Application):
         This is the port on which the proxy will listen.
         This is the only port through which JupyterHub
         should be accessed by users.
-
-        .. deprecated: 0.9
-            Use JupyterHub.bind_url
         """,
     ).tag(config=True)
 
@@ -649,9 +644,6 @@ class JupyterHub(Application):
 
         Add this to the beginning of all JupyterHub URLs.
         Use base_url to run JupyterHub within an existing website.
-
-        .. deprecated: 0.9
-            Use JupyterHub.bind_url
         """,
     ).tag(config=True)
 
@@ -677,9 +669,7 @@ class JupyterHub(Application):
             if self.bind_url != self._bind_url_default():
                 self.log.warning(
                     "Both bind_url and ip/port/base_url have been configured. "
-                    "JupyterHub.ip, JupyterHub.port, JupyterHub.base_url are"
-                    " deprecated in JupyterHub 0.9,"
-                    " please use JupyterHub.bind_url instead."
+                    " please use just one or the other."
                 )
             self.bind_url = bind_url
 
@@ -1733,6 +1723,8 @@ class JupyterHub(Application):
         config=True,
     )
 
+    metrics_collector = Any()
+
     def init_handlers(self):
         h = []
         # load handlers from the authenticator
@@ -2164,7 +2156,7 @@ class JupyterHub(Application):
                 # we don't want to allow user.created to be undefined,
                 # so initialize it to last_activity (if defined) or now.
                 if not user.created:
-                    user.created = user.last_activity or datetime.utcnow()
+                    user.created = user.last_activity or utcnow(with_tz=False)
         db.commit()
 
         # The allowed_users set and the users in the db are now the same.
@@ -2563,6 +2555,11 @@ class JupyterHub(Application):
         if orm_service.oauth_client is not None:
             service.oauth_client_id = orm_service.oauth_client.identifier
             service.oauth_redirect_uri = orm_service.oauth_client.redirect_uri
+            oauth_msg = f"with ouath_client_id={orm_service.oauth_client.identifier}"
+        else:
+            oauth_msg = "without oauth"
+
+        self.log.info(f"Loaded service {service.name} from database {oauth_msg}.")
 
         self._service_map[name] = service
 
@@ -2688,6 +2685,15 @@ class JupyterHub(Application):
             service.orm.server = None
 
         if service.oauth_available:
+            self.log.info(
+                f"Creating service {service.name} with oauth_client_id={service.oauth_client_id}"
+            )
+            if not service.oauth_redirect_uri:
+                # redirect uri has a default value if a URL is configured,
+                # but must be specified explicitly for external services
+                raise ValueError(
+                    f"Service {service.name} has oauth configured, but is missing required oauth_redirect_uri."
+                )
             allowed_scopes = set()
             if service.oauth_client_allowed_scopes:
                 allowed_scopes.update(service.oauth_client_allowed_scopes)
@@ -2717,7 +2723,11 @@ class JupyterHub(Application):
             allowed_scopes.update(scopes.access_scopes(oauth_client))
             oauth_client.allowed_scopes = sorted(allowed_scopes)
         else:
+            self.log.info(f"Creating service {service.name} without oauth.")
             if service.oauth_client:
+                self.log.warning(
+                    f"Deleting unused oauth client for service {service.name} with client_id={service.oauth_client.identifier}"
+                )
                 self.db.delete(service.oauth_client)
 
         self._service_map[name] = service
@@ -2847,9 +2857,13 @@ class JupyterHub(Application):
                         "%s appears to have stopped while the Hub was down",
                         spawner._log_name,
                     )
-                    # remove server entry from db
-                    db.delete(spawner.orm_spawner.server)
-                    spawner.server = None
+                    try:
+                        await user.stop(name)
+                    except Exception:
+                        self.log.exception(
+                            f"Failed to cleanup {spawner._log_name} which appeared to stop while the Hub was down.",
+                            exc_info=True,
+                        )
                 else:
                     self.log.debug("%s not running", spawner._log_name)
 
@@ -3232,8 +3246,10 @@ class JupyterHub(Application):
                 await self.proxy.check_routes(self.users, self._service_map)
 
             asyncio.ensure_future(finish_init_spawners())
-        metrics_updater = PeriodicMetricsCollector(parent=self, db=self.db)
-        metrics_updater.start()
+        metrics_collector = self.metrics_collector = PeriodicMetricsCollector(
+            parent=self, db=self.db
+        )
+        metrics_collector.start()
 
     async def cleanup(self):
         """Shutdown managed services and various subprocesses. Cleanup runtime files."""
@@ -3321,7 +3337,7 @@ class JupyterHub(Application):
         routes = await self.proxy.get_all_routes()
         users_count = 0
         active_users_count = 0
-        now = datetime.utcnow()
+        now = utcnow(with_tz=False)
         for prefix, route in routes.items():
             route_data = route['data']
             if 'user' not in route_data:
@@ -3669,6 +3685,8 @@ class JupyterHub(Application):
             return
         if self.http_server:
             self.http_server.stop()
+        if self.metrics_collector:
+            self.metrics_collector.stop()
         self.io_loop.add_callback(self.shutdown_cancel_tasks)
 
     async def start_show_config(self):

@@ -22,19 +22,31 @@ require(["jquery", "jhapi", "moment"], function ($, JHAPI, moment) {
     }
     var expiration_seconds =
       parseInt($("#token-expiration-seconds").val()) || null;
-    api.request_token(
-      user,
-      {
-        note: note,
-        expires_in: expiration_seconds,
+
+    var scope_text = $("#token-scopes").val() || "";
+
+    // split on commas and/or space
+    var scope_list = scope_text.split(/[\s,]+/).filter(function (scope) {
+      // filter out empty scopes
+      return scope.length > 0;
+    });
+
+    var request_body = {
+      note: note,
+      expires_in: expiration_seconds,
+    };
+
+    if (scope_list.length > 0) {
+      // add scopes to body, if defined
+      request_body.scopes = scope_list;
+    }
+
+    api.request_token(user, request_body, {
+      success: function (reply) {
+        $("#token-result").text(reply.token);
+        $("#token-area").show();
       },
-      {
-        success: function (reply) {
-          $("#token-result").text(reply.token);
-          $("#token-area").show();
-        },
-      },
-    );
+    });
     return false;
   });
 

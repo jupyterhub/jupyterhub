@@ -136,11 +136,11 @@ jobs:
           if [ "${{ matrix.jupyverse }}" != "" ]; then
               echo "JUPYTERHUB_SINGLEUSER_APP=jupyverse" >> $GITHUB_ENV
           fi
-      - uses: actions/checkout@v3
-      # NOTE: actions/setup-node@v3 make use of a cache within the GitHub base
+      - uses: actions/checkout@v4
+      # NOTE: actions/setup-node@v4 make use of a cache within the GitHub base
       #       environment and setup in a fraction of a second.
       - name: Install Node v14
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: "14"
       - name: Install Javascript dependencies
@@ -149,24 +149,23 @@ jobs:
           npm install -g configurable-http-proxy yarn
           npm list
 
-      # NOTE: actions/setup-python@v4 make use of a cache within the GitHub base
+      # NOTE: actions/setup-python@v5 make use of a cache within the GitHub base
       #       environment and setup in a fraction of a second.
       - name: Install Python ${{ matrix.python }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "${{ matrix.python }}"
 
       - name: Install Python dependencies
         run: |
           pip install --upgrade pip
-          pip install -e ".[test]"
 
           if [ "${{ matrix.oldest_dependencies }}" != "" ]; then
-            # take any dependencies in requirements.txt such as tornado>=5.0
-            # and transform them to tornado==5.0 so we can run tests with
-            # the earliest-supported versions
-            cat requirements.txt | grep '>=' | sed -e 's@>=@==@g' > oldest-requirements.txt
-            pip install -r oldest-requirements.txt
+            # frozen env with oldest dependencies
+            # make sure our `>=` pins really do express our minimum supported versions
+            pip install -r ci/oldest-dependencies/requirements.old -e .
+          else
+            pip install -e ".[test]"
           fi
 
           if [ "${{ matrix.main_dependencies }}" != "" ]; then
@@ -258,7 +257,7 @@ jobs:
     timeout-minutes: 20
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: build images
         run: |

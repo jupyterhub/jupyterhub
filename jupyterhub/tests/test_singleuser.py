@@ -20,6 +20,12 @@ from .utils import AsyncSession, async_requests, get_page
 IS_JUPYVERSE = os.environ.get("JUPYTERHUB_SINGLEUSER_APP") == "jupyverse"
 
 
+@pytest.fixture(autouse=True)
+def _jupyverse(app):
+    if IS_JUPYVERSE:
+        app.config.Spawner.default_url = "/lab"
+
+
 @pytest.mark.parametrize(
     "access_scopes, server_name, expect_success",
     [
@@ -65,8 +71,6 @@ async def test_singleuser_auth(
         await user.spawn(server_name)
         await app.proxy.add_user(user, server_name)
     spawner = user.spawners[server_name]
-    if IS_JUPYVERSE:
-        spawner.default_url = "/lab"
     url = url_path_join(public_url(app, user), server_name)
 
     # no cookies, redirects to login page
@@ -359,6 +363,7 @@ def test_singleuser_app_class(JUPYTERHUB_SINGLEUSER_APP):
 async def test_nbclassic_control_panel(app, user, full_spawn):
     # login, start the server
     await user.spawn()
+    await app.proxy.add_user(user)
     cookies = await app.login_user(user.name)
     next_url = url_path_join(user.url, "tree/")
     url = '/?' + urlencode({'next': next_url})
@@ -373,3 +378,38 @@ async def test_nbclassic_control_panel(app, user, full_spawn):
     else:
         prefix = app.base_url
     assert link["href"] == url_path_join(prefix, "hub/home")
+
+
+@pytest.mark.skipif(
+    IS_JUPYVERSE, reason="jupyverse doesn't implement token authentication"
+)
+async def test_token_url_cookie(app, user, full_spawn):
+    await user.spawn()
+    await app.proxy.add_user(user)
+    token = user.new_api_token(scopes=["access:servers!user"])
+    url = url_path_join(public_url(app, user), user.spawner.default_url or "/tree/")
+
+    # first request: auth with token in URL
+    r = await async_requests.get(url + f"?token={token}", allow_redirects=False)
+    print(r.url, r.status_code)
+    assert r.status_code == 200
+    assert r.cookies
+    # second request, use cookies set by first response,
+    # no token in URL
+    r = await async_requests.get(url, cookies=r.cookies, allow_redirects=False)
+    assert r.status_code == 200
+
+    await user.stop()
+
+
+async def test_api_403_no_cookie(app, user, full_spawn):
+    """unused oauth cookies don't get set for failed requests to API handlers"""
+    await user.spawn()
+    await app.proxy.add_user(user)
+    url = url_path_join(public_url(app, user), "/api/contents/")
+    r = await async_requests.get(url, allow_redirects=False)
+    # 403, not redirect
+    assert r.status_code == 403
+    # no state cookie set
+    assert not r.cookies
+    await user.stop()

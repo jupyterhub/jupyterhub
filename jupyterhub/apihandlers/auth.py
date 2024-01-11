@@ -2,7 +2,6 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import json
-from datetime import datetime
 from unittest import mock
 from urllib.parse import parse_qsl, quote, urlencode, urlparse, urlunparse
 
@@ -10,7 +9,7 @@ from oauthlib import oauth2
 from tornado import web
 
 from .. import orm, roles, scopes
-from ..utils import get_browser_protocol, token_authenticated
+from ..utils import get_browser_protocol, token_authenticated, utcnow
 from .base import APIHandler, BaseHandler
 
 
@@ -39,7 +38,7 @@ class TokenAPIHandler(APIHandler):
             self.parsed_scopes = scopes.parse_scopes(self.expanded_scopes)
 
         # record activity whenever we see a token
-        now = orm_token.last_activity = datetime.utcnow()
+        now = orm_token.last_activity = utcnow(with_tz=False)
         if orm_token.user:
             orm_token.user.last_activity = now
             model = self.user_model(self.users[orm_token.user])

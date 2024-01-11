@@ -15,6 +15,7 @@ import ssl
 import string
 import sys
 import threading
+import time
 import uuid
 import warnings
 from binascii import b2a_hex
@@ -93,6 +94,8 @@ def can_connect(ip, port):
     except OSError as e:
         if e.errno not in {errno.ECONNREFUSED, errno.ETIMEDOUT}:
             app_log.error("Unexpected error connecting to %s:%i %s", ip, port, e)
+        else:
+            app_log.debug("Server at %s:%i not ready: %s", ip, port, e)
         return False
     else:
         return True
@@ -245,6 +248,8 @@ async def wait_for_server(ip, port, timeout=10):
     """Wait for any server to show up at ip:port."""
     if ip in {'', '0.0.0.0', '::'}:
         ip = '127.0.0.1'
+    app_log.debug("Waiting %ss for server at %s:%s", timeout, ip, port)
+    tic = time.perf_counter()
     await exponential_backoff(
         lambda: can_connect(ip, port),
         "Server at {ip}:{port} didn't respond in {timeout} seconds".format(
@@ -252,6 +257,8 @@ async def wait_for_server(ip, port, timeout=10):
         ),
         timeout=timeout,
     )
+    toc = time.perf_counter()
+    app_log.debug("Server at %s:%s responded in %.2fs", ip, port, toc - tic)
 
 
 async def wait_for_http_server(url, timeout=10, ssl_context=None):
@@ -259,11 +266,12 @@ async def wait_for_http_server(url, timeout=10, ssl_context=None):
 
     Any non-5XX response code will do, even 404.
     """
-    loop = ioloop.IOLoop.current()
-    tic = loop.time()
     client = AsyncHTTPClient()
     if ssl_context:
         client.ssl_options = ssl_context
+
+    app_log.debug("Waiting %ss for server at %s", timeout, url)
+    tic = time.perf_counter()
 
     async def is_reachable():
         try:
@@ -297,6 +305,8 @@ async def wait_for_http_server(url, timeout=10, ssl_context=None):
         ),
         timeout=timeout,
     )
+    toc = time.perf_counter()
+    app_log.debug("Server at %s responded in %.2fs", url, toc - tic)
     return re
 
 
@@ -644,65 +654,50 @@ async def iterate_until(deadline_future, generator):
                 continue
 
 
-def utcnow():
-    """Return timezone-aware utcnow"""
-    return datetime.now(timezone.utc)
+def utcnow(*, with_tz=True):
+    """Return utcnow
+
+    with_tz (default): returns tz-aware datetime in UTC
+
+    if with_tz=False, returns UTC timestamp without tzinfo
+    (used for most internal timestamp storage because databases often don't preserve tz info)
+    """
+    now = datetime.now(timezone.utc)
+    if not with_tz:
+        now = now.replace(tzinfo=None)
+    return now
 
 
 def _parse_accept_header(accept):
     """
-    Parse the Accept header *accept*
+    Parse the Accept header
 
-    Return a list with 3-tuples of
-    [(str(media_type), dict(params), float(q_value)),] ordered by q values.
-    If the accept header includes vendor-specific types like::
-        application/vnd.yourcompany.yourproduct-v1.1+json
-    It will actually convert the vendor and version into parameters and
-    convert the content type into `application/json` so appropriate content
-    negotiation decisions can be made.
+    Return a list with 2-tuples of
+    [(str(media_type), float(q_value)),] ordered by q values (descending).
+
     Default `q` for values that are not specified is 1.0
-
-    From: https://gist.github.com/samuraisam/2714195
     """
     result = []
+    if not accept:
+        return result
     for media_range in accept.split(","):
-        parts = media_range.split(";")
-        media_type = parts.pop(0).strip()
-        media_params = []
-        # convert vendor-specific content type to application/json
-        typ, subtyp = media_type.split('/')
-        # check for a + in the sub-type
-        if '+' in subtyp:
-            # if it exists, determine if the subtype is a vendor-specific type
-            vnd, sep, extra = subtyp.partition('+')
-            if vnd.startswith('vnd'):
-                # and then... if it ends in something like "-v1.1" parse the
-                # version out
-                if '-v' in vnd:
-                    vnd, sep, rest = vnd.rpartition('-v')
-                    if len(rest):
-                        # add the version as a media param
-                        try:
-                            version = media_params.append(('version', float(rest)))
-                        except ValueError:
-                            version = 1.0  # could not be parsed
-                # add the vendor code as a media param
-                media_params.append(('vendor', vnd))
-                # and re-write media_type to something like application/json so
-                # it can be used usefully when looking up emitters
-                media_type = f'{typ}/{extra}'
+        media_type, *parts = media_range.split(";")
+        media_type = media_type.strip()
+        if not media_type:
+            continue
 
         q = 1.0
         for part in parts:
-            (key, value) = part.lstrip().split("=", 1)
+            (key, _, value) = part.partition("=")
             key = key.strip()
-            value = value.strip()
             if key == "q":
-                q = float(value)
-            else:
-                media_params.append((key, value))
-        result.append((media_type, dict(media_params), q))
-    result.sort(key=itemgetter(2))
+                try:
+                    q = float(value)
+                except ValueError:
+                    pass
+                break
+        result.append((media_type, q))
+    result.sort(key=itemgetter(1), reverse=True)
     return result
 
 
@@ -715,7 +710,7 @@ def get_accepted_mimetype(accept_header, choices=None):
     Return `None` if choices is given and no match is found,
     or nothing is specified.
     """
-    for mime, params, q in _parse_accept_header(accept_header):
+    for mime, q in _parse_accept_header(accept_header):
         if choices:
             if mime in choices:
                 return mime

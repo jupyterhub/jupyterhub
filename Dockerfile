@@ -6,7 +6,7 @@
 #
 # Option 1:
 #
-# FROM jupyterhub/jupyterhub:latest
+# FROM quay.io/jupyterhub/jupyterhub:latest
 #
 # And put your configuration file jupyterhub_config.py in /srv/jupyterhub/jupyterhub_config.py.
 #
@@ -14,10 +14,10 @@
 #
 # Or you can create your jupyterhub config and database on the host machine, and mount it with:
 #
-# docker run -v $PWD:/srv/jupyterhub -t jupyterhub/jupyterhub
+# docker run -v $PWD:/srv/jupyterhub -t quay.io/jupyterhub/jupyterhub
 #
 # NOTE
-# If you base on jupyterhub/jupyterhub-onbuild
+# If you base on quay.io/jupyterhub/jupyterhub-onbuild
 # your jupyterhub_config.py will be added automatically
 # from your docker directory.
 
@@ -44,6 +44,8 @@ RUN apt-get update -qq \
     build-essential \
     ca-certificates \
     curl \
+    git \
+    gnupg \
     locales \
     python3-dev \
     python3-pip \
@@ -52,10 +54,13 @@ RUN apt-get update -qq \
  && python3 -m pip install --no-cache-dir --upgrade setuptools pip build wheel
 # Ubuntu 22.04 comes with Nodejs 12 which is too old for building JupyterHub JS
 # It's fine at runtime though (used only by configurable-http-proxy)
-RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+ARG NODE_MAJOR=20
+RUN mkdir -p /etc/apt/keyrings \
+ && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
+ && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list \
+ && apt-get update \
  && apt-get install -yqq --no-install-recommends \
-    nodejs \
- && npm install --global yarn
+    nodejs
 
 WORKDIR /src/jupyterhub
 # copy everything except whats in .dockerignore, its a
@@ -67,6 +72,11 @@ ARG PIP_CACHE_DIR=/tmp/pip-cache
 RUN --mount=type=cache,target=${PIP_CACHE_DIR} \
     python3 -m build --wheel
 
+# verify installed files
+RUN --mount=type=cache,target=${PIP_CACHE_DIR} \
+    python3 -m pip install ./dist/*.whl \
+ && cd ci \
+ && python3 check_installed_data.py
 
 ######################################################################
 # All other wheels required by JupyterHub, some are platform specific

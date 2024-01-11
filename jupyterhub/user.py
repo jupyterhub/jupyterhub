@@ -3,7 +3,7 @@
 import json
 import warnings
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import timedelta
 from urllib.parse import quote, urlparse, urlunparse
 
 from sqlalchemy import inspect
@@ -25,6 +25,7 @@ from .utils import (
     subdomain_hook_legacy,
     url_escape_path,
     url_path_join,
+    utcnow,
 )
 
 # detailed messages about the most common failure-to-start errors,
@@ -187,7 +188,7 @@ class UserDict(dict):
 
         Returns dict with counts of active/pending/ready servers
         """
-        counts = defaultdict(lambda: 0)
+        counts = defaultdict(int)
         for user in self.values():
             for spawner in user.spawners.values():
                 pending = spawner.pending
@@ -796,7 +797,7 @@ class User:
             # update spawner start time, and activity for both spawner and user
             self.last_activity = (
                 spawner.orm_spawner.started
-            ) = spawner.orm_spawner.last_activity = datetime.utcnow()
+            ) = spawner.orm_spawner.last_activity = utcnow(with_tz=False)
             db.commit()
             # wait for spawner.start to return
             # run optional preparation work to bootstrap the notebook
@@ -940,7 +941,10 @@ class User:
         ssl_context = make_ssl_context(key, cert, cafile=ca)
         try:
             resp = await server.wait_up(
-                http=True, timeout=spawner.http_timeout, ssl_context=ssl_context
+                http=True,
+                timeout=spawner.http_timeout,
+                ssl_context=ssl_context,
+                extra_path="api",
             )
         except Exception as e:
             if isinstance(e, AnyTimeoutError):
@@ -1000,7 +1004,9 @@ class User:
             status = await spawner.poll()
             if status is None:
                 await spawner.stop()
-            self.last_activity = spawner.orm_spawner.last_activity = datetime.utcnow()
+            self.last_activity = spawner.orm_spawner.last_activity = utcnow(
+                with_tz=False
+            )
             # remove server entry from db
             spawner.server = None
             if not spawner.will_resume:

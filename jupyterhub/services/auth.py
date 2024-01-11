@@ -686,6 +686,33 @@ class HubAuth(SingletonConfigurable):
         """Check whether the user has required scope(s)"""
         return check_scopes(required_scopes, set(user["scopes"]))
 
+    def _persist_url_token_if_set(self, handler):
+        """Persist ?token=... from URL in cookie if set
+
+        for use in future cookie-authenticated requests.
+
+        Allows initiating an authenticated session
+        via /user/name/?token=abc...,
+        otherwise only the initial request will be authenticated.
+
+        No-op if no token URL parameter is given.
+        """
+        url_token = handler.get_argument('token', '')
+        if not url_token:
+            # no token to persist
+            return
+        # only do this if the token in the URL is the source of authentication
+        if not getattr(handler, '_token_authenticated', False):
+            return
+        if not hasattr(self, 'set_cookie'):
+            # only HubOAuth can persist cookies
+            return
+        self.log.info(
+            "Storing token from url in cookie for %s",
+            handler.request.remote_ip,
+        )
+        self.set_cookie(handler, url_token)
+
 
 class HubOAuth(HubAuth):
     """HubAuth using OAuth for login instead of cookies set by the Hub.
@@ -1057,19 +1084,30 @@ class HubAuthenticated:
     def hub_auth(self, auth):
         self._hub_auth = auth
 
+    _hub_login_url = None
+
     def get_login_url(self):
         """Return the Hub's login URL"""
-        login_url = self.hub_auth.login_url
-        if isinstance(self.hub_auth, HubOAuth):
-            # add state argument to OAuth url
-            state = self.hub_auth.set_state_cookie(self, next_url=self.request.uri)
-            login_url = url_concat(login_url, {'state': state})
+        if self._hub_login_url is not None:
+            # cached value, don't call this more than once per handler
+            return self._hub_login_url
         # temporary override at setting level,
         # to allow any subclass overrides of get_login_url to preserve their effect
         # for example, APIHandler raises 403 to prevent redirects
-        with mock.patch.dict(self.application.settings, {"login_url": login_url}):
-            app_log.debug("Redirecting to login url: %s", login_url)
-            return super().get_login_url()
+        with mock.patch.dict(
+            self.application.settings, {"login_url": self.hub_auth.login_url}
+        ):
+            login_url = super().get_login_url()
+        app_log.debug("Redirecting to login url: %s", login_url)
+
+        if isinstance(self.hub_auth, HubOAuth):
+            # add state argument to OAuth url
+            # must do this _after_ allowing get_login_url to raise
+            # so we don't set unused cookies
+            state = self.hub_auth.set_state_cookie(self, next_url=self.request.uri)
+            login_url = url_concat(login_url, {'state': state})
+        self._hub_login_url = login_url
+        return login_url
 
     def check_hub_user(self, model):
         """Check whether Hub-authenticated user or service should be allowed.
@@ -1180,18 +1218,7 @@ class HubAuthenticated:
             self._hub_auth_user_cache = None
             raise
 
-        # store ?token=... tokens passed via url in a cookie for future requests
-        url_token = self.get_argument('token', '')
-        if (
-            user_model
-            and url_token
-            and getattr(self, '_token_authenticated', False)
-            and hasattr(self.hub_auth, 'set_cookie')
-        ):
-            # authenticated via `?token=`
-            # set a cookie for future requests
-            # hub_auth.set_cookie is only available on HubOAuth
-            self.hub_auth.set_cookie(self, url_token)
+        self.hub_auth._persist_url_token_if_set(self)
         return self._hub_auth_user_cache
 
 
@@ -1244,6 +1271,7 @@ class HubOAuthCallbackHandler(HubOAuthenticated, RequestHandler):
         )
         if user_model is None:
             raise HTTPError(500, "oauth callback failed to identify a user")
-        app_log.info("Logged-in user %s", user_model)
+        app_log.info("Logged-in user %s", user_model['name'])
+        app_log.debug("User model %s", user_model)
         self.hub_auth.set_cookie(self, token)
         self.redirect(next_url or self.hub_auth.base_url)

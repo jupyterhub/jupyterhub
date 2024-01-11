@@ -36,6 +36,8 @@ Source = "https://github.com/jupyterhub/jupyterhub"
 Tracker = "https://github.com/jupyterhub/jupyterhub/issues"
 
 [project.optional-dependencies]
+# note: updating test dependencies here
+# may require matching updates in ci/oldest-dependencies/
 test = [
   "beautifulsoup4[html5lib]",
   "coverage",
@@ -49,8 +51,10 @@ test = [
   # the test test_nbclassic_control_panel.
   "nbclassic",
   "pytest>=3.3",
-  "pytest-asyncio>=0.17",
+  # FIXME: unpin pytest-asyncio
+  "pytest-asyncio>=0.17,<0.23",
   "pytest-cov",
+  "pytest-rerunfailures",
   "requests-mock",
   "playwright",
   "virtualenv",
@@ -88,6 +92,12 @@ include = ["jupyterhub*"]
 [tool.setuptools.dynamic]
 readme = { file = "README.md", content-type = "text/markdown" }
 dependencies = { file = "requirements.txt" }
+
+# setuptools_scm needs a section to be present
+[tool.setuptools_scm]
+# we don't actually use setuptools_scm for versions,
+# only the file-finder
+fallback_version = "0.0.0"
 
 # declarative data-files doesn't quite work right
 # this is still in setup.py:get_data_files

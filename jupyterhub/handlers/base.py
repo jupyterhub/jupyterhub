@@ -10,7 +10,7 @@ import re
 import time
 import uuid
 import warnings
-from datetime import datetime, timedelta
+from datetime import timedelta
 from http.client import responses
 from urllib.parse import parse_qs, parse_qsl, urlencode, urlparse, urlunparse
 
@@ -47,6 +47,7 @@ from ..utils import (
     maybe_future,
     url_escape_path,
     url_path_join,
+    utcnow,
 )
 
 # pattern for the authentication token header
@@ -297,7 +298,7 @@ class BaseHandler(RequestHandler):
             recorded (bool): True if activity was recorded, False if not.
         """
         if timestamp is None:
-            timestamp = datetime.utcnow()
+            timestamp = utcnow(with_tz=False)
         resolution = self.settings.get("activity_resolution", 0)
         if not obj.last_activity or resolution == 0:
             self.log.debug("Recording first activity for %s", obj)
@@ -385,7 +386,7 @@ class BaseHandler(RequestHandler):
         orm_token = self.get_token()
         if orm_token is None:
             return None
-        now = datetime.utcnow()
+        now = utcnow(with_tz=False)
         recorded = self._record_activity(orm_token, now)
         if orm_token.user:
             # FIXME: scopes should give us better control than this
@@ -522,13 +523,18 @@ class BaseHandler(RequestHandler):
 
     def clear_login_cookie(self, name=None):
         kwargs = {}
-        if self.subdomain_host:
-            kwargs['domain'] = self.domain
         user = self.get_current_user_cookie()
         session_id = self.get_session_cookie()
         if session_id:
             # clear session id
-            self.clear_cookie(SESSION_COOKIE_NAME, path=self.base_url, **kwargs)
+            session_cookie_kwargs = {}
+            session_cookie_kwargs.update(kwargs)
+            if self.subdomain_host:
+                session_cookie_kwargs['domain'] = self.domain
+
+            self.clear_cookie(
+                SESSION_COOKIE_NAME, path=self.base_url, **session_cookie_kwargs
+            )
 
             if user:
                 # user is logged in, clear any tokens associated with the current session
@@ -583,9 +589,6 @@ class BaseHandler(RequestHandler):
             if self.request.protocol == 'https':
                 kwargs['secure'] = True
 
-        if self.subdomain_host:
-            kwargs['domain'] = self.domain
-
         kwargs.update(self.settings.get('cookie_options', {}))
         kwargs.update(overrides)
 
@@ -619,8 +622,18 @@ class BaseHandler(RequestHandler):
         so other services on this domain can read it.
         """
         session_id = uuid.uuid4().hex
+        # if using subdomains, set session cookie on the domain,
+        # which allows it to be shared by subdomains.
+        # if domain is unspecified, it is _more_ restricted to only the setting domain
+        kwargs = {}
+        if self.subdomain_host:
+            kwargs['domain'] = self.domain
         self._set_cookie(
-            SESSION_COOKIE_NAME, session_id, encrypted=False, path=self.base_url
+            SESSION_COOKIE_NAME,
+            session_id,
+            encrypted=False,
+            path=self.base_url,
+            **kwargs,
         )
         return session_id
 
@@ -824,7 +837,16 @@ class BaseHandler(RequestHandler):
 
         # apply authenticator-managed groups
         if self.authenticator.manage_groups:
-            group_names = authenticated.get("groups")
+            if "groups" not in authenticated:
+                # to use manage_groups, group membership must always be specified
+                # Authenticators that don't support this feature will omit it,
+                # which should fail here rather than silently not implement the requested behavior
+                auth_cls = self.authenticator.__class__.__name__
+                raise ValueError(
+                    f"Authenticator.manage_groups is enabled, but auth_model for {username} specifies no groups."
+                    f" Does {auth_cls} support manage_groups=True?"
+                )
+            group_names = authenticated["groups"]
             if group_names is not None:
                 user.sync_groups(group_names)
 
@@ -1328,11 +1350,21 @@ class BaseHandler(RequestHandler):
         accessible_services = []
         if user is None:
             return accessible_services
-        for service in self.services.values():
+
+        for service_name, service in self.services.items():
             if not service.url:
                 continue
             if not service.display:
                 continue
+
+            # only display links to services users have access to
+            service_scopes = {
+                "access:services",
+                f"access:services!service={service.name}",
+            }
+            if not service_scopes.intersection(self.expanded_scopes):
+                continue
+
             accessible_services.append(service)
         return accessible_services
 
