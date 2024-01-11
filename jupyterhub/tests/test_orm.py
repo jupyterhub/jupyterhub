@@ -3,7 +3,7 @@
 # Distributed under the terms of the Modified BSD License.
 import os
 import socket
-from datetime import datetime, timedelta
+from datetime import timedelta
 from unittest import mock
 
 import pytest
@@ -11,6 +11,7 @@ import pytest
 from .. import crypto, objects, orm, roles
 from ..emptyclass import EmptyClass
 from ..user import User
+from ..utils import utcnow
 from .mocking import MockSpawner
 
 
@@ -121,7 +122,7 @@ def test_token_expiry(db):
     user = orm.User(name='parker')
     db.add(user)
     db.commit()
-    now = datetime.utcnow()
+    now = utcnow(with_tz=False)
     token = user.new_api_token(expires_in=60)
     orm_token = orm.APIToken.find(db, token=token)
     assert orm_token
@@ -506,7 +507,7 @@ def test_expiring_api_token(app, user):
     assert found is orm_token
 
     with mock.patch.object(
-        orm.APIToken, 'now', lambda: datetime.utcnow() + timedelta(seconds=60)
+        orm.APIToken, 'now', lambda: utcnow(with_tz=False) + timedelta(seconds=60)
     ):
         found = orm.APIToken.find(db, token)
         assert found is None

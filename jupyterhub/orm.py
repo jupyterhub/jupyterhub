@@ -4,7 +4,8 @@
 import enum
 import json
 from base64 import decodebytes, encodebytes
-from datetime import datetime, timedelta
+from datetime import timedelta
+from functools import partial
 
 import alembic.command
 import alembic.config
@@ -40,10 +41,10 @@ from sqlalchemy.pool import StaticPool
 from sqlalchemy.types import LargeBinary, Text, TypeDecorator
 from tornado.log import app_log
 
-from .utils import compare_token, hash_token, new_token, random_port
+from .utils import compare_token, hash_token, new_token, random_port, utcnow
 
 # top-level variable for easier mocking in tests
-utcnow = datetime.utcnow
+utcnow = partial(utcnow, with_tz=False)
 
 
 class JSONDict(TypeDecorator):
@@ -278,7 +279,7 @@ class User(Base):
         return {s.name: s for s in self._orm_spawners}
 
     admin = Column(Boolean(create_constraint=False), default=False)
-    created = Column(DateTime, default=datetime.utcnow)
+    created = Column(DateTime, default=utcnow)
     last_activity = Column(DateTime, nullable=True)
 
     api_tokens = relationship(
@@ -665,8 +666,8 @@ class APIToken(Hashed, Base):
     session_id = Column(Unicode(255), nullable=True)
 
     # token metadata for bookkeeping
-    now = datetime.utcnow  # for expiry
-    created = Column(DateTime, default=datetime.utcnow)
+    now = utcnow  # for expiry
+    created = Column(DateTime, default=utcnow)
     expires_at = Column(DateTime, default=None, nullable=True)
     last_activity = Column(DateTime)
     note = Column(Unicode(1023))
@@ -855,7 +856,7 @@ class OAuthCode(Expiring, Base):
 
     @staticmethod
     def now():
-        return datetime.utcnow().timestamp()
+        return utcnow(with_tz=True).timestamp()
 
     @classmethod
     def find(cls, db, code):

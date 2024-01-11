@@ -654,9 +654,18 @@ async def iterate_until(deadline_future, generator):
                 continue
 
 
-def utcnow():
-    """Return timezone-aware utcnow"""
-    return datetime.now(timezone.utc)
+def utcnow(*, with_tz=True):
+    """Return utcnow
+
+    with_tz (default): returns tz-aware datetime in UTC
+
+    if with_tz=False, returns UTC timestamp without tzinfo
+    (used for most internal timestamp storage because databases often don't preserve tz info)
+    """
+    now = datetime.now(timezone.utc)
+    if not with_tz:
+        now = now.replace(tzinfo=None)
+    return now
 
 
 def _parse_accept_header(accept):
