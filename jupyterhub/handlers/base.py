@@ -10,7 +10,7 @@ import re
 import time
 import uuid
 import warnings
-from datetime import datetime, timedelta
+from datetime import timedelta
 from http.client import responses
 from urllib.parse import parse_qs, parse_qsl, urlencode, urlparse, urlunparse
 
@@ -47,6 +47,7 @@ from ..utils import (
     maybe_future,
     url_escape_path,
     url_path_join,
+    utcnow,
 )
 
 # pattern for the authentication token header
@@ -293,7 +294,7 @@ class BaseHandler(RequestHandler):
             recorded (bool): True if activity was recorded, False if not.
         """
         if timestamp is None:
-            timestamp = datetime.utcnow()
+            timestamp = utcnow(with_tz=False)
         resolution = self.settings.get("activity_resolution", 0)
         if not obj.last_activity or resolution == 0:
             self.log.debug("Recording first activity for %s", obj)
@@ -381,7 +382,7 @@ class BaseHandler(RequestHandler):
         orm_token = self.get_token()
         if orm_token is None:
             return None
-        now = datetime.utcnow()
+        now = utcnow(with_tz=False)
         recorded = self._record_activity(orm_token, now)
         if orm_token.user:
             # FIXME: scopes should give us better control than this

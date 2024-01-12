@@ -4,7 +4,7 @@
 import asyncio
 import inspect
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta, timezone
 
 from async_generator import aclosing
 from dateutil.parser import parse as parse_date
@@ -23,6 +23,7 @@ from ..utils import (
     maybe_future,
     url_escape_path,
     url_path_join,
+    utcnow,
 )
 from .base import APIHandler
 
@@ -367,7 +368,7 @@ class UserTokenListAPIHandler(APIHandler):
         if not user:
             raise web.HTTPError(404, "No such user: %s" % user_name)
 
-        now = datetime.utcnow()
+        now = utcnow(with_tz=False)
         api_tokens = []
 
         def sort_key(token):
@@ -843,7 +844,7 @@ def _parse_timestamp(timestamp):
         # strip timezone info to naive UTC datetime
         dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
 
-    now = datetime.utcnow()
+    now = utcnow(with_tz=False)
     if (dt - now) > timedelta(minutes=59):
         raise web.HTTPError(
             400,

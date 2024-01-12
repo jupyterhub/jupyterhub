@@ -14,7 +14,7 @@ from tornado.httputil import url_concat
 from .. import __version__, orm
 from ..metrics import SERVER_POLL_DURATION_SECONDS, ServerPollStatus
 from ..scopes import describe_raw_scopes, needs_scope
-from ..utils import maybe_future, url_escape_path, url_path_join
+from ..utils import maybe_future, url_escape_path, url_path_join, utcnow
 from .base import BaseHandler
 
 
@@ -484,7 +484,7 @@ class TokenPageHandler(BaseHandler):
         def sort_key(token):
             return (token.last_activity or never, token.created or never)
 
-        now = datetime.utcnow()
+        now = utcnow(with_tz=False)
 
         # group oauth client tokens by client id
         all_tokens = defaultdict(list)
