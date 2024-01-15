@@ -316,11 +316,11 @@ The process environment is returned by `Spawner.get_env`, which specifies the fo
 - `JUPYTERHUB_OAUTH_CLIENT_ALLOWED_SCOPES` - the scopes the service is allowed to request.
   If no scopes are requested explicitly, these scopes will be requested.
 - `JUPYTERHUB_PUBLIC_URL` - the public URL of the server,
-  e.g. `https://jupyterhub.horse/user/name/`.
+  e.g. `https://jupyterhub.example.org/user/name/`.
   Empty if no public URL is specified (default).
   Will be available if subdomains are configured.
 - `JUPYTERHUB_PUBLIC_HUB_URL` - the public URL of JupyterHub as a whole,
-  e.g. `https://jupyterhub.horse/`.
+  e.g. `https://jupyterhub.example.org/`.
   Empty if no public URL is specified (default).
   Will be available if subdomains are configured.
 

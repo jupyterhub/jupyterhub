@@ -710,7 +710,8 @@ class JupyterHub(Application):
 
         Should include the full, public URL of JupyterHub,
         including the public-facing base_url prefix
-        (i.e. it should include a trailing slash).
+        (i.e. it should include a trailing slash), e.g.
+        https://jupyterhub.example.org/prefix/
         """,
     )
 
