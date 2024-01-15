@@ -555,7 +555,7 @@ class User:
     @property
     def host(self):
         """Get the *host* for my server (proto://domain[:port])"""
-        # if subodmains are used, use our domain
+        # if subdomains are used, use our domain
 
         if self.settings.get('subdomain_host'):
             parsed = urlparse(self.settings['subdomain_host'])
