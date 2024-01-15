@@ -182,6 +182,7 @@ html_context = {
 linkcheck_ignore = [
     r"(.*)github\.com(.*)#",  # javascript based anchors
     r"(.*)/#%21(.*)/(.*)",  # /#!forum/jupyter - encoded anchor edge case
+    r"https?://(.*\.)?example\.(org|com)(/.*)?",  # example links
     r"https://github.com/[^/]*$",  # too many github usernames / searches in changelog
     "https://github.com/jupyterhub/jupyterhub/pull/",  # too many PRs in changelog
     "https://github.com/jupyterhub/jupyterhub/compare/",  # too many comparisons in changelog
