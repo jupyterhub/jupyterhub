@@ -6,6 +6,15 @@ c.JupyterHub.services = [
         'environment': {'FLASK_APP': 'whoami-flask.py'},
     },
 ]
+c.JupyterHub.load_roles = [
+    {
+        'name': 'user',
+        'scopes': [
+            'access:services!service=whoami',
+            'self'
+        ]
+    }
+]
 
 # dummy auth and simple spawner for testing
 # any username and password will work
