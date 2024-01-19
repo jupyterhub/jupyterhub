@@ -885,10 +885,9 @@ class Spawner(LoggingConfigurable):
 
         Example::
 
-            from subprocess import check_call
             def my_hook(spawner):
                 username = spawner.user.name
-                check_call(['./examples/bootstrap-script/bootstrap.sh', username])
+                spawner.environment["GREETING"] = f"Hello {username}"
 
             c.Spawner.pre_spawn_hook = my_hook
 
