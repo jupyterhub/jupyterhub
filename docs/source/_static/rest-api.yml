@@ -572,9 +572,11 @@ paths:
               properties:
                 expires_in:
                   type: number
+                  example: 3600
                   description:
                     lifetime (in seconds) after which the requested token
                     will expire.
+                    Omit or specify null for no expiration.
                 note:
                   type: string
                   description: A note attached to the token for future bookkeeping
