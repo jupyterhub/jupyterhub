@@ -132,7 +132,7 @@ async def test_open_url_login(
         ("user", "password"),
     ],
 )
-async def test_login_with_invalid_credantials(app, browser, username, pass_w):
+async def test_login_with_invalid_credentials(app, browser, username, pass_w):
     login_url = url_path_join(public_host(app), app.hub.base_url, "login")
     await browser.goto(login_url)
     await login(browser, username, pass_w)
@@ -310,7 +310,7 @@ async def open_home_page(app, browser, user):
 
 
 async def test_start_button_server_not_started(app, browser, user):
-    """verify that when server is not started one button is availeble,
+    """verify that when server is not started one button is available,
     after starting 2 buttons are available"""
     await open_home_page(app, browser, user)
     # checking that only one button is presented
@@ -346,7 +346,7 @@ async def test_start_button_server_not_started(app, browser, user):
 
 
 async def test_stop_button(app, browser, user):
-    """verify that the stop button after stoping a server is not shown
+    """verify that the stop button after stopping a server is not shown
     the start button is displayed with new name"""
 
     await open_home_page(app, browser, user)
