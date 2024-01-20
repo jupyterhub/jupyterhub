@@ -37,11 +37,12 @@ async def test_open_login_page(app, browser):
     await expect(form.locator('//h1')).to_have_text("Sign in")
 
 
-async def test_submit_login_form(app, browser, user):
+async def test_submit_login_form(app, browser, user_special_chars):
+    user = user_special_chars.user
     login_url = url_path_join(public_host(app), app.hub.base_url, "login")
     await browser.goto(login_url)
     await login(browser, user.name, password=user.name)
-    expected_url = ujoin(public_url(app), f"/user/{user.name}/")
+    expected_url = ujoin(public_url(app), f"/user/{user_special_chars.urlname}/")
     await expect(browser).to_have_url(expected_url)
 
 
@@ -90,8 +91,9 @@ async def test_open_url_login(
     params,
     redirected_url,
     form_action,
-    user,
+    user_special_chars,
 ):
+    user = user_special_chars.user
     login_url = url_path_join(public_host(app), app.hub.base_url, url)
     await browser.goto(login_url)
     url_new = url_path_join(public_host(app), app.hub.base_url, url_concat(url, params))
@@ -120,7 +122,9 @@ async def test_open_url_login(
         await expect(browser).to_have_url(re.compile(pattern))
         await expect(browser).not_to_have_url(re.compile(".*/user/.*"))
     else:
-        await expect(browser).to_have_url(re.compile(".*/user/" + f"{user.name}/"))
+        await expect(browser).to_have_url(
+            re.compile(".*/user/" + f"{user_special_chars.urlname}/")
+        )
 
 
 @pytest.mark.parametrize(
@@ -194,7 +198,8 @@ async def test_login_otp(request, app, browser, username, request_otp):
 # SPAWNING
 
 
-async def open_spawn_pending(app, browser, user):
+async def open_spawn_pending(app, browser, user_special_chars):
+    user = user_special_chars.user
     url = url_path_join(
         public_host(app),
         url_concat(
@@ -205,18 +210,21 @@ async def open_spawn_pending(app, browser, user):
     await browser.goto(url)
     await login(browser, user.name, password=user.name)
     url_spawn = url_path_join(
-        public_host(app), app.hub.base_url, '/spawn-pending/' + user.name
+        public_host(app),
+        app.hub.base_url,
+        '/spawn-pending/' + user_special_chars.urlname,
     )
     await browser.goto(url_spawn)
     await expect(browser).to_have_url(url_spawn)
 
 
 async def test_spawn_pending_server_not_started(
-    app, browser, no_patience, user, slow_spawn
+    app, browser, no_patience, user_special_chars, slow_spawn
 ):
+    user = user_special_chars.user
     # first request, no spawn is pending
     # spawn-pending shows button linking to spawn
-    await open_spawn_pending(app, browser, user)
+    await open_spawn_pending(app, browser, user_special_chars)
     # on the page verify the button and expected information
     expected_heading = "Server not running"
     heading = browser.locator('//div[@class="text-center"]').get_by_role("heading")
@@ -228,16 +236,20 @@ async def test_spawn_pending_server_not_started(
     await expect(launch_btn).to_have_id("start")
     await expect(launch_btn).to_be_enabled()
     await expect(launch_btn).to_have_count(1)
-    f_string = re.escape(f"/hub/spawn/{user.name}")
+    f_string = re.escape(f"/hub/spawn/{user_special_chars.urlname}")
     await expect(launch_btn).to_have_attribute('href', re.compile('.*' + f_string))
 
 
-async def test_spawn_pending_progress(app, browser, no_patience, user, slow_spawn):
+async def test_spawn_pending_progress(
+    app, browser, no_patience, user_special_chars, slow_spawn
+):
     """verify that the server process messages are showing up to the user
     when the server is going to start up"""
 
+    user = user_special_chars.user
+    urlname = user_special_chars.urlname
     # visit the spawn-pending page
-    await open_spawn_pending(app, browser, user)
+    await open_spawn_pending(app, browser, user_special_chars)
     launch_btn = browser.locator("//div[@class='text-center']").get_by_role(
         "button", name="Launch Server"
     )
@@ -245,18 +257,18 @@ async def test_spawn_pending_progress(app, browser, no_patience, user, slow_spaw
 
     # begin starting the server
     async with browser.expect_navigation(
-        url=re.compile(".*/spawn-pending/" + f"{user.name}")
+        url=re.compile(".*/spawn-pending/" + f"{urlname}")
     ):
         await launch_btn.click()
     # wait for progress message to appear
     progress = browser.locator("#progress-message")
     progress_message = await progress.inner_text()
-    async with browser.expect_navigation(url=re.compile(".*/user/" + f"{user.name}/")):
+    async with browser.expect_navigation(url=re.compile(".*/user/" + f"{urlname}/")):
         # wait for log messages to appear
         expected_messages = [
             "Server requested",
             "Spawning server...",
-            f"Server ready at {app.base_url}user/{user.name}/",
+            f"Server ready at {app.base_url}user/{urlname}/",
         ]
         while not user.spawner.ready:
             logs_list = [
@@ -270,15 +282,16 @@ async def test_spawn_pending_progress(app, browser, no_patience, user, slow_spaw
             if logs_list:
                 assert progress_message
             assert logs_list == expected_messages[: len(logs_list)]
-    await expect(browser).to_have_url(re.compile(".*/user/" + f"{user.name}/"))
+    await expect(browser).to_have_url(re.compile(".*/user/" + f"{urlname}/"))
     assert user.spawner.ready
 
 
-async def test_spawn_pending_server_ready(app, browser, user):
+async def test_spawn_pending_server_ready(app, browser, user_special_chars):
     """verify that after a successful launch server via the spawn-pending page
     the user should see two buttons on the home page"""
 
-    await open_spawn_pending(app, browser, user)
+    user = user_special_chars.user
+    await open_spawn_pending(app, browser, user_special_chars)
     launch_btn = browser.get_by_role("button", name="Launch Server")
     await launch_btn.click()
     await browser.wait_for_selector("button", state="detached")
@@ -309,9 +322,11 @@ async def open_home_page(app, browser, user):
     await expect(browser).to_have_url(re.compile(".*/hub/home"))
 
 
-async def test_start_button_server_not_started(app, browser, user):
+async def test_start_button_server_not_started(app, browser, user_special_chars):
     """verify that when server is not started one button is available,
     after starting 2 buttons are available"""
+    user = user_special_chars.user
+    urlname = user_special_chars.urlname
     await open_home_page(app, browser, user)
     # checking that only one button is presented
     start_stop_btns = browser.locator('//div[@class="text-center"]').get_by_role(
@@ -321,9 +336,9 @@ async def test_start_button_server_not_started(app, browser, user):
     await expect(start_stop_btns).to_be_enabled()
     await expect(start_stop_btns).to_have_count(1)
     await expect(start_stop_btns).to_have_text(expected_btn_name)
-    f_string = re.escape(f"/hub/spawn/{user.name}")
+    f_string = re.escape(f"/hub/spawn/{urlname}")
     await expect(start_stop_btns).to_have_attribute('href', re.compile('.*' + f_string))
-    async with browser.expect_navigation(url=re.compile(".*/user/" + f"{user.name}/")):
+    async with browser.expect_navigation(url=re.compile(".*/user/" + f"{urlname}/")):
         # Start server via clicking on the Start button
         await start_stop_btns.click()
     # return to Home page
@@ -337,7 +352,7 @@ async def test_start_button_server_not_started(app, browser, user):
         await expect(start_stop_btn).to_be_enabled()
         for start_stop_btn in await start_stop_btns.all()
     ]
-    f_string = re.escape(f"/user/{user.name}")
+    f_string = re.escape(f"/user/{urlname}")
     await expect(start_stop_btns.nth(1)).to_have_attribute(
         'href', re.compile('.*' + f_string)
     )
@@ -345,16 +360,19 @@ async def test_start_button_server_not_started(app, browser, user):
     await expect(start_stop_btns.nth(1)).to_have_id("start")
 
 
-async def test_stop_button(app, browser, user):
+async def test_stop_button(app, browser, user_special_chars):
     """verify that the stop button after stopping a server is not shown
     the start button is displayed with new name"""
 
+    user = user_special_chars.user
     await open_home_page(app, browser, user)
     # checking that only one button is presented
     start_stop_btns = browser.locator('//div[@class="text-center"]').get_by_role(
         "button"
     )
-    async with browser.expect_navigation(url=re.compile(".*/user/" + f"{user.name}/")):
+    async with browser.expect_navigation(
+        url=re.compile(".*/user/" + re.escape(user_special_chars.urlname) + "/")
+    ):
         # Start server via clicking on the Start button
         await start_stop_btns.click()
     assert user.spawner.ready
@@ -384,10 +402,10 @@ async def open_token_page(app, browser, user):
     await expect(browser).to_have_url(re.compile(".*/hub/token"))
 
 
-async def test_token_request_form_and_panel(app, browser, user):
+async def test_token_request_form_and_panel(app, browser, user_special_chars):
     """verify elements of the request token form"""
 
-    await open_token_page(app, browser, user)
+    await open_token_page(app, browser, user_special_chars.user)
     request_btn = browser.locator('//div[@class="text-center"]').get_by_role("button")
     expected_btn_name = 'Request new API token'
     # check if the request token button is enabled
@@ -458,14 +476,18 @@ async def test_token_request_form_and_panel(app, browser, user):
         ("server_up", False),
     ],
 )
-async def test_request_token_expiration(app, browser, token_opt, note, user):
+async def test_request_token_expiration(
+    app, browser, token_opt, note, user_special_chars
+):
     """verify request token with the different options"""
 
+    user = user_special_chars.user
+    urlname = user_special_chars.urlname
     if token_opt == "server_up":
         # open the home page
         await open_home_page(app, browser, user)
         # start server via clicking on the Start button
-        async with browser.expect_navigation(url=f"**/user/{user.name}/"):
+        async with browser.expect_navigation(url=f"**/user/{urlname}/"):
             await browser.locator("#start").click()
         token_page = url_path_join(public_host(app), app.base_url, '/hub/token')
         await browser.goto(token_page)
@@ -496,7 +518,7 @@ async def test_request_token_expiration(app, browser, token_opt, note, user):
     orm_token = user.api_tokens[-1]
 
     if token_opt == "server_up":
-        expected_note = "Server at " + ujoin(app.base_url, f"/user/{user.name}/")
+        expected_note = "Server at " + ujoin(app.base_url, f"/user/{urlname}/")
     elif note:
         expected_note = note
     else:
@@ -567,9 +589,12 @@ async def test_request_token_expiration(app, browser, token_opt, note, user):
         ("admin:users", "Not assigning requested scopes"),
     ],
 )
-async def test_request_token_permissions(app, browser, permissions_str, granted, user):
+async def test_request_token_permissions(
+    app, browser, permissions_str, granted, user_special_chars
+):
     """verify request token with the different options"""
 
+    user = user_special_chars.user
     # open the token page
     await open_token_page(app, browser, user)
     scopes_input = browser.get_by_label("Permissions")
@@ -620,14 +645,17 @@ async def test_request_token_permissions(app, browser, permissions_str, granted,
         ("both"),
     ],
 )
-async def test_revoke_token(app, browser, token_type, user):
+async def test_revoke_token(app, browser, token_type, user_special_chars):
     """verify API Tokens table content in case the server is started"""
 
+    user = user_special_chars.user
     # open the home page
     await open_home_page(app, browser, user)
     if token_type == "server_up" or token_type == "both":
         # Start server via clicking on the Start button
-        async with browser.expect_navigation(url=f"**/user/{user.name}/"):
+        async with browser.expect_navigation(
+            url=f"**/user/{user_special_chars.urlname}/"
+        ):
             await browser.locator("#start").click()
     # open the token page
     next_url = url_path_join(public_host(app), app.base_url, '/hub/token')
@@ -686,7 +714,8 @@ async def test_revoke_token(app, browser, token_type, user):
         ("", False),
     ],
 )
-async def test_menu_bar(app, browser, page, logged_in, user):
+async def test_menu_bar(app, browser, page, logged_in, user_special_chars):
+    user = user_special_chars.user
     url = url_path_join(
         public_host(app),
         url_concat(
@@ -728,7 +757,9 @@ async def test_menu_bar(app, browser, page, logged_in, user):
                 expected_url = f"hub/login?next={url_escape(app.base_url)}"
                 assert expected_url in browser.url
             else:
-                await expect(browser).to_have_url(re.compile(f".*/user/{user.name}/"))
+                await expect(browser).to_have_url(
+                    re.compile(f".*/user/{user_special_chars.urlname}/")
+                )
                 await browser.go_back()
                 await expect(browser).to_have_url(re.compile(".*" + page))
         elif index == 3:
@@ -746,13 +777,14 @@ async def test_menu_bar(app, browser, page, logged_in, user):
     "url",
     [("/hub/home"), ("/hub/token"), ("/hub/spawn")],
 )
-async def test_user_logout(app, browser, url, user):
+async def test_user_logout(app, browser, url, user_special_chars):
+    user = user_special_chars.user
     if "/hub/home" in url:
         await open_home_page(app, browser, user)
     elif "/hub/token" in url:
         await open_home_page(app, browser, user)
     elif "/hub/spawn" in url:
-        await open_spawn_pending(app, browser, user)
+        await open_spawn_pending(app, browser, user_special_chars)
     logout_btn = browser.get_by_role("button", name="Logout")
     await expect(logout_btn).to_be_enabled()
     await logout_btn.click()
@@ -766,7 +798,9 @@ async def test_user_logout(app, browser, url, user):
 
     # verify that user can login after logout
     await login(browser, user.name, password=user.name)
-    await expect(browser).to_have_url(re.compile(".*/user/" + f"{user.name}/"))
+    await expect(browser).to_have_url(
+        re.compile(".*/user/" + f"{user_special_chars.urlname}/")
+    )
 
 
 # OAUTH confirmation page
