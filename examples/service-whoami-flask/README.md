@@ -27,7 +27,7 @@ After logging in with your local-system credentials, you should see a JSON dump 
 }
 ```
 
-This relies on the Hub starting the whoami service, via config (see [jupyterhub_config.py](./jupyterhub_config.py)).  For ordinary users to access this service, they need to be given the appropriate scope (again, see [jupyterhub_config.py](./jupyterhub_config.py)).
+This relies on the Hub starting the whoami service, via config (see [jupyterhub_config.py](./jupyterhub_config.py)). For ordinary users to access this service, they need to be given the appropriate scope (again, see [jupyterhub_config.py](./jupyterhub_config.py)).
 
 A similar service could be run externally, by setting the JupyterHub service environment variables:
 
