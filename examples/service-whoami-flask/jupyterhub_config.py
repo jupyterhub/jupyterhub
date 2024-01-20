@@ -7,13 +7,7 @@ c.JupyterHub.services = [
     },
 ]
 c.JupyterHub.load_roles = [
-    {
-        'name': 'user',
-        'scopes': [
-            'access:services!service=whoami',
-            'self'
-        ]
-    }
+    {'name': 'user', 'scopes': ['access:services!service=whoami', 'self']}
 ]
 
 # dummy auth and simple spawner for testing
