@@ -17,9 +17,21 @@ c.JupyterHub.load_roles = [
     {
         "name": "user",
         "scopes": ["self", "shares!user"],
-    }
+    },
 ]
+
+# below are two ways to grant sharing permission to a single-user server.
+# there's no reason to use both
+
 
 # OAuth token should have sharing permissions,
 # so JupyterLab javascript can manage shares
 c.Spawner.oauth_client_allowed_scopes = ["access:servers!server", "shares!server"]
+
+# grant $JUPYTERHUB_API_TOKEN sharing permissions
+# so that _python_ code can manage shares
+c.Spawner.server_token_scopes = [
+    "shares!server",  # manage shares
+    "servers!server",  # start/stop itself
+    "users:activity!server",  # report activity
+]
