@@ -120,6 +120,43 @@ def populate_shares(app, user, group, share_user):
     }
 
 
+def expand_scopes(scope_str, user, group=None, share_with=None):
+    """utility to expand scopes used in parametrized tests
+
+    Turns "read:users!user=USER,shares!group=SHARE_WITH"
+    into
+        [
+            "read:users!user=username",
+            "shares!group=groupname",
+        ]
+    """
+    scopes = []
+    replacements = {}
+
+    def _get_name(str_or_obj):
+        """Allow a string name or an object with a name attribute
+
+        string names are used for tests where something doesn't exist
+        """
+        if isinstance(str_or_obj, str):
+            return str_or_obj
+        else:
+            return str_or_obj.name
+
+    username = _get_name(user)
+    replacements["USER"] = username
+    replacements["SERVER"] = username + "/"
+    if group:
+        replacements["GROUP"] = _get_name(group)
+    if share_with:
+        replacements["SHARE_WITH"] = _get_name(share_with)
+    for scope in scope_str.split(","):
+        for a, b in replacements.items():
+            scope = scope.replace(a, b)
+        scopes.append(scope)
+    return scopes
+
+
 @pytest.mark.parametrize("share_with", ["user", "group"])
 def test_create_share(app, user, share_user, group, share_with):
     db = app.db
@@ -477,14 +514,6 @@ async def test_shares_api_create(
     with_group,
     status,
 ):
-    def _expand_scopes(scope_str):
-        return [
-            s.replace("USER", user.name)
-            .replace("SERVER", user.name + "/")
-            .replace("SHARE_WITH", share_with.name)
-            for s in scope_str.split(",")
-        ]
-
     # make sure default spawner exists
     spawner = user.spawner  # noqa
     body = {}
@@ -494,6 +523,7 @@ async def test_shares_api_create(
     if with_group:
         body["group"] = group.name if with_group == True else with_group
         share_with = group
+    _expand_scopes = partial(expand_scopes, user=user, share_with=share_with)
 
     expected_scopes = _expand_scopes("access:servers!server=SERVER")
     if share_scopes:
@@ -570,14 +600,7 @@ async def test_shares_api_revoke(
     if with_group:
         body["group"] = group.name if with_group == True else with_group
         share_with = group
-
-    def _expand_scopes(scope_str):
-        return [
-            s.replace("USER", user.name)
-            .replace("SERVER", user.name + "/")
-            .replace("SHARE_WITH", share_with.name)
-            for s in scope_str.split(",")
-        ]
+    _expand_scopes = partial(expand_scopes, user=user, share_with=share_with)
 
     if revoke_scopes:
         revoke_scopes = _expand_scopes(revoke_scopes)
@@ -637,12 +660,7 @@ async def test_shares_api_revoke_all(
     spawner = user.spawner.orm_spawner  # noqa
     orm.Share.grant(db, spawner, share_user)
     orm.Share.grant(db, spawner, group)
-
-    def _expand_scopes(scope_str):
-        return [
-            s.replace("USER", user.name).replace("SERVER", user.name + "/")
-            for s in scope_str.split(",")
-        ]
+    _expand_scopes = partial(expand_scopes, user=user)
 
     if have_scopes is None:
         # default: needed permissions
@@ -750,13 +768,7 @@ async def test_single_shared_api(
     else:
         share_with = group
 
-    def _expand_scopes(scope_str):
-        return [
-            s.replace("USER", user.name)
-            .replace("SERVER", user.name + "/")
-            .replace("SHARE_WITH", share_with.name)
-            for s in scope_str.split(",")
-        ]
+    _expand_scopes = partial(expand_scopes, user=user, share_with=share_with)
 
     requester = create_user_with_scopes(*_expand_scopes(have_scopes))
 
@@ -825,13 +837,7 @@ async def test_single_shared_api_no_such_owner(
 
     owner_name = "nosuchname"
 
-    def _expand_scopes(scope_str):
-        return [
-            s.replace("USER", owner_name)
-            .replace("SERVER", owner_name + "/")
-            .replace("SHARE_WITH", share_with.name)
-            for s in scope_str.split(",")
-        ]
+    _expand_scopes = partial(expand_scopes, user=owner_name, share_with=share_with)
 
     requester = create_user_with_scopes(*_expand_scopes(have_scopes))
 
@@ -861,16 +867,6 @@ async def test_single_shared_api_no_such_target(
     spawner = user.spawner.orm_spawner  # noqa
     share_with = "nosuch" + kind
 
-    owner_name = user.name
-
-    def _expand_scopes(scope_str):
-        return [
-            s.replace("USER", owner_name)
-            .replace("SERVER", owner_name + "/")
-            .replace("SHARE_WITH", share_with)
-            for s in scope_str.split(",")
-        ]
-
     requester = create_user_with_scopes(f"{kind}:shares")
 
     api_url = f"/{kind}/{share_with}/shared/{user.name}/"
@@ -899,14 +895,7 @@ async def test_shares_api_list_server(
     db = app.db
     spawner = user.spawner.orm_spawner
 
-    def _expand_scopes(scope_str):
-        return [
-            s.replace("USER", user.name)
-            .replace("SERVER", user.name + "/")
-            .replace("SERVER", user.name + "/")
-            .replace("SHARE_WITH", share_user.name)
-            for s in scope_str.split(",")
-        ]
+    _expand_scopes = partial(expand_scopes, user=user, share_with=share_user)
 
     requester = create_user_with_scopes(*_expand_scopes(have_scopes))
 
@@ -965,14 +954,7 @@ async def test_shares_api_list_user(
     db = app.db
     spawner = user.spawner.orm_spawner
 
-    def _expand_scopes(scope_str):
-        return [
-            s.replace("USER", user.name)
-            .replace("SERVER", user.name + "/")
-            .replace("SERVER", user.name + "/")
-            .replace("SHARE_WITH", share_user.name)
-            for s in scope_str.split(",")
-        ]
+    _expand_scopes = partial(expand_scopes, user=user, share_with=share_user)
 
     requester = create_user_with_scopes(*_expand_scopes(have_scopes))
 
@@ -1115,14 +1097,7 @@ async def test_share_codes_api_list(
     db = app.db
     spawner = user.spawner.orm_spawner
 
-    def _expand_scopes(scope_str):
-        return [
-            s.replace("USER", user.name)
-            .replace("SERVER", user.name + "/")
-            .replace("SHARE_WITH", share_user.name)
-            for s in scope_str.split(",")
-        ]
-
+    _expand_scopes = partial(expand_scopes, user=user, share_with=share_user)
     requester = create_user_with_scopes(*_expand_scopes(have_scopes))
 
     expected_shares = []
@@ -1196,18 +1171,11 @@ async def test_share_codes_api_create(
     share_scopes,
     status,
 ):
-    def _expand_scopes(scope_str):
-        return [
-            s.replace("USER", user.name)
-            .replace("SERVER", user.name + "/")
-            .replace("SHARE_WITH", share_with.name)
-            for s in scope_str.split(",")
-        ]
-
     # make sure default spawner exists
     spawner = user.spawner  # noqa
     body = {}
     share_with = share_user
+    _expand_scopes = partial(expand_scopes, user=user, share_with=share_with)
 
     expected_scopes = _expand_scopes("access:servers!server=SERVER")
     if share_scopes:
@@ -1347,14 +1315,7 @@ async def test_share_codes_api_revoke(
     db = app.db
     spawner = user.spawner.orm_spawner
 
-    def _expand_scopes(scope_str):
-        return [
-            s.replace("USER", user.name)
-            .replace("SERVER", user.name + "/")
-            .replace("SHARE_WITH", share_user.name)
-            for s in scope_str.split(",")
-        ]
-
+    _expand_scopes = partial(expand_scopes, user=user, share_with=share_user)
     # make sure default spawner exists
     spawner = user.spawner.orm_spawner
     share_code, code = orm.ShareCode.new(
