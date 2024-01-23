@@ -1,3 +1,5 @@
+c = get_config()  # noqa
+
 c.JupyterHub.services = [
     {
         'name': 'whoami',

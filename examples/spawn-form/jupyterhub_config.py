@@ -6,6 +6,7 @@ import shlex
 
 from jupyterhub.spawner import LocalProcessSpawner
 
+c = get_config()  # noqa
 
 class DemoFormSpawner(LocalProcessSpawner):
     def _options_form_default(self):

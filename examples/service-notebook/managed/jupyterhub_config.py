@@ -1,3 +1,5 @@
+c = get_config()  # noqa
+
 # our user list
 c.Authenticator.allowed_users = ['minrk', 'ellisonbg', 'willingc']
 

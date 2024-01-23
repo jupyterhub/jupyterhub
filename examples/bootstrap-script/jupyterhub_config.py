@@ -27,9 +27,9 @@ def clean_dir_hook(spawner):
     if os.path.exists(temp_path) and os.path.isdir(temp_path):
         shutil.rmtree(temp_path)
 
+c = get_config()  # noqa
 
 # attach the hook functions to the spawner
-# pylint: disable=undefined-variable
 c.Spawner.pre_spawn_hook = create_dir_hook
 c.Spawner.post_stop_hook = clean_dir_hook
 

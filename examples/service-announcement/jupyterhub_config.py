@@ -1,6 +1,6 @@
 import sys
 
-c = get_config()
+c = get_config()  # noqa
 
 # To run the announcement service managed by the hub, add this.
 
