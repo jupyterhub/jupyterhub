@@ -3,7 +3,7 @@
 # Sharing access to your server
 
 In JupyterHub 5.0, users can grant each other limited access to their servers without intervention by Hub administrators.
-There is not (yet!) UI for granting shared access, so this tutorial goes through the steps of using the JupyterHub API to grant access to servers.
+There is not (yet!) any UI for granting shared access, so this tutorial goes through the steps of using the JupyterHub API to grant access to servers.
 
 For more background on how sharing works in JupyterHub, see the [sharing reference documentation](sharing-reference).
 

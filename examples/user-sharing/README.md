@@ -13,7 +13,7 @@ c.JupyterHub.load_roles = [
 ]
 ```
 
-And to make it more convenient, grant this permission tot he default token used,
+And to make it more convenient, grant this permission to the default token used,
 so sharing actions can be taken from JupyterLab javascript:
 
 ```python

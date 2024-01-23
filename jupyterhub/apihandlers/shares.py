@@ -62,7 +62,7 @@ class ShareGrantRequest(BaseShareRequest):
 
 
 class ShareRevokeRequest(ShareGrantRequest):
-    """Validator for `revoke` field of requests to revoke shares"""
+    """Validator for requests to revoke sharing permission"""
 
     # currently identical to ShareGrantRequest
 
@@ -200,10 +200,10 @@ class UserShareListAPIHandler(_ShareAPIHandler):
 
     @needs_scope("read:users:shares")
     def get(self, user_name):
-        query = self._init_share_query()
         user = self.find_user(user_name)
         if user is None:
             raise web.HTTPError(404, f"No such user: {user_name}")
+        query = self._init_share_query()
         filter = orm.Share.user == user
         if user.groups:
             filter = or_(
@@ -386,7 +386,7 @@ class ServerShareAPIHandler(_ShareAPIHandler):
 
     @needs_scope('shares')
     async def patch(self, user_name, server_name=None):
-        """PATCH revokes single shares for a given server"""
+        """PATCH revokes permissions from single shares for a given server"""
 
         if server_name is None:
             # only GET supported `/shares/{user}` without specified server
@@ -529,7 +529,7 @@ class ServerShareCodeAPIHandler(_ShareAPIHandler):
         share_id = self.get_argument("id", None)
         spawner = self._lookup_spawner(user_name, server_name)
         if code:
-            # delete one code by code
+            # delete one code, identified by the code itself
             share_code = orm.ShareCode.find(self.db, code, spawner=spawner)
             if share_code is None:
                 raise web.HTTPError(404, "No matching code found")

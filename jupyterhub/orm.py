@@ -959,6 +959,7 @@ class ShareCode(_Share, Hashed, Base):
     ):
         """Create a new ShareCode"""
         app_log.info(f"Creating share code for {spawner.user.name}/{spawner.name}")
+        # verify scopes have the necessary filter
         kwargs["scopes"] = sorted(cls.apply_filter(scopes, spawner))
         if not expires_in:
             expires_in = cls.default_expires_in
@@ -971,8 +972,6 @@ class ShareCode(_Share, Hashed, Base):
         share_code = cls(**kwargs)
         # setting Hashed.token property sets the `hashed` column in the db
         share_code.token = code
-        # verify scopes
-        share_code.scopes = sorted(scopes)
         # actually put it in the db
         db.add(share_code)
         db.commit()

@@ -178,7 +178,7 @@ GET /api/groups/:groupname/shared
 
 ```
 
-This is a paginated endpoint.
+These are paginated endpoints.
 
 ### Access permission for a single user on a single server
 

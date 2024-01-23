@@ -454,7 +454,7 @@ paths:
 
   /users/{name}/shared:
     get:
-      summary: List shared access for user
+      summary: List servers shared with user
       description:
         Returns list of Shares granting the user access to servers owned
         by others (new in 5.0)
@@ -550,7 +550,7 @@ paths:
       description: |
         Creates a new token owned by the user.
         Permissions can be limited by specifying a list of `scopes` in the JSON request body
-        (starting in JupyerHub 3.0; previously, permissions could be specified as `roles` could be specified,
+        (starting in JupyerHub 3.0; previously, permissions could be specified as `roles`,
         which is deprecated in 3.0).
       parameters:
         - $ref: "#/components/parameters/userName"
@@ -606,7 +606,7 @@ paths:
   /users/{name}/tokens/{token_id}:
     get:
       summary: Get one token
-      description: Get the model for a token by id
+      description: Get the details for one token by id
       parameters:
         - $ref: "#/components/parameters/userName"
         - name: token_id
@@ -762,7 +762,7 @@ paths:
         204:
           description: |
             Permission has been revoked,
-            the user no longer has access to the server.
+            the group members no longer have access to the server.
           content: {}
       security:
         - oauth2:
@@ -972,7 +972,11 @@ paths:
     patch:
       summary: Revoke shared access
       description: |
-        Revoke shared access to a single server for a single user or group
+        Revoke shared access to a single server for a single user or group.
+        If scopes are specified, only the specified scopes are revoked,
+        allowing the target user or group to retain partial access.
+        Revocation is idempotent - revoking a scope not held does not result in an error.
+        The resulting Share model is returned if any scopes remain.
         (new in 5.0)
       parameters:
         - $ref: "#/components/parameters/sharedServerOwner"
@@ -1017,6 +1021,21 @@ paths:
             - shares
             - read:users:name
             - read:groups:name
+    delete:
+      summary: Revoke all shared access
+      description: |
+        Revoke all shared access to a given server
+        (new in 5.0)
+      parameters:
+        - $ref: "#/components/parameters/sharedServerOwner"
+        - $ref: "#/components/parameters/sharedServerName"
+      responses:
+        204:
+          description: |
+            All shares for teh server have been deleted
+      security:
+        - oauth2:
+            - shares
 
   /share-codes/{owner}:
     get:

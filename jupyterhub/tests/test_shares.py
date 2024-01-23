@@ -1021,7 +1021,6 @@ async def test_share_flow_full(
     await user.spawn("")
     await app.proxy.add_user(user)
     spawner = user.spawner
-    # access_scope = scopes.access_scopes(spawner.orm_spawner.oauth_client)
 
     # grant access
     share_url = f"shares/{user.name}/{spawner.name}"

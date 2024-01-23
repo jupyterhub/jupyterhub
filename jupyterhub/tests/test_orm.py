@@ -500,8 +500,6 @@ def test_group_delete_cascade(db):
 def test_share_user(db):
     user1 = orm.User(name='user1')
     user2 = orm.User(name='user2')
-    group1 = orm.Group(name='group1')
-    group2 = orm.Group(name='group2')
     spawner = orm.Spawner(user=user1)
     db.add(user1)
     db.add(user2)

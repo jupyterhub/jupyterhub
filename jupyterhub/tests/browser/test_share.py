@@ -22,7 +22,6 @@ async def test_share_code_flow_full(app, browser, full_spawn, create_user_with_s
     await user.spawn("")
     await app.proxy.add_user(user)
     spawner = user.spawner
-    # access_scope = scopes.access_scopes(spawner.orm_spawner.oauth_client)
 
     # issue_code
     share_url = f"share-codes/{user.name}/{spawner.name}"
