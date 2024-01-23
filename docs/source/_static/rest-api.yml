@@ -576,7 +576,7 @@ paths:
                   description:
                     lifetime (in seconds) after which the requested token
                     will expire.
-                    Omit or specify null for no expiration.
+                    Omit, or specify null or 0 for no expiration.
                 note:
                   type: string
                   description: A note attached to the token for future bookkeeping
