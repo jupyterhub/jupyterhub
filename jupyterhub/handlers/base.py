@@ -1251,7 +1251,7 @@ class BaseHandler(RequestHandler):
                         'servername': server_name,
                     },
                 )
-            except:
+            except Exception:
                 PROXY_DELETE_DURATION_SECONDS.labels(
                     status=ProxyDeleteStatus.failure
                 ).observe(time.perf_counter() - tic)
@@ -1425,7 +1425,7 @@ class BaseHandler(RequestHandler):
             self.log.debug("No template for %d", status_code)
             try:
                 html = self.render_template('error.html', sync=True, **ns)
-            except:
+            except Exception:
                 # In this case, any side effect must be avoided.
                 ns['no_spawner_check'] = True
                 html = self.render_template('error.html', sync=True, **ns)
