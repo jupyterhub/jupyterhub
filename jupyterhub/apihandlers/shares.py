@@ -61,19 +61,10 @@ class ShareGrantRequest(BaseShareRequest):
         return self
 
 
-class ShareRevokeRequest(BaseShareRequest):
+class ShareRevokeRequest(ShareGrantRequest):
     """Validator for `revoke` field of requests to revoke shares"""
 
-    user: Optional[str] = None
-    group: Optional[str] = None
-
-    @model_validator(mode='after')
-    def user_group_exclusive(self):
-        if self.user and self.group:
-            raise ValueError("Expected exactly one of `user` or `group`, not both.")
-        if self.user is None and self.group is None:
-            raise ValueError("Specify exactly one of `user` or `group`")
-        return self
+    # currently identical to ShareGrantRequest
 
 
 class ShareCodeGrantRequest(BaseShareRequest):
