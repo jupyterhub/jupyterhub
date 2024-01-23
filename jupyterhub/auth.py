@@ -820,13 +820,8 @@ def _deprecated_method(old_name, new_name, version):
     def deprecated(self, *args, **kwargs):
         warnings.warn(
             (
-                "{cls}.{old_name} is deprecated in JupyterHub {version}."
-                " Please use {cls}.{new_name} instead."
-            ).format(
-                cls=self.__class__.__name__,
-                old_name=old_name,
-                new_name=new_name,
-                version=version,
+                f"{self.__class__.__name__}.{old_name} is deprecated in JupyterHub {version}."
+                f" Please use {self.__class__.__name__}.{new_name} instead."
             ),
             DeprecationWarning,
             stacklevel=2,
@@ -961,11 +956,9 @@ class LocalAuthenticator(Authenticator):
                 await maybe_future(self.add_system_user(user))
             else:
                 raise KeyError(
-                    "User {} does not exist on the system."
+                    f"User {user.name} does not exist on the system."
                     " Set LocalAuthenticator.create_system_users=True"
-                    " to automatically create system users from jupyterhub users.".format(
-                        user.name
-                    )
+                    " to automatically create system users from jupyterhub users."
                 )
 
         await maybe_future(super().add_user(user))

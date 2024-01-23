@@ -1194,7 +1194,7 @@ async def test_progress(request, app, no_patience, slow_spawn):
     assert evt == {
         'progress': 100,
         'message': f'Server ready at {url}',
-        'html_message': 'Server ready at <a href="{0}">{0}</a>'.format(url),
+        'html_message': f'Server ready at <a href="{url}">{url}</a>',
         'url': url,
         'ready': True,
     }
@@ -1307,7 +1307,7 @@ async def test_progress_ready_hook_async_func_exception(request, app):
     db = app.db
     name = 'saga'
     app_user = add_user(db, app=app, name=name)
-    html_message = 'Server ready at <a href="{0}">{0}</a>'.format(app_user.url)
+    html_message = f'Server ready at <a href="{app_user.url}">{app_user.url}</a>'
     spawner = app_user.spawner
 
     async def custom_progress_ready_hook(spawner, ready_event):

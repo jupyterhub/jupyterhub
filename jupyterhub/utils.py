@@ -253,9 +253,7 @@ async def wait_for_server(ip, port, timeout=10):
     tic = time.perf_counter()
     await exponential_backoff(
         lambda: can_connect(ip, port),
-        "Server at {ip}:{port} didn't respond in {timeout} seconds".format(
-            ip=ip, port=port, timeout=timeout
-        ),
+        f"Server at {ip}:{port} didn't respond in {timeout} seconds",
         timeout=timeout,
     )
     toc = time.perf_counter()
@@ -301,9 +299,7 @@ async def wait_for_http_server(url, timeout=10, ssl_context=None):
 
     re = await exponential_backoff(
         is_reachable,
-        "Server at {url} didn't respond in {timeout} seconds".format(
-            url=url, timeout=timeout
-        ),
+        f"Server at {url} didn't respond in {timeout} seconds",
         timeout=timeout,
     )
     toc = time.perf_counter()
@@ -507,14 +503,12 @@ def print_ps_info(file=sys.stderr):
     threadlen = len('threads')
 
     print(
-        "%s %s %s %s"
-        % ('%CPU'.ljust(cpulen), 'MEM'.ljust(memlen), 'FDs'.ljust(fdlen), 'threads'),
+        "{} {} {} {}".format('%CPU'.ljust(cpulen), 'MEM'.ljust(memlen), 'FDs'.ljust(fdlen), 'threads'),
         file=file,
     )
 
     print(
-        "%s %s %s %s"
-        % (
+        "{} {} {} {}".format(
             cpu_s.ljust(cpulen),
             mem_s.ljust(memlen),
             fd_s.ljust(fdlen),
@@ -788,7 +782,7 @@ _dns_safe = set(string.ascii_letters + string.digits + '-.')
 _dns_needs_replace = _dns_safe | {"%"}
 
 
-@lru_cache()
+@lru_cache
 def _dns_quote(name):
     """Escape a name for use in a dns label
 

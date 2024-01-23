@@ -29,11 +29,10 @@ def upgrade():
     # fill created date with current time
     now = utcnow()
     c.execute(
-        """
+        f"""
         UPDATE users
-        SET created='%s'
+        SET created='{now}'
         """
-        % (now,)
     )
 
     tables = sa.inspect(c.engine).get_table_names()
@@ -42,12 +41,11 @@ def upgrade():
         op.add_column('spawners', sa.Column('started', sa.DateTime, nullable=True))
         # fill started value with now for running servers
         c.execute(
-            """
+            f"""
             UPDATE spawners
-            SET started='%s'
+            SET started='{now}'
             WHERE server_id IS NOT NULL
             """
-            % (now,)
         )
 
 

@@ -85,9 +85,7 @@ async def test_default_server(app, named_servers):
                     'pending': None,
                     'ready': True,
                     'stopped': False,
-                    'progress_url': 'PREFIX/hub/api/users/{}/server/progress'.format(
-                        username
-                    ),
+                    'progress_url': f'PREFIX/hub/api/users/{username}/server/progress',
                     'state': {'pid': 0},
                     'user_options': {},
                 }

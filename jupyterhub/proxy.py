@@ -337,8 +337,7 @@ class Proxy(LoggingConfigurable):
 
         if spawner.pending and spawner.pending != 'spawn':
             raise RuntimeError(
-                "%s is pending %s, shouldn't be added to the proxy yet!"
-                % (spawner._log_name, spawner.pending)
+                f"{spawner._log_name} is pending {spawner.pending}, shouldn't be added to the proxy yet!"
             )
 
         await self.add_route(
@@ -941,9 +940,7 @@ class ConfigurableHTTPProxy(Proxy):
                 # errors.
                 if e.code >= 500:
                     self.log.warning(
-                        "api_request to the proxy failed with status code {}, retrying...".format(
-                            e.code
-                        )
+                        f"api_request to the proxy failed with status code {e.code}, retrying..."
                     )
                     return False  # a falsy return value make exponential_backoff retry
                 else:

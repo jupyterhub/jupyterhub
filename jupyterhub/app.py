@@ -24,8 +24,6 @@ from textwrap import dedent
 from typing import Optional
 from urllib.parse import unquote, urlparse, urlunparse
 
-if sys.version_info[:2] < (3, 3):
-    raise ValueError("Python < 3.3 not supported: %s" % sys.version)
 
 import tornado.httpserver
 import tornado.options
@@ -385,9 +383,7 @@ class JupyterHub(Application):
     def _validate_config_file(self, proposal):
         if not self.generate_config and not os.path.isfile(proposal.value):
             print(
-                "ERROR: Failed to find specified config file: {}".format(
-                    proposal.value
-                ),
+                f"ERROR: Failed to find specified config file: {proposal.value}",
                 file=sys.stderr,
             )
             sys.exit(1)
@@ -1581,7 +1577,7 @@ class JupyterHub(Application):
         if change.new:
             self.log.warning(
                 dedent(
-                    """
+                    f"""
                 extra_log_file is DEPRECATED in jupyterhub-0.8.2.
 
                 extra_log_file only redirects logs of the Hub itself,
@@ -1591,10 +1587,8 @@ class JupyterHub(Application):
                 It is STRONGLY recommended that you redirect process
                 output instead, e.g.
 
-                    jupyterhub &>> '{}'
-            """.format(
-                        change.new
-                    )
+                    jupyterhub &>> '{change.new}'
+            """
                 )
             )
 
@@ -1962,9 +1956,7 @@ class JupyterHub(Application):
         if urlinfo.password:
             # avoid logging the database password
             urlinfo = urlinfo._replace(
-                netloc='{}:[redacted]@{}:{}'.format(
-                    urlinfo.username, urlinfo.hostname, urlinfo.port
-                )
+                netloc=f'{urlinfo.username}:[redacted]@{urlinfo.hostname}:{urlinfo.port}'
             )
             db_log_url = urlinfo.geturl()
         else:
@@ -3496,9 +3488,7 @@ class JupyterHub(Application):
                 self.internal_ssl = True
             self.init_internal_ssl()
             self.log.info(
-                "Certificates written to directory `{}`".format(
-                    self.internal_certs_location
-                )
+                f"Certificates written to directory `{self.internal_certs_location}`"
             )
             loop.stop()
             return

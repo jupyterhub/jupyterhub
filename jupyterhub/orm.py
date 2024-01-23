@@ -730,7 +730,7 @@ class _Share:
         return cls._apply_filter(frozenset(scopes), spawner.user.name, spawner.name)
 
     @staticmethod
-    @lru_cache()
+    @lru_cache
     def _apply_filter(scopes, owner_name, server_name):
         """
         implementation of Share.apply_filter
@@ -1518,11 +1518,9 @@ def check_db_revision(engine):
         app_log.debug("database schema version found: %s", alembic_revision)
     else:
         raise DatabaseSchemaMismatch(
-            "Found database schema version {found} != {head}. "
+            f"Found database schema version {alembic_revision} != {head}. "
             "Backup your database and run `jupyterhub upgrade-db`"
-            " to upgrade to the latest schema.".format(
-                found=alembic_revision, head=head
-            )
+            " to upgrade to the latest schema."
         )
 
 

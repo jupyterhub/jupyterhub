@@ -40,7 +40,7 @@ class APIHandler(BaseHandler):
         return 'application/json'
 
     @property
-    @lru_cache()
+    @lru_cache
     def accepts_pagination(self):
         """Return whether the client accepts the pagination preview media type"""
         accept_header = self.request.headers.get("Accept", "")
@@ -460,8 +460,7 @@ class APIHandler(BaseHandler):
             if not isinstance(value, model_types[key]):
                 raise web.HTTPError(
                     400,
-                    "%s.%s must be %s, not: %r"
-                    % (name, key, model_types[key], type(value)),
+                    f"{name}.{key} must be {model_types[key]}, not: {type(value)!r}",
                 )
 
     def _check_user_model(self, model):

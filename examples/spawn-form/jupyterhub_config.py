@@ -11,7 +11,7 @@ c = get_config()  # noqa
 class DemoFormSpawner(LocalProcessSpawner):
     def _options_form_default(self):
         default_env = "YOURNAME=%s\n" % self.user.name
-        return """
+        return f"""
         <div class="form-group">
             <label for="args">Extra notebook CLI arguments</label>
             <input name="args" class="form-control"
@@ -19,11 +19,9 @@ class DemoFormSpawner(LocalProcessSpawner):
         </div>
         <div class="form-group">
             <label for="env">Environment variables (one per line)</label>
-            <textarea class="form-control" name="env">{env}</textarea>
+            <textarea class="form-control" name="env">{default_env}</textarea>
         </div>
-        """.format(
-            env=default_env
-        )
+        """
 
     def options_from_form(self, formdata):
         options = {}

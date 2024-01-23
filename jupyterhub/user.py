@@ -897,9 +897,7 @@ class User:
                 self.settings['statsd'].incr('spawner.failure.timeout')
             else:
                 self.log.exception(
-                    "Unhandled error starting {user}'s server: {error}".format(
-                        user=self.name, error=e
-                    )
+                    f"Unhandled error starting {self.name}'s server: {e}"
                 )
                 self.settings['statsd'].incr('spawner.failure.error')
                 e.reason = 'error'
@@ -907,9 +905,7 @@ class User:
                 await self.stop(spawner.name)
             except Exception:
                 self.log.exception(
-                    "Failed to cleanup {user}'s server that failed to start".format(
-                        user=self.name
-                    ),
+                    f"Failed to cleanup {self.name}'s server that failed to start",
                     exc_info=True,
                 )
             # raise original exception
@@ -967,9 +963,7 @@ class User:
                 await self.stop(spawner.name)
             except Exception:
                 self.log.exception(
-                    "Failed to cleanup {user}'s server that failed to start".format(
-                        user=self.name
-                    ),
+                    f"Failed to cleanup {self.name}'s server that failed to start",
                     exc_info=True,
                 )
             # raise original TimeoutError

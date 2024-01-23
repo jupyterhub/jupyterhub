@@ -782,7 +782,7 @@ class SpawnProgressAPIHandler(APIHandler):
                 'progress': 100,
                 'ready': True,
                 'message': f"Server ready at {url}",
-                'html_message': 'Server ready at <a href="{0}">{0}</a>'.format(url),
+                'html_message': f'Server ready at <a href="{url}">{url}</a>',
                 'url': url,
             }
             original_ready_event = ready_event.copy()
@@ -881,9 +881,7 @@ def _parse_timestamp(timestamp):
     if (dt - now) > timedelta(minutes=59):
         raise web.HTTPError(
             400,
-            "Rejecting activity from more than an hour in the future: {}".format(
-                isoformat(dt)
-            ),
+            f"Rejecting activity from more than an hour in the future: {isoformat(dt)}",
         )
     return dt
 
