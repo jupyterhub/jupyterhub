@@ -109,14 +109,20 @@ class OAuthHandler:
         redirect_uri = self.get_argument('redirect_uri')
         if not redirect_uri or not redirect_uri.startswith('/'):
             return uri
+
         # make absolute local redirects full URLs
         # to satisfy oauthlib's absolute URI requirement
-        redirect_uri = (
-            get_browser_protocol(self.request)
-            + "://"
-            + self.request.host
-            + redirect_uri
-        )
+
+        public_url = self.settings.get("public_url")
+        if public_url:
+            proto = public_url.scheme
+            host = public_url.netloc
+        else:
+            # guess from request
+            proto = get_browser_protocol(self.request)
+            host = self.request.host
+        redirect_uri = f"{proto}://{host}{redirect_uri}"
+
         parsed_url = urlparse(uri)
         query_list = parse_qsl(parsed_url.query, keep_blank_values=True)
         for idx, item in enumerate(query_list):

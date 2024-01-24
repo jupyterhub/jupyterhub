@@ -162,6 +162,8 @@ class Spawner(LoggingConfigurable):
     hub = Any()
     orm_spawner = Any()
     cookie_options = Dict()
+    public_url = Unicode(help="Public URL of this spawner's server")
+    public_hub_url = Unicode(help="Public URL of the Hub itself")
 
     db = Any()
 
@@ -1046,6 +1048,10 @@ class Spawner(LoggingConfigurable):
         proto = 'https' if self.internal_ssl else 'http'
         bind_url = f"{proto}://{self.ip}:{self.port}{base_url}"
         env["JUPYTERHUB_SERVICE_URL"] = bind_url
+
+        # the public URLs of this server and the Hub
+        env["JUPYTERHUB_PUBLIC_URL"] = self.public_url
+        env["JUPYTERHUB_PUBLIC_HUB_URL"] = self.public_hub_url
 
         # Put in limit and guarantee info if they exist.
         # Note that this is for use by the humans / notebook extensions in the
