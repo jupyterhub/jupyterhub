@@ -4,6 +4,7 @@
 # Distributed under the terms of the Modified BSD License.
 import enum
 import json
+import numbers
 from base64 import decodebytes, encodebytes
 from datetime import datetime, timedelta
 
@@ -761,7 +762,18 @@ class APIToken(Hashed, Base):
         else:
             assert service.id is not None
             orm_token.service = service
-        if expires_in is not None:
+        if expires_in:
+            if not isinstance(expires_in, numbers.Real):
+                raise TypeError(
+                    f"expires_in must be a positive integer or null, not {expires_in!r}"
+                )
+            expires_in = int(expires_in)
+            # tokens must always expire in the future
+            if expires_in < 1:
+                raise ValueError(
+                    f"expires_in must be a positive integer or null, not {expires_in!r}"
+                )
+
             orm_token.expires_at = cls.now() + timedelta(seconds=expires_in)
 
         db.commit()
