@@ -363,6 +363,7 @@ def test_singleuser_app_class(JUPYTERHUB_SINGLEUSER_APP):
 async def test_nbclassic_control_panel(app, user, full_spawn):
     # login, start the server
     await user.spawn()
+    await app.proxy.add_user(user)
     cookies = await app.login_user(user.name)
     next_url = url_path_join(user.url, "tree/")
     url = '/?' + urlencode({'next': next_url})
@@ -384,6 +385,7 @@ async def test_nbclassic_control_panel(app, user, full_spawn):
 )
 async def test_token_url_cookie(app, user, full_spawn):
     await user.spawn()
+    await app.proxy.add_user(user)
     token = user.new_api_token(scopes=["access:servers!user"])
     url = url_path_join(public_url(app, user), user.spawner.default_url or "/tree/")
 
@@ -397,4 +399,17 @@ async def test_token_url_cookie(app, user, full_spawn):
     r = await async_requests.get(url, cookies=r.cookies, allow_redirects=False)
     assert r.status_code == 200
 
+    await user.stop()
+
+
+async def test_api_403_no_cookie(app, user, full_spawn):
+    """unused oauth cookies don't get set for failed requests to API handlers"""
+    await user.spawn()
+    await app.proxy.add_user(user)
+    url = url_path_join(public_url(app, user), "/api/contents/")
+    r = await async_requests.get(url, allow_redirects=False)
+    # 403, not redirect
+    assert r.status_code == 403
+    # no state cookie set
+    assert not r.cookies
     await user.stop()

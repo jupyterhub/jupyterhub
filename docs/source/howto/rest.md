@@ -99,8 +99,45 @@ In JupyterHub 2.0,
 specific permissions are now defined as '**scopes**',
 and can be assigned both at the user/service level,
 and at the individual token level.
+The previous behavior is represented by the scope `inherit`,
+and is still the default behavior for requesting a token if limited permissions are not specified.
 
 This allows e.g. a user with full admin permissions to request a token with limited permissions.
+
+In JupyterHub 5.0, you can specify scopes for a token when requesting it via the `/hub/tokens` page as a space-separated list.
+In JupyterHub 3.0 and later, you can also request tokens with limited scopes via the JupyterHub API (provided you already have a token!):
+
+```python
+import json
+from urllib.parse import quote
+
+import requests
+
+def request_token(
+    username, *, api_token, scopes=None, expires_in=0, hub_url="http://127.0.0.1:8081"
+):
+    """Request a new token for a user"""
+    request_body = {}
+    if expires_in:
+        request_body["expires_in"] = expires_in
+    if scopes:
+        request_body["scopes"] = scopes
+    url = hub_url.rstrip("/") + f"/hub/api/users/{quote(username)}/tokens"
+    r = requests.post(
+        url,
+        data=json.dumps(request_body),
+        headers={"Authorization": f"token {api_token}"},
+    )
+    if r.status_code >= 400:
+        # extract error message for nicer error messages
+        r.reason = r.json().get("message", r.text)
+    r.raise_for_status()
+    # response is a dict and will include the token itself in the 'token' field,
+    # as well as other fields about the token
+    return r.json()
+
+request_token("myusername", scopes=["list:users"], api_token="abc123")
+```
 
 ## Updating to admin services
 

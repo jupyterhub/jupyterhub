@@ -12,17 +12,21 @@ branch_labels = None
 depends_on = None
 
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 import sqlalchemy as sa
 from alembic import op
+
+
+def utcnow():
+    return datetime.now(timezone.utc)._replace(tzinfo=None)
 
 
 def upgrade():
     op.add_column('users', sa.Column('created', sa.DateTime, nullable=True))
     c = op.get_bind()
     # fill created date with current time
-    now = datetime.utcnow()
+    now = utcnow()
     c.execute(
         """
         UPDATE users

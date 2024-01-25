@@ -51,8 +51,10 @@ test = [
   # the test test_nbclassic_control_panel.
   "nbclassic",
   "pytest>=3.3",
-  "pytest-asyncio>=0.17",
+  # FIXME: unpin pytest-asyncio
+  "pytest-asyncio>=0.17,<0.23",
   "pytest-cov",
+  "pytest-rerunfailures",
   "requests-mock",
   "playwright",
   "virtualenv",

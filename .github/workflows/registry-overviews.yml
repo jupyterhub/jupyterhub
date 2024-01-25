@@ -1,0 +1,54 @@
+name: Update Registry overviews
+
+env:
+  OWNER: ${{ github.repository_owner }}
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/registry-overviews.yml"
+
+      - "README.md"
+      - "onbuild/README.md"
+      - "demo-image/README.md"
+      - "singleuser/README.md"
+  workflow_dispatch:
+
+jobs:
+  update-overview:
+    runs-on: ubuntu-latest
+    name: update-overview (${{matrix.image}})
+    if: github.repository_owner == 'jupyterhub'
+
+    steps:
+      - name: Checkout Repo ⚡️
+        uses: actions/checkout@v4
+
+      - name: Push README to Registry 🐳
+        uses: christian-korneck/update-container-description-action@d36005551adeaba9698d8d67a296bd16fa91f8e8 # v1
+        env:
+          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKER_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
+        with:
+          destination_container_repo: ${{ env.OWNER }}/${{ matrix.image }}
+          provider: dockerhub
+          short_description: ${{ matrix.description }}
+          readme_file: ${{ matrix.readme_file }}
+
+    strategy:
+      matrix:
+        include:
+          - image: jupyterhub
+            description: "JupyterHub: multi-user Jupyter notebook server"
+            readme_file: README.md
+          - image: jupyterhub-onbuild
+            description: onbuild version of JupyterHub images
+            readme_file: onbuild/README.md
+          - image: jupyterhub-demo
+            description: Demo JupyterHub Docker image with a quick overview of what JupyterHub is and how it works
+            readme_file: demo-image/README.md
+          - image: singleuser
+            description: "single-user docker images for use with JupyterHub and DockerSpawner see also: jupyter/docker-stacks"
+            readme_file: singleuser/README.md

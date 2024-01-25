@@ -209,6 +209,12 @@ paths:
           required: true
           schema:
             type: string
+        - name: include_stopped_servers
+          in: query
+          description: Include stopped servers in user model(s).
+          schema:
+            type: boolean
+          allowEmptyValue: true
       responses:
         200:
           description: The User model
@@ -546,7 +552,11 @@ paths:
         - oauth2:
             - read:tokens
     post:
-      summary: Create a new token for the user
+      summary: |
+        Create a new token for the user.
+        Permissions can be limited by specifying a list of `scopes` in the JSON request body
+        (starting in JupyerHub 3.0; previously, permissions could be specified as `roles` could be specified,
+        which is deprecated in 3.0).
       parameters:
         - name: name
           in: path
@@ -562,9 +572,10 @@ paths:
               properties:
                 expires_in:
                   type: number
+                  example: 3600
                   description:
                     lifetime (in seconds) after which the requested token
-                    will expire.
+                    will expire. Omit, or specify null or 0 for no expiration.
                 note:
                   type: string
                   description: A note attached to the token for future bookkeeping

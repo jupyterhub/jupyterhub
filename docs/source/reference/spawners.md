@@ -315,6 +315,14 @@ The process environment is returned by `Spawner.get_env`, which specifies the fo
 - `JUPYTERHUB_OAUTH_ACCESS_SCOPES` - the scopes required to access the server (called `JUPYTERHUB_OAUTH_SCOPES` prior to 3.0)
 - `JUPYTERHUB_OAUTH_CLIENT_ALLOWED_SCOPES` - the scopes the service is allowed to request.
   If no scopes are requested explicitly, these scopes will be requested.
+- `JUPYTERHUB_PUBLIC_URL` - the public URL of the server,
+  e.g. `https://jupyterhub.example.org/user/name/`.
+  Empty if no public URL is specified (default).
+  Will be available if subdomains are configured.
+- `JUPYTERHUB_PUBLIC_HUB_URL` - the public URL of JupyterHub as a whole,
+  e.g. `https://jupyterhub.example.org/`.
+  Empty if no public URL is specified (default).
+  Will be available if subdomains are configured.
 
 Optional environment variables, depending on configuration:
 

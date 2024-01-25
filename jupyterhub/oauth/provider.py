@@ -424,6 +424,7 @@ class JupyterHubRequestValidator(RequestValidator):
         if orm_client is None:
             return False
         if not orm_client.secret:
+            app_log.warning("OAuth client %s present without secret", client_id)
             return False
         request.client = orm_client
         return True

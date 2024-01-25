@@ -96,6 +96,7 @@ from .utils import (
     subdomain_hook_idna,
     subdomain_hook_legacy,
     url_path_join,
+    utcnow,
 )
 
 common_aliases = {
@@ -697,6 +698,61 @@ class JupyterHub(Application):
         proto = 'https' if self.ssl_cert else 'http'
         return proto + '://:8000'
 
+    public_url = Unicode(
+        "",
+        config=True,
+        help="""Set the public URL of JupyterHub
+
+        This will skip any detection of URL and protocol from requests,
+        which isn't always correct when JupyterHub is behind
+        multiple layers of proxies, etc.
+        Usually the failure is detecting http when it's really https.
+
+        Should include the full, public URL of JupyterHub,
+        including the public-facing base_url prefix
+        (i.e. it should include a trailing slash), e.g.
+        https://jupyterhub.example.org/prefix/
+        """,
+    )
+
+    @default("public_url")
+    def _default_public_url(self):
+        if self.subdomain_host:
+            # if subdomain_host is specified, use it by default
+            return self.subdomain_host + self.base_url
+        else:
+            return ""
+
+    @validate("public_url")
+    def _validate_public_url(self, proposal):
+        url = proposal.value
+        if not url:
+            # explicitly empty (default)
+            return url
+        if not url.endswith("/"):
+            # ensure we have a trailing slash
+            # for consistency with base_url
+            url = url + "/"
+        if not url.endswith(self.base_url):
+            if not urlparse(url).path.strip("/"):
+                # no path specified, add base_url and warn
+                url = url.rstrip("/") + self.base_url
+                self.log.warning(
+                    f"Adding missing base_url {self.base_url!r} to JupyterHub.public_url = {url!r}"
+                )
+            else:
+                # path specified but it doesn't match, raise
+                raise ValueError(
+                    f"JupyterHub.public_url = {url!r} must include base_url: {self.base_url!r}"
+                )
+        if "://" not in url:
+            # https by default; should be specified
+            url = 'https://' + url
+            self.log.warning(
+                f"Adding missing protocol 'https://' to JupyterHub.public_url = {url!r}"
+            )
+        return url
+
     subdomain_host = Unicode(
         '',
         help="""Run single-user servers on subdomains of this host.
@@ -720,15 +776,18 @@ class JupyterHub(Application):
             # host should include '://'
             # if not specified, assume https: You have to be really explicit about HTTP!
             new = 'https://' + new
+            self.log.warning(
+                f"Adding missing protocol 'https://' to JupyterHub.subdomain_host = {new!r}"
+            )
         return new
 
     domain = Unicode(help="domain name, e.g. 'example.com' (excludes protocol, port)")
 
     @default('domain')
     def _domain_default(self):
-        if not self.subdomain_host:
+        if not (self.public_url or self.subdomain_host):
             return ''
-        return urlparse(self.subdomain_host).hostname
+        return urlparse(self.public_url or self.subdomain_host).hostname
 
     subdomain_hook = Union(
         [Callable(), Unicode()],
@@ -1665,6 +1724,8 @@ class JupyterHub(Application):
         config=True,
     )
 
+    metrics_collector = Any()
+
     def init_handlers(self):
         h = []
         # load handlers from the authenticator
@@ -1938,10 +1999,15 @@ class JupyterHub(Application):
 
     def init_hub(self):
         """Load the Hub URL config"""
+        if self.public_url:
+            # host = scheme://hostname:port (no path)
+            public_host = urlunparse(urlparse(self.public_url)._replace(path=""))
+        else:
+            public_host = self.subdomain_host
         hub_args = dict(
             base_url=self.hub_prefix,
             routespec=self.hub_routespec,
-            public_host=self.subdomain_host,
+            public_host=public_host,
             certfile=self.internal_ssl_cert,
             keyfile=self.internal_ssl_key,
             cafile=self.internal_ssl_ca,
@@ -2091,7 +2157,7 @@ class JupyterHub(Application):
                 # we don't want to allow user.created to be undefined,
                 # so initialize it to last_activity (if defined) or now.
                 if not user.created:
-                    user.created = user.last_activity or datetime.utcnow()
+                    user.created = user.last_activity or utcnow(with_tz=False)
         db.commit()
 
         # The allowed_users set and the users in the db are now the same.
@@ -2459,9 +2525,9 @@ class JupyterHub(Application):
         """
 
         name = orm_service.name
-        if self.domain:
+        if self.subdomain_host:
             parsed_host = urlparse(self.subdomain_host)
-            domain = self.subdomain_hook(name, self.domain, kind="service")
+            domain = self.subdomain_hook(name, parsed_host.hostname, kind="service")
             host = f"{parsed_host.scheme}://{domain}"
             if parsed_host.port:
                 host = f"{host}:{parsed_host.port}"
@@ -2523,9 +2589,9 @@ class JupyterHub(Application):
 
         name = spec['name']
 
-        if self.domain:
+        if self.subdomain_host:
             parsed_host = urlparse(self.subdomain_host)
-            domain = self.subdomain_hook(name, self.domain, kind="service")
+            domain = self.subdomain_hook(name, parsed_host.hostname, kind="service")
             host = f"{parsed_host.scheme}://{domain}"
             if parsed_host.port:
                 host = f"{host}:{parsed_host.port}"
@@ -2971,6 +3037,7 @@ class JupyterHub(Application):
             spawner_class=self.spawner_class,
             base_url=self.base_url,
             default_url=self.default_url,
+            public_url=urlparse(self.public_url) if self.public_url else "",
             cookie_secret=self.cookie_secret,
             cookie_max_age_days=self.cookie_max_age_days,
             redirect_to_server=self.redirect_to_server,
@@ -3180,8 +3247,10 @@ class JupyterHub(Application):
                 await self.proxy.check_routes(self.users, self._service_map)
 
             asyncio.ensure_future(finish_init_spawners())
-        metrics_updater = PeriodicMetricsCollector(parent=self, db=self.db)
-        metrics_updater.start()
+        metrics_collector = self.metrics_collector = PeriodicMetricsCollector(
+            parent=self, db=self.db
+        )
+        metrics_collector.start()
 
     async def cleanup(self):
         """Shutdown managed services and various subprocesses. Cleanup runtime files."""
@@ -3269,7 +3338,7 @@ class JupyterHub(Application):
         routes = await self.proxy.get_all_routes()
         users_count = 0
         active_users_count = 0
-        now = datetime.utcnow()
+        now = utcnow(with_tz=False)
         for prefix, route in routes.items():
             route_data = route['data']
             if 'user' not in route_data:
@@ -3617,6 +3686,8 @@ class JupyterHub(Application):
             return
         if self.http_server:
             self.http_server.stop()
+        if self.metrics_collector:
+            self.metrics_collector.stop()
         self.io_loop.add_callback(self.shutdown_cancel_tasks)
 
     async def start_show_config(self):

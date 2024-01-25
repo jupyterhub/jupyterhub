@@ -20,7 +20,7 @@
         <small id="note-note" class="form-text text-muted">
           This note will help you keep track of what your tokens are for.
         </small>
-        <br><br>
+        <br/>
         <label for="token-expiration-seconds">Token expires in</label>
         {% block expiration_options %}
         <select id="token-expiration-seconds"
@@ -34,6 +34,14 @@
         {% endblock expiration_options %}
         <small id="note-expires-at" class="form-text text-muted">
           You can configure when your token will expire.
+        </small>
+        <br/>
+        <label for="token-scopes">Permissions</label>
+        <input id="token-scopes" class="form-control" placeholder="list of scopes for the token to have, separated by space">
+        <small id="note-token-scopes" class="form-text text-muted">
+          You can limit the permissions of the token so it can only do what you want it to.
+          If none are specified, the token will have permission to do everything you can do.
+          See the <a href="https://jupyterhub.readthedocs.io/en/stable/rbac/scopes.html#available-scopes">JupyterHub documentation for a list of available scopes</a>.
         </small>
       </div>
     </form>
@@ -59,17 +67,18 @@
   </div>
 
   {% if api_tokens %}
-  <div class="row">
+  <div class="row" id="api-tokens-section">
     <h2>API Tokens</h2>
     <p>
       These are tokens with access to the JupyterHub API.
       Permissions for each token may be viewed via the JupyterHub tokens API.
       Revoking the API token for a running server will require restarting that server.
     </p>
-    <table class="table table-striped">
+    <table class="table table-striped" id="api-tokens-table">
       <thead>
         <tr>
           <th>Note</th>
+          <th>Permissions</th>
           <th>Last used</th>
           <th>Created</th>
           <th>Expires</th>
@@ -79,7 +88,15 @@
         {% for token in api_tokens %}
         <tr class="token-row" data-token-id="{{token.api_id}}">
           {% block token_row scoped %}
-          <td class="note-col col-sm-5">{{token.note}}</td>
+          <td class="note-col col-sm-4">{{token.note}}</td>
+          <td class="scope-col col-sm-1">
+            <details>
+              <summary>scopes</summary>
+                {% for scope in token.scopes %}
+                <pre class="token-scope">{{ scope }}</pre>
+                {% endfor %}
+            </details>
+          </td>
           <td class="time-col col-sm-3">
             {%- if token.last_activity -%}
             {{ token.last_activity.isoformat() + 'Z' }}
@@ -113,7 +130,7 @@
   {% endif %}
 
   {% if oauth_clients %}
-  <div class="row">
+  <div class="row" id="oauth-clients-section">
     <h2>Authorized Applications</h2>
     <p>
       These are applications that use OAuth with JupyterHub
@@ -122,10 +139,11 @@
       OAuth tokens can generally only be used to identify you,
       not take actions on your behalf.
     </p>
-    <table class="table table-striped">
+    <table class="table table-striped" id="oauth-tokens-table">
       <thead>
         <tr>
           <th>Application</th>
+          <th>Permissions</th>
           <th>Last used</th>
           <th>First authorized</th>
         </tr>
@@ -135,7 +153,18 @@
         <tr class="token-row"
           data-token-id="{{ client['token_id'] }}">
           {% block client_row scoped %}
-          <td class="note-col col-sm-5">{{ client['description'] }}</td>
+          <td class="note-col col-sm-4">{{ client['description'] }}</td>
+          <td class="scope-col col-sm-1">
+            <details>
+              <summary>scopes</summary>
+                {# create  set of scopes on all tokens -#}
+                {# sum concatenates all token.scopes into a single list -#}
+                {# then filter to unique set and sort -#}
+                {% for scope in client.tokens | sum(attribute="scopes", start=[]) | unique | sort %}
+                <pre class="token-scope">{{ scope }}</pre>
+                {% endfor %}
+            </details>
+          </td>
           <td class="time-col col-sm-3">
             {%- if client['last_activity'] -%}
             {{ client['last_activity'].isoformat() + 'Z' }}
