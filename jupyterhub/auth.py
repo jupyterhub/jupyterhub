@@ -453,7 +453,10 @@ class Authenticator(LoggingConfigurable):
     def check_allowed(self, username, authentication=None):
         """Check if a username is allowed to authenticate based on configuration
 
-        Return True if username is allowed, False otherwise.
+        Return True if username is allowed, False otherwise. Subclasses can also
+        raise a `web.HTTPError(403, message)` to immediately *deny* access and show
+        the end user the given message.
+
         No allowed_users set means any username is allowed.
 
         Names are normalized *before* being checked against the allowed set.
