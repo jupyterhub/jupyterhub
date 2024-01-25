@@ -15,14 +15,19 @@ After logging in with your local-system credentials, you should see a JSON dump 
 ```json
 {
   "admin": false,
-  "last_activity": "2016-05-27T14:05:18.016372",
+  "groups": [],
+  "kind": "user",
   "name": "queequeg",
-  "pending": null,
-  "server": "/user/queequeg"
+  "scopes": [
+    "access:services!service=whoami",
+    "read:users:groups!user=queequeg",
+    "read:users:name!user=queequeg"
+  ],
+  "session_id": "a32e59cdd7b445759c58c48e47394a38"
 }
 ```
 
-This relies on the Hub starting the whoami service, via config (see [jupyterhub_config.py](./jupyterhub_config.py)).
+This relies on the Hub starting the whoami service, via config (see [jupyterhub_config.py](./jupyterhub_config.py)). For ordinary users to access this service, they need to be given the appropriate scope (again, see [jupyterhub_config.py](./jupyterhub_config.py)).
 
 A similar service could be run externally, by setting the JupyterHub service environment variables:
 
