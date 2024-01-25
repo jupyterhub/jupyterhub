@@ -919,9 +919,9 @@ class HubOAuth(HubAuth):
         _ExpiringDict,
         allow_none=False,
         help="""
-        Store oauth state info, such as next_url
+        Store oauth state info for each oauth request, such as next_url
         
-        The oauth state only contains the oauth state _id_,
+        The oauth state field only contains the oauth state _id_ of each pending request,
         while other information such as the cookie name, next_url
         are stored in this dictionary.
         """,
