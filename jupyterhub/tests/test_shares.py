@@ -347,7 +347,6 @@ def test_share_code(app, user, share_user):
         spawner,
         scopes=code_scopes,
     )
-    print(repr(orm_code))
     assert sorted(orm_code.scopes) == code_scopes
     assert orm_code.owner is user
     assert orm_code.spawner is spawner
@@ -546,7 +545,6 @@ async def test_shares_api_create(
         data=json.dumps(body),
         name=requester.name,
     )
-    print(r.json())
     assert r.status_code == status
     if r.status_code < 300:
         share_model = r.json()
@@ -1036,7 +1034,6 @@ async def test_share_flow_full(
 
     # attempt to _use_ access
     user_url = public_url(app, user) + "api/contents/"
-    print(f"{user_url=}")
     token = share_user.new_api_token()
     r = await async_requests.get(user_url, headers={"Authorization": f"Bearer {token}"})
     r.raise_for_status()
@@ -1058,7 +1055,6 @@ async def test_share_flow_full(
     # new request with new token to avoid cache
     token = share_user.new_api_token()
     r = await async_requests.get(user_url, headers={"Authorization": f"Bearer {token}"})
-    print(r.json())
     assert r.status_code == 403
 
 
@@ -1197,7 +1193,6 @@ async def test_share_codes_api_create(
         data=json.dumps(body),
         name=requester.name,
     )
-    print(r.json())
     assert r.status_code == status
     if r.status_code >= 400:
         return
