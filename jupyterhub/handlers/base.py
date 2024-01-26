@@ -139,6 +139,10 @@ class BaseHandler(RequestHandler):
         return self.settings['domain']
 
     @property
+    def public_url(self):
+        return self.settings['public_url']
+
+    @property
     def db(self):
         return self.settings['db']
 
@@ -581,8 +585,13 @@ class BaseHandler(RequestHandler):
         # tornado <4.2 have a bug that consider secure==True as soon as
         # 'secure' kwarg is passed to set_secure_cookie
         kwargs = {'httponly': True}
-        if self.request.protocol == 'https':
-            kwargs['secure'] = True
+        public_url = self.settings.get("public_url")
+        if public_url:
+            if public_url.scheme == 'https':
+                kwargs['secure'] = True
+        else:
+            if self.request.protocol == 'https':
+                kwargs['secure'] = True
 
         kwargs.update(self.settings.get('cookie_options', {}))
         kwargs.update(overrides)
@@ -674,8 +683,15 @@ class BaseHandler(RequestHandler):
         next_url = self.get_argument('next', default='')
         # protect against some browsers' buggy handling of backslash as slash
         next_url = next_url.replace('\\', '%5C')
-        proto = get_browser_protocol(self.request)
-        host = self.request.host
+        public_url = self.settings.get("public_url")
+        if public_url:
+            proto = public_url.scheme
+            host = public_url.netloc
+        else:
+            # guess from request
+            proto = get_browser_protocol(self.request)
+            host = self.request.host
+
         if next_url.startswith("///"):
             # strip more than 2 leading // down to 2
             # because urlparse treats that as empty netloc,

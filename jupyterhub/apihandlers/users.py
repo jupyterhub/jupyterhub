@@ -472,7 +472,14 @@ class UserTokenListAPIHandler(APIHandler):
             user_kind = 'user' if isinstance(user, User) else 'service'
             self.log.info("%s %s requested new API token", user_kind.title(), user.name)
         # retrieve the model
-        token_model = self.token_model(orm.APIToken.find(self.db, api_token))
+        orm_token = orm.APIToken.find(self.db, api_token)
+        if orm_token is None:
+            self.log.error(
+                "Failed to find token after creating it: %r. Maybe it expired already?",
+                body,
+            )
+            raise web.HTTPError(500, "Failed to create token")
+        token_model = self.token_model(orm_token)
         token_model['token'] = api_token
         self.write(json.dumps(token_model))
         self.set_status(201)
