@@ -133,27 +133,21 @@ To view shares for a given server, you need the permission `read:shares` with th
 GET /api/shares/:username/:servername
 ```
 
-This is a paginated endpoint, so responses look like:
+This is a paginated endpoint, so responses has `items` as a list of Share models, and `_pagination` for information about retrieving all shares if there are many:
 
 ```python
 {
   "items": [
-      {
-      "server": {
-          "name": "servername",
-          "user": {
-            "name": "ownername"
-          },
-          "url": "/users/ownername/servername/",
-          "ready": False,
-      },
-      "scopes": ["access:servers!server=username/servername"],
-      "user": { # or null
-          "name": "username",
+    {
+      "server": {...},
+      "scopes": ["access:servers!server=sharer/"],
+      "user": {
+        "name": "shared-with",
       },
       "group": None, # or {"name": "groupname"},
-      "created_at": "2023-10-02T13:27Z",
-    }
+      ...
+    },
+    ...
   ],
   "_pagination": {
     "total": 5,
@@ -163,6 +157,8 @@ This is a paginated endpoint, so responses look like:
   },
 }
 ```
+
+see the [rest-api](rest-api) for full details of the response models.
 
 ### View servers shared with user or group
 
@@ -213,7 +209,9 @@ DELETE /api/groups/:groupname/shared/:ownername/:servername
 
 will revoke all permissions granted to the user or group for the specified server.
 
-## The Share model
+### The Share model
+
+<!-- refresh from examples/user-sharing/rest-api.ipynb -->
 
 A Share returned in the REST API has the following structure:
 
@@ -229,7 +227,7 @@ A Share returned in the REST API has the following structure:
 
     },
     "scopes": ["access:servers!server=username/servername"],
-    "user": { # or null
+    "user": { # or None
         "name": "username",
     },
     "group": None, # or {"name": "groupname"},
@@ -238,6 +236,8 @@ A Share returned in the REST API has the following structure:
 ```
 
 where exactly one of `user` and `group` is not null and the other is null.
+
+See the [rest-api](rest-api) for full details of the response models.
 
 ## Share via invitation code
 
@@ -282,17 +282,12 @@ The response contains the code itself:
   "code": "abc1234....",
   "accept_url": "/hub/accept-share?code=abc1234",
   "id": "sc_1234",
-  "exchange_count": 1,
-  "last_exchanged_at": "2023-12-31T23:59:59Z",
-  "scopes": ["access:servers!server=username/servername"],
-  "server": {
-    "name": "",
-    "user": {
-      "name": "username",
-    },
-  },
+  "scopes": [...],
+  ...
 }
 ```
+
+See the [rest-api](rest-api) for full details of the response models.
 
 ### Accepting sharing invitations
 
@@ -322,7 +317,7 @@ which produces a paginated list of share codes (_excluding_ the codes themselves
     {
       "id": "sc_1234",
       "exchange_count": 0,
-      "last_exchanged_at": null,
+      "last_exchanged_at": None,
       "scopes": ["access:servers!server=username/servername"],
       "server": {
         "name": "",
@@ -330,6 +325,7 @@ which produces a paginated list of share codes (_excluding_ the codes themselves
           "name": "username",
         },
       },
+      ...
     }
   ],
   "_pagination": {
@@ -340,6 +336,8 @@ which produces a paginated list of share codes (_excluding_ the codes themselves
   }
 }
 ```
+
+see the [rest-api](rest-api) for full details of the response models.
 
 ### Revoking invitations
 
