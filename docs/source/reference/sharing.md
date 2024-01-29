@@ -339,6 +339,39 @@ which produces a paginated list of share codes (_excluding_ the codes themselves
 
 see the [rest-api](rest-api) for full details of the response models.
 
+### Share code model
+
+<!-- refresh from examples/user-sharing/rest-api.ipynb -->
+
+A Share Code returned in the REST API has most of the same fields as a Share, but lacks the association with a user or group, and adds information about exchanges of the share code,
+and the `id` that can be used for revocation:
+
+```python
+{
+
+  # common share fields
+  "server": {
+    "user": {
+      "name": "sharer"
+    },
+    "name": "",
+    "url": "/user/sharer/",
+    "ready": True,
+  },
+  "scopes": [
+    "access:servers!server=sharer/"
+  ],
+  # share-code-specific fields
+  "id": "sc_1",
+  "created_at": "2024-01-23T11:46:32.154416Z",
+  "expires_at": "2024-01-24T11:46:32.153582Z",
+  "exchange_count": 1,
+  "last_exchanged_at": "2024-01-23T11:46:43.589701Z"
+}
+```
+
+see the [rest-api](rest-api) for full details of the response models.
+
 ### Revoking invitations
 
 If you've finished inviting users to a server, you can revoke all invitations with:
