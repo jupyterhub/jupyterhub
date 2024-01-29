@@ -251,8 +251,9 @@ then the users themselves exchange the code for actual sharing permissions.
 Share codes are much like shares, except:
 
 1. they don't associate with specific users
-2. they can be used by more than one user (i.e. send one invite email to several recipients)
+2. they can be used multiple times, by more than one user (i.e. send one invite email to several recipients)
 3. they expire (default: 1 day)
+4. they can only be accepted by individual users, not groups
 
 ### Creating share codes
 
@@ -298,8 +299,10 @@ Sharing invitations can be accepted by visiting:
 ```
 
 where you will be able to confirm the permissions you would like to accept.
-After accepting permissions, you will be redirected to the server.
-TODO: which may or may not be running!
+After accepting permissions, you will be redirected to the running server.
+
+If the server is not running and you have not also been granted permission to start it,
+you will need to contact the owner of the server to start it.
 
 ### Listing existing invitations
 
