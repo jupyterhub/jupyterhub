@@ -8,7 +8,7 @@ Prior to JupyterHub 5.0, this could only be granted via static role assignments 
 JupyterHub 5.0 adds the concept of a 'share', allowing _users_ to grant each other limited access to their servers.
 
 :::{seealso}
-Documentation on [roles and scopes](rbac) for more details on how permissions work in JupyterHub.
+Documentation on [roles and scopes](rbac) for more details on how permissions work in JupyterHub, and in particular [access scopes](access-scopes).
 :::
 
 In JupyterHub, shares:

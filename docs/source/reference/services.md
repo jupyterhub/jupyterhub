@@ -189,6 +189,8 @@ c.JupyterHub.services = [
 In this case, the `url` field will be passed along to the Service as
 `JUPYTERHUB_SERVICE_URL`.
 
+(service-credentials)=
+
 ## Service credentials
 
 A service has direct access to the Hub API via its `api_token`.
