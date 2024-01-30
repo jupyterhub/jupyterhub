@@ -2,12 +2,11 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import json
+import logging
 import os
-import warnings
 
 import pytest
 from pytest import mark
-from sqlalchemy.exc import SADeprecationWarning
 from tornado.log import app_log
 
 from .. import orm, roles
@@ -286,7 +285,7 @@ async def test_load_default_roles(tmpdir, request):
                 'scopes': ['groups'],
             },
             'info',
-            app_log.info('Role new-role added to database'),
+            'Role new-role added to database',
         ),
         (
             'the-same-role',
@@ -303,7 +302,7 @@ async def test_load_default_roles(tmpdir, request):
             'no_scopes',
             {'name': 'no-permissions'},
             'warning',
-            app_log.warning('Warning: New defined role no-permissions has no scopes'),
+            'Role no-permissions will have no scopes',
         ),
         (
             'admin',
@@ -321,19 +320,20 @@ async def test_load_default_roles(tmpdir, request):
             'user',
             {'name': 'user', 'scopes': ['read:users:name']},
             'info',
-            app_log.info('Role user scopes attribute has been changed'),
+            'Role attribute user.scopes has been changed',
         ),
         # rewrite the user role back to 'default'
         (
             'user',
             {'name': 'user', 'scopes': ['self']},
             'info',
-            app_log.info('Role user scopes attribute has been changed'),
+            'Role attribute user.scopes has been changed',
         ),
     ],
 )
-async def test_creating_roles(app, role, role_def, response_type, response):
+async def test_creating_roles(app, role, role_def, response_type, response, caplog):
     """Test raising errors and warnings when creating/modifying roles"""
+    caplog.set_level(logging.INFO)
 
     db = app.db
 
@@ -342,8 +342,9 @@ async def test_creating_roles(app, role, role_def, response_type, response):
             roles.create_role(db, role_def)
 
     elif response_type == 'warning' or response_type == 'info':
-        with pytest.warns(response):
-            roles.create_role(db, role_def)
+        roles.create_role(db, role_def)
+        if response:
+            assert response in caplog.text
         # check the role has been created/modified
         role = orm.Role.find(db, role_def['name'])
         assert role is not None
@@ -354,15 +355,8 @@ async def test_creating_roles(app, role, role_def, response_type, response):
 
     # make sure no warnings/info logged when the role exists and its definition hasn't been changed
     elif response_type == 'no-log':
-        with pytest.warns(response) as record:
-            # don't catch already-suppressed sqlalchemy warnings
-            warnings.simplefilter("ignore", SADeprecationWarning)
-            roles.create_role(db, role_def)
-
-        for warning in record.list:
-            # show warnings for debugging
-            print("Unexpected warning", warning)
-        assert not record.list
+        roles.create_role(db, role_def)
+        assert caplog.text == ""
         role = orm.Role.find(db, role_def['name'])
         assert role is not None
 
@@ -375,14 +369,15 @@ async def test_creating_roles(app, role, role_def, response_type, response):
             'existing',
             'test-role1',
             'info',
-            app_log.info('Role user scopes attribute has been changed'),
+            'Role test-role1 has been deleted',
         ),
         ('non-existing', 'test-role2', 'error', KeyError),
         ('default', 'user', 'error', ValueError),
     ],
 )
-async def test_delete_roles(db, role_type, rolename, response_type, response):
+async def test_delete_roles(db, role_type, rolename, response_type, response, caplog):
     """Test raising errors and info when deleting roles"""
+    caplog.set_level(logging.INFO)
 
     if response_type == 'info':
         # add the role to db
@@ -391,9 +386,10 @@ async def test_delete_roles(db, role_type, rolename, response_type, response):
         db.commit()
         check_role = orm.Role.find(db, rolename)
         assert check_role is not None
-        # check the role is deleted and info raised
-        with pytest.warns(response):
-            roles.delete_role(db, rolename)
+        # check the role is deleted and info logged
+        roles.delete_role(db, rolename)
+        if response:
+            assert response in caplog.text
         check_role = orm.Role.find(db, rolename)
         assert check_role is None
 

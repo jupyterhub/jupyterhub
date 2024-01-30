@@ -20,11 +20,11 @@ from .utils import skip_if_ssl
 @pytest.fixture
 def disable_check_routes(app):
     # disable periodic check_routes while we are testing
-    app.last_activity_callback.stop()
+    app._periodic_callbacks["last_activity"].stop()
     try:
         yield
     finally:
-        app.last_activity_callback.start()
+        app._periodic_callbacks["last_activity"].start()
 
 
 @skip_if_ssl

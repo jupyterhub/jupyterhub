@@ -317,6 +317,13 @@ class MockHub(JupyterHub):
         def before_execute(conn, clauseelement, multiparams, params, execution_options):
             self.db_query_count += 1
 
+    def init_logging(self):
+        super().init_logging()
+        # enable log propagation for pytest capture
+        self.log.propagate = True
+        # clear unneeded handlers
+        self.log.handlers.clear()
+
     async def initialize(self, argv=None):
         self.pid_file = NamedTemporaryFile(delete=False).name
         self.db_file = NamedTemporaryFile()
