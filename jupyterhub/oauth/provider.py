@@ -2,6 +2,7 @@
 
 implements https://oauthlib.readthedocs.io/en/latest/oauth2/server.html
 """
+
 from oauthlib import uri_validate
 from oauthlib.oauth2 import RequestValidator, WebApplicationServer
 from oauthlib.oauth2.rfc6749.grant_types import authorization_code, base

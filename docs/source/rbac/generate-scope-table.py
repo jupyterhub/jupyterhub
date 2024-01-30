@@ -13,6 +13,7 @@ The files are:
        This file is JupyterHub's REST API schema. Both a version and the RBAC
        scopes descriptions are updated in it.
 """
+
 import os
 from collections import defaultdict
 from pathlib import Path

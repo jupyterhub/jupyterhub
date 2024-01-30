@@ -1,6 +1,7 @@
 """
 Contains base Spawner class & default implementation
 """
+
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import ast
@@ -273,8 +274,6 @@ class Spawner(LoggingConfigurable):
     admin_access = Bool(False)
     api_token = Unicode()
     oauth_client_id = Unicode()
-
-    oauth_scopes = List(Unicode())
 
     @property
     def oauth_scopes(self):

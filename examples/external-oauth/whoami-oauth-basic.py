@@ -3,6 +3,7 @@
 Implements OAuth handshake manually
 so all URLs and requests necessary for OAuth with JupyterHub should be in one place
 """
+
 import json
 import os
 from urllib.parse import urlencode, urlparse

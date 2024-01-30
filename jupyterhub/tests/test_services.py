@@ -1,4 +1,5 @@
 """Tests for services"""
+
 import os
 import sys
 from binascii import hexlify
