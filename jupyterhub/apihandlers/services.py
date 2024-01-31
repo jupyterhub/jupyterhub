@@ -2,6 +2,7 @@
 
 Currently GET-only, no actions can be taken to modify services.
 """
+
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import json

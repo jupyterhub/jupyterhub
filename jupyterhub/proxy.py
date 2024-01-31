@@ -14,6 +14,7 @@ Route Specification:
   'host.tld/path/' for host-based routing or '/path/' for default routing.
 - Route paths should be normalized to always start and end with '/'
 """
+
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import asyncio

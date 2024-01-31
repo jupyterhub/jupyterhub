@@ -1,4 +1,5 @@
 """Test the JupyterHub entry point"""
+
 import asyncio
 import binascii
 import json

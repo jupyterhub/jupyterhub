@@ -1,4 +1,5 @@
 """Tests for HTML pages"""
+
 import asyncio
 import sys
 from unittest import mock

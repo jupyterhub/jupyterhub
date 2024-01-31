@@ -8,6 +8,7 @@
     Default app changed to launch `jupyter labhub`.
     Use JUPYTERHUB_SINGLEUSER_APP='notebook' for the legacy 'classic' notebook server (requires notebook<7).
 """
+
 import os
 
 from traitlets import import_item

@@ -140,8 +140,8 @@ setup_args = dict(
             # nbclassic provides the '/tree/' handler that we tests against in
             # the test test_nbclassic_control_panel.
             "nbclassic",
-            "pytest>=3.3",
-            "pytest-asyncio>=0.17",
+            "pytest>=3.3,<8",
+            "pytest-asyncio>=0.17,<0.23",
             "pytest-cov",
             "requests-mock",
             "playwright",

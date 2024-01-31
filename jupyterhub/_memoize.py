@@ -3,6 +3,7 @@
 Note: a memoized function should always return an _immutable_
 result to avoid later modifications polluting cached results.
 """
+
 from collections import OrderedDict
 from functools import wraps
 

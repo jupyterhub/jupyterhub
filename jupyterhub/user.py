@@ -223,7 +223,7 @@ class UserDict(dict):
 
         Returns dict with counts of active/pending/ready servers
         """
-        counts = defaultdict(lambda: 0)
+        counts = defaultdict(int)
         for user in self.values():
             for spawner in user.spawners.values():
                 pending = spawner.pending
@@ -780,9 +780,9 @@ class User:
             await spawner.run_auth_state_hook(auth_state)
 
             # update spawner start time, and activity for both spawner and user
-            self.last_activity = (
-                spawner.orm_spawner.started
-            ) = spawner.orm_spawner.last_activity = datetime.utcnow()
+            self.last_activity = spawner.orm_spawner.started = (
+                spawner.orm_spawner.last_activity
+            ) = datetime.utcnow()
             db.commit()
             # wait for spawner.start to return
             # run optional preparation work to bootstrap the notebook
