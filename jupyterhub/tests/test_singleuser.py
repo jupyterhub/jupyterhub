@@ -18,6 +18,8 @@ from ..utils import url_path_join
 from .mocking import public_url
 from .utils import AsyncSession, async_requests, get_page
 
+IS_JUPYVERSE = False  # backport compatibility
+
 
 @pytest.fixture(autouse=True)
 def _jupyverse(app):
