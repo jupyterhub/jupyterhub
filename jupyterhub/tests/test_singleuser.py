@@ -1,4 +1,5 @@
 """Tests for jupyterhub.singleuser"""
+
 import os
 import sys
 from contextlib import nullcontext

@@ -1,4 +1,5 @@
 """Test a proxy being started before the Hub"""
+
 import json
 import os
 from contextlib import contextmanager

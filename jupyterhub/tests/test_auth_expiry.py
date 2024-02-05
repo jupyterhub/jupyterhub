@@ -7,6 +7,7 @@ authentication can expire in a number of ways:
 - doesn't need refresh
 - needs refresh and cannot be refreshed without new login
 """
+
 from unittest import mock
 from urllib.parse import parse_qs, urlparse
 

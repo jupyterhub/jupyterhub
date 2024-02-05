@@ -1,4 +1,5 @@
 """Example JupyterServer app subclass"""
+
 from jupyter_server.base.handlers import JupyterHandler
 from jupyter_server.serverapp import ServerApp
 from tornado import web

@@ -4,6 +4,7 @@ This serves `/services/whoami-api/`, authenticated with the Hub, showing the use
 
 HubAuthenticated only supports token-based access.
 """
+
 import json
 import os
 from urllib.parse import urlparse
