@@ -123,3 +123,53 @@ def test_browser_protocol(x_scheme, x_forwarded_proto, forwarded, expected):
 
     proto = utils.get_browser_protocol(request)
     assert proto == expected
+
+
+@pytest.mark.parametrize(
+    "accept_header, choices, expected",
+    [
+        (
+            "",
+            ["application/json"],
+            None,
+        ),
+        (
+            "text/html",
+            ["application/json"],
+            None,
+        ),
+        (
+            "nonsense",
+            ["application/json"],
+            None,
+        ),
+        (
+            "text/html, application/json",
+            ["application/json"],
+            "application/json",
+        ),
+        (
+            "text/html, application/json",
+            ["application/json", "text/html"],
+            "text/html",
+        ),
+        (
+            "text/html; q=0.8, application/json; q=0.9",
+            ["application/json", "text/html"],
+            "application/json",
+        ),
+        (
+            "text/html, application/json; q=0.9",
+            ["application/json", "text/html"],
+            "text/html",
+        ),
+        (
+            "text/html; q=notunderstood, application/json; q=0.9",
+            ["application/json", "text/html"],
+            "text/html",
+        ),
+    ],
+)
+def test_get_accepted_mimetype(accept_header, choices, expected):
+    accepted = utils.get_accepted_mimetype(accept_header, choices=choices)
+    assert accepted == expected
