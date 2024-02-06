@@ -1,6 +1,7 @@
 """
 Example JupyterHub config allowing users to specify environment variables and notebook-server args
 """
+
 import shlex
 
 from jupyterhub.spawner import LocalProcessSpawner

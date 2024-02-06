@@ -795,9 +795,9 @@ class User:
             await spawner.run_auth_state_hook(auth_state)
 
             # update spawner start time, and activity for both spawner and user
-            self.last_activity = (
-                spawner.orm_spawner.started
-            ) = spawner.orm_spawner.last_activity = utcnow(with_tz=False)
+            self.last_activity = spawner.orm_spawner.started = (
+                spawner.orm_spawner.last_activity
+            ) = utcnow(with_tz=False)
             db.commit()
             # wait for spawner.start to return
             # run optional preparation work to bootstrap the notebook

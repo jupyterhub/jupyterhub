@@ -1,4 +1,5 @@
 """Base Authenticator class and the default PAM Authenticator"""
+
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 import inspect
@@ -535,13 +536,12 @@ class Authenticator(LoggingConfigurable):
         blocked_pass = await maybe_future(
             self.check_blocked_users(username, authenticated)
         )
-        allowed_pass = await maybe_future(self.check_allowed(username, authenticated))
 
-        if blocked_pass:
-            pass
-        else:
+        if not blocked_pass:
             self.log.warning("User %r blocked. Stop authentication", username)
             return
+
+        allowed_pass = await maybe_future(self.check_allowed(username, authenticated))
 
         if allowed_pass:
             if authenticated['admin'] is None:

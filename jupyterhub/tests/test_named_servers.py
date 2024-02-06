@@ -1,4 +1,5 @@
 """Tests for named servers"""
+
 import asyncio
 import json
 import time

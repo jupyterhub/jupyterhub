@@ -1725,6 +1725,7 @@ class JupyterHub(Application):
     )
 
     metrics_collector = Any()
+    _periodic_callbacks = Dict()
 
     def init_handlers(self):
         h = []
@@ -2508,6 +2509,7 @@ class JupyterHub(Application):
         pc = PeriodicCallback(
             self.purge_expired_tokens, 1e3 * self.purge_expired_tokens_interval
         )
+        self._periodic_callbacks["purge_expired_tokens"] = pc
         pc.start()
 
     def service_from_orm(
@@ -3553,18 +3555,18 @@ class JupyterHub(Application):
         await self.proxy.check_routes(self.users, self._service_map)
 
         # Check services health
-        self._check_services_health_callback = None
         if self.service_check_interval:
-            self._check_services_health_callback = PeriodicCallback(
+            pc = PeriodicCallback(
                 self.check_services_health, 1e3 * self.service_check_interval
             )
-            self._check_services_health_callback.start()
+            self._periodic_callbacks["service_check"] = pc
+            pc.start()
 
         if self.last_activity_interval:
             pc = PeriodicCallback(
                 self.update_last_activity, 1e3 * self.last_activity_interval
             )
-            self.last_activity_callback = pc
+            self._periodic_callbacks["last_activity"] = pc
             pc.start()
 
         if self.proxy.should_start:
@@ -3689,6 +3691,9 @@ class JupyterHub(Application):
         if self.metrics_collector:
             self.metrics_collector.stop()
         self.io_loop.add_callback(self.shutdown_cancel_tasks)
+        # stop periodic callbacks
+        for pc in self._periodic_callbacks.values():
+            pc.stop()
 
     async def start_show_config(self):
         """Async wrapper around base start_show_config method"""

@@ -4,6 +4,7 @@ Run with old versions of jupyterhub to test upgrade/downgrade
 
 used in test_db.py
 """
+
 from functools import partial
 
 import jupyterhub
