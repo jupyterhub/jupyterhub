@@ -7,10 +7,11 @@ There is not (yet!) any UI for granting shared access, so this tutorial goes thr
 
 For more background on how sharing works in JupyterHub, see the [sharing reference documentation](sharing-reference).
 
-## Step 0: enable sharing (admin)
+## Setup: enable sharing (admin)
 
 First, sharing must be _enabled_ on the JupyterHub deployment.
-It is not enabled by default.
+That is, grant (some) users permission to share their servers with others.
+Users cannot share their servers by default.
 This is the only step that requires an admin action.
 To grant users permission to share access to their servers,
 add the `shares!user` scope to the default `user` role:
@@ -42,7 +43,13 @@ c.JupyterHub.load_roles = [
 Note that this exposes the ability for all users to _discover_ existing user and group names,
 which is part of why we have the share-by-code pattern,
 so users don't need this ability to share with each other.
-Adding filters lets you limit the impact of these.
+Adding filters lets you limit who can be shared with by name.
+
+:::{note}
+Removing a user's permission to grant shares only prevents _future_ shares.
+Any shared permissions previously granted by a user will remain and must be revoked separately,
+if desired.
+:::
 
 ### Grant servers permission to share themselves (optional, admin)
 
@@ -92,6 +99,9 @@ To create a {py:class}`requests.Session` that will send this header on every req
 
 ```python
 import requests
+from getpass import getpass
+
+token = getpass.getpass("JupyterHub API token: ")
 
 session = requests.Session()
 session.headers = {"Authorization": f"Bearer {token}"}
@@ -102,14 +112,15 @@ We will make subsequent requests in this tutorial with this session object, so t
 ## Issue a sharing code
 
 We are going to make a POST request to `/hub/api/share-codes/username/` to issue a _sharing code_.
-This is a _code_, which can be _exchanged_ for access to the shared service.
+This is a _code_, which can be _exchanged_ by one or more users for access to the shared service.
 
 A sharing code:
 
 - always expires (default: after one day)
-- can be _exchanged_ for shared access to the server
+- can be _exchanged_ multiple times for shared access to the server
 
-When the sharing code expires, any (think of it like an invitation to collaborate on a repository or to a chat group - the invitation can expire, but once accepted, access persists).
+When the sharing code expires, any permissions granted by the code will remain
+(think of it like an invitation to collaborate on a repository or to a chat group - the invitation can expire, but once accepted, access persists).
 
 To request a share code:
 
