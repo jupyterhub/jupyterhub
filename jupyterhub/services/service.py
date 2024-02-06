@@ -65,7 +65,7 @@ from .. import orm
 from ..objects import Server
 from ..spawner import LocalProcessSpawner, set_user_setuid
 from ..traitlets import Command
-from ..utils import url_path_join
+from ..utils import random_port, url_path_join
 
 
 class _MockUser(HasTraits):
@@ -126,6 +126,8 @@ class _ServiceSpawner(LocalProcessSpawner):
 
     def start(self):
         """Start the process"""
+        if self.port == 0:
+            self.port = random_port()
         env = self.get_env()
         # no activity url for services
         env.pop('JUPYTERHUB_ACTIVITY_URL', None)

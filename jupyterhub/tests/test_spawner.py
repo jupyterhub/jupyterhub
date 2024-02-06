@@ -57,6 +57,7 @@ def new_spawner(db, **kwargs):
     kwargs.setdefault('term_timeout', 1)
     kwargs.setdefault('kill_timeout', 1)
     kwargs.setdefault('poll_interval', 1)
+    kwargs.setdefault('port', 5555)
     return user._new_spawner('', spawner_class=LocalProcessSpawner, **kwargs)
 
 
