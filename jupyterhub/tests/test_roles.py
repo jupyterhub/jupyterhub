@@ -369,9 +369,10 @@ async def test_creating_roles(app, role, role_def, response_type, response, capl
         ('default', 'user', 'error', ValueError),
     ],
 )
-async def test_delete_roles(db, role_type, rolename, response_type, response, caplog):
+async def test_delete_roles(app, role_type, rolename, response_type, response, caplog):
     """Test raising errors and info when deleting roles"""
     caplog.set_level(logging.INFO)
+    db = app.db
 
     if response_type == 'info':
         # add the role to db
