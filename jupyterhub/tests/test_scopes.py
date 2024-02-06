@@ -1,4 +1,5 @@
 """Test scopes for API handlers"""
+
 from operator import itemgetter
 from unittest import mock
 

@@ -12,6 +12,7 @@ Application subclass can be controlled with environment variables:
 - JUPYTERHUB_SINGLEUSER_EXTENSION=1 to opt-in to the extension (requires Jupyter Server 2)
 - JUPYTERHUB_SINGLEUSER_APP=notebook (or jupyter-server) to opt-in
 """
+
 import os
 
 from .mixins import HubAuthenticatedHandler, make_singleuser_app

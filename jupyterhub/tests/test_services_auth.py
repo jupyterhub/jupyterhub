@@ -1,4 +1,5 @@
 """Tests for service authentication"""
+
 import copy
 import os
 import sys

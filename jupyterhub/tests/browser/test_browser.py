@@ -878,9 +878,11 @@ async def test_oauth_page(
         user_scopes or ['(no_scope)'], user.name
     )
     desc_list_expected = [
-        f"{sd['description']} Applies to {sd['filter']}."
-        if sd.get('filter')
-        else sd['description']
+        (
+            f"{sd['description']} Applies to {sd['filter']}."
+            if sd.get('filter')
+            else sd['description']
+        )
         for sd in scope_descriptions
     ]
     assert sorted(desc_list_form) == sorted(desc_list_expected)

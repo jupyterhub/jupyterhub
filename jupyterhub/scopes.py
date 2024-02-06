@@ -14,6 +14,7 @@ intersection : set of expanded scopes as intersection of 2 expanded scope sets
 identify scopes: set of expanded scopes needed for identify (whoami) endpoints
 reduced scopes: expanded scopes that have been reduced
 """
+
 import functools
 import inspect
 import re

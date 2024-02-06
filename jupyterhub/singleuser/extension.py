@@ -613,9 +613,9 @@ class JupyterHubSingleUser(ExtensionApp):
         jinja_template_vars['logo_url'] = self.hub_auth.hub_host + url_path_join(
             self.hub_auth.hub_prefix, 'logo'
         )
-        jinja_template_vars[
-            'hub_control_panel_url'
-        ] = self.hub_auth.hub_host + url_path_join(self.hub_auth.hub_prefix, 'home')
+        jinja_template_vars['hub_control_panel_url'] = (
+            self.hub_auth.hub_host + url_path_join(self.hub_auth.hub_prefix, 'home')
+        )
 
     _activity_task = None
 
@@ -628,9 +628,9 @@ class JupyterHubSingleUser(ExtensionApp):
 
         super().initialize()
         app = self.serverapp
-        app.web_app.settings[
-            "page_config_hook"
-        ] = app.identity_provider.page_config_hook
+        app.web_app.settings["page_config_hook"] = (
+            app.identity_provider.page_config_hook
+        )
         # if the user has configured a log function in the tornado settings, do not override it
         if not 'log_function' in app.config.ServerApp.get('tornado_settings', {}):
             app.web_app.settings["log_function"] = log_request

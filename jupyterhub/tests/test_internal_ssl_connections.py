@@ -1,4 +1,5 @@
 """Tests for jupyterhub internal_ssl connections"""
+
 import sys
 import time
 from unittest import mock

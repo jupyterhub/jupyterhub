@@ -2,6 +2,7 @@
 Example for a Spawner.pre_spawn_hook
 create a directory for the user before the spawner starts
 """
+
 # pylint: disable=import-error
 import os
 import shutil

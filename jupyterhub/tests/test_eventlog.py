@@ -5,6 +5,7 @@ To test a new schema or event, simply add it to the
 
 You *shouldn't* need to write new tests.
 """
+
 import io
 import json
 import logging

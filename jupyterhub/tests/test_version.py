@@ -1,4 +1,5 @@
 """Test version checking"""
+
 import logging
 
 import pytest
