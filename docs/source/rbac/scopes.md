@@ -298,6 +298,17 @@ class MyHandler(HubOAuthenticated, BaseHandler):
 Existing scope filters (`!user=`, etc.) may be applied to custom scopes.
 Custom scope _filters_ are NOT supported.
 
+:::{warning}
+JupyterHub allows you to define custom scopes,
+but it does not enforce that your services apply them.
+
+For example, if you enable read-only access to servers via custom JupyterHub
+(as seen in the `read-only` example),
+it is the administrator's responsibility to enforce that they are applied.
+If you allow users to launch servers without that custom Authorizer,
+read-only permissions will not be enforced, and the default behavior of unrestricted access via the `access:servers` scope will be applied.
+:::
+
 ### Scopes and APIs
 
 The scopes are also listed in the [](jupyterhub-rest-API) documentation.
