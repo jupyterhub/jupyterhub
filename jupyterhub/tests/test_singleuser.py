@@ -18,6 +18,14 @@ from ..utils import url_path_join
 from .mocking import public_url
 from .utils import AsyncSession, async_requests, get_page
 
+IS_JUPYVERSE = False  # backport compatibility
+
+
+@pytest.fixture(autouse=True)
+def _jupyverse(app):
+    if IS_JUPYVERSE:
+        app.config.Spawner.default_url = "/lab"
+
 
 @pytest.mark.parametrize(
     "access_scopes, server_name, expect_success",
@@ -361,6 +369,26 @@ async def test_nbclassic_control_panel(app, user, full_spawn):
     else:
         prefix = app.base_url
     assert link["href"] == url_path_join(prefix, "hub/home")
+
+
+@pytest.mark.skipif(
+    IS_JUPYVERSE, reason="jupyverse doesn't implement token authentication"
+)
+async def test_token_url_cookie(app, user, full_spawn):
+    await user.spawn()
+    token = user.new_api_token(scopes=["access:servers!user"])
+    url = url_path_join(public_url(app, user), user.spawner.default_url or "/tree/")
+
+    # first request: auth with token in URL
+    r = await async_requests.get(url + f"?token={token}", allow_redirects=False)
+    print(r.url, r.status_code)
+    assert r.status_code == 200
+    assert r.cookies
+    # second request, use cookies set by first response,
+    # no token in URL
+    r = await async_requests.get(url, cookies=r.cookies, allow_redirects=False)
+    assert r.status_code == 200
+    await user.stop()
 
 
 async def test_api_403_no_cookie(app, user, full_spawn):
