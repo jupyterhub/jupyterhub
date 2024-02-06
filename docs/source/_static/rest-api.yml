@@ -1794,6 +1794,8 @@ components:
       description: Subset of Server model present in Share responses
       type: object
       properties:
+        # these are the minimal subset of a server model needed for access
+        # e.g. where is it (name, url), whose is it (user.name), and is it running (ready)
         name:
           type: string
           description: the server name. '' for the default server.
@@ -1803,9 +1805,6 @@ components:
         ready:
           type: boolean
           description: whether the server is ready
-        active:
-          type: boolean
-          description: whether the server is active
         user:
           type: object
           description: the server's owner
