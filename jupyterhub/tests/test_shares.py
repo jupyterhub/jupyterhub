@@ -5,7 +5,9 @@ from unittest import mock
 from urllib.parse import parse_qs, urlparse
 
 import pytest
+from bs4 import BeautifulSoup
 from dateutil.parser import parse as parse_date
+from tornado.httputil import url_concat
 
 from jupyterhub import orm, scopes
 from jupyterhub.utils import url_path_join, utcnow
@@ -1401,3 +1403,81 @@ async def test_accept_share_page(
     else:
         assert orm_code.exchange_count == 0
         assert not share_user.shared_with_me
+
+
+@pytest.mark.parametrize(
+    "running, next_url, expected_next",
+    [
+        (False, None, "{USER_URL}"),
+        (True, None, "{USER_URL}"),
+        (False, "https://example.com{BASE_URL}", "{USER_URL}"),
+        (False, "{BASE_URL}hub", ""),
+        (True, "{USER_URL}lab/tree/notebook.ipynb?param=5", ""),
+        (False, "{USER_URL}lab/tree/notebook.ipynb?param=5", ""),
+    ],
+)
+async def test_accept_share_page_next_url(
+    app,
+    user,
+    share_user,
+    running,
+    next_url,
+    expected_next,
+):
+    db = app.db
+    spawner = user.spawner.orm_spawner
+    orm_code, code = orm.ShareCode.new(
+        db, spawner, scopes=list(scopes.access_scopes(spawner=spawner))
+    )
+    cookies = await app.login_user(share_user.name)
+
+    if running:
+        await user.spawn()
+        await user.spawner.server.wait_up(http=True)
+        await app.proxy.add_user(user)
+    else:
+        pass
+
+    def expand_url(url):
+        url = url.format(
+            USER=user.name,
+            USER_URL=user.server_url(""),
+            BASE_URL=app.base_url,
+        )
+        return url
+
+    if next_url:
+        next_url = expand_url(next_url)
+    if expected_next:
+        expected_next = expand_url(expected_next)
+    else:
+        # empty: expect match
+        expected_next = next_url
+
+    url = f"accept-share?code={code}"
+    form_data = {"_xsrf": cookies['_xsrf']}
+    if next_url:
+        url = url_concat(url, {"next": next_url})
+
+    r = await get_page(url, app, cookies=cookies)
+    assert r.status_code == 200
+
+    page = BeautifulSoup(r.text)
+    page_body = page.find("div", class_="container").get_text()
+    if running:
+        assert "not currently running" not in page_body
+    else:
+        assert "not currently running" in page_body
+
+    # try submitting the form with the same inputs
+    accept_url = r.url
+    r = await async_requests.post(
+        accept_url,
+        cookies=cookies,
+        data=form_data,
+        allow_redirects=False,
+    )
+    assert r.status_code == 302
+    target = r.headers["Location"]
+    assert target == expected_next
+    # is it worth following the redirect?
