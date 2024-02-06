@@ -119,17 +119,14 @@ jobs:
 
       - name: Setup push rights to Docker Hub
         # This was setup by...
-        # 1. Creating a Docker Hub service account "jupyterhubbot"
-        # 2. Creating a access token for the service account specific to this
-        #    repository: https://hub.docker.com/settings/security
-        # 3. Making the account part of the "bots" team, and granting that team
-        #    permissions to push to the relevant images:
-        #    https://hub.docker.com/orgs/jupyterhub/teams/bots/permissions
-        # 4. Registering the username and token as a secret for this repo:
-        #    https://github.com/jupyterhub/jupyterhub/settings/secrets/actions
+        # 1. Creating a [Robot Account](https://quay.io/organization/jupyterhub?tab=robots) in the JupyterHub
+        # .  Quay.io org
+        # 2. Giving it enough permissions to push to the jupyterhub and singleuser images
+        # 3. Putting the robot account's username and password in GitHub actions environment
         if: env.REGISTRY != 'localhost:5000/'
         run: |
-          docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" -p "${{ secrets.DOCKERHUB_TOKEN }}"
+          docker login -u "${{ secrets.QUAY_USERNAME }}" -p "${{ secrets.QUAY_PASSWORD }}" "${{ env.REGISTRY }}"
+          docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" -p "${{ secrets.DOCKERHUB_TOKEN }}" docker.io
 
       # image: jupyterhub/jupyterhub
       #
@@ -145,7 +142,9 @@ jobs:
         uses: jupyterhub/action-major-minor-tag-calculator@v2
         with:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
-          prefix: "${{ env.REGISTRY }}jupyterhub/jupyterhub:"
+          prefix: >-
+            ${{ env.REGISTRY }}jupyterhub/jupyterhub:
+            jupyterhub/jupyterhub:
           defaultTag: "${{ env.REGISTRY }}jupyterhub/jupyterhub:noref"
           branchRegex: ^\w[\w-.]*$
 
@@ -166,7 +165,9 @@ jobs:
         uses: jupyterhub/action-major-minor-tag-calculator@v2
         with:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
-          prefix: "${{ env.REGISTRY }}jupyterhub/jupyterhub-onbuild:"
+          prefix: >-
+            ${{ env.REGISTRY }}jupyterhub/jupyterhub-onbuild:
+            jupyterhub/jupyterhub-onbuild:
           defaultTag: "${{ env.REGISTRY }}jupyterhub/jupyterhub-onbuild:noref"
           branchRegex: ^\w[\w-.]*$
 
@@ -187,7 +188,9 @@ jobs:
         uses: jupyterhub/action-major-minor-tag-calculator@v2
         with:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
-          prefix: "${{ env.REGISTRY }}jupyterhub/jupyterhub-demo:"
+          prefix: >-
+            ${{ env.REGISTRY }}jupyterhub/jupyterhub-demo:
+            jupyterhub/jupyterhub-demo:
           defaultTag: "${{ env.REGISTRY }}jupyterhub/jupyterhub-demo:noref"
           branchRegex: ^\w[\w-.]*$
 
@@ -211,7 +214,9 @@ jobs:
         uses: jupyterhub/action-major-minor-tag-calculator@v2
         with:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
-          prefix: "${{ env.REGISTRY }}jupyterhub/singleuser:"
+          prefix: >-
+            ${{ env.REGISTRY }}jupyterhub/singleuser:
+            jupyterhub/singleuser:
           defaultTag: "${{ env.REGISTRY }}jupyterhub/singleuser:noref"
           branchRegex: ^\w[\w-.]*$
 
