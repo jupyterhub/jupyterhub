@@ -1872,7 +1872,10 @@ components:
           type: string
           format: date-time
         expires_at:
-          description: when the share code expires
+          description: |
+            When the share code will expire,
+            always in the future.
+            `null` if the code does not expire.
           type: string
           nullable: true
           format: date-time
