@@ -554,10 +554,32 @@ class TokenPageHandler(BaseHandler):
 
 
 class AcceptShareHandler(BaseHandler):
+
+    def _get_next_url(self, owner, spawner):
+        """Get next_url for a given owner/spawner"""
+        next_url = self.get_argument("next", "")
+        next_url = self._validate_next_url(next_url)
+        if next_url:
+            return next_url
+
+        # default behavior:
+        # if it's active, redirect to server URL
+        if spawner.name in owner.spawners:
+            spawner = owner.spawners[spawner.name]
+            if spawner.active:
+                # redirect to spawner url
+                return owner.server_url(spawner.name)
+
+        # spawner not active
+        # TODO: next_url not specified and not running, what do we do?
+        # for now, redirect as if it's running,
+        # but that's very likely to fail on "You can't launch this server"
+        # is there a better experience for this?
+        return owner.server_url(spawner.name)
+
     @web.authenticated
     async def get(self):
         code = self.get_argument("code")
-        next_url = self.get_argument("next", "")
         share_code = orm.ShareCode.find(self.db, code=code)
         if share_code is None:
             raise web.HTTPError(404, "Share not found or expired")
@@ -568,14 +590,23 @@ class AcceptShareHandler(BaseHandler):
             share_code.scopes,
             username=self.current_user.name,
         )
+        owner = self._user_from_orm(share_code.owner)
+        spawner = share_code.spawner
+        if spawner.name in owner.spawners:
+            spawner = owner.spawners[spawner.name]
+            spawner_ready = spawner.ready
+        else:
+            spawner_ready = False
 
         html = await self.render_template(
             'accept-share.html',
             code=code,
-            owner=share_code.owner,
-            spawner=share_code.spawner,
+            owner=owner,
+            spawner=spawner,
+            spawner_ready=spawner_ready,
+            spawner_url=owner.server_url(spawner.name),
             scope_descriptions=scope_descriptions,
-            next_url=next_url,
+            next_url=self._get_next_url(owner, spawner),
         )
         self.finish(html)
 
@@ -591,21 +622,9 @@ class AcceptShareHandler(BaseHandler):
         user = self.current_user
         share = share_code.exchange(user.orm_user)
         owner = self._user_from_orm(share.owner)
+        spawner = share.spawner
 
-        next_url = self.get_argument("next", "")
-        if not next_url:
-            # if it's active, redirect to server URL
-            if share.spawner.name in owner.spawners:
-                spawner = owner.spawners[share.spawner.name]
-                if spawner.active:
-                    # redirect to spawner url
-                    next_url = owner.server_url(spawner.name)
-        if not next_url:
-            # TODO: next_url not specified and not running, what do we do?
-            # for now, redirect as if it's running,
-            # but that's very likely to 403 on "You can't launch this server"
-            next_url = owner.server_url(spawner.name)
-
+        next_url = self._get_next_url(owner, spawner)
         self.redirect(next_url)
 
 

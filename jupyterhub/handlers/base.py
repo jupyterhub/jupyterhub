@@ -673,15 +673,14 @@ class BaseHandler(RequestHandler):
     def authenticate(self, data):
         return maybe_future(self.authenticator.get_authenticated_user(self, data))
 
-    def get_next_url(self, user=None, default=None):
-        """Get the next_url for login redirect
+    def _validate_next_url(self, next_url):
+        """Validate next_url handling
 
-        Default URL after login:
+        protects against external redirects, etc.
 
-        - if redirect_to_server (default): send to user's own server
-        - else: /hub/home
+        Returns empty string if next_url is not considered safe,
+        resulting in same behavior as if next_url is not specified.
         """
-        next_url = self.get_argument('next', default='')
         # protect against some browsers' buggy handling of backslash as slash
         next_url = next_url.replace('\\', '%5C')
         public_url = self.settings.get("public_url")
@@ -727,17 +726,18 @@ class BaseHandler(RequestHandler):
             self.log.warning("Disallowing redirect outside JupyterHub: %r", next_url)
             next_url = ''
 
-        if next_url and next_url.startswith(url_path_join(self.base_url, 'user/')):
-            # add /hub/ prefix, to ensure we redirect to the right user's server.
-            # The next request will be handled by SpawnHandler,
-            # ultimately redirecting to the logged-in user's server.
-            without_prefix = next_url[len(self.base_url) :]
-            next_url = url_path_join(self.hub.base_url, without_prefix)
-            self.log.warning(
-                "Redirecting %s to %s. For sharing public links, use /user-redirect/",
-                self.request.uri,
-                next_url,
-            )
+        return next_url
+
+    def get_next_url(self, user=None, default=None):
+        """Get the next_url for login redirect
+
+        Default URL after login:
+
+        - if redirect_to_server (default): send to user's own server
+        - else: /hub/home
+        """
+        next_url = self.get_argument('next', default='')
+        next_url = self._validate_next_url(next_url)
 
         # this is where we know if next_url is coming from ?next= param or we are using a default url
         if next_url:
