@@ -1,4 +1,4 @@
-"""Group handlers"""
+"""Handlers for Shares and Share Codes"""
 
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
