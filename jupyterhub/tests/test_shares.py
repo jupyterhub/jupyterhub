@@ -2,7 +2,7 @@ import json
 from datetime import timedelta
 from functools import partial
 from unittest import mock
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, urlparse, urlunparse
 
 import pytest
 from bs4 import BeautifulSoup
@@ -1479,5 +1479,9 @@ async def test_accept_share_page_next_url(
     )
     assert r.status_code == 302
     target = r.headers["Location"]
-    assert target == expected_next
+    # expect absolute path redirect
+    expected_next_target = urlunparse(
+        urlparse(expected_next)._replace(scheme="", netloc="")
+    )
+    assert target == expected_next_target
     # is it worth following the redirect?

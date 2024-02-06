@@ -568,14 +568,17 @@ class AcceptShareHandler(BaseHandler):
             spawner = owner.spawners[spawner.name]
             if spawner.active:
                 # redirect to spawner url
-                return owner.server_url(spawner.name)
+                next_url = owner.server_url(spawner.name)
 
-        # spawner not active
-        # TODO: next_url not specified and not running, what do we do?
-        # for now, redirect as if it's running,
-        # but that's very likely to fail on "You can't launch this server"
-        # is there a better experience for this?
-        return owner.server_url(spawner.name)
+        if not next_url:
+            # spawner not active
+            # TODO: next_url not specified and not running, what do we do?
+            # for now, redirect as if it's running,
+            # but that's very likely to fail on "You can't launch this server"
+            # is there a better experience for this?
+            next_url = owner.server_url(spawner.name)
+        # validate again, which strips away host to just absolute path
+        return self._validate_next_url(next_url)
 
     @web.authenticated
     async def get(self):
