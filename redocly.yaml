@@ -1,0 +1,10 @@
+extends:
+  - recommended
+
+apis:
+  rest:
+    root: ./docs/source/_static/rest-api.yml
+    rules:
+      info-license-url: off
+      operation-4xx-response: off
+      no-unused-components: warn

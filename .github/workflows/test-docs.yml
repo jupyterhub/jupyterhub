@@ -36,14 +36,18 @@ env:
 
 jobs:
   validate-rest-api-definition:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
 
-      - name: Validate REST API definition
-        uses: char0n/swagger-editor-validate@v1.3.2
+      - uses: actions/setup-node@v4
         with:
-          definition-file: docs/source/_static/rest-api.yml
+          node-version: "20"
+          cache: npm
+
+      - name: Validate REST API definition
+        run: |
+          npx @redocly/cli lint
 
   test-docs:
     runs-on: ubuntu-20.04
