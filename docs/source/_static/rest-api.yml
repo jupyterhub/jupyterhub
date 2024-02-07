@@ -1465,6 +1465,7 @@ paths:
         content:
           application/x-www-form-urlencoded:
             schema:
+              type: object
               required:
                 - client_id
                 - client_secret
@@ -1481,6 +1482,8 @@ paths:
                 grant_type:
                   type: string
                   description: The grant type (always 'authorization_code')
+                  enum:
+                    - authorization_code
                 code:
                   type: string
                   description: The code provided by the authorization redirect
