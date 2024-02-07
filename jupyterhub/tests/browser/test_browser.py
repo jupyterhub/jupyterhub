@@ -17,8 +17,10 @@ from jupyterhub.utils import url_escape_path, url_path_join
 pytestmark = pytest.mark.browser
 
 
-async def login(browser, username, password):
-    """filling the login form by user and pass_w parameters and iniate the login"""
+async def login(browser, username, password=None):
+    """filling the login form by user and pass_w parameters and initiate the login"""
+    if password is None:
+        password = username
 
     await browser.get_by_label("Username:").click()
     await browser.get_by_label("Username:").fill(username)

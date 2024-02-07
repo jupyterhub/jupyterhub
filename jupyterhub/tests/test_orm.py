@@ -185,7 +185,9 @@ def test_service_server(db):
 
 
 def test_token_find(db):
-    service = db.query(orm.Service).first()
+    service = orm.Service(name='sample')
+    db.add(service)
+    db.commit()
     user = db.query(orm.User).first()
     service_token = service.new_api_token()
     user_token = user.new_api_token()
@@ -238,7 +240,7 @@ async def test_spawn_fails(db):
 
 
 def test_groups(db):
-    user = orm.User.find(db, name='aeofel')
+    user = orm.User(name='aeofel')
     db.add(user)
 
     group = orm.Group(name='lives')
@@ -494,6 +496,71 @@ def test_group_delete_cascade(db):
     db.delete(user2)
     db.commit()
     assert user1 not in group1.users
+
+
+def test_share_user(db):
+    user1 = orm.User(name='user1')
+    user2 = orm.User(name='user2')
+    spawner = orm.Spawner(user=user1)
+    db.add(user1)
+    db.add(user2)
+    db.add(spawner)
+    db.commit()
+
+    share = orm.Share(
+        owner=user1,
+        spawner=spawner,
+        user=user2,
+    )
+    db.add(share)
+    db.commit()
+    assert user1.shares == [share]
+    assert spawner.shares == [share]
+    assert user1.shared_with_me == []
+    assert user2.shared_with_me == [share]
+    db.delete(share)
+    db.commit()
+    assert user1.shares == []
+    assert spawner.shares == []
+    assert user1.shared_with_me == []
+    assert user2.shared_with_me == []
+
+
+def test_share_group(db):
+    initial_list = list(db.query(orm.User))
+    assert len(initial_list) <= 1
+    user1 = orm.User(name='user1')
+    user2 = orm.User(name='user2')
+    group2 = orm.Group(name='group2')
+    spawner = orm.Spawner(user=user1)
+    db.add(user1)
+    db.add(user2)
+    db.add(group2)
+    db.add(spawner)
+    db.commit()
+    group2.users.append(user2)
+    db.commit()
+    share = orm.Share(
+        owner=user1,
+        spawner=spawner,
+        group=group2,
+    )
+    db.add(share)
+    db.commit()
+    assert user1.shares == [share]
+    assert spawner.shares == [share]
+    assert user1.shared_with_me == []
+    assert user2.shared_with_me == []
+    assert group2.shared_with_me == [share]
+    assert user2.all_shared_with_me == [share]
+    db.delete(share)
+    db.commit()
+    assert user1.shares == []
+    assert spawner.shares == []
+    assert user1.shared_with_me == []
+    assert user2.shared_with_me == []
+    assert group2.shared_with_me == []
+    assert user2.all_shared_with_me == []
 
 
 def test_expiring_api_token(app, user):

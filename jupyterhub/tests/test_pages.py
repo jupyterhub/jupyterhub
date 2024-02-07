@@ -764,7 +764,7 @@ async def test_login_strip(app, form_user, auth_user, form_password):
         (False, '', '', None),
         # next_url is respected
         (False, '/hub/admin', '/hub/admin', None),
-        (False, '/user/other', '/hub/user/other', None),
+        (False, '/user/other', '/user/other', None),
         (False, '/absolute', '/absolute', None),
         (False, '/has?query#andhash', '/has?query#andhash', None),
         # :// in query string or fragment

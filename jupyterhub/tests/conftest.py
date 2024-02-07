@@ -30,7 +30,6 @@ import asyncio
 import copy
 import os
 import sys
-from getpass import getuser
 from subprocess import TimeoutExpired
 from unittest import mock
 
@@ -42,7 +41,13 @@ from tornado.platform.asyncio import AsyncIOMainLoop
 import jupyterhub.services.service
 
 from .. import crypto, orm, scopes
-from ..roles import create_role, get_default_roles, mock_roles, update_roles
+from ..roles import (
+    assign_default_roles,
+    create_role,
+    get_default_roles,
+    mock_roles,
+    update_roles,
+)
 from ..utils import random_port
 from . import mocking
 from .mocking import MockHub
@@ -104,18 +109,18 @@ def auth_state_enabled(app):
 @fixture
 def db():
     """Get a db session"""
-    global _db
-    if _db is None:
-        # make sure some initial db contents are filled out
-        # specifically, the 'default' jupyterhub oauth client
-        app = MockHub(db_url='sqlite:///:memory:')
-        app.init_db()
-        _db = app.db
-        for role in get_default_roles():
-            create_role(_db, role)
-        user = orm.User(name=getuser())
-        _db.add(user)
-        _db.commit()
+    # make sure some initial db contents are filled out
+    # specifically, the 'default' jupyterhub oauth client
+    app = MockHub(db_url='sqlite:///:memory:')
+    app.init_db()
+    _db = app.db
+    for role in get_default_roles():
+        create_role(_db, role)
+    user = orm.User(name="user")
+    _db.add(user)
+    _db.commit()
+    assign_default_roles(_db, user)
+    _db.commit()
     return _db
 
 
@@ -181,10 +186,16 @@ async def cleanup_after(request, io_loop):
                     print(f"Stopping leftover server {spawner._log_name}")
                     await user.stop(name)
             if user.name not in {'admin', 'user'}:
+                app.log.debug(f"Deleting test user {user.name}")
                 app.users.delete(user.id)
         # delete groups
         for group in app.db.query(orm.Group):
+            app.log.debug(f"Deleting test group {group.name}")
             app.db.delete(group)
+        # delete shares
+        for share in app.db.query(orm.Share):
+            app.log.debug(f"Deleting test share {share}")
+            app.db.delete(share)
 
         # clear services
         for name, service in app._service_map.items():

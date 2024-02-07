@@ -21,17 +21,10 @@ from .utils import add_user, api_request
 def test_orm_roles(db):
     """Test orm roles setup"""
     user_role = orm.Role.find(db, name='user')
+    user_role.users = []
     token_role = orm.Role.find(db, name='token')
-    service_role = orm.Role.find(db, name='service')
-    if not user_role:
-        user_role = orm.Role(name='user', scopes=['self'])
-        db.add(user_role)
-    if not token_role:
-        token_role = orm.Role(name='token', scopes=['inherit'])
-        db.add(token_role)
-    if not service_role:
-        service_role = orm.Role(name='service', scopes=[])
-        db.add(service_role)
+    service_role = orm.Role(name="service")
+    db.add(service_role)
     db.commit()
 
     group_role = orm.Role(name='group', scopes=['read:users'])
@@ -376,9 +369,10 @@ async def test_creating_roles(app, role, role_def, response_type, response, capl
         ('default', 'user', 'error', ValueError),
     ],
 )
-async def test_delete_roles(db, role_type, rolename, response_type, response, caplog):
+async def test_delete_roles(app, role_type, rolename, response_type, response, caplog):
     """Test raising errors and info when deleting roles"""
     caplog.set_level(logging.INFO)
+    db = app.db
 
     if response_type == 'info':
         # add the role to db

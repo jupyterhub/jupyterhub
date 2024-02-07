@@ -12,6 +12,8 @@ docs/source/rbac/scope-table.md
 docs/source/reference/metrics.md
 
 .ipynb_checkpoints
+.virtual_documents
+
 jsx/build/
 # ignore config file at the top-level of the repo
 # but not sub-dirs

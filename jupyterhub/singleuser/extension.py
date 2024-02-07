@@ -225,6 +225,7 @@ class JupyterHubIdentityProvider(IdentityProvider):
         user = handler.current_user
         # originally implemented in jupyterlab's LabApp
         page_config["hubUser"] = user.name if user else ""
+        page_config["hubServerUser"] = os.environ.get("JUPYTERHUB_USER", "")
         page_config["hubPrefix"] = hub_prefix = self.hub_auth.hub_prefix
         page_config["hubHost"] = self.hub_auth.hub_host
         page_config["shareUrl"] = url_path_join(hub_prefix, "user-redirect")

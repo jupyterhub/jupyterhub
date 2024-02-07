@@ -5,9 +5,11 @@
 import enum
 import json
 import numbers
+import secrets
 from base64 import decodebytes, encodebytes
 from datetime import timedelta
-from functools import partial
+from functools import lru_cache, partial
+from itertools import chain
 
 import alembic.command
 import alembic.config
@@ -33,6 +35,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import (
     Session,
     declarative_base,
+    declared_attr,
     interfaces,
     joinedload,
     object_session,
@@ -94,6 +97,10 @@ class JSONDict(TypeDecorator):
 class JSONList(JSONDict):
     """Represents an immutable structure as a json-encoded string (to be used for list type columns).
 
+    Accepts list, tuple, sets for assignment
+
+    Always read as a list
+
     Usage::
 
         JSONList(JSONDict)
@@ -101,8 +108,12 @@ class JSONList(JSONDict):
     """
 
     def process_bind_param(self, value, dialect):
-        if isinstance(value, list) and value is not None:
+        if isinstance(value, (list, tuple)):
             value = json.dumps(value)
+        if isinstance(value, set):
+            # serialize sets as ordered lists
+            value = json.dumps(sorted(value))
+
         return value
 
     def process_result_value(self, value, dialect):
@@ -226,6 +237,15 @@ class Group(Base):
     roles = relationship(
         'Role', secondary='group_role_map', back_populates='groups', lazy="selectin"
     )
+    shared_with_me = relationship(
+        "Share",
+        back_populates="group",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+
+    # used in some model fields to differentiate 'whoami'
+    kind = "group"
 
     def __repr__(self):
         return f"<{self.__class__.__name__} {self.name}>"
@@ -296,6 +316,42 @@ class User(Base):
     oauth_codes = relationship(
         "OAuthCode", back_populates="user", cascade="all, delete-orphan"
     )
+
+    # sharing relationships
+    shares = relationship(
+        "Share",
+        back_populates="owner",
+        cascade="all, delete-orphan",
+        foreign_keys="Share.owner_id",
+    )
+    share_codes = relationship(
+        "ShareCode",
+        back_populates="owner",
+        cascade="all, delete-orphan",
+        foreign_keys="ShareCode.owner_id",
+    )
+    shared_with_me = relationship(
+        "Share",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        foreign_keys="Share.user_id",
+        lazy="selectin",
+    )
+
+    @property
+    def all_shared_with_me(self):
+        """return all shares shared with me,
+
+        including via group
+        """
+
+        return list(
+            chain(
+                self.shared_with_me,
+                *[group.shared_with_me for group in self.groups],
+            )
+        )
+
     cookie_id = Column(Unicode(255), default=new_token, nullable=False, unique=True)
     # User.state is actually Spawner state
     # We will need to figure something else out if/when we have multiple spawners per user
@@ -303,6 +359,10 @@ class User(Base):
     # Authenticators can store their state here:
     # Encryption is handled elsewhere
     encrypted_auth_state = Column(LargeBinary)
+
+    # used in some model fields to differentiate whether an owner or actor
+    # is a user or service
+    kind = "user"
 
     def __repr__(self):
         return "<{cls}({name} {running}/{total} running)>".format(
@@ -343,6 +403,13 @@ class Spawner(Base):
         lazy="joined",
         single_parent=True,
         cascade="all, delete-orphan",
+    )
+
+    shares = relationship(
+        "Share", back_populates="spawner", cascade="all, delete-orphan"
+    )
+    share_codes = relationship(
+        "ShareCode", back_populates="spawner", cascade="all, delete-orphan"
     )
 
     state = Column(JSONDict)
@@ -457,6 +524,9 @@ class Service(Base):
         single_parent=True,
     )
 
+    # used in some model fields to differentiate 'whoami'
+    kind = "service"
+
     def new_api_token(self, token=None, **kwargs):
         """Create a new API token
         If `token` is given, load that token.
@@ -496,6 +566,14 @@ class Expiring:
         else:
             return None
 
+    @property
+    def expired(self):
+        """Is this object expired?"""
+        if not self.expires_at:
+            return False
+        else:
+            return self.expires_in <= 0
+
     @classmethod
     def purge_expired(cls, db):
         """Purge expired API Tokens from the database"""
@@ -528,7 +606,7 @@ class Hashed(Expiring):
 
     @property
     def token(self):
-        raise AttributeError("token is write-only")
+        raise AttributeError(f"{self.__class__.__name__}.token is write-only")
 
     @token.setter
     def token(self, token):
@@ -556,12 +634,13 @@ class Hashed(Expiring):
         """Check if a token is acceptable"""
         if len(token) < cls.min_length:
             raise ValueError(
-                "Tokens must be at least %i characters, got %r"
-                % (cls.min_length, token)
+                f"{cls.__name__}.token must be at least {cls.min_length} characters, got {len(token)}: {token[: cls.prefix_length]}..."
             )
         found = cls.find(db, token)
         if found:
-            raise ValueError("Collision on token: %s..." % token[: cls.prefix_length])
+            raise ValueError(
+                f"Collision on {cls.__name__}: {token[: cls.prefix_length]}..."
+            )
 
     @classmethod
     def find_prefix(cls, db, token):
@@ -598,6 +677,339 @@ class Hashed(Expiring):
         for orm_token in prefix_match:
             if orm_token.match(token):
                 return orm_token
+
+
+class _Share:
+    """Common columns for Share and ShareCode"""
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    created_at = Column(DateTime, nullable=False, default=utcnow)
+
+    # TODO: owner_id and spawner_id columns don't need `@declared_attr` when we can require sqlalchemy 2
+
+    # the owner of the shared server
+    # this is redundant with spawner.user, but saves a join
+    @declared_attr
+    def owner_id(self):
+        return Column(Integer, ForeignKey('users.id', ondelete="CASCADE"))
+
+    @declared_attr
+    def owner(self):
+        # table name happens to be appropriate 'shares', 'share_codes'
+        # could be another, more explicit attribute, but the values would be the same
+        return relationship(
+            "User",
+            back_populates=self.__tablename__,
+            foreign_keys=[self.owner_id],
+            lazy="selectin",
+        )
+
+    # the spawner the share is for
+    @declared_attr
+    def spawner_id(self):
+        return Column(Integer, ForeignKey('spawners.id', ondelete="CASCADE"))
+
+    @declared_attr
+    def spawner(self):
+        return relationship(
+            "Spawner",
+            back_populates=self.__tablename__,
+            lazy="selectin",
+        )
+
+    # the permissions granted (!server filter will always be applied)
+    scopes = Column(JSONList)
+    expires_at = Column(DateTime, nullable=True)
+
+    @classmethod
+    def apply_filter(cls, scopes, spawner):
+        """Apply our filter, ensures all scopes have appropriate !server filter
+
+        Any other filters will raise ValueError.
+        """
+        return cls._apply_filter(frozenset(scopes), spawner.user.name, spawner.name)
+
+    @staticmethod
+    @lru_cache()
+    def _apply_filter(scopes, owner_name, server_name):
+        """
+        implementation of Share.apply_filter
+
+        Static method so @lru_cache is persisted across instances
+        """
+        filtered_scopes = []
+        server_filter = f"server={owner_name}/{server_name}"
+        for scope in scopes:
+            base_scope, _, filter = scope.partition("!")
+            if filter and filter != server_filter:
+                raise ValueError(
+                    f"!{filter} not allowed on sharing {scope}, only !{server_filter}"
+                )
+            filtered_scopes.append(f"{base_scope}!{server_filter}")
+        return frozenset(filtered_scopes)
+
+
+class Share(_Share, Expiring, Base):
+    """A single record of a sharing permission
+
+    granted by one user to another user (or group)
+
+    Restricted to a single server.
+    """
+
+    __tablename__ = "shares"
+
+    # who the share is granted to (user or group)
+    user_id = Column(Integer, ForeignKey('users.id', ondelete="CASCADE"), nullable=True)
+    user = relationship(
+        "User", back_populates="shared_with_me", foreign_keys=[user_id], lazy="selectin"
+    )
+
+    group_id = Column(
+        Integer, ForeignKey('groups.id', ondelete="CASCADE"), nullable=True
+    )
+    group = relationship("Group", back_populates="shared_with_me", lazy="selectin")
+
+    def __repr__(self):
+        if self.user:
+            kind = "user"
+            name = self.user.name
+        elif self.group:
+            kind = "group"
+            name = self.group.name
+        else:  # pragma: no cover
+            kind = "deleted"
+            name = "unknown"
+
+        if self.owner and self.spawner:
+            server_name = f"{self.owner.name}/{self.spawner.name}"
+        else:  # pragma: n cover
+            server_name = "unknown/deleted"
+
+        return f"<{self.__class__.__name__}(server={server_name}, scopes={self.scopes}, {kind}={name})>"
+
+    @staticmethod
+    def _share_with_key(share_with):
+        """Get the field name for share with
+
+        either group_id or user_id, depending on type of share_with
+
+        raises TypeError if neither User nor Group
+        """
+        if isinstance(share_with, User):
+            return "user_id"
+        elif isinstance(share_with, Group):
+            return "group_id"
+        else:
+            raise TypeError(
+                f"Can only share with orm.User or orm.Group, not {share_with!r}"
+            )
+
+    @classmethod
+    def find(cls, db, spawner, share_with):
+        """Find an existing
+
+        Shares are unique for a given (spawner, user)
+        """
+
+        filter_by = {
+            cls._share_with_key(share_with): share_with.id,
+            "spawner_id": spawner.id,
+            "owner_id": spawner.user.id,
+        }
+        return db.query(Share).filter_by(**filter_by).one_or_none()
+
+    @staticmethod
+    def _get_log_name(spawner, share_with):
+        """construct log snippet to refer to the share"""
+        return (
+            f"{share_with.kind}:{share_with.name} on {spawner.user.name}/{spawner.name}"
+        )
+
+    @property
+    def _log_name(self):
+        return self._get_log_name(self.spawner, self.user or self.group)
+
+    @classmethod
+    def grant(cls, db, spawner, share_with, scopes=None):
+        """Grant shared permissions for a server
+
+        Updates existing Share if there is one,
+        otherwise creates a new Share
+        """
+        if scopes is None:
+            scopes = frozenset(
+                [f"access:servers!server={spawner.user.name}/{spawner.name}"]
+            )
+        scopes = cls._apply_filter(frozenset(scopes), spawner.user.name, spawner.name)
+
+        if not scopes:
+            raise ValueError("Must specify scopes to grant.")
+
+        # 1. lookup existing share and update
+        share = cls.find(db, spawner, share_with)
+        share_with_log = cls._get_log_name(spawner, share_with)
+        if share is not None:
+            # update existing permissions in-place
+            # extend permissions
+            existing_scopes = set(share.scopes)
+            added_scopes = set(scopes).difference(existing_scopes)
+            if not added_scopes:
+                app_log.info(f"No new scopes for {share_with_log}")
+                return share
+            new_scopes = sorted(existing_scopes | added_scopes)
+            app_log.info(f"Granting scopes {sorted(added_scopes)} for {share_with_log}")
+            share.scopes = new_scopes
+            db.commit()
+        else:
+            # no share for (spawner, share_with), create a new one
+            app_log.info(f"Sharing scopes {sorted(scopes)} for {share_with_log}")
+            share = cls(
+                created_at=cls.now(),
+                # copy shared fields
+                owner=spawner.user,
+                spawner=spawner,
+                scopes=sorted(scopes),
+            )
+            if share_with.kind == "user":
+                share.user = share_with
+            elif share_with.kind == "group":
+                share.group = share_with
+            else:
+                raise TypeError(f"Expected user or group, got {share_with!r}")
+            db.add(share)
+            db.commit()
+        return share
+
+    @classmethod
+    def revoke(cls, db, spawner, share_with, scopes=None):
+        """Revoke permissions for share_with on `spawner`
+
+        If scopes are not specified, all scopes are revoked
+        """
+        share = cls.find(db, spawner, share_with)
+        if share is None:
+            _log_name = cls._get_log_name(spawner, share_with)
+            app_log.info(f"No permissions to revoke from {_log_name}")
+            return
+        else:
+            _log_name = share._log_name
+
+        if scopes is None:
+            app_log.info(f"Revoked all permissions from {_log_name}")
+            db.delete(share)
+            db.commit()
+            return None
+
+        # update scopes
+        new_scopes = [scope for scope in share.scopes if scope not in scopes]
+        revoked_scopes = [scope for scope in scopes if scope in set(share.scopes)]
+        if new_scopes == share.scopes:
+            app_log.info(f"No change in scopes for {_log_name}")
+            return share
+        elif not new_scopes:
+            # revoked all scopes, delete the Share
+            app_log.info(f"Revoked all permissions from {_log_name}")
+            db.delete(share)
+            db.commit()
+        else:
+            app_log.info(f"Revoked {revoked_scopes} from {_log_name}")
+            share.scopes = new_scopes
+            db.commit()
+
+        if new_scopes:
+            return share
+        else:
+            return None
+
+
+class ShareCode(_Share, Hashed, Base):
+    """A code that can be exchanged for a Share
+
+    Ultimately, the same as a Share, but has a 'code'
+    instead of a user or group that it is shared with.
+    The code can be exchanged to create or update an actual Share.
+    """
+
+    __tablename__ = "share_codes"
+
+    hashed = Column(Unicode(255), unique=True)
+    prefix = Column(Unicode(16), index=True)
+    exchange_count = Column(Integer, default=0)
+    last_exchanged_at = Column(DateTime, nullable=True, default=None)
+
+    _code_bytes = 32
+    default_expires_in = 86400
+
+    def __repr__(self):
+        if self.owner and self.spawner:
+            server_name = f"{self.owner.name}/{self.spawner.name}"
+        else:
+            server_name = "unknown/deleted"
+
+        return f"<{self.__class__.__name__}(server={server_name}, scopes={self.scopes}, expires_at={self.expires_at})>"
+
+    @classmethod
+    def new(
+        cls,
+        db,
+        spawner,
+        *,
+        scopes,
+        expires_in=None,
+        **kwargs,
+    ):
+        """Create a new ShareCode"""
+        app_log.info(f"Creating share code for {spawner.user.name}/{spawner.name}")
+        # verify scopes have the necessary filter
+        kwargs["scopes"] = sorted(cls.apply_filter(scopes, spawner))
+        if not expires_in:
+            expires_in = cls.default_expires_in
+        kwargs["expires_at"] = utcnow() + timedelta(seconds=expires_in)
+        kwargs["spawner"] = spawner
+        kwargs["owner"] = spawner.user
+        code = secrets.token_urlsafe(cls._code_bytes)
+
+        # create the ShareCode
+        share_code = cls(**kwargs)
+        # setting Hashed.token property sets the `hashed` column in the db
+        share_code.token = code
+        # actually put it in the db
+        db.add(share_code)
+        db.commit()
+        return (share_code, code)
+
+    @classmethod
+    def find(cls, db, code, *, spawner=None):
+        """Lookup a single ShareCode by code"""
+        prefix_match = cls.find_prefix(db, code)
+        if spawner:
+            prefix_match = prefix_match.filter_by(spawner_id=spawner.id)
+        for share_code in prefix_match:
+            if share_code.match(code):
+                return share_code
+
+    def exchange(self, share_with):
+        """exchange a ShareCode for a Share
+
+        share_with can be a User or a Group.
+        """
+        db = inspect(self).session
+        share_code_log = f"Share code {self.prefix}..."
+        if self.expired:
+            db.delete(self)
+            db.commit()
+            raise ValueError(f"{share_code_log} expired")
+
+        share_with_log = f"{share_with.kind}:{share_with.name} on {self.owner.name}/{self.spawner.name}"
+        app_log.info(f"Exchanging {share_code_log} for {share_with_log}")
+        share = Share.grant(db, self.spawner, share_with, self.scopes)
+        # note: we count exchanges, even if they don't modify the permissions
+        # (e.g. one user exchanging the same code twice)
+        self.exchange_count += 1
+        self.last_exchanged_at = self.now()
+        db.commit()
+        return share
 
 
 # ------------------------------------

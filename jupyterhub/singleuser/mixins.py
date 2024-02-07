@@ -713,6 +713,7 @@ class SingleUserNotebookAppMixin(Configurable):
         Only has effect on jupyterlab_server >=2.9
         """
         page_config["token"] = self.hub_auth.get_token(handler) or ""
+        page_config["hubServerUser"] = os.environ.get("JUPYTERHUB_USER", "")
         return page_config
 
     def patch_default_headers(self):
