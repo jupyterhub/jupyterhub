@@ -1,5 +1,5 @@
 extends:
-  - recommended
+  - recommended-strict
 
 apis:
   rest:
@@ -7,4 +7,3 @@ apis:
     rules:
       info-license-url: off
       operation-4xx-response: off
-      no-unused-components: warn

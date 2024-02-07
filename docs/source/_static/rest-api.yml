@@ -1921,6 +1921,7 @@ components:
           items:
             type: string
         id:
+          type: string
           description: |
             the share-code's id.
             Can be used to revoke share codes.
