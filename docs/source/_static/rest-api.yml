@@ -12,8 +12,7 @@ servers:
   - url: /hub/api
 security:
   - token: []
-  - oauth2:
-      - self
+  - oauth2: []
 paths:
   /:
     get:
@@ -86,7 +85,11 @@ paths:
   /user:
     get:
       operationId: get-current-user
-      summary: Return authenticated user's model
+      summary: Get current user
+      description: |
+        Returns the User model for the owner of the authenticating token.
+        Includes information about the requesting token itself,
+        such as the currently authorized scopes.
       responses:
         200:
           description: |
@@ -97,15 +100,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/RequestIdentity"
       security:
-        - oauth2:
-            - read:users
-            - read:users:name
-            - read:users:groups
-            - read:users:activity
-            - read:servers
-            - read:roles:users
-            - admin:auth_state
-            - admin:server_state
+        - oauth2: []
   /users:
     get:
       operationId: get-users
@@ -151,14 +146,7 @@ paths:
                   $ref: "#/components/schemas/User"
       security:
         - oauth2:
-            - read:users
-            - read:users:name
-            - read:users:groups
-            - read:users:activity
-            - read:servers
-            - read:roles:users
-            - admin:auth_state
-            - admin:server_state
+            - list:users
     post:
       operationId: post-users
       summary: Create multiple users
@@ -213,13 +201,6 @@ paths:
       security:
         - oauth2:
             - read:users
-            - read:users:name
-            - read:users:groups
-            - read:users:activity
-            - read:servers
-            - read:roles:users
-            - admin:auth_state
-            - admin:server_state
     post:
       operationId: post-user
       summary: Create a single user
@@ -246,7 +227,7 @@ paths:
           content: {}
       security:
         - oauth2:
-            - admin:users
+            - delete:users
     patch:
       operationId: patch-user
       summary: Modify a user
@@ -394,7 +375,7 @@ paths:
           content: {}
       security:
         - oauth2:
-            - servers
+            - delete:servers
   /users/{name}/servers/{server_name}:
     post:
       operationId: post-user-server-name
@@ -465,7 +446,7 @@ paths:
           content: {}
       security:
         - oauth2:
-            - servers
+            - delete:servers
       # x-codegen-request-body-name: body
 
   /users/{name}/shared:
@@ -682,9 +663,7 @@ paths:
                   $ref: "#/components/schemas/Group"
       security:
         - oauth2:
-            - read:groups
-            - read:groups:name
-            - read:roles:groups
+            - list:groups
   /groups/{name}:
     get:
       operationId: get-group
@@ -701,8 +680,6 @@ paths:
       security:
         - oauth2:
             - read:groups
-            - read:groups:name
-            - read:roles:groups
     post:
       operationId: post-group
       summary: Create a group
@@ -729,7 +706,7 @@ paths:
           content: {}
       security:
         - oauth2:
-            - admin:groups
+            - delete:groups
 
   /groups/{name}/shared:
     get:
@@ -1236,8 +1213,6 @@ paths:
       security:
         - oauth2:
             - read:services
-            - read:services:name
-            - read:roles:services
   /services/{name}:
     get:
       operationId: get-service
@@ -1259,8 +1234,6 @@ paths:
       security:
         - oauth2:
             - read:services
-            - read:services:name
-            - read:roles:services
   /proxy:
     get:
       operationId: get-proxy
@@ -1330,6 +1303,7 @@ paths:
       x-codegen-request-body-name: body
   /authorizations/token:
     post:
+      deprecated: true
       operationId: post-auth-token
       summary: Request a new API token
       description: |
@@ -1369,6 +1343,7 @@ paths:
       x-codegen-request-body-name: credentials
   /authorizations/token/{token}:
     get:
+      deprecated: true
       operationId: get-auth-token
       summary: Identify a user or service from an API token
       parameters:
@@ -2005,15 +1980,14 @@ components:
             Added in 2.0.
   securitySchemes:
     token:
-      type: apiKey
-      name: Authorization
-      in: header
+      type: http
+      scheme: bearer
     oauth2:
       type: oauth2
       flows:
         authorizationCode:
-          authorizationUrl: https://hub.example/hub/api/oauth2/authorize
-          tokenUrl: https://hub.example/hub/api/oauth2/token
+          authorizationUrl: /hub/api/oauth2/authorize
+          tokenUrl: /hub/api/oauth2/token
           scopes:
             (no_scope): Identify the owner of the requesting entity.
             self:
