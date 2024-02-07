@@ -2,8 +2,10 @@ openapi: 3.0.3
 # note: 3.1.0 required for requestBody on DELETE
 # which we should maybe move away from
 info:
-  title: JupyterHub
-  description: The REST API for JupyterHub
+  title: JupyterHub REST API
+  description: |
+    The REST API for JupyterHub.
+    <a href="./">Return to JupyterHub documentation</a>.
   license:
     name: BSD-3-Clause
   version: 5.0.0.dev
