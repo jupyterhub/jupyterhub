@@ -7,13 +7,17 @@ import datetime
 import io
 import os
 import subprocess
+from pathlib import Path
+from urllib.request import urlretrieve
 
 from docutils import nodes
 from sphinx.directives.other import SphinxDirective
+from sphinx.util import logging
 
 import jupyterhub
 from jupyterhub.app import JupyterHub
 
+logger = logging.getLogger(__name__)
 # -- Project information -----------------------------------------------------
 # ref: https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 #
@@ -119,7 +123,24 @@ class HelpAllDirective(SphinxDirective):
         return [par]
 
 
+templates_path = ["_templates"]
+
+
+def stage_redoc_js(app, exception):
+    """Download redoc.js to our static files"""
+    redoc_version = "2.1.3"
+    redoc_url = (
+        f"https://cdn.redoc.ly/redoc/v{redoc_version}/bundles/redoc.standalone.js"
+    )
+
+    dest = Path(app.builder.outdir) / "_static/redoc.js"
+    if not dest.exists():
+        logger.info(f"Downloading {redoc_url} -> {dest}")
+        urlretrieve(redoc_url, dest)
+
+
 def setup(app):
+    app.connect("build-finished", stage_redoc_js)
     app.add_css_file("custom.css")
     app.add_directive("jupyterhub-generate-config", ConfigDirective)
     app.add_directive("jupyterhub-help-all", HelpAllDirective)
