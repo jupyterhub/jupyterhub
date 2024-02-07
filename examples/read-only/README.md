@@ -23,3 +23,8 @@ To test this, you'll want two browser sessions:
 
 Percy can use their server as normal, but vex will only be able to read files.
 Vex won't be able to run any code, connect to kernels, or save edits to files.
+
+Note that defining custom scopes does not enforce that they are used.
+Defining scopes for read-only access and then running user servers without the custom Authorizer
+will result in users who are supposed to have read-only access actually having unrestricted access,
+because only the default `access:servers` scope is checked.

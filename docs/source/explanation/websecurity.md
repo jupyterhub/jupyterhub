@@ -52,6 +52,7 @@ ensure that:
     their single-user server;
   - the modification of the configuration of the notebook server
     (the `~/.jupyter` or `JUPYTER_CONFIG_DIR` directory).
+  - unrestricted selection of the base environment (e.g. the image used in container-based Spawners)
 
 If any additional services are run on the same domain as the Hub, the services
 **must never** display user-authored HTML that is neither _sanitized_ nor _sandboxed_
@@ -93,6 +94,8 @@ the Spawner should _not_ evaluate shell configuration files prior to launching t
 Package isolation is most easily handled by running the single-user server in
 a virtualenv with disabled system-site-packages. The user should not have
 permission to install packages into this environment.
+The same principle extends to the images used by container-based deployments.
+If users can select the images in which their servers run, they can disable all security.
 
 It is important to note that the control over the environment only affects the
 single-user server, and not the environment(s) in which the user's kernel(s)
