@@ -334,6 +334,8 @@ paths:
                     last_activity: 2019-02-06T12:54:14Z
         required: false
       responses:
+        200:
+          description: Successfully updated activity
         401:
           description: Authentication/Authorization error
           content: {}
@@ -1614,8 +1616,9 @@ components:
           description: |
             fields for the next page, if any.
             Null if this is the last page.
-          type: object
-          nullable: true
+          type:
+            - object
+            - "null"
           properties:
             offset:
               type: number
@@ -1763,8 +1766,9 @@ components:
         - type: object
           properties:
             session_id:
-              type: string
-              nullable: true
+              type:
+                - string
+                - "null"
               description: |
                 The session id associated with the request's OAuth token, if any.
                 null, if the request token not associated with a session id.
@@ -1881,8 +1885,9 @@ components:
           description:
             the group being shared with (exactly one of 'user' or 'group'
             will be non-null, the other will be null)
-          type: object
-          nullable: true
+          type:
+            - object
+            - "null"
           properties:
             name:
               type: string
@@ -1890,8 +1895,9 @@ components:
           description:
             the user being shared with (exactly one of 'user' or 'group'
             will be non-null, the other will be null)
-          type: object
-          nullable: true
+          type:
+            - object
+            - "null"
           properties:
             name:
               type: string
@@ -1927,8 +1933,9 @@ components:
             When the share code will expire,
             always in the future.
             `null` if the code does not expire.
-          type: string
-          nullable: true
+          type:
+            - string
+            - "null"
           format: date-time
 
     Token:
@@ -1984,20 +1991,14 @@ components:
             Can be null if token has never been used.
           format: date-time
         session_id:
-          type: string
-          nullable: true
+          type:
+            - string
+            - "null"
           description: |
             The session id associated with the token, if any.
             Only used for tokens set during oauth flows.
 
             Added in 2.0.
-  responses:
-    NotFound:
-      description: The specified resource was not found
-      content: {}
-    Unauthorized:
-      description: Authentication/Authorization error
-      content: {}
   securitySchemes:
     token:
       type: apiKey
