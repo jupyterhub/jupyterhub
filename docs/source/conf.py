@@ -128,11 +128,14 @@ templates_path = ["_templates"]
 
 def stage_redoc_js(app, exception):
     """Download redoc.js to our static files"""
+    if app.builder.name != "html":
+        logger.info(f"Skipping redoc download for builder: {app.builder.name}")
+        return
+
     redoc_version = "2.1.3"
     redoc_url = (
         f"https://cdn.redoc.ly/redoc/v{redoc_version}/bundles/redoc.standalone.js"
     )
-
     dest = Path(app.builder.outdir) / "_static/redoc.js"
     if not dest.exists():
         logger.info(f"Downloading {redoc_url} -> {dest}")
