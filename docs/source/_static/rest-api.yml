@@ -178,7 +178,6 @@ paths:
       security:
         - oauth2:
             - admin:users
-      x-codegen-request-body-name: body
   /users/{name}:
     get:
       operationId: get-user
@@ -264,7 +263,6 @@ paths:
       security:
         - oauth2:
             - admin:users
-      x-codegen-request-body-name: body
   /users/{name}/activity:
     post:
       operationId: post-user-activity
@@ -326,7 +324,6 @@ paths:
       security:
         - oauth2:
             - users:activity
-      x-codegen-request-body-name: body
   /users/{name}/server:
     post:
       operationId: post-user-server
@@ -358,7 +355,7 @@ paths:
       security:
         - oauth2:
             - servers
-      x-codegen-request-body-name: options
+
     delete:
       operationId: delete-user-server
       summary: Stop a user's server
@@ -406,7 +403,6 @@ paths:
       security:
         - oauth2:
             - servers
-      x-codegen-request-body-name: options
     delete:
       operationId: delete-user-server-name
       summary: Stop a user's named server
@@ -447,7 +443,6 @@ paths:
       security:
         - oauth2:
             - delete:servers
-      # x-codegen-request-body-name: body
 
   /users/{name}/shared:
     get:
@@ -605,7 +600,7 @@ paths:
       security:
         - oauth2:
             - tokens
-      x-codegen-request-body-name: token_params
+
   /users/{name}/tokens/{token_id}:
     get:
       operationId: get-user-token
@@ -805,7 +800,6 @@ paths:
       security:
         - oauth2:
             - groups
-      x-codegen-request-body-name: body
     delete:
       operationId: delete-group-users
       summary: |
@@ -842,7 +836,6 @@ paths:
       security:
         - oauth2:
             - groups
-      x-codegen-request-body-name: body
 
   /groups/{name}/properties:
     put:
@@ -872,7 +865,6 @@ paths:
       security:
         - oauth2:
             - groups
-      x-codegen-request-body-name: body
 
   /shares/{owner}:
     get:
@@ -970,7 +962,6 @@ paths:
                   items:
                     type: string
         required: true
-      x-codegen-request-body-name: body
       responses:
         200:
           description: The updated Share permissions
@@ -1021,7 +1012,6 @@ paths:
                   items:
                     type: string
         required: true
-      x-codegen-request-body-name: body
       responses:
         200:
           description: |
@@ -1138,7 +1128,6 @@ paths:
                   items:
                     type: string
         required: true
-      x-codegen-request-body-name: body
       responses:
         200:
           description: |
@@ -1300,7 +1289,6 @@ paths:
       security:
         - oauth2:
             - proxy
-      x-codegen-request-body-name: body
   /authorizations/token:
     post:
       deprecated: true
@@ -1340,7 +1328,7 @@ paths:
       security:
         - oauth2:
             - tokens
-      x-codegen-request-body-name: credentials
+
   /authorizations/token/{token}:
     get:
       deprecated: true
@@ -1511,7 +1499,6 @@ paths:
       security:
         - oauth2:
             - shutdown
-      x-codegen-request-body-name: body
 
 components:
   parameters:
