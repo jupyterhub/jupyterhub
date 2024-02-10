@@ -144,6 +144,54 @@ class Authenticator(LoggingConfigurable):
         """
     ).tag(config=True)
 
+    allow_existing_users = Bool(
+        False,  # the default value is computed by a function below
+        config=True,
+        help="""
+        Allow existing users to login.
+
+        Defaults to True if `allowed_users` is set for historical reasons, and
+        False otherwise.
+
+        An existing user is a user in JupyterHub's database of users, and it
+        includes all users that has previously logged in.
+
+        .. warning::
+
+           Before enabling this you should review the existing users in the
+           JupyterHub admin panel at `/hub/admin`. You may find users existing
+           there because they have once been declared in config such as
+           `allowed_users`, or once been allowed to sign in.
+
+        .. warning::
+
+           When this is enabled and you are to remove access for one or more
+           users allowed via other config options, you must make sure that they
+           are not part of the database of users still. This can be tricky to do
+           if you stop allowing a group of externally managed users for example.
+
+        With this enabled, JupyterHub admin users can visit `/hub/admin` or use
+        JupyterHub's REST API to add and remove users as a way to allow or
+        revoke access.
+
+        The username for existing users must match the normalized username
+        returned by the authenticator.
+
+        .. versionadded:: 5.0
+        """,
+    )
+
+    @default("allow_existing_users")
+    def _allow_existing_users_default(self):
+        """
+        Computes the default value of allow_existing_users based on if
+        allowed_users to align with original behavior not introduce a breaking
+        change.
+        """
+        if self.allowed_users:
+            return True
+        return False
+
     blocked_users = Set(
         help="""
         Set of usernames that are not allowed to log in.
@@ -682,7 +730,8 @@ class Authenticator(LoggingConfigurable):
 
         This method may be a coroutine.
 
-        By default, this just adds the user to the allowed_users set.
+        By default, this adds the user to the allowed_users set if
+        allow_existing_users is true.
 
         Subclasses may do more extensive things, such as adding actual unix users,
         but they should call super to ensure the allowed_users set is updated.
@@ -690,12 +739,16 @@ class Authenticator(LoggingConfigurable):
         Note that this should be idempotent, since it is called whenever the hub restarts
         for all users.
 
+        .. versionchanged:: 5.0
+           Now adds users to the allowed_users set if allow_existing_users is
+           True, instead of if allowed_users was truthy.
+
         Args:
             user (User): The User wrapper object
         """
         if not self.validate_username(user.name):
             raise ValueError("Invalid username: %s" % user.name)
-        if self.allowed_users:
+        if self.allow_existing_users:
             self.allowed_users.add(user.name)
 
     def delete_user(self, user):
