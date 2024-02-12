@@ -36,7 +36,7 @@ permissions:
 jobs:
   # Run "pytest jupyterhub/tests" in various configurations
   pytest:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     timeout-minutes: 15
 
     strategy:
@@ -139,10 +139,10 @@ jobs:
       - uses: actions/checkout@v4
       # NOTE: actions/setup-node@v4 make use of a cache within the GitHub base
       #       environment and setup in a fraction of a second.
-      - name: Install Node v14
+      - name: Install Node
         uses: actions/setup-node@v4
         with:
-          node-version: "14"
+          node-version: "20"
       - name: Install Javascript dependencies
         run: |
           npm install
@@ -253,7 +253,7 @@ jobs:
       - uses: codecov/codecov-action@v4
 
   docker-build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     timeout-minutes: 20
 
     steps:

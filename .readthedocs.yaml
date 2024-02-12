@@ -8,10 +8,10 @@ sphinx:
   configuration: docs/source/conf.py
 
 build:
-  os: ubuntu-20.04
+  os: ubuntu-22.04
   tools:
-    nodejs: "16"
-    python: "3.9"
+    nodejs: "20"
+    python: "3.11"
 
 python:
   install:

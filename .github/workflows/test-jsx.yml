@@ -28,7 +28,7 @@ jobs:
   # tests also has tests that this job is meant to run with `npm test`
   # according to the documentation in jsx/README.md.
   test-jsx-admin-react:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     timeout-minutes: 5
 
     steps:

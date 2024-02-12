@@ -30,16 +30,16 @@ on:
 
 jobs:
   build-release:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.9"
+          python-version: "3.11"
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "14"
+          node-version: "20"
 
       - name: install build requirements
         run: |
@@ -83,7 +83,7 @@ jobs:
           twine upload --skip-existing dist/*
 
   publish-docker:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     timeout-minutes: 20
 
     services:
