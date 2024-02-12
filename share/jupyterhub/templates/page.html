@@ -68,7 +68,12 @@
         base_url: "{{base_url}}",
         prefix: "{{prefix}}",
         {% if user %}
-        user: "{{user.json_escaped_name}}",
+        {#
+          Autoescaping in templates is turned on in JupyterHub,
+          need `| safe` to prevent escaping
+          https://github.com/pallets/markupsafe/blob/2.1.4/src/markupsafe/_native.py#L6
+        #}
+        user: "{{ user.json_escaped_name | safe }}",
         {% endif %}
         {% if admin_access %}
         admin_access: true,
