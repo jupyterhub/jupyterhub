@@ -130,11 +130,14 @@ class Authenticator(LoggingConfigurable):
         help="""
         Set of usernames that are allowed to log in.
 
-        Use this with supported authenticators to restrict which users can log in. This is an
-        additional list that further restricts users, beyond whatever restrictions the
-        authenticator has in place. Any user in this list is granted the 'user' role on hub startup.
+        Use this to limit which authenticated users may login.
+        Default behavior: only users in this set are allowed.
+        
+        If empty, does not perform any restriction,
+        in which case any authenticated user is allowed.
 
-        If empty, does not perform any additional restriction.
+        Authenticators may extend :meth:`.Authenticator.check_allowed` to combine `allowed_users` with other configuration
+        to either expand or restrict access.
 
         .. versionchanged:: 1.2
             `Authenticator.whitelist` renamed to `allowed_users`
