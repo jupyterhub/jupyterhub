@@ -12,7 +12,7 @@ and a custom Spawner needs to be able to take three actions:
 
 ## Examples
 
-Custom Spawners for JupyterHub can be found on the [JupyterHub wiki](https://github.com/jupyterhub/jupyterhub/wiki/Spawners).
+Along with default Spawner, JupyterHub also has Custom Spawners.
 Some examples include:
 
 - [DockerSpawner](https://github.com/jupyterhub/dockerspawner) for spawning user servers in Docker containers
