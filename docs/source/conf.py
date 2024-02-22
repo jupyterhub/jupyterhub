@@ -11,6 +11,7 @@ from pathlib import Path
 from urllib.request import urlretrieve
 
 from docutils import nodes
+from ruamel.yaml import YAML
 from sphinx.directives.other import SphinxDirective
 from sphinx.util import logging
 
@@ -45,6 +46,10 @@ root_doc = "index"
 source_suffix = [".md"]
 # default_role let's use use `foo` instead of ``foo`` in rST
 default_role = "literal"
+
+docs = Path(__file__).parent.parent.absolute()
+docs_source = docs / "source"
+rest_api_yaml = docs_source / "_static" / "rest-api.yml"
 
 
 # -- MyST configuration ------------------------------------------------------
@@ -123,6 +128,43 @@ class HelpAllDirective(SphinxDirective):
         return [par]
 
 
+class RestAPILinksDirective(SphinxDirective):
+    """Directive to populate link targets for the REST API
+
+    The resulting nodes resolve xref targets,
+    but are not actually rendered in the final result
+    which is handled by a custom template.
+    """
+
+    hast_content = False
+    required_arguments = 0
+    optional_arguments = 0
+    final_argument_whitespace = False
+    option_spec = {}
+
+    def run(self):
+        targets = []
+        yaml = YAML(typ="safe")
+        with rest_api_yaml.open() as f:
+            api = yaml.load(f)
+        for path, path_spec in api["paths"].items():
+            for method, operation in path_spec.items():
+                operation_id = operation.get("operationId")
+                if not operation_id:
+                    logger.warning(f"No operation id for {method} {path}")
+                    continue
+                # 'id' is the id on the page (must match redoc anchor)
+                # 'name' is the name of the ref for use in our documents
+                target = nodes.target(
+                    ids=[f"operation/{operation_id}"],
+                    names=[f"rest-api-{operation_id}"],
+                )
+                targets.append(target)
+                self.state.document.note_explicit_target(target, target)
+
+        return targets
+
+
 templates_path = ["_templates"]
 
 
@@ -147,6 +189,7 @@ def setup(app):
     app.add_css_file("custom.css")
     app.add_directive("jupyterhub-generate-config", ConfigDirective)
     app.add_directive("jupyterhub-help-all", HelpAllDirective)
+    app.add_directive("jupyterhub-rest-api-links", RestAPILinksDirective)
 
 
 # -- Read The Docs -----------------------------------------------------------
@@ -155,8 +198,7 @@ def setup(app):
 # pre-requisite steps for "make html" from here if needed.
 #
 if os.environ.get("READTHEDOCS"):
-    docs = os.path.dirname(os.path.dirname(__file__))
-    subprocess.check_call(["make", "metrics", "scopes"], cwd=docs)
+    subprocess.check_call(["make", "metrics", "scopes"], cwd=str(docs))
 
 
 # -- Spell checking ----------------------------------------------------------
@@ -211,7 +253,6 @@ linkcheck_ignore = [
     "https://github.com/jupyterhub/jupyterhub/pull/",  # too many PRs in changelog
     "https://github.com/jupyterhub/jupyterhub/compare/",  # too many comparisons in changelog
     r"https?://(localhost|127.0.0.1).*",  # ignore localhost references in auto-links
-    r".*/rest-api.html#.*",  # ignore javascript-resolved internal rest-api links
     r"https://linux.die.net/.*",  # linux.die.net seems to block requests from CI with 403 sometimes
 ]
 linkcheck_anchors_ignore = [

@@ -773,7 +773,7 @@ paths:
 
   /groups/{name}/users:
     post:
-      operationId: get-group-users
+      operationId: post-group-users
       summary: Add users to a group
       parameters:
         - $ref: "#/components/parameters/groupName"
