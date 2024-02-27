@@ -20,8 +20,22 @@ rather than keeing these monkey patches around.
 """
 
 import os
+from pathlib import Path
 
 from jupyter_core import paths
+
+
+def _is_relative_to(path, prefix):
+    """
+    Backport Path.is_relative_to for Python < 3.9
+
+    added in Python 3.9
+    """
+    if hasattr(path, "is_relative_to"):
+        # Python >= 3.9
+        return path.is_relative_to(prefix)
+    else:
+        return path == prefix or prefix in path.parents
 
 
 def _exclude_home(path_list):
@@ -29,10 +43,12 @@ def _exclude_home(path_list):
 
     Used to disable per-user configuration.
     """
-    home = os.path.expanduser('~/')
-    for p in path_list:
-        if not p.startswith(home):
-            yield p
+    # resolve paths before comparison
+    # so we do the right thing when $HOME is a symlink
+    home = Path.home().resolve()
+    for path in path_list:
+        if not _is_relative_to(Path(path).resolve(), home):
+            yield path
 
 
 # record patches
