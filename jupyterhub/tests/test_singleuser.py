@@ -3,6 +3,7 @@
 import os
 import sys
 from contextlib import nullcontext
+from pathlib import Path
 from pprint import pprint
 from subprocess import CalledProcessError, check_output
 from unittest import mock
@@ -145,7 +146,7 @@ async def test_singleuser_auth(
 @pytest.mark.skipif(
     IS_JUPYVERSE, reason="jupyverse doesn't look up directories for configuration files"
 )
-async def test_disable_user_config(request, app, tmpdir, full_spawn):
+async def test_disable_user_config(request, app, tmp_path, full_spawn):
     # login, start the server
     cookies = await app.login_user('nandy')
     user = app.users['nandy']
@@ -156,14 +157,21 @@ async def test_disable_user_config(request, app, tmpdir, full_spawn):
     # start with new config:
     user.spawner.debug = True
     user.spawner.disable_user_config = True
-    home_dir = tmpdir.join("home")
-    home_dir.mkdir()
+    user.spawner.default_url = "/jupyterhub-test-info"
+
+    # make sure it's resolved to start
+    tmp_path = tmp_path.resolve()
+    real_home_dir = tmp_path / "realhome"
+    real_home_dir.mkdir()
+    # make symlink to test resolution
+    home_dir = tmp_path / "home"
+    home_dir.symlink_to(real_home_dir)
     # home_dir is defined on SimpleSpawner
-    user.spawner.home_dir = home = str(home_dir)
-    jupyter_config_dir = home_dir.join(".jupyter")
+    user.spawner.home_dir = str(home_dir)
+    jupyter_config_dir = home_dir / ".jupyter"
     jupyter_config_dir.mkdir()
     # verify config paths
-    with jupyter_config_dir.join("jupyter_server_config.py").open("w") as f:
+    with (jupyter_config_dir / "jupyter_server_config.py").open("w") as f:
         f.write("c.TestSingleUser.jupyter_config_py = True")
 
     await user.spawn()
@@ -174,29 +182,22 @@ async def test_disable_user_config(request, app, tmpdir, full_spawn):
     # with cookies, login successful
     r = await async_requests.get(url, cookies=cookies)
     r.raise_for_status()
-    assert r.url.rstrip('/').endswith(
-        url_path_join('/user/nandy', user.spawner.default_url or "/tree")
-    )
+    assert r.url.endswith('/user/nandy/jupyterhub-test-info')
     assert r.status_code == 200
-
-    r = await async_requests.get(
-        url_path_join(public_url(app, user), 'jupyterhub-test-info'), cookies=cookies
-    )
-    r.raise_for_status()
     info = r.json()
     pprint(info)
     assert info['disable_user_config']
     server_config = info['config']
     settings = info['settings']
     assert 'TestSingleUser' not in server_config
-    # check config paths
-    norm_home = os.path.realpath(os.path.abspath(home))
 
+    # check against tmp_path, the parent of both our home directories
+    # (symlink and real)
     def assert_not_in_home(path, name):
-        path = os.path.realpath(os.path.abspath(path))
-        assert not path.startswith(
-            norm_home + os.path.sep
-        ), f"{name}: {path} is in home {norm_home}"
+        path = Path(path).resolve()
+        assert not (str(path) + os.path.sep).startswith(
+            str(tmp_path) + os.path.sep
+        ), f"{name}: {path} is in home {tmp_path}"
 
     for path in info['config_file_paths']:
         assert_not_in_home(path, 'config_file_paths')
