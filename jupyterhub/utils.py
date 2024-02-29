@@ -14,6 +14,7 @@ import socket
 import ssl
 import sys
 import threading
+import time
 import uuid
 import warnings
 from binascii import b2a_hex
@@ -90,6 +91,8 @@ def can_connect(ip, port):
     except OSError as e:
         if e.errno not in {errno.ECONNREFUSED, errno.ETIMEDOUT}:
             app_log.error("Unexpected error connecting to %s:%i %s", ip, port, e)
+        else:
+            app_log.debug("Server at %s:%i not ready: %s", ip, port, e)
         return False
     else:
         return True
@@ -242,6 +245,8 @@ async def wait_for_server(ip, port, timeout=10):
     """Wait for any server to show up at ip:port."""
     if ip in {'', '0.0.0.0', '::'}:
         ip = '127.0.0.1'
+    app_log.debug("Waiting %ss for server at %s:%s", timeout, ip, port)
+    tic = time.perf_counter()
     await exponential_backoff(
         lambda: can_connect(ip, port),
         "Server at {ip}:{port} didn't respond in {timeout} seconds".format(
@@ -249,6 +254,8 @@ async def wait_for_server(ip, port, timeout=10):
         ),
         timeout=timeout,
     )
+    toc = time.perf_counter()
+    app_log.debug("Server at %s:%s responded in %.2fs", ip, port, toc - tic)
 
 
 async def wait_for_http_server(url, timeout=10, ssl_context=None):
@@ -256,11 +263,12 @@ async def wait_for_http_server(url, timeout=10, ssl_context=None):
 
     Any non-5XX response code will do, even 404.
     """
-    loop = ioloop.IOLoop.current()
-    tic = loop.time()
     client = AsyncHTTPClient()
     if ssl_context:
         client.ssl_options = ssl_context
+
+    app_log.debug("Waiting %ss for server at %s", timeout, url)
+    tic = time.perf_counter()
 
     async def is_reachable():
         try:
@@ -294,6 +302,8 @@ async def wait_for_http_server(url, timeout=10, ssl_context=None):
         ),
         timeout=timeout,
     )
+    toc = time.perf_counter()
+    app_log.debug("Server at %s responded in %.2fs", url, toc - tic)
     return re
 
 
