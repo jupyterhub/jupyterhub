@@ -11,6 +11,8 @@ from .._version import __version__
 from ..scopes import needs_scope
 from .base import APIHandler
 
+from psutil import virtual_memory, cpu_count, cpu_percent
+from time import time, ctime
 
 class ShutdownAPIHandler(APIHandler):
     @needs_scope('shutdown')
@@ -65,6 +67,38 @@ class RootAPIHandler(APIHandler):
         self.finish(json.dumps(data))
 
 
+class ResourcesAPIHandler(APIHandler):
+    last_updated = 0
+    cached_data = {}
+    seconds_interval = 10
+    
+    def check_xsrf_cookie(self):
+        return
+
+    def get(self):
+        """GET /api/resources returns resource information about the server
+
+          It currently returns cpu and memory usage information without authentication
+        """
+        current_time = time()
+        if current_time - ResourcesAPIHandler.last_updated >= ResourcesAPIHandler.seconds_interval:
+            ResourcesAPIHandler.cached_data = {
+                "last_updated": ctime(),
+                "seconds_interval": ResourcesAPIHandler.seconds_interval,
+                ##"virtual_memory" : dict(virtual_memory()._asdict()),                
+                "ram_free_gb": virtual_memory().free / 1e9,
+                "ram_used_gb" : virtual_memory().used / 1e9,
+                "ram_total_gb" : virtual_memory().total / 1e9,
+                "ram_free_percent": round(100 * virtual_memory().available / virtual_memory().total),
+                "ram_used_percent": virtual_memory().percent,
+                "cpu_usage_percent": round(cpu_percent()),
+                "cpu_count" : cpu_count()
+            }
+            ResourcesAPIHandler.last_updated = current_time            
+            
+        self.finish(json.dumps(ResourcesAPIHandler.cached_data))
+
+
 class InfoAPIHandler(APIHandler):
     @needs_scope('read:hub')
     def get(self):
@@ -99,4 +133,5 @@ default_handlers = [
     (r"/api/shutdown", ShutdownAPIHandler),
     (r"/api/?", RootAPIHandler),
     (r"/api/info", InfoAPIHandler),
+    (r"/api/resources", ResourcesAPIHandler),
 ]
