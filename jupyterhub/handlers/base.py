@@ -1348,7 +1348,10 @@ class BaseHandler(RequestHandler):
             xsrf=self.xsrf_token.decode('ascii'),
         )
         if self.settings['template_vars']:
-            ns.update(self.settings['template_vars'])
+            for key, value in self.settings['template_vars'].items():
+                if callable(value):
+                    value = value()
+                ns[key] = value
         return ns
 
     def get_accessible_services(self, user):
