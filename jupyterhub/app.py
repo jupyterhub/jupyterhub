@@ -491,9 +491,24 @@ class JupyterHub(Application):
     def _template_paths_default(self):
         return [os.path.join(self.data_files_path, 'templates')]
 
-    template_vars = Dict(help="Extra variables to be passed into jinja templates").tag(
-        config=True
-    )
+    template_vars = Dict(
+        help="""Extra variables to be passed into jinja templates.
+
+        Values in dict may contain callable objects.
+
+        Example::
+
+            def value_function():
+                with open("/tmp/file.txt", "r") as f:
+                    ret = f.read()
+                return ret
+
+            c.JupyterHub.template_vars = {
+                "key1": "value1",
+                "key2": value_function,
+            }
+        """,
+    ).tag(config=True)
 
     confirm_no_ssl = Bool(False, help="""DEPRECATED: does nothing""").tag(config=True)
     ssl_key = Unicode(
