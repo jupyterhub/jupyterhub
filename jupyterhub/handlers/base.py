@@ -13,6 +13,7 @@ import uuid
 import warnings
 from datetime import timedelta
 from http.client import responses
+from inspect import signature
 from urllib.parse import parse_qs, parse_qsl, urlencode, urlparse, urlunparse
 
 from jinja2 import TemplateNotFound
@@ -1350,7 +1351,10 @@ class BaseHandler(RequestHandler):
         if self.settings['template_vars']:
             for key, value in self.settings['template_vars'].items():
                 if callable(value):
-                    value = value()
+                    if len(signature(value).parameters.keys()) == 1:
+                        value = value(user)
+                    else:
+                        value = value()
                 ns[key] = value
         return ns
 
