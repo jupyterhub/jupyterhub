@@ -67,36 +67,42 @@ class RootAPIHandler(APIHandler):
         self.finish(json.dumps(data))
 
 
-class ResourcesAPIHandler(APIHandler):
+class SysMonAPIHandler(APIHandler):
     last_updated = 0
     cached_data = {}
     seconds_interval = 10
-    
-    def check_xsrf_cookie(self):
-        return
 
+    @needs_scope('read:hub')
     def get(self):
-        """GET /api/resources returns resource information about the server
+        """GET /api/sysmon returns resource information about the server
 
-          It currently returns cpu and memory usage information without authentication
+          It currently returns cpu and memory usage information as output by psutil.
+          The update interval can be set via 'JupyterHub.sysmon_interval' in the config.
         """
+        this = SysMonAPIHandler
+        conf = self.settings["config"]["JupyterHub"]
+
+        if "sysmon_interval" in conf:
+            this.seconds_interval = conf["sysmon_interval"]
+
         current_time = time()
-        if current_time - ResourcesAPIHandler.last_updated >= ResourcesAPIHandler.seconds_interval:
-            ResourcesAPIHandler.cached_data = {
+        if current_time - this.last_updated >= this.seconds_interval:
+            vmem = virtual_memory()
+            this.cached_data = {
                 "last_updated": ctime(),
-                "seconds_interval": ResourcesAPIHandler.seconds_interval,
-                ##"virtual_memory" : dict(virtual_memory()._asdict()),                
-                "ram_free_gb": virtual_memory().free / 1e9,
-                "ram_used_gb" : virtual_memory().used / 1e9,
-                "ram_total_gb" : virtual_memory().total / 1e9,
-                "ram_free_percent": round(100 * virtual_memory().available / virtual_memory().total),
-                "ram_used_percent": virtual_memory().percent,
+                "seconds_interval": this.seconds_interval,
+                ##"virtual_memory" : dict(vmem._asdict()),
+                "ram_free_gb": vmem.free / 1e9,
+                "ram_used_gb" : vmem.used / 1e9,
+                "ram_total_gb" : vmem.total / 1e9,
+                "ram_free_percent": round(100 * vmem.free / vmem.total),
+                "ram_used_percent": vmem.percent,
                 "cpu_usage_percent": round(cpu_percent()),
                 "cpu_count" : cpu_count()
             }
-            ResourcesAPIHandler.last_updated = current_time            
-            
-        self.finish(json.dumps(ResourcesAPIHandler.cached_data))
+            this.last_updated = current_time
+
+        self.finish(json.dumps(this.cached_data))
 
 
 class InfoAPIHandler(APIHandler):
@@ -133,5 +139,5 @@ default_handlers = [
     (r"/api/shutdown", ShutdownAPIHandler),
     (r"/api/?", RootAPIHandler),
     (r"/api/info", InfoAPIHandler),
-    (r"/api/resources", ResourcesAPIHandler),
+    (r"/api/sysmon", SysMonAPIHandler),
 ]
