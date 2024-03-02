@@ -2398,6 +2398,24 @@ async def test_info(app):
     }
 
 
+async def test_sysmon(app):
+    r = await api_request(app, 'sysmon')
+    r.raise_for_status()
+    data = r.json()
+    assert data['seconds_interval'] == 10
+    assert sorted(data) == [
+        'cpu_count',
+        'cpu_usage_percent',
+        'last_updated',
+        'ram_free_gb',
+        'ram_free_percent',
+        'ram_total_gb',
+        'ram_used_gb',
+        'ram_used_percent',
+        'seconds_interval'
+    ]
+
+
 # ------------------
 # Activity API tests
 # ------------------
