@@ -127,7 +127,7 @@ paths:
                     description: |
                       The percent of CPU usage, rounded to nearest integer
                       The output of psutil.cpu_percent()
-                  cpu_count :
+                  cpu_count:
                     type: number
                     description: The number of CPUs, as output by psutil.cpu_count()
       security:

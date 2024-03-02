@@ -4,15 +4,15 @@
 # Distributed under the terms of the Modified BSD License.
 import json
 import sys
+from time import time, ctime
 
+from psutil import virtual_memory, cpu_count, cpu_percent
 from tornado import web
 
 from .._version import __version__
 from ..scopes import needs_scope
 from .base import APIHandler
 
-from psutil import virtual_memory, cpu_count, cpu_percent
-from time import time, ctime
 
 class ShutdownAPIHandler(APIHandler):
     @needs_scope('shutdown')
@@ -76,8 +76,8 @@ class SysMonAPIHandler(APIHandler):
     def get(self):
         """GET /api/sysmon returns resource information about the server
 
-          It currently returns cpu and memory usage information as output by psutil.
-          The update interval can be set via 'JupyterHub.sysmon_interval' in the config.
+        It currently returns cpu and memory usage information as output by psutil.
+        The update interval can be set via 'JupyterHub.sysmon_interval' in the config.
         """
         this = SysMonAPIHandler
         conf = self.settings["config"]["JupyterHub"]
@@ -93,12 +93,12 @@ class SysMonAPIHandler(APIHandler):
                 "seconds_interval": this.seconds_interval,
                 ##"virtual_memory" : dict(vmem._asdict()),
                 "ram_free_gb": vmem.free / 1e9,
-                "ram_used_gb" : vmem.used / 1e9,
-                "ram_total_gb" : vmem.total / 1e9,
+                "ram_used_gb": vmem.used / 1e9,
+                "ram_total_gb": vmem.total / 1e9,
                 "ram_free_percent": round(100 * vmem.free / vmem.total),
                 "ram_used_percent": vmem.percent,
                 "cpu_usage_percent": round(cpu_percent()),
-                "cpu_count" : cpu_count()
+                "cpu_count": cpu_count(),
             }
             this.last_updated = current_time
 
