@@ -4,9 +4,9 @@
 # Distributed under the terms of the Modified BSD License.
 import json
 import sys
-from time import time, ctime
+from time import ctime, time
 
-from psutil import virtual_memory, cpu_count, cpu_percent
+from psutil import cpu_count, cpu_percent, virtual_memory
 from tornado import web
 
 from .._version import __version__

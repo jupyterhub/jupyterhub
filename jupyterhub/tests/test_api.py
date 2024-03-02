@@ -2412,7 +2412,7 @@ async def test_sysmon(app):
         'ram_total_gb',
         'ram_used_gb',
         'ram_used_percent',
-        'seconds_interval'
+        'seconds_interval',
     ]
 
 
