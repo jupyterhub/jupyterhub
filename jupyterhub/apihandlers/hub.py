@@ -6,9 +6,11 @@ import json
 import sys
 from time import ctime, time
 
-from psutil import cpu_count, cpu_percent, virtual_memory
+from psutil import cpu_count, cpu_percent, process_iter, virtual_memory
+from psutil import AccessDenied, NoSuchProcess, ZombieProcess
 from tornado import web
 
+from .. import orm
 from .._version import __version__
 from ..scopes import needs_scope
 from .base import APIHandler
@@ -68,11 +70,46 @@ class RootAPIHandler(APIHandler):
 
 
 class SysMonAPIHandler(APIHandler):
+    cached_data = { "time" : {}, "system" : {}, "ram_rss_mb": {} }
+    update_interval = 10
+    ndigits = 1
     last_updated = 0
-    cached_data = {}
-    seconds_interval = 10
 
-    @needs_scope('read:hub')
+    def get_memory_usage_per_user(self):
+        """Calculate RSS memory, on a system and per-user basis in MB"""
+        memory_rss = {"non_jupyter_users": 0, "all_jupyter_users": 0}
+
+        jupyter_usernames = {}
+        for user in self.db.query(orm.User):
+            jupyter_usernames[user.name] = 0
+            memory_rss[user.name] = 0
+
+        for proc in process_iter(['pid', 'username', 'memory_info']):
+            try:
+                username = proc.info['username']
+                memory_usage = proc.info['memory_info'].rss
+                if username in jupyter_usernames:
+                    memory_rss[username] += memory_usage
+                    memory_rss["all_jupyter_users"] += memory_usage
+                else:
+                    memory_rss["non_jupyter_users"] += memory_usage
+
+            except (NoSuchProcess, AccessDenied, ZombieProcess):
+                pass
+
+        memory_rss["all_processes"] = memory_rss["all_jupyter_users"] + memory_rss["non_jupyter_users"]
+        del memory_rss["non_jupyter_users"]
+
+        ## Convert Units
+        for term in memory_rss:
+            memory_rss[term] = round(memory_rss[term] / 1e6,
+                                     ndigits=SysMonAPIHandler.ndigits)  ## MB
+
+        return memory_rss
+
+    def check_xsrf_cookie(self):
+        return
+
     def get(self):
         """GET /api/sysmon returns resource information about the server
 
@@ -83,26 +120,39 @@ class SysMonAPIHandler(APIHandler):
         conf = self.settings["config"]["JupyterHub"]
 
         if "sysmon_interval" in conf:
-            this.seconds_interval = conf["sysmon_interval"]
+            this.update_interval = conf["sysmon_interval"]
 
         current_time = time()
-        if current_time - this.last_updated >= this.seconds_interval:
+        diff_time = current_time - this.last_updated
+
+        if diff_time >= this.update_interval:
             vmem = virtual_memory()
             this.cached_data = {
-                "last_updated": ctime(),
-                "seconds_interval": this.seconds_interval,
-                ##"virtual_memory" : dict(vmem._asdict()),
-                "ram_free_gb": vmem.free / 1e9,
-                "ram_used_gb": vmem.used / 1e9,
-                "ram_total_gb": vmem.total / 1e9,
-                "ram_free_percent": round(100 * vmem.free / vmem.total),
-                "ram_used_percent": vmem.percent,
-                "cpu_usage_percent": round(cpu_percent()),
-                "cpu_count": cpu_count(),
+                "time": {
+                    "cached": ctime(),
+                    "update_interval": this.update_interval,
+                },
+                "system": {
+                    "ram_free_gb": round(vmem.free / 1e9, ndigits=this.ndigits),
+                    "ram_used_gb": round(vmem.used / 1e9, ndigits=this.ndigits),
+                    "ram_total_gb": round(vmem.total / 1e9, ndigits=this.ndigits),
+                    "ram_usage_percent": round(vmem.percent, ndigits=this.ndigits),
+                    "cpu_usage_percent": round(cpu_percent(), ndigits=this.ndigits),
+                    "cpu_count": cpu_count(),
+                },
+                "ram_rss_mb" : self.get_memory_usage_per_user(),
             }
             this.last_updated = current_time
 
-        self.finish(json.dumps(this.cached_data))
+        show_data = this.cached_data
+        next_update = this.update_interval - diff_time
+        if next_update < 0:
+            next_update = this.update_interval
+
+        show_data["time"]["next_update"] = round(next_update, ndigits=this.ndigits)
+        show_data["time"]["last_update"] = round(diff_time, ndigits=this.ndigits)
+
+        self.finish(json.dumps(show_data))
 
 
 class InfoAPIHandler(APIHandler):

@@ -93,43 +93,57 @@ paths:
               schema:
                 type: object
                 properties:
-                  last_updated:
-                    type: string
-                    description: The local date and time, as returned by time.ctime
-                  seconds_interval:
-                    type: number
-                    description: The interval in which the metrics are updated in seconds
-                  ram_free_gb:
-                    type: number
-                    description: |
-                      Free GBs of virtual memory
-                      The output of psutil.virtual_memory().free / 1e9
-                  ram_used_gb:
-                    type: number
-                    description: |
-                      Used GBs of virtual memory
-                      The output of psutil.virtual_memory().used / 1e9
-                  ram_total_gb:
-                    type: number
-                    description: |
-                      Total GBs of virtual memory
-                      The output of psutil.virtual_memory().total / 1e9
-                  ram_free_percent:
-                    type: number
-                    description: |
-                      The percentage of free virtual memory, rounded to nearest integer
-                  ram_used_percent:
-                    type: number
-                    description: |
-                      The percentage of used virtual memory, rounded to nearest integer
-                  cpu_usage_percent:
-                    type: number
-                    description: |
-                      The percent of CPU usage, rounded to nearest integer
-                      The output of psutil.cpu_percent()
-                  cpu_count:
-                    type: number
-                    description: The number of CPUs, as output by psutil.cpu_count()
+                  time:
+                    type: object
+                    properties:
+                      cached:
+                        type: string
+                        description: The local date and time, as returned by time.ctime
+                      update_interval:
+                        type: number
+                        description: The interval (seconds) in which the stats are updated
+                  system:
+                    type: object
+                    properties:
+                      ram_free_gb:
+                        type: number
+                        description: |
+                          Free GBs of virtual memory
+                          The output of psutil.virtual_memory().free / 1e9
+                      ram_used_gb:
+                        type: number
+                        description: |
+                          Used GBs of virtual memory
+                          The output of psutil.virtual_memory().used / 1e9
+                      ram_total_gb:
+                        type: number
+                        description: |
+                          Total GBs of virtual memory
+                          The output of psutil.virtual_memory().total / 1e9
+                      ram_usage_percent:
+                        type: number
+                        description: |
+                          The percentage of used virtual memory, rounded to nearest integer
+                      cpu_usage_percent:
+                        type: number
+                        description: |
+                          The percent of CPU usage, rounded to nearest integer
+                          The output of psutil.cpu_percent()
+                      cpu_count:
+                        type: number
+                        description: The number of CPUs, as output by psutil.cpu_count()
+                  ram_rss_mb:
+                    type: object
+                    properties:
+                      all_processes:
+                        type: number
+                        description: The RSS memory of all processes
+                      all_jupyter_users:
+                        type: number
+                        description: The RSS memory of all Jupyter users
+                      <user name>:
+                        type: number
+                        description: The RSS memory of each Jupyter user
       security:
         - oauth2:
             - read:hub
