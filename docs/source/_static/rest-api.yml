@@ -80,6 +80,59 @@ paths:
       security:
         - oauth2:
             - read:hub
+  /sysmon:
+    get:
+      summary: Get system monitor information
+      description: |
+        CPU and memory usage of the server as a whole
+      responses:
+        200:
+          description: CPU and Memory usage, availability, and totals in GB or percent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  last_updated:
+                    type: string
+                    description: The local date and time, as returned by time.ctime
+                  seconds_interval:
+                    type: number
+                    description: The interval in which the metrics are updated in seconds
+                  ram_free_gb:
+                    type: number
+                    description: |
+                      Free GBs of virtual memory
+                      The output of psutil.virtual_memory().free / 1e9
+                  ram_used_gb:
+                    type: number
+                    description: |
+                      Used GBs of virtual memory
+                      The output of psutil.virtual_memory().used / 1e9
+                  ram_total_gb:
+                    type: number
+                    description: |
+                      Total GBs of virtual memory
+                      The output of psutil.virtual_memory().total / 1e9
+                  ram_free_percent:
+                    type: number
+                    description: |
+                      The percentage of free virtual memory, rounded to nearest integer
+                  ram_used_percent:
+                    type: number
+                    description: |
+                      The percentage of used virtual memory, rounded to nearest integer
+                  cpu_usage_percent:
+                    type: number
+                    description: |
+                      The percent of CPU usage, rounded to nearest integer
+                      The output of psutil.cpu_percent()
+                  cpu_count :
+                    type: number
+                    description: The number of CPUs, as output by psutil.cpu_count()
+      security:
+        - oauth2:
+            - read:hub
   /user:
     get:
       summary: Return authenticated user's model
