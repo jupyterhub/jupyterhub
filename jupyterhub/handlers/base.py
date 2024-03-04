@@ -1351,10 +1351,7 @@ class BaseHandler(RequestHandler):
         if self.settings['template_vars']:
             for key, value in self.settings['template_vars'].items():
                 if callable(value):
-                    if len(signature(value).parameters.keys()) == 1:
-                        value = value(user)
-                    else:
-                        value = value()
+                    value = value(user)
                 ns[key] = value
         return ns
 
