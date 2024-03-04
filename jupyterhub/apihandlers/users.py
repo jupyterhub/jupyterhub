@@ -88,7 +88,24 @@ class UserListAPIHandler(APIHandler):
     def get(self):
         state_filter = self.get_argument("state", None)
         name_filter = self.get_argument("name_filter", None)
+        sort = self.get_argument("sort", "id")
+        sort_direction = self.get_argument("direction", "asc")
         offset, limit = self.get_api_pagination()
+
+        if sort in {"id", "name", "last_activity"}:
+            sort_column = getattr(orm.User, sort)
+        else:
+            raise web.HTTPError(
+                400, f"sort must be 'id', 'name', or 'last_activity', not '{sort}'"
+            )
+
+        if sort_direction in {"asc", "desc"}:
+            # default: sort_order = orm.User.id.asc()
+            sort_order = getattr(sort_column, sort_direction)()
+        else:
+            raise web.HTTPError(
+                400, f"direction must be 'asc' or 'desc', not '{sort_direction}'"
+            )
 
         # post_filter
         post_filter = None
@@ -168,7 +185,7 @@ class UserListAPIHandler(APIHandler):
             query = query.filter(orm.User.name.ilike(f'%{name_filter}%'))
 
         full_query = query
-        query = query.order_by(orm.User.id.asc()).offset(offset).limit(limit)
+        query = query.order_by(sort_order).offset(offset).limit(limit)
 
         user_list = []
         for u in query:

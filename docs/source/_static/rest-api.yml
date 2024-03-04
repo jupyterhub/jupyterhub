@@ -135,6 +135,27 @@ paths:
           schema:
             type: boolean
           allowEmptyValue: true
+        - name: sort
+          in: query
+          description: |
+            Sort users by this key (new in JupyterHub 5.0).
+            Default: id (opaque but stable internal order).
+          schema:
+            type: string
+            enum:
+              - id
+              - name
+              - last_activity
+        - name: direction
+          in: query
+          description: |
+            Direction of sorted results (new in JupyterHub 5.0).
+            Default: 'asc' (ascending).
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
       responses:
         200:
           description: The Hub's user list
