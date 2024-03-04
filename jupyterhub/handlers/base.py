@@ -13,7 +13,6 @@ import uuid
 import warnings
 from datetime import timedelta
 from http.client import responses
-from inspect import signature
 from urllib.parse import parse_qs, parse_qsl, urlencode, urlparse, urlunparse
 
 from jinja2 import TemplateNotFound
