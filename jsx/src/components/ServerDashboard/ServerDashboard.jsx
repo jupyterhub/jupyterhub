@@ -15,6 +15,9 @@ import {
 import ReactObjectTableViewer from "../ReactObjectTableViewer/ReactObjectTableViewer";
 
 import { Link } from "react-router-dom";
+// react-router-dom v6 API
+// should be able to upgrade to v6 someday
+import { useSearchParams } from "react-router-dom-v5-compat";
 import { FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
 
 import "./server-dashboard.css";
@@ -30,6 +33,7 @@ RowListItem.propTypes = {
 
 const ServerDashboard = (props) => {
   let base_url = window.base_url || "/";
+  let [searchParams, setSearchParams] = useSearchParams();
   // sort methods
   var usernameDesc = (e) => e.sort((a, b) => (a.name > b.name ? 1 : -1)),
     usernameAsc = (e) => e.sort((a, b) => (a.name < b.name ? 1 : -1)),
@@ -54,8 +58,11 @@ const ServerDashboard = (props) => {
     user_page = useSelector((state) => state.user_page),
     name_filter = useSelector((state) => state.name_filter);
 
-  var offset = user_page ? user_page.offset : 0;
-  var limit = user_page ? user_page.limit : window.api_page_limit;
+  // get offset, limit, name filter from URL
+  var offset = parseInt(searchParams.get("offset", "0")) || 0;
+  var limit = parseInt(searchParams.get("limit", "0")) || window.api_page_limit;
+  var searchNameFilter = searchParams.get("name_filter");
+
   var total = user_page ? user_page.total : undefined;
 
   const dispatch = useDispatch();
@@ -82,6 +89,13 @@ const ServerDashboard = (props) => {
   };
 
   const setOffset = (newOffset) => {
+    if (newOffset < 0) {
+      newOffset = 0;
+    }
+    setSearchParams((params) => {
+      params.set("offset", newOffset);
+      return params;
+    });
     dispatch({
       type: "USER_OFFSET",
       value: {
@@ -90,7 +104,27 @@ const ServerDashboard = (props) => {
     });
   };
 
+  const setLimit = (newLimit) => {
+    if (newLimit < 1) {
+      newLimit = 10;
+    }
+    setSearchParams((params) => {
+      params.set("limit", newLimit);
+      return params;
+    });
+    dispatch({
+      type: "USER_LIMIT",
+      value: {
+        limit: newLimit,
+      },
+    });
+  };
+
   const setNameFilter = (name_filter) => {
+    setSearchParams((params) => {
+      params.set("name_filter", name_filter);
+      return params;
+    });
     dispatch({
       type: "USER_NAME_FILTER",
       value: {
@@ -105,6 +139,11 @@ const ServerDashboard = (props) => {
       .catch((err) => setErrorAlert("Failed to update user list."));
   }, [offset, limit, name_filter]);
 
+  if (searchNameFilter && name_filter != searchNameFilter) {
+    // get name_filter from URL
+    setNameFilter(searchNameFilter);
+  }
+
   if (!user_data || !user_page) {
     return <div data-testid="no-show"></div>;
   }
@@ -113,6 +152,10 @@ const ServerDashboard = (props) => {
 
   const handleSearch = debounce(async (event) => {
     setNameFilter(event.target.value);
+  }, 300);
+
+  const handleLimit = debounce(async (event) => {
+    setLimit(event.target.value);
   }, 300);
 
   if (sortMethod != null) {
@@ -573,6 +616,7 @@ const ServerDashboard = (props) => {
           total={total}
           next={() => setOffset(offset + limit)}
           prev={() => setOffset(offset - limit)}
+          handleLimit={handleLimit}
         />
         <br></br>
       </div>

@@ -1,8 +1,10 @@
 import React, { useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import PropTypes from "prop-types";
+import { debounce } from "lodash";
 
 import { Link } from "react-router-dom";
+import { useSearchParams } from "react-router-dom-v5-compat";
 import PaginationFooter from "../PaginationFooter/PaginationFooter";
 
 const Groups = (props) => {
@@ -10,9 +12,20 @@ const Groups = (props) => {
     groups_page = useSelector((state) => state.groups_page),
     dispatch = useDispatch();
 
-  var offset = groups_page ? groups_page.offset : 0;
+  let [searchParams, setSearchParams] = useSearchParams();
+
+  var offset = parseInt(searchParams.get("offset", "0")) || 0;
+  var limit = parseInt(searchParams.get("limit", "0")) || window.api_page_limit;
 
   const setOffset = (offset) => {
+    console.log("setting offset", offset);
+    if (offset < 0) {
+      offset = 0;
+    }
+    setSearchParams((params) => {
+      params.set("offset", offset);
+      return params;
+    });
     dispatch({
       type: "GROUPS_OFFSET",
       value: {
@@ -20,7 +33,23 @@ const Groups = (props) => {
       },
     });
   };
-  var limit = groups_page ? groups_page.limit : window.api_page_limit;
+
+  const setLimit = (newLimit) => {
+    if (newLimit < 1) {
+      newLimit = 10;
+    }
+    setSearchParams((params) => {
+      params.set("limit", newLimit);
+      return params;
+    });
+    dispatch({
+      type: "GROUP_LIMIT",
+      value: {
+        limit: newLimit,
+      },
+    });
+  };
+
   var total = groups_page ? groups_page.total : undefined;
 
   var { updateGroups, history } = props;
@@ -44,6 +73,10 @@ const Groups = (props) => {
   if (!groups_data || !groups_page) {
     return <div data-testid="no-show"></div>;
   }
+
+  const handleLimit = debounce(async (event) => {
+    setLimit(event.target.value);
+  }, 300);
 
   return (
     <div className="container" data-testid="container">
@@ -85,7 +118,8 @@ const Groups = (props) => {
                 visible={groups_data.length}
                 total={total}
                 next={() => setOffset(offset + limit)}
-                prev={() => setOffset(offset >= limit ? offset - limit : 0)}
+                prev={() => setOffset(offset - limit)}
+                handleLimit={handleLimit}
               />
             </div>
             <div className="panel-footer">

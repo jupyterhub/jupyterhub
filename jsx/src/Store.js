@@ -17,6 +17,13 @@ export const reducers = (state = initialState, action) => {
         }),
       });
 
+    case "USER_LIMIT":
+      return Object.assign({}, state, {
+        user_page: Object.assign({}, state.user_page, {
+          limit: action.value.limit,
+        }),
+      });
+
     case "USER_NAME_FILTER":
       // set offset to 0 if name filter changed,
       // otherwise leave it alone
