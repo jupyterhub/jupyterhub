@@ -9,7 +9,7 @@ from datetime import timedelta, timezone
 
 from async_generator import aclosing
 from dateutil.parser import parse as parse_date
-from sqlalchemy import func, nulls_first, nulls_last, or_
+from sqlalchemy import func, or_
 from sqlalchemy.orm import joinedload, selectinload
 from tornado import web
 from tornado.iostream import StreamClosedError
@@ -99,12 +99,11 @@ class UserListAPIHandler(APIHandler):
                 400, f"sort must be 'id', 'name', or 'last_activity', not '{sort}'"
             )
 
-        if sort_direction in {"asc", "desc"}:
-            # default: sort_order = orm.User.id.asc()
-            sort_order = getattr(sort_column, sort_direction)()
-            # explicit NULL sorting
-            null_order = nulls_first if sort_direction == "asc" else nulls_last
-            sort_order = null_order(sort_order)
+        # NULL is sorted inconsistently, so make it explicit
+        if sort_direction == "asc":
+            sort_order = (sort_column.is_not(None), sort_column.asc())
+        elif sort_direction == "desc":
+            sort_order = (sort_column.is_(None), sort_column.desc())
         else:
             raise web.HTTPError(
                 400, f"direction must be 'asc' or 'desc', not '{sort_direction}'"
@@ -188,7 +187,7 @@ class UserListAPIHandler(APIHandler):
             query = query.filter(orm.User.name.ilike(f'%{name_filter}%'))
 
         full_query = query
-        query = query.order_by(sort_order).offset(offset).limit(limit)
+        query = query.order_by(*sort_order).offset(offset).limit(limit)
 
         user_list = []
         for u in query:
