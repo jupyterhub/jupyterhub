@@ -22,6 +22,7 @@ import { FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
 
 import "./server-dashboard.css";
 import { timeSince } from "../../util/timeSince";
+import { usePaginationParams } from "../../util/paginationParams";
 import PaginationFooter from "../PaginationFooter/PaginationFooter";
 
 const RowListItem = ({ text }) => (
@@ -32,10 +33,10 @@ RowListItem.propTypes = {
 };
 
 const ServerDashboard = (props) => {
-  let base_url = window.base_url || "/";
-  let [searchParams, setSearchParams] = useSearchParams();
+  const base_url = window.base_url || "/";
+  const [searchParams, setSearchParams] = useSearchParams();
   // sort methods
-  var usernameDesc = (e) => e.sort((a, b) => (a.name > b.name ? 1 : -1)),
+  const usernameDesc = (e) => e.sort((a, b) => (a.name > b.name ? 1 : -1)),
     usernameAsc = (e) => e.sort((a, b) => (a.name < b.name ? 1 : -1)),
     adminDesc = (e) => e.sort((a) => (a.admin ? -1 : 1)),
     adminAsc = (e) => e.sort((a) => (a.admin ? 1 : -1)),
@@ -50,20 +51,19 @@ const ServerDashboard = (props) => {
     runningAsc = (e) => e.sort((a) => (a.server == null ? -1 : 1)),
     runningDesc = (e) => e.sort((a) => (a.server == null ? 1 : -1));
 
-  var [errorAlert, setErrorAlert] = useState(null);
-  var [sortMethod, setSortMethod] = useState(null);
-  var [collapseStates, setCollapseStates] = useState({});
+  const [errorAlert, setErrorAlert] = useState(null);
+  const [sortMethod, setSortMethod] = useState(null);
+  const [collapseStates, setCollapseStates] = useState({});
 
-  var user_data = useSelector((state) => state.user_data),
-    user_page = useSelector((state) => state.user_page),
-    name_filter = useSelector((state) => state.name_filter);
+  const user_data = useSelector((state) => state.user_data);
+  const user_page = useSelector((state) => state.user_page);
 
-  // get offset, limit, name filter from URL
-  var offset = parseInt(searchParams.get("offset", "0")) || 0;
-  var limit = parseInt(searchParams.get("limit", "0")) || window.api_page_limit;
-  var searchNameFilter = searchParams.get("name_filter");
+  const { setOffset, offset, setLimit, handleLimit, limit, setPagination } =
+    usePaginationParams();
 
-  var total = user_page ? user_page.total : undefined;
+  const name_filter = searchParams.get("name_filter");
+
+  const total = user_page ? user_page.total : undefined;
 
   const dispatch = useDispatch();
 
@@ -79,6 +79,7 @@ const ServerDashboard = (props) => {
   } = props;
 
   const dispatchPageUpdate = (data, page) => {
+    setPagination(page);
     dispatch({
       type: "USER_PAGE",
       value: {
@@ -88,48 +89,14 @@ const ServerDashboard = (props) => {
     });
   };
 
-  const setOffset = (newOffset) => {
-    if (newOffset < 0) {
-      newOffset = 0;
-    }
-    setSearchParams((params) => {
-      params.set("offset", newOffset);
-      return params;
-    });
-    dispatch({
-      type: "USER_OFFSET",
-      value: {
-        offset: newOffset,
-      },
-    });
-  };
-
-  const setLimit = (newLimit) => {
-    if (newLimit < 1) {
-      newLimit = 10;
-    }
-    setSearchParams((params) => {
-      params.set("limit", newLimit);
-      return params;
-    });
-    dispatch({
-      type: "USER_LIMIT",
-      value: {
-        limit: newLimit,
-      },
-    });
-  };
-
   const setNameFilter = (name_filter) => {
     setSearchParams((params) => {
-      params.set("name_filter", name_filter);
+      if (name_filter) {
+        params.set("name_filter", name_filter);
+      } else {
+        params.delete("name_filter");
+      }
       return params;
-    });
-    dispatch({
-      type: "USER_NAME_FILTER",
-      value: {
-        name_filter: name_filter,
-      },
     });
   };
 
@@ -139,11 +106,6 @@ const ServerDashboard = (props) => {
       .catch((err) => setErrorAlert("Failed to update user list."));
   }, [offset, limit, name_filter]);
 
-  if (searchNameFilter && name_filter != searchNameFilter) {
-    // get name_filter from URL
-    setNameFilter(searchNameFilter);
-  }
-
   if (!user_data || !user_page) {
     return <div data-testid="no-show"></div>;
   }
@@ -152,10 +114,6 @@ const ServerDashboard = (props) => {
 
   const handleSearch = debounce(async (event) => {
     setNameFilter(event.target.value);
-  }, 300);
-
-  const handleLimit = debounce(async (event) => {
-    setLimit(event.target.value);
   }, 300);
 
   if (sortMethod != null) {
@@ -175,11 +133,7 @@ const ServerDashboard = (props) => {
               if (res.status < 300) {
                 updateUsers(...slice)
                   .then((data) => {
-                    dispatchPageUpdate(
-                      data.items,
-                      data._pagination,
-                      name_filter,
-                    );
+                    dispatchPageUpdate(data.items, data._pagination);
                   })
                   .catch(() => {
                     setIsDisabled(false);
@@ -537,11 +491,7 @@ const ServerDashboard = (props) => {
                       .then((res) => {
                         updateUsers(...slice)
                           .then((data) => {
-                            dispatchPageUpdate(
-                              data.items,
-                              data._pagination,
-                              name_filter,
-                            );
+                            dispatchPageUpdate(data.items, data._pagination);
                           })
                           .catch(() =>
                             setErrorAlert(`Failed to update users list.`),
@@ -577,11 +527,7 @@ const ServerDashboard = (props) => {
                       .then((res) => {
                         updateUsers(...slice)
                           .then((data) => {
-                            dispatchPageUpdate(
-                              data.items,
-                              data._pagination,
-                              name_filter,
-                            );
+                            dispatchPageUpdate(data.items, data._pagination);
                           })
                           .catch(() =>
                             setErrorAlert(`Failed to update users list.`),
