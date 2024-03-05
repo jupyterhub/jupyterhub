@@ -136,7 +136,7 @@ class RestAPILinksDirective(SphinxDirective):
     which is handled by a custom template.
     """
 
-    hast_content = False
+    has_content = False
     required_arguments = 0
     optional_arguments = 0
     final_argument_whitespace = False
