@@ -9,7 +9,7 @@ from datetime import timedelta, timezone
 
 from async_generator import aclosing
 from dateutil.parser import parse as parse_date
-from sqlalchemy import func, or_
+from sqlalchemy import func, nulls_first, nulls_last, or_
 from sqlalchemy.orm import joinedload, selectinload
 from tornado import web
 from tornado.iostream import StreamClosedError
@@ -102,6 +102,9 @@ class UserListAPIHandler(APIHandler):
         if sort_direction in {"asc", "desc"}:
             # default: sort_order = orm.User.id.asc()
             sort_order = getattr(sort_column, sort_direction)()
+            # explicit NULL sorting
+            null_order = nulls_first if sort_direction == "asc" else nulls_last
+            sort_order = null_order(sort_order)
         else:
             raise web.HTTPError(
                 400, f"direction must be 'asc' or 'desc', not '{sort_direction}'"
