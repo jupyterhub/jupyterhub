@@ -38,3 +38,5 @@ docs/source/reference/metrics.rst
 oldest-requirements.txt
 jupyterhub-proxy.pid
 examples/server-api/service-token
+
+*.hot-update*

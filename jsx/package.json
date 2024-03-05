@@ -7,8 +7,8 @@
   "license": "BSD-3-Clause",
   "scripts": {
     "build": "webpack",
+    "build:watch": "webpack watch",
     "hot": "webpack && webpack-dev-server",
-    "place": "cp build/admin-react.js* ../share/jupyterhub/static/js/",
     "test": "jest --verbose",
     "snap": "jest --updateSnapshot",
     "lint": "eslint --ext .jsx --ext .js src/",

@@ -215,13 +215,6 @@ class JSX(BaseCommand):
             shell=shell,
         )
 
-        print("Copying JSX admin app to static/js")
-        check_call(
-            ["npm", "run", "place"],
-            cwd=self.jsx_dir,
-            shell=shell,
-        )
-
         # update data-files in case this created new files
         self.distribution.data_files = get_data_files()
         assert not self.should_run(), 'JSX.run failed'
