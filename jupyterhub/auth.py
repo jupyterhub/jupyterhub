@@ -458,6 +458,7 @@ class Authenticator(LoggingConfigurable):
         """Check if a username is allowed to authenticate based on configuration
 
         Return True if username is allowed, False otherwise.
+
         No allowed_users set means any username is allowed.
 
         Names are normalized *before* being checked against the allowed set.
@@ -467,6 +468,18 @@ class Authenticator(LoggingConfigurable):
 
         .. versionchanged:: 1.2
             Renamed check_whitelist to check_allowed
+
+        Args:
+            username (str):
+                The normalized username
+            authentication (dict):
+                The authentication model, as returned by `.authenticate()`.
+        Returns:
+            allowed (bool):
+                Whether the user is allowed
+        Raises:
+            web.HTTPError(403):
+                Raising HTTPErrors directly allows customizing the message shown to the user.
         """
         if not self.allowed_users:
             # No allowed set means any name is allowed
@@ -488,6 +501,18 @@ class Authenticator(LoggingConfigurable):
 
         .. versionchanged:: 1.2
             Renamed check_blacklist to check_blocked_users
+
+        Args:
+            username (str):
+                The normalized username
+            authentication (dict):
+                The authentication model, as returned by `.authenticate()`.
+        Returns:
+            allowed (bool):
+                Whether the user is allowed
+        Raises:
+            web.HTTPError(403, message):
+                Raising HTTPErrors directly allows customizing the message shown to the user.
         """
         if not self.blocked_users:
             # No block list means any name is allowed
@@ -612,6 +637,12 @@ class Authenticator(LoggingConfigurable):
         It must return the username on successful authentication,
         and return None on failed authentication.
 
+        Subclasses can also raise a `web.HTTPError(403, message)`
+        in order to halt the authentication process
+        and customize the error message that will be shown to the user.
+        This error may be raised anywhere in the authentication process
+        (`authenticate`, `check_allowed`, `check_blocked_users`).
+
         Checking allowed_users/blocked_users is handled separately by the caller.
 
         .. versionchanged:: 0.8
@@ -634,6 +665,9 @@ class Authenticator(LoggingConfigurable):
                 - `groups`, the list of group names the user should be a member of,
                   if Authenticator.manage_groups is True.
                   `groups` MUST always be present if manage_groups is enabled.
+        Raises:
+            web.HTTPError(403):
+                Raising errors directly allows customizing the message shown to the user.
         """
 
     def pre_spawn_start(self, user, spawner):
