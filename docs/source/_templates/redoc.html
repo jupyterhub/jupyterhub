@@ -12,7 +12,7 @@
 
 {%- block extrahead %}
 {{ super() }}
-<link href="https://fonts.googleapis.com/css?family=Montserrat:300,400,700|Roboto:300,400,700"
+<link href="{{ pathto('_static/redoc-fonts.css', 1) }}"
       rel="stylesheet"
     />
 <script src="{{ pathto('_static/redoc.js', 1) }}"></script>

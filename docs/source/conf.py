@@ -6,6 +6,7 @@ import contextlib
 import datetime
 import io
 import os
+import re
 import subprocess
 from pathlib import Path
 from urllib.request import urlretrieve
@@ -174,14 +175,48 @@ def stage_redoc_js(app, exception):
         logger.info(f"Skipping redoc download for builder: {app.builder.name}")
         return
 
+    out_static = Path(app.builder.outdir) / "_static"
+
     redoc_version = "2.1.3"
     redoc_url = (
         f"https://cdn.redoc.ly/redoc/v{redoc_version}/bundles/redoc.standalone.js"
     )
-    dest = Path(app.builder.outdir) / "_static/redoc.js"
+    dest = out_static / "redoc.js"
     if not dest.exists():
         logger.info(f"Downloading {redoc_url} -> {dest}")
         urlretrieve(redoc_url, dest)
+
+    # stage fonts for redoc from google fonts
+    fonts_css_url = "https://fonts.googleapis.com/css?family=Montserrat:300,400,700|Roboto:300,400,700"
+    fonts_css_file = out_static / "redoc-fonts.css"
+    fonts_dir = out_static / "fonts"
+    fonts_dir.mkdir(exist_ok=True)
+    if not fonts_css_file.exists():
+        logger.info(f"Downloading {fonts_css_url} -> {fonts_css_file}")
+        urlretrieve(fonts_css_url, fonts_css_file)
+
+    # For each font external font URL,
+    # download the font and rewrite to a local URL
+    # The downloaded TTF fonts have license info in their metadata
+    with open(fonts_css_file) as f:
+        fonts_css = f.read()
+
+    fonts_css_changed = False
+    for font_url in re.findall(r'url\((https?[^\)]+)\)', fonts_css):
+        fonts_css_changed = True
+        filename = font_url.rpartition("/")[-1]
+        dest = fonts_dir / filename
+        local_url = str(dest.relative_to(fonts_css_file.parent))
+        fonts_css = fonts_css.replace(font_url, local_url)
+        if not dest.exists():
+            logger.info(f"Downloading {font_url} -> {dest}")
+            urlretrieve(font_url, dest)
+
+    if fonts_css_changed:
+        # rewrite font css with local URLs
+        with open(fonts_css_file, "w") as f:
+            logger.info(f"Rewriting URLs in {fonts_css_file}")
+            f.write(fonts_css)
 
 
 def setup(app):
