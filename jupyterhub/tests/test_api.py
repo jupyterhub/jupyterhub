@@ -494,8 +494,10 @@ async def test_get_users_sort(app, sort, direction):
         "last_activity": ["never", "early", "middle", "late"],
     }
     expected_order = orders[sort]
+    sort_param = sort
     if direction == "desc":
         expected_order.reverse()
+        sort_param = "-" + sort
 
     # create the users, encode the expected sort order in the names
     u = add_user(db, app=app, name='xyz-c-1-middle')
@@ -523,8 +525,7 @@ async def test_get_users_sort(app, sort, direction):
     # to ensure offset is handled correctly
     params = {
         "name_filter": "xyz",
-        "sort": sort,
-        "direction": direction,
+        "sort": sort_param,
         "limit": 2,
     }
 
@@ -557,7 +558,7 @@ async def test_get_users_sort(app, sort, direction):
 async def test_get_users_sort_invalid(app):
     r = await api_request(app, "users", params={"sort": "servers"})
     assert r.status_code == 400
-    r = await api_request(app, "users", params={"direction": "ascending"})
+    r = await api_request(app, "users", params={"sort": "--id"})
     assert r.status_code == 400
 
 

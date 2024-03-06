@@ -88,15 +88,20 @@ class UserListAPIHandler(APIHandler):
     def get(self):
         state_filter = self.get_argument("state", None)
         name_filter = self.get_argument("name_filter", None)
-        sort = self.get_argument("sort", "id")
-        sort_direction = self.get_argument("direction", "asc")
+        sort = sort_by_param = self.get_argument("sort", "id")
+        sort_direction = "asc"
+        if sort[:1] == '-':
+            sort_direction = "desc"
+            sort = sort[1:]
+
         offset, limit = self.get_api_pagination()
 
         if sort in {"id", "name", "last_activity"}:
             sort_column = getattr(orm.User, sort)
         else:
             raise web.HTTPError(
-                400, f"sort must be 'id', 'name', or 'last_activity', not '{sort}'"
+                400,
+                f"sort must be 'id', 'name', or 'last_activity', not '{sort_by_param}'",
             )
 
         # NULL is sorted inconsistently, so make it explicit
@@ -105,8 +110,9 @@ class UserListAPIHandler(APIHandler):
         elif sort_direction == "desc":
             sort_order = (sort_column.is_(None), sort_column.desc())
         else:
-            raise web.HTTPError(
-                400, f"direction must be 'asc' or 'desc', not '{sort_direction}'"
+            # this can't happen, users don't specify direction
+            raise ValueError(
+                f"sort_direction must be 'asc' or 'desc', got '{sort_direction}'"
             )
 
         # post_filter
