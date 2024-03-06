@@ -55,13 +55,13 @@ const ServerDashboard = (props) => {
   const [sortMethod, setSortMethod] = useState(null);
   const [collapseStates, setCollapseStates] = useState({});
 
-  const user_data = useSelector((state) => state.user_data);
+  let user_data = useSelector((state) => state.user_data);
   const user_page = useSelector((state) => state.user_page);
 
   const { setOffset, offset, setLimit, handleLimit, limit, setPagination } =
     usePaginationParams();
 
-  const name_filter = searchParams.get("name_filter");
+  const name_filter = searchParams.get("name_filter") || "";
 
   const total = user_page ? user_page.total : undefined;
 

@@ -6,7 +6,7 @@ export const usePaginationParams = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const offset = parseInt(searchParams.get("offset", "0")) || 0;
   const limit =
-    parseInt(searchParams.get("limit", "0")) || window.api_page_limit;
+    parseInt(searchParams.get("limit", "0")) || window.api_page_limit || 100;
 
   const _setOffset = (params, offset) => {
     if (offset < 0) offset = 0;
@@ -26,6 +26,9 @@ export const usePaginationParams = () => {
   };
   const setPagination = (pagination) => {
     // update pagination in one
+    if (!pagination) {
+      return;
+    }
     setSearchParams((params) => {
       _setOffset(params, pagination.offset);
       _setLimit(params, pagination.limit);

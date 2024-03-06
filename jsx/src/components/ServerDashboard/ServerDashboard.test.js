@@ -10,6 +10,7 @@ import {
   getAllByRole,
 } from "@testing-library/react";
 import { HashRouter, Switch } from "react-router-dom";
+import { CompatRouter, useSearchParams } from "react-router-dom-v5-compat";
 import { Provider, useSelector } from "react-redux";
 import { createStore } from "redux";
 // eslint-disable-next-line
@@ -25,20 +26,26 @@ jest.mock("react-redux", () => ({
   ...jest.requireActual("react-redux"),
   useSelector: jest.fn(),
 }));
+jest.mock("react-router-dom-v5-compat", () => ({
+  ...jest.requireActual("react-router-dom-v5-compat"),
+  useSearchParams: jest.fn(),
+}));
 
 var serverDashboardJsx = (spy) => (
   <Provider store={createStore(mockReducers, mockAppState())}>
     <HashRouter>
-      <Switch>
-        <ServerDashboard
-          updateUsers={spy}
-          shutdownHub={spy}
-          startServer={spy}
-          stopServer={spy}
-          startAll={spy}
-          stopAll={spy}
-        />
-      </Switch>
+      <CompatRouter>
+        <Switch>
+          <ServerDashboard
+            updateUsers={spy}
+            shutdownHub={spy}
+            startServer={spy}
+            stopServer={spy}
+            startAll={spy}
+            stopAll={spy}
+          />
+        </Switch>
+      </CompatRouter>
     </HashRouter>
   </Provider>
 );
@@ -137,14 +144,25 @@ var mockReducers = jest.fn((state, action) => {
   return state;
 });
 
+let searchParams = new URLSearchParams();
+
 beforeEach(() => {
   clock = sinon.useFakeTimers();
   useSelector.mockImplementation((callback) => {
     return callback(mockAppState());
   });
+  searchParams = new URLSearchParams();
+
+  useSearchParams.mockImplementation(() => [
+    searchParams,
+    (callback) => {
+      searchParams = callback(searchParams);
+    },
+  ]);
 });
 
 afterEach(() => {
+  useSearchParams.mockClear();
   useSelector.mockClear();
   mockReducers.mockClear();
   clock.restore();
@@ -350,16 +368,16 @@ test("Shows server details with button click", async () => {
 
   await act(async () => {
     fireEvent.click(button);
+    await clock.tick(400);
   });
-  clock.tick(400);
 
   expect(collapse).toHaveClass("collapse show");
   expect(collapseBar).not.toHaveClass("show");
 
   await act(async () => {
     fireEvent.click(button);
+    await clock.tick(400);
   });
-  clock.tick(400);
 
   expect(collapse).toHaveClass("collapse");
   expect(collapse).not.toHaveClass("show");
@@ -367,8 +385,8 @@ test("Shows server details with button click", async () => {
 
   await act(async () => {
     fireEvent.click(button);
+    await clock.tick(400);
   });
-  clock.tick(400);
 
   expect(collapse).toHaveClass("collapse show");
   expect(collapseBar).not.toHaveClass("show");
@@ -398,16 +416,18 @@ test("Shows a UI error dialogue when start all servers fails", async () => {
     render(
       <Provider store={createStore(() => {}, {})}>
         <HashRouter>
-          <Switch>
-            <ServerDashboard
-              updateUsers={spy}
-              shutdownHub={spy}
-              startServer={spy}
-              stopServer={spy}
-              startAll={rejectSpy}
-              stopAll={spy}
-            />
-          </Switch>
+          <CompatRouter>
+            <Switch>
+              <ServerDashboard
+                updateUsers={spy}
+                shutdownHub={spy}
+                startServer={spy}
+                stopServer={spy}
+                startAll={rejectSpy}
+                stopAll={spy}
+              />
+            </Switch>
+          </CompatRouter>
         </HashRouter>
       </Provider>,
     );
@@ -432,16 +452,18 @@ test("Shows a UI error dialogue when stop all servers fails", async () => {
     render(
       <Provider store={createStore(() => {}, {})}>
         <HashRouter>
-          <Switch>
-            <ServerDashboard
-              updateUsers={spy}
-              shutdownHub={spy}
-              startServer={spy}
-              stopServer={spy}
-              startAll={spy}
-              stopAll={rejectSpy}
-            />
-          </Switch>
+          <CompatRouter>
+            <Switch>
+              <ServerDashboard
+                updateUsers={spy}
+                shutdownHub={spy}
+                startServer={spy}
+                stopServer={spy}
+                startAll={spy}
+                stopAll={rejectSpy}
+              />
+            </Switch>
+          </CompatRouter>
         </HashRouter>
       </Provider>,
     );
@@ -466,16 +488,18 @@ test("Shows a UI error dialogue when start user server fails", async () => {
     render(
       <Provider store={createStore(() => {}, {})}>
         <HashRouter>
-          <Switch>
-            <ServerDashboard
-              updateUsers={spy}
-              shutdownHub={spy}
-              startServer={rejectSpy}
-              stopServer={spy}
-              startAll={spy}
-              stopAll={spy}
-            />
-          </Switch>
+          <CompatRouter>
+            <Switch>
+              <ServerDashboard
+                updateUsers={spy}
+                shutdownHub={spy}
+                startServer={rejectSpy}
+                stopServer={spy}
+                startAll={spy}
+                stopAll={spy}
+              />
+            </Switch>
+          </CompatRouter>
         </HashRouter>
       </Provider>,
     );
@@ -501,16 +525,18 @@ test("Shows a UI error dialogue when start user server returns an improper statu
     render(
       <Provider store={createStore(() => {}, {})}>
         <HashRouter>
-          <Switch>
-            <ServerDashboard
-              updateUsers={spy}
-              shutdownHub={spy}
-              startServer={rejectSpy}
-              stopServer={spy}
-              startAll={spy}
-              stopAll={spy}
-            />
-          </Switch>
+          <CompatRouter>
+            <Switch>
+              <ServerDashboard
+                updateUsers={spy}
+                shutdownHub={spy}
+                startServer={rejectSpy}
+                stopServer={spy}
+                startAll={spy}
+                stopAll={spy}
+              />
+            </Switch>
+          </CompatRouter>
         </HashRouter>
       </Provider>,
     );
@@ -536,16 +562,18 @@ test("Shows a UI error dialogue when stop user servers fails", async () => {
     render(
       <Provider store={createStore(() => {}, {})}>
         <HashRouter>
-          <Switch>
-            <ServerDashboard
-              updateUsers={spy}
-              shutdownHub={spy}
-              startServer={spy}
-              stopServer={rejectSpy}
-              startAll={spy}
-              stopAll={spy}
-            />
-          </Switch>
+          <CompatRouter>
+            <Switch>
+              <ServerDashboard
+                updateUsers={spy}
+                shutdownHub={spy}
+                startServer={spy}
+                stopServer={rejectSpy}
+                startAll={spy}
+                stopAll={spy}
+              />
+            </Switch>
+          </CompatRouter>
         </HashRouter>
       </Provider>,
     );
@@ -570,16 +598,18 @@ test("Shows a UI error dialogue when stop user server returns an improper status
     render(
       <Provider store={createStore(() => {}, {})}>
         <HashRouter>
-          <Switch>
-            <ServerDashboard
-              updateUsers={spy}
-              shutdownHub={spy}
-              startServer={spy}
-              stopServer={rejectSpy}
-              startAll={spy}
-              stopAll={spy}
-            />
-          </Switch>
+          <CompatRouter>
+            <Switch>
+              <ServerDashboard
+                updateUsers={spy}
+                shutdownHub={spy}
+                startServer={spy}
+                stopServer={rejectSpy}
+                startAll={spy}
+                stopAll={spy}
+              />
+            </Switch>
+          </CompatRouter>
         </HashRouter>
       </Provider>,
     );
@@ -616,16 +646,18 @@ test("Search for user calls updateUsers with name filter", async () => {
     render(
       <Provider store={createStore(mockReducers, mockAppState())}>
         <HashRouter>
-          <Switch>
-            <ServerDashboard
-              updateUsers={mockUpdateUsers}
-              shutdownHub={spy}
-              startServer={spy}
-              stopServer={spy}
-              startAll={spy}
-              stopAll={spy}
-            />
-          </Switch>
+          <CompatRouter>
+            <Switch>
+              <ServerDashboard
+                updateUsers={mockUpdateUsers}
+                shutdownHub={spy}
+                startServer={spy}
+                stopServer={spy}
+                startAll={spy}
+                stopAll={spy}
+              />
+            </Switch>
+          </CompatRouter>
         </HashRouter>
       </Provider>,
     );
@@ -637,21 +669,20 @@ test("Search for user calls updateUsers with name filter", async () => {
 
   userEvent.type(search, "a");
   expect(search.value).toEqual("a");
-  clock.tick(400);
-  expect(mockReducers.mock.calls).toHaveLength(3);
-  var lastState =
-    mockReducers.mock.results[mockReducers.mock.results.length - 1].value;
-  expect(lastState.name_filter).toEqual("a");
-  // TODO: this should
-  expect(mockUpdateUsers.mock.calls).toHaveLength(1);
+  await act(async () => {
+    await clock.tick(400);
+  });
+  expect(searchParams.get("name_filter")).toEqual("a");
+  // FIXME: useSelector mocks prevent updateUsers from being called
+  // expect(mockUpdateUsers.mock.calls).toHaveLength(2);
+  // expect(mockUpdateUsers).toBeCalledWith(0, 100, "a");
   userEvent.type(search, "b");
   expect(search.value).toEqual("ab");
-  clock.tick(400);
-  expect(mockReducers.mock.calls).toHaveLength(4);
-  lastState =
-    mockReducers.mock.results[mockReducers.mock.results.length - 1].value;
-  expect(lastState.name_filter).toEqual("ab");
-  expect(lastState.user_page.offset).toEqual(0);
+  await act(async () => {
+    jest.runAllTimers();
+  });
+  expect(searchParams.get("name_filter")).toEqual("ab");
+  // expect(mockUpdateUsers).toBeCalledWith(0, 100, "ab");
 });
 
 test("Interacting with PaginationFooter causes state update and refresh via useEffect call", async () => {
@@ -661,24 +692,20 @@ test("Interacting with PaginationFooter causes state update and refresh via useE
     render(serverDashboardJsx(callbackSpy));
   });
 
-  expect(callbackSpy).toBeCalledWith(0, 2, "");
+  expect(callbackSpy).toBeCalledWith(0, 100, "");
 
-  expect(mockReducers.mock.results).toHaveLength(2);
-  lastState =
-    mockReducers.mock.results[mockReducers.mock.results.length - 1].value;
-  console.log(lastState);
-  expect(lastState.user_page.offset).toEqual(0);
-  expect(lastState.user_page.limit).toEqual(2);
+  var n = 3;
+  expect(searchParams.get("offset")).toEqual(null);
+  expect(searchParams.get("limit")).toEqual(null);
 
   let next = screen.getByTestId("paginate-next");
-  fireEvent.click(next);
-  clock.tick(400);
+  await act(async () => {
+    fireEvent.click(next);
+    await clock.tick(400);
+  });
 
-  expect(mockReducers.mock.results).toHaveLength(3);
-  var lastState =
-    mockReducers.mock.results[mockReducers.mock.results.length - 1].value;
-  expect(lastState.user_page.offset).toEqual(2);
-  expect(lastState.user_page.limit).toEqual(2);
+  expect(searchParams.get("offset")).toEqual("100");
+  expect(searchParams.get("limit")).toEqual(null);
 
   // FIXME: should call updateUsers, does in reality.
   // tests don't reflect reality due to mocked state/useSelector
@@ -721,16 +748,18 @@ test("Start server and confirm pending state", async () => {
     render(
       <Provider store={createStore(mockReducers, {})}>
         <HashRouter>
-          <Switch>
-            <ServerDashboard
-              updateUsers={mockUpdateUsers}
-              shutdownHub={spy}
-              startServer={mockStartServer}
-              stopServer={spy}
-              startAll={spy}
-              stopAll={spy}
-            />
-          </Switch>
+          <CompatRouter>
+            <Switch>
+              <ServerDashboard
+                updateUsers={mockUpdateUsers}
+                shutdownHub={spy}
+                startServer={mockStartServer}
+                stopServer={spy}
+                startAll={spy}
+                stopAll={spy}
+              />
+            </Switch>
+          </CompatRouter>
         </HashRouter>
       </Provider>,
     );

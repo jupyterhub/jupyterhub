@@ -199,8 +199,8 @@ const DynamicTable = (props) => {
 DynamicTable.propTypes = {
   current_keys: PropTypes.array,
   current_values: PropTypes.array,
-  setPropKeys: PropTypes.array,
-  setPropValues: PropTypes.array,
+  setPropKeys: PropTypes.func,
+  setPropValues: PropTypes.func,
   setProp: PropTypes.func,
 };
 export default DynamicTable;
