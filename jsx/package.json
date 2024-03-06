@@ -34,7 +34,7 @@
     "lodash": "^4.17.21",
     "prop-types": "^15.8.1",
     "react": "^17.0.2",
-    "react-bootstrap": "^2.7.4",
+    "react-bootstrap": "^2.10.1",
     "react-dom": "^17.0.2",
     "react-icons": "^4.8.0",
     "react-multi-select-component": "^4.3.4",

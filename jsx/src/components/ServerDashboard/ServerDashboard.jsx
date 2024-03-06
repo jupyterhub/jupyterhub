@@ -7,6 +7,7 @@ import {
   Button,
   Col,
   Row,
+  Form,
   FormControl,
   Card,
   CardGroup,
@@ -32,21 +33,6 @@ RowListItem.propTypes = {
 const ServerDashboard = (props) => {
   const base_url = window.base_url || "/";
   const [searchParams, setSearchParams] = useSearchParams();
-  // sort methods
-  const usernameDesc = (e) => e.sort((a, b) => (a.name > b.name ? 1 : -1)),
-    usernameAsc = (e) => e.sort((a, b) => (a.name < b.name ? 1 : -1)),
-    adminDesc = (e) => e.sort((a) => (a.admin ? -1 : 1)),
-    adminAsc = (e) => e.sort((a) => (a.admin ? 1 : -1)),
-    dateDesc = (e) =>
-      e.sort((a, b) =>
-        new Date(a.last_activity) - new Date(b.last_activity) > 0 ? -1 : 1,
-      ),
-    dateAsc = (e) =>
-      e.sort((a, b) =>
-        new Date(a.last_activity) - new Date(b.last_activity) > 0 ? 1 : -1,
-      ),
-    runningAsc = (e) => e.sort((a) => (a.server == null ? -1 : 1)),
-    runningDesc = (e) => e.sort((a) => (a.server == null ? 1 : -1));
 
   const [errorAlert, setErrorAlert] = useState(null);
   const [sortMethod, setSortMethod] = useState(null);
@@ -59,6 +45,8 @@ const ServerDashboard = (props) => {
     usePaginationParams();
 
   const name_filter = searchParams.get("name_filter") || "";
+  const sort = searchParams.get("sort") || "id";
+  const state_filter = searchParams.get("state") || "";
 
   const total = user_page ? user_page.total : undefined;
 
@@ -76,7 +64,13 @@ const ServerDashboard = (props) => {
   } = props;
 
   const dispatchPageUpdate = (data, page) => {
+    // trigger page update in state
+    // in response to fetching updated user list
+    // data is list of user records
+    // page is _pagination part of response
+    // persist page info in url query
     setPagination(page);
+    // persist user data, triggers rerender
     dispatch({
       type: "USER_PAGE",
       value: {
@@ -87,6 +81,8 @@ const ServerDashboard = (props) => {
   };
 
   const setNameFilter = (new_name_filter) => {
+    // persist ?name_filter parameter
+    // store in url param, clear when value is empty
     setSearchParams((params) => {
       // clear offset when name filter changes
       if (new_name_filter !== name_filter) {
@@ -101,25 +97,55 @@ const ServerDashboard = (props) => {
     });
   };
 
+  const setSort = (sort) => {
+    // persist ?sort parameter
+    // store in url param, clear when value is default ('id')
+    setSearchParams((params) => {
+      if (sort === "id") {
+        params.delete("id");
+      } else {
+        params.set("sort", sort);
+      }
+      return params;
+    });
+  };
+
+  const setStateFilter = (state_filter) => {
+    // persist ?state filter
+    // store in url param, clear when value is default ('')
+    setSearchParams((params) => {
+      if (!state_filter) {
+        params.delete("state");
+      } else {
+        params.set("state", state_filter);
+      }
+      return params;
+    });
+  };
+
+  // the callback to update the displayed user list
+  const updateUsersWithParams = () =>
+    updateUsers({
+      offset,
+      limit,
+      name_filter,
+      sort,
+      state: state_filter,
+    });
+
   useEffect(() => {
-    updateUsers(offset, limit, name_filter)
+    updateUsersWithParams()
       .then((data) => dispatchPageUpdate(data.items, data._pagination))
       .catch((err) => setErrorAlert("Failed to update user list."));
-  }, [offset, limit, name_filter]);
+  }, [offset, limit, name_filter, sort, state_filter]);
 
   if (!user_data || !user_page) {
     return <div data-testid="no-show"></div>;
   }
 
-  var slice = [offset, limit, name_filter];
-
   const handleSearch = debounce(async (event) => {
     setNameFilter(event.target.value);
   }, 300);
-
-  if (sortMethod != null) {
-    user_data = sortMethod(user_data);
-  }
 
   const ServerButton = ({ server, user, action, name, extraClass }) => {
     var [isDisabled, setIsDisabled] = useState(false);
@@ -132,7 +158,7 @@ const ServerDashboard = (props) => {
           action(user.name, server.name)
             .then((res) => {
               if (res.status < 300) {
-                updateUsers(...slice)
+                updateUsersWithParams()
                   .then((data) => {
                     dispatchPageUpdate(data.items, data._pagination);
                   })
@@ -417,42 +443,39 @@ const ServerDashboard = (props) => {
               <th id="user-header">
                 User{" "}
                 <SortHandler
-                  sorts={{ asc: usernameAsc, desc: usernameDesc }}
-                  callback={(method) => setSortMethod(() => method)}
+                  currentSort={sort}
+                  setSort={setSort}
+                  sortKey="name"
                   testid="user-sort"
                 />
               </th>
-              <th id="admin-header">
-                Admin{" "}
-                <SortHandler
-                  sorts={{ asc: adminAsc, desc: adminDesc }}
-                  callback={(method) => setSortMethod(() => method)}
-                  testid="admin-sort"
-                />
-              </th>
-              <th id="server-header">
-                Server{" "}
-                <SortHandler
-                  sorts={{ asc: usernameAsc, desc: usernameDesc }}
-                  callback={(method) => setSortMethod(() => method)}
-                  testid="server-sort"
-                />
-              </th>
+              <th id="admin-header">Admin</th>
+              <th id="server-header">Server</th>
               <th id="last-activity-header">
                 Last Activity{" "}
                 <SortHandler
-                  sorts={{ asc: dateAsc, desc: dateDesc }}
-                  callback={(method) => setSortMethod(() => method)}
+                  currentSort={sort}
+                  setSort={setSort}
+                  sortKey="last_activity"
                   testid="last-activity-sort"
                 />
               </th>
               <th id="running-status-header">
-                Running{" "}
-                <SortHandler
-                  sorts={{ asc: runningAsc, desc: runningDesc }}
-                  callback={(method) => setSortMethod(() => method)}
-                  testid="running-status-sort"
-                />
+                <label title="only show active servers">
+                  <Form.Check
+                    inline
+                    type="checkbox"
+                    name="active_servers"
+                    aria-label="only show active servers"
+                    checked={state_filter == "active"}
+                    onChange={(event) => {
+                      setStateFilter(event.target.checked ? "active" : null);
+                    }}
+                  />
+                  {state_filter == "active"
+                    ? " Active servers"
+                    : " All servers"}
+                </label>
               </th>
               <th id="actions-header">Actions</th>
             </tr>
@@ -490,7 +513,7 @@ const ServerDashboard = (props) => {
                         return res;
                       })
                       .then((res) => {
-                        updateUsers(...slice)
+                        updateUsersWithParams()
                           .then((data) => {
                             dispatchPageUpdate(data.items, data._pagination);
                           })
@@ -526,7 +549,7 @@ const ServerDashboard = (props) => {
                         return res;
                       })
                       .then((res) => {
-                        updateUsers(...slice)
+                        updateUsersWithParams()
                           .then((data) => {
                             dispatchPageUpdate(data.items, data._pagination);
                           })
@@ -590,30 +613,27 @@ ServerDashboard.propTypes = {
 };
 
 const SortHandler = (props) => {
-  var { sorts, callback, testid } = props;
+  const { currentSort, setSort, sortKey, testid } = props;
 
-  var [direction, setDirection] = useState(undefined);
-
+  const currentlySorted = currentSort && currentSort.endsWith(sortKey);
+  const descending = currentSort && currentSort.startsWith("-");
   return (
     <div
       className="sort-icon"
       data-testid={testid}
       onClick={() => {
-        if (!direction) {
-          callback(sorts.desc);
-          setDirection("desc");
-        } else if (direction == "asc") {
-          callback(sorts.desc);
-          setDirection("desc");
+        if (!currentlySorted) {
+          setSort(sortKey);
+        } else if (descending) {
+          setSort(sortKey);
         } else {
-          callback(sorts.asc);
-          setDirection("asc");
+          setSort("-" + sortKey);
         }
       }}
     >
-      {!direction ? (
+      {!currentlySorted ? (
         <FaSort />
-      ) : direction == "asc" ? (
+      ) : descending ? (
         <FaSortDown />
       ) : (
         <FaSortUp />
@@ -623,8 +643,9 @@ const SortHandler = (props) => {
 };
 
 SortHandler.propTypes = {
-  sorts: PropTypes.object,
-  callback: PropTypes.func,
+  currentSort: PropTypes.string,
+  setSort: PropTypes.func,
+  sortKey: PropTypes.string,
   testid: PropTypes.string,
 };
 

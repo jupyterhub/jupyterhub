@@ -46,3 +46,51 @@ tr.noborder > td {
 .user-row .actions > * {
   margin-right: 5px;
 }
+
+.form-check-inline {
+  /* inline form check doesn't get inline css 
+  I _think_ this is because our bootstrap css is outdated
+  */
+  display: inline-block;
+}
+
+/* column widths for dashboard
+
+goals:
+
+- want stable width for running-status
+  so clicking the running filter doesn't cause a jump
+- shrink fixed-content columns (action, admin)
+- allow variable content columns (username, server name)
+  to claim remaining space
+
+*/
+
+.admin-table-head label {
+  /* clear margin-bottom to keep label on baseline */
+  margin-bottom: 0px;
+}
+
+.admin-table-head #user-header {
+}
+.admin-table-head #admin-header {
+  width: 64px;
+}
+.admin-table-head #server-header {
+}
+.admin-table-head #last-activity-header {
+  width: 180px;
+}
+.admin-table-head #running-status-header {
+  width: 300px;
+}
+.admin-table-head #actions-header {
+  width: 80px;
+}
+
+/* vertical stack server buttons on small windows */
+@media (max-width: 991px) {
+  .admin-table-head #running-status-header {
+    width: 140px;
+  }
+}
