@@ -2,7 +2,7 @@ import React from "react";
 import "@testing-library/jest-dom";
 import { act } from "react-dom/test-utils";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { Provider, useDispatch, useSelector } from "react-redux";
+import { Provider, useSelector } from "react-redux";
 import { createStore } from "redux";
 import { HashRouter, useSearchParams } from "react-router-dom";
 // eslint-disable-next-line

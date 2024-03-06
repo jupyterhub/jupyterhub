@@ -9,7 +9,7 @@ const PaginationFooter = (props) => {
   return (
     <div className="pagination-footer">
       <p>
-        Displaying {offset}-{offset + visible}
+        Displaying {offset}-{offset + visible} {total ? `of ${total}` : ""}
         <br />
         {offset >= 1 ? (
           <button className="btn btn-sm btn-light spaced">
@@ -61,10 +61,13 @@ const PaginationFooter = (props) => {
 
 PaginationFooter.propTypes = {
   endpoint: PropTypes.string,
-  page: PropTypes.number,
+  offset: PropTypes.number,
   limit: PropTypes.number,
-  numOffset: PropTypes.number,
-  numElements: PropTypes.number,
+  visible: PropTypes.number,
+  total: PropTypes.number,
+  handleLimit: PropTypes.func,
+  next: PropTypes.func,
+  prev: PropTypes.func,
 };
 
 export default PaginationFooter;
