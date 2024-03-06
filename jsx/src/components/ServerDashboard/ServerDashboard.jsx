@@ -14,10 +14,7 @@ import {
 } from "react-bootstrap";
 import ReactObjectTableViewer from "../ReactObjectTableViewer/ReactObjectTableViewer";
 
-import { Link } from "react-router-dom";
-// react-router-dom v6 API
-// should be able to upgrade to v6 someday
-import { useSearchParams } from "react-router-dom-v5-compat";
+import { Link, useSearchParams } from "react-router-dom";
 import { FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
 
 import "./server-dashboard.css";

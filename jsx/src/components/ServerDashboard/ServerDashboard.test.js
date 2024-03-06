@@ -9,8 +9,8 @@ import {
   getByText,
   getAllByRole,
 } from "@testing-library/react";
-import { HashRouter, Switch } from "react-router-dom";
-import { CompatRouter, useSearchParams } from "react-router-dom-v5-compat";
+import { HashRouter, Routes, Route, useSearchParams } from "react-router-dom";
+// import { CompatRouter,  } from "react-router-dom-v5-compat";
 import { Provider, useSelector } from "react-redux";
 import { createStore } from "redux";
 // eslint-disable-next-line
@@ -23,8 +23,8 @@ jest.mock("react-redux", () => ({
   ...jest.requireActual("react-redux"),
   useSelector: jest.fn(),
 }));
-jest.mock("react-router-dom-v5-compat", () => ({
-  ...jest.requireActual("react-router-dom-v5-compat"),
+jest.mock("react-router-dom", () => ({
+  ...jest.requireActual("react-router-dom"),
   useSearchParams: jest.fn(),
 }));
 

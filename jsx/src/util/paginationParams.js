@@ -1,5 +1,5 @@
 import { debounce } from "lodash";
-import { useSearchParams } from "react-router-dom-v5-compat";
+import { useSearchParams } from "react-router-dom";
 
 export const usePaginationParams = () => {
   // get offset, limit, name filter from URL

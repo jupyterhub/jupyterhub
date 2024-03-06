@@ -4,8 +4,7 @@ import { act } from "react-dom/test-utils";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { Provider, useDispatch, useSelector } from "react-redux";
 import { createStore } from "redux";
-import { HashRouter } from "react-router-dom";
-import { CompatRouter, useSearchParams } from "react-router-dom-v5-compat";
+import { HashRouter, useSearchParams } from "react-router-dom";
 // eslint-disable-next-line
 import regeneratorRuntime from "regenerator-runtime";
 
@@ -17,8 +16,8 @@ jest.mock("react-redux", () => ({
   useSelector: jest.fn(),
 }));
 
-jest.mock("react-router-dom-v5-compat", () => ({
-  ...jest.requireActual("react-router-dom-v5-compat"),
+jest.mock("react-router-dom", () => ({
+  ...jest.requireActual("react-router-dom"),
   useSearchParams: jest.fn(),
 }));
 
@@ -28,9 +27,7 @@ var mockAsync = () =>
 var groupsJsx = (callbackSpy) => (
   <Provider store={createStore(mockReducers, mockAppState())}>
     <HashRouter>
-      <CompatRouter>
-        <Groups location={{ search: "0" }} updateGroups={callbackSpy} />
-      </CompatRouter>
+      <Groups location={{ search: "0" }} updateGroups={callbackSpy} />
     </HashRouter>
   </Provider>
 );

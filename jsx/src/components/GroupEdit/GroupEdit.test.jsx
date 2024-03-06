@@ -6,7 +6,6 @@ import userEvent from "@testing-library/user-event";
 import { Provider, useSelector } from "react-redux";
 import { createStore } from "redux";
 import { HashRouter } from "react-router-dom";
-import { CompatRouter } from "react-router-dom-v5-compat";
 // eslint-disable-next-line
 import regeneratorRuntime from "regenerator-runtime";
 
@@ -28,22 +27,20 @@ var okPacket = new Promise((resolve) => resolve(true));
 var groupEditJsx = (callbackSpy) => (
   <Provider store={createStore(() => {}, {})}>
     <HashRouter>
-      <CompatRouter>
-        <GroupEdit
-          location={{
-            state: {
-              group_data: { users: ["foo"], name: "group" },
-              callback: () => {},
-            },
-          }}
-          addToGroup={callbackSpy}
-          removeFromGroup={callbackSpy}
-          deleteGroup={callbackSpy}
-          history={{ push: () => callbackSpy }}
-          updateGroups={callbackSpy}
-          validateUser={jest.fn().mockImplementation(() => okPacket)}
-        />
-      </CompatRouter>
+      <GroupEdit
+        location={{
+          state: {
+            group_data: { users: ["foo"], name: "group" },
+            callback: () => {},
+          },
+        }}
+        addToGroup={callbackSpy}
+        removeFromGroup={callbackSpy}
+        deleteGroup={callbackSpy}
+        history={{ push: () => callbackSpy }}
+        updateGroups={callbackSpy}
+        validateUser={jest.fn().mockImplementation(() => okPacket)}
+      />
     </HashRouter>
   </Provider>
 );
