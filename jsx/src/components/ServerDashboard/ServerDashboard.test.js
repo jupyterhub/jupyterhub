@@ -18,9 +18,6 @@ import regeneratorRuntime from "regenerator-runtime";
 
 import ServerDashboard from "./ServerDashboard";
 import { initialState, reducers } from "../../Store";
-import * as sinon from "sinon";
-
-let clock;
 
 jest.mock("react-redux", () => ({
   ...jest.requireActual("react-redux"),
@@ -147,7 +144,7 @@ var mockReducers = jest.fn((state, action) => {
 let searchParams = new URLSearchParams();
 
 beforeEach(() => {
-  clock = sinon.useFakeTimers();
+  jest.useFakeTimers();
   useSelector.mockImplementation((callback) => {
     return callback(mockAppState());
   });
@@ -165,7 +162,7 @@ afterEach(() => {
   useSearchParams.mockClear();
   useSelector.mockClear();
   mockReducers.mockClear();
-  clock.restore();
+  jest.runAllTimers();
 });
 
 test("Renders", async () => {
@@ -368,7 +365,7 @@ test("Shows server details with button click", async () => {
 
   await act(async () => {
     fireEvent.click(button);
-    await clock.tick(400);
+    jest.runAllTimers();
   });
 
   expect(collapse).toHaveClass("collapse show");
@@ -376,7 +373,7 @@ test("Shows server details with button click", async () => {
 
   await act(async () => {
     fireEvent.click(button);
-    await clock.tick(400);
+    jest.runAllTimers();
   });
 
   expect(collapse).toHaveClass("collapse");
@@ -385,7 +382,7 @@ test("Shows server details with button click", async () => {
 
   await act(async () => {
     fireEvent.click(button);
-    await clock.tick(400);
+    jest.runAllTimers();
   });
 
   expect(collapse).toHaveClass("collapse show");
@@ -670,7 +667,7 @@ test("Search for user calls updateUsers with name filter", async () => {
   userEvent.type(search, "a");
   expect(search.value).toEqual("a");
   await act(async () => {
-    await clock.tick(400);
+    jest.runAllTimers();
   });
   expect(searchParams.get("name_filter")).toEqual("a");
   // FIXME: useSelector mocks prevent updateUsers from being called
@@ -701,7 +698,7 @@ test("Interacting with PaginationFooter causes state update and refresh via useE
   let next = screen.getByTestId("paginate-next");
   await act(async () => {
     fireEvent.click(next);
-    await clock.tick(400);
+    jest.runAllTimers();
   });
 
   expect(searchParams.get("offset")).toEqual("100");
@@ -736,7 +733,7 @@ test("Start server and confirm pending state", async () => {
 
   let mockStartServer = jest.fn(() => {
     return new Promise(async (resolve) =>
-      clock.setTimeout(() => {
+      setTimeout(() => {
         resolve({ status: 200 });
       }, 100),
     );
@@ -784,7 +781,7 @@ test("Start server and confirm pending state", async () => {
   expect(buttons[1]).toBeEnabled();
 
   await act(async () => {
-    await clock.tick(100);
+    jest.runAllTimers();
   });
   expect(mockUpdateUsers.mock.calls).toHaveLength(2);
 });
