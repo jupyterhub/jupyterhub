@@ -86,10 +86,14 @@ const ServerDashboard = (props) => {
     });
   };
 
-  const setNameFilter = (name_filter) => {
+  const setNameFilter = (new_name_filter) => {
     setSearchParams((params) => {
-      if (name_filter) {
-        params.set("name_filter", name_filter);
+      // clear offset when name filter changes
+      if (new_name_filter !== name_filter) {
+        params.delete("offset");
+      }
+      if (new_name_filter) {
+        params.set("name_filter", new_name_filter);
       } else {
         params.delete("name_filter");
       }

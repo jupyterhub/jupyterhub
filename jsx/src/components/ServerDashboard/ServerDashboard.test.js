@@ -509,6 +509,7 @@ test("Search for user calls updateUsers with name filter", async () => {
     });
   });
   await act(async () => {
+    searchParams.set("offset", "2");
     render(serverDashboardJsx({ updateUsers: mockUpdateUsers }));
   });
 
@@ -516,12 +517,14 @@ test("Search for user calls updateUsers with name filter", async () => {
 
   expect(mockUpdateUsers.mock.calls).toHaveLength(1);
 
+  expect(searchParams.get("offset")).toEqual("2");
   userEvent.type(search, "a");
   expect(search.value).toEqual("a");
   await act(async () => {
     jest.runAllTimers();
   });
   expect(searchParams.get("name_filter")).toEqual("a");
+  expect(searchParams.get("offset")).toEqual(null);
   // FIXME: useSelector mocks prevent updateUsers from being called
   // expect(mockUpdateUsers.mock.calls).toHaveLength(2);
   // expect(mockUpdateUsers).toBeCalledWith(0, 100, "a");

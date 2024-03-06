@@ -9,7 +9,7 @@ const PaginationFooter = (props) => {
   return (
     <div className="pagination-footer">
       <p>
-        Displaying {offset}-{offset + visible} {total ? `of ${total}` : ""}
+        Displaying {offset + 1}-{offset + visible} {total ? `of ${total}` : ""}
         <br />
         {offset >= 1 ? (
           <button className="btn btn-sm btn-light spaced">
