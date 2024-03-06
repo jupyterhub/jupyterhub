@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import "./table-select.css";
 import PropTypes from "prop-types";
 
@@ -199,8 +199,8 @@ const DynamicTable = (props) => {
 DynamicTable.propTypes = {
   current_keys: PropTypes.array,
   current_values: PropTypes.array,
-  setPropKeys: PropTypes.array,
-  setPropValues: PropTypes.array,
+  setPropKeys: PropTypes.func,
+  setPropValues: PropTypes.func,
   setProp: PropTypes.func,
 };
 export default DynamicTable;

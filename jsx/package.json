@@ -7,8 +7,8 @@
   "license": "BSD-3-Clause",
   "scripts": {
     "build": "webpack",
+    "build:watch": "webpack watch",
     "hot": "webpack && webpack-dev-server",
-    "place": "cp build/admin-react.js* ../share/jupyterhub/static/js/",
     "test": "jest --verbose",
     "snap": "jest --updateSnapshot",
     "lint": "eslint --ext .jsx --ext .js src/",
@@ -39,7 +39,7 @@
     "react-icons": "^4.8.0",
     "react-multi-select-component": "^4.3.4",
     "react-redux": "^7.2.8",
-    "react-router-dom": "^5.3.4",
+    "react-router-dom": "^6.22.2",
     "recompose": "npm:react-recompose@^0.33.0",
     "redux": "^4.2.1",
     "regenerator-runtime": "^0.13.11"
@@ -64,7 +64,6 @@
     "jest": "^29.5.0",
     "jest-environment-jsdom": "^29.5.0",
     "prettier": "^2.8.7",
-    "sinon": "^15.0.3",
     "style-loader": "^3.3.2",
     "webpack": "^5.79.0",
     "webpack-cli": "^5.0.1",

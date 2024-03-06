@@ -1041,7 +1041,7 @@ async def test_start_stop_all_servers_on_admin_page(app, browser, admin_user):
     )
 
 
-@pytest.mark.parametrize("added_count_users", [10, 47, 48, 49, 110])
+@pytest.mark.parametrize("added_count_users", [10, 49, 50, 51, 99, 100, 101])
 async def test_paging_on_admin_page(
     app, browser, admin_user, added_count_users, create_user_with_scopes
 ):
@@ -1057,7 +1057,7 @@ async def test_paging_on_admin_page(
     btn_next = browser.get_by_role("button", name="Next")
     # verify "Previous"/"Next" button clickability depending on users number on the page
     await expect(displaying).to_have_text(
-        re.compile(".*" + f"0-{min(users_count_db,50)}" + ".*")
+        re.compile(".*" + f"1-{min(users_count_db, 50)}" + ".*")
     )
     if users_count_db > 50:
         await expect(btn_next.locator("//span")).to_have_class("active-pagination")
@@ -1065,10 +1065,10 @@ async def test_paging_on_admin_page(
         await btn_next.click()
         if users_count_db <= 100:
             await expect(displaying).to_have_text(
-                re.compile(".*" + f"50-{users_count_db}" + ".*")
+                re.compile(".*" + f"51-{users_count_db}" + ".*")
             )
         else:
-            await expect(displaying).to_have_text(re.compile(".*" + "50-100" + ".*"))
+            await expect(displaying).to_have_text(re.compile(".*" + "51-100" + ".*"))
             await expect(btn_next.locator("//span")).to_have_class("active-pagination")
         await expect(btn_previous.locator("//span")).to_have_class("active-pagination")
         # click on Previous button
@@ -1117,7 +1117,7 @@ async def test_search_on_admin_page(
     if users_count_db_filtered <= 50:
         await expect(filtered_list_on_page).to_have_count(users_count_db_filtered)
         await expect(displaying).to_contain_text(
-            re.compile(f"0-{users_count_db_filtered}")
+            re.compile(f"1-{users_count_db_filtered}")
         )
         # check that users names contain the search value in the filtered list
         for element in await filtered_list_on_page.get_by_test_id(
@@ -1126,7 +1126,7 @@ async def test_search_on_admin_page(
             await expect(element).to_contain_text(re.compile(f".*{search_value}.*"))
     else:
         await expect(filtered_list_on_page).to_have_count(50)
-        await expect(displaying).to_contain_text(re.compile("0-50"))
+        await expect(displaying).to_contain_text(re.compile("1-50"))
         # click on Next button to verify that the rest part of filtered list is displayed on the next page
         await browser.get_by_role("button", name="Next").click()
         filtered_list_on_next_page = browser.locator('//tr[@class="user-row"]')

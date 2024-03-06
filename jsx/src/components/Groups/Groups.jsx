@@ -3,6 +3,7 @@ import { useSelector, useDispatch } from "react-redux";
 import PropTypes from "prop-types";
 
 import { Link } from "react-router-dom";
+import { usePaginationParams } from "../../util/paginationParams";
 import PaginationFooter from "../PaginationFooter/PaginationFooter";
 
 const Groups = (props) => {
@@ -10,22 +11,15 @@ const Groups = (props) => {
     groups_page = useSelector((state) => state.groups_page),
     dispatch = useDispatch();
 
-  var offset = groups_page ? groups_page.offset : 0;
+  const { setOffset, offset, setLimit, handleLimit, limit, setPagination } =
+    usePaginationParams();
 
-  const setOffset = (offset) => {
-    dispatch({
-      type: "GROUPS_OFFSET",
-      value: {
-        offset: offset,
-      },
-    });
-  };
-  var limit = groups_page ? groups_page.limit : window.api_page_limit;
   var total = groups_page ? groups_page.total : undefined;
 
   var { updateGroups, history } = props;
 
   const dispatchPageUpdate = (data, page) => {
+    setPagination(page);
     dispatch({
       type: "GROUPS_PAGE",
       value: {
@@ -85,7 +79,8 @@ const Groups = (props) => {
                 visible={groups_data.length}
                 total={total}
                 next={() => setOffset(offset + limit)}
-                prev={() => setOffset(offset >= limit ? offset - limit : 0)}
+                prev={() => setOffset(offset - limit)}
+                handleLimit={handleLimit}
               />
             </div>
             <div className="panel-footer">
