@@ -6,6 +6,7 @@ import re
 import sys
 import uuid
 from copy import deepcopy
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from unittest import mock
 from urllib.parse import parse_qs, quote, urlparse
@@ -267,7 +268,6 @@ def max_page_limit(app):
 
 
 @mark.user
-@mark.role
 @mark.parametrize(
     "n, offset, limit, accepts_pagination, expected_count, include_stopped_servers",
     [
@@ -479,6 +479,87 @@ async def test_get_users_name_filter(app):
     assert r.status_code == 200
     response_users = [u.get("name") for u in r.json()]
     assert response_users == ['qrst']
+
+
+@mark.user
+@pytest.mark.parametrize("direction", ["asc", "desc"])
+@pytest.mark.parametrize("sort", ["id", "name", "last_activity"])
+async def test_get_users_sort(app, sort, direction):
+    db = app.db
+
+    # 4 users, different order depending on sort field
+    orders = {
+        "id": ["1", "2", "3", "4"],
+        "name": ["a", "b", "c", "d"],
+        "last_activity": ["never", "early", "middle", "late"],
+    }
+    expected_order = orders[sort]
+    sort_param = sort
+    if direction == "desc":
+        expected_order.reverse()
+        sort_param = "-" + sort
+
+    # create the users, encode the expected sort order in the names
+    u = add_user(db, app=app, name='xyz-c-1-middle')
+    u.last_activity = utcnow() - timedelta(hours=1)
+    u = add_user(db, app=app, name='xyz-a-2-late')
+    u.last_activity = utcnow()
+    u = add_user(db, app=app, name='xyz-d-3-never')
+    u.last_activity = None
+    u = add_user(db, app=app, name='xyz-b-4-early')
+    u.last_activity = utcnow() - timedelta(days=1)
+    app.db.commit()
+
+    @dataclass
+    class UserName:
+        """Parse username so we can get the current sort field"""
+
+        id: str
+        name: str
+        last_activity: str
+
+        def __init__(self, username):
+            prefix, self.name, self.id, self.last_activity = username.split("-")
+
+    # fetch 4 users in 2 pages of 2 items each
+    # to ensure offset is handled correctly
+    params = {
+        "name_filter": "xyz",
+        "sort": sort_param,
+        "limit": 2,
+    }
+
+    r = await api_request(
+        app, 'users', params=params, headers={"Accept": PAGINATION_MEDIA_TYPE}
+    )
+    assert r.status_code == 200
+    page_1 = r.json()
+
+    assert page_1["_pagination"]["total"] == 4
+    users = page_1["items"]
+    assert len(users) == 2
+
+    # next page
+    params["offset"] = page_1["_pagination"]["next"]["offset"]
+    r = await api_request(
+        app, 'users', params=params, headers={"Accept": PAGINATION_MEDIA_TYPE}
+    )
+    assert r.status_code == 200
+    page_2 = r.json()
+
+    # turn user dicts into list of only the relevant component,
+    # e.g. { "name": "xyz-a-2-late" } -> "late"
+    users.extend(page_2["items"])
+    usernames = [UserName(u["name"]) for u in users]
+    sorted_fields = [getattr(u, sort) for u in usernames]
+    assert sorted_fields == expected_order
+
+
+async def test_get_users_sort_invalid(app):
+    r = await api_request(app, "users", params={"sort": "servers"})
+    assert r.status_code == 400
+    r = await api_request(app, "users", params={"sort": "--id"})
+    assert r.status_code == 400
 
 
 @mark.user

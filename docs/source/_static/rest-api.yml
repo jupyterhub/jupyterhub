@@ -135,6 +135,30 @@ paths:
           schema:
             type: boolean
           allowEmptyValue: true
+        - name: sort
+          in: query
+          description: |
+            Sort users by this key (new in JupyterHub 5.0).
+            Default: `id` (opaque but stable internal order).
+            Supported fields: `id`, `name`, `last_activity`.
+            Results will be in ascending order.
+            Descending order can be requested with a `-` prefix,
+            e.g. `sort=-last_activity` for most recently active users first.
+          schema:
+            type: string
+          examples:
+            default:
+              value: id
+              summary: |
+                default: sort by internal id
+            by_name:
+              value: name
+              summary: |
+                sort by user.name
+            recent_activity:
+              value: "-last_activity"
+              summary: |
+                sort by last activity, most recent first
       responses:
         200:
           description: The Hub's user list
