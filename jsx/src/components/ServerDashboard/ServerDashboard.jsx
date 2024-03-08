@@ -35,7 +35,6 @@ const ServerDashboard = (props) => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [errorAlert, setErrorAlert] = useState(null);
-  const [sortMethod, setSortMethod] = useState(null);
   const [collapseStates, setCollapseStates] = useState({});
 
   let user_data = useSelector((state) => state.user_data);
@@ -123,6 +122,7 @@ const ServerDashboard = (props) => {
       } else {
         params.set("state", new_state_filter);
       }
+      console.log("setting search params", params.toString());
       return params;
     });
   };
@@ -491,7 +491,7 @@ const ServerDashboard = (props) => {
                   </Button>
                 </Link>
               </td>
-              <td colspan="4" className="admin-header-buttons">
+              <td colSpan={4} className="admin-header-buttons">
                 {/* Start all servers */}
                 <Button
                   variant="primary"
@@ -566,7 +566,7 @@ const ServerDashboard = (props) => {
                   Stop All
                 </Button>
                 {/* spacing between start/stop and Shutdown */}
-                <span style={{ "margin-left": "56px" }}> </span>
+                <span style={{ marginLeft: "56px" }}> </span>
                 {/* Shutdown Jupyterhub */}
                 <Button
                   variant="danger"
