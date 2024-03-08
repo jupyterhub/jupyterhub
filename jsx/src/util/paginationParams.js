@@ -17,7 +17,7 @@ export const usePaginationParams = () => {
     }
   };
   const _setLimit = (params, limit) => {
-    if (limit < 10) limit = 10;
+    if (limit < 1) limit = 1;
     if (limit === window.api_page_limit) {
       params.delete("limit");
     } else {

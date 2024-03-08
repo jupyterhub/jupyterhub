@@ -2,13 +2,16 @@ import { withProps } from "recompose";
 import { jhapiRequest } from "./jhapiUtil";
 
 const withAPI = withProps(() => ({
-  updateUsers: (offset, limit, name_filter) =>
-    jhapiRequest(
-      `/users?include_stopped_servers&offset=${offset}&limit=${limit}&name_filter=${
-        name_filter || ""
-      }`,
-      "GET",
-    ).then((data) => data.json()),
+  updateUsers: (options) => {
+    let params = new URLSearchParams();
+    params.set("include_stopped_servers", "1");
+    for (let key in options) {
+      params.set(key, options[key]);
+    }
+    return jhapiRequest(`/users?${params.toString()}`, "GET").then((data) =>
+      data.json(),
+    );
+  },
   updateGroups: (offset, limit) =>
     jhapiRequest(`/groups?offset=${offset}&limit=${limit}`, "GET").then(
       (data) => data.json(),

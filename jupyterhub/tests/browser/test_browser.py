@@ -1116,8 +1116,9 @@ async def test_search_on_admin_page(
     displaying = browser.get_by_text("Displaying")
     if users_count_db_filtered <= 50:
         await expect(filtered_list_on_page).to_have_count(users_count_db_filtered)
+        start = 1 if users_count_db_filtered else 0
         await expect(displaying).to_contain_text(
-            re.compile(f"1-{users_count_db_filtered}")
+            re.compile(f"{start}-{users_count_db_filtered}")
         )
         # check that users names contain the search value in the filtered list
         for element in await filtered_list_on_page.get_by_test_id(

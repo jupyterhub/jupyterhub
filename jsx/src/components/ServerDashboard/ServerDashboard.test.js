@@ -34,9 +34,8 @@ const serverDashboardJsx = (props) => {
   // spies is a dict of properties to mock in
   // any API calls that will fire during the test should be mocked
   props = props || {};
-  const defaultSpy = mockAsync();
   if (!props.updateUsers) {
-    props.updateUsers = defaultSpy;
+    props.updateUsers = mockUpdateUsers;
   }
   return (
     <Provider store={createStore(mockReducers, mockAppState())}>
@@ -54,6 +53,14 @@ var mockAsync = (data) =>
 
 var mockAsyncRejection = () =>
   jest.fn().mockImplementation(() => Promise.reject());
+
+const defaultUpdateUsersParams = {
+  offset: 0,
+  limit: 2,
+  name_filter: "",
+  sort: "id",
+  state: "",
+};
 
 var bar_servers = {
   "": {
@@ -80,44 +87,64 @@ var bar_servers = {
   },
 };
 
+/* create new user models */
+const newUser = (name) => {
+  return {
+    kind: "user",
+    name: name,
+    admin: false,
+    groups: [],
+    server: `/user/${name}`,
+    created: "2020-12-07T18:46:27.112695Z",
+    last_activity: "2020-12-07T21:00:33.336354Z",
+    servers: {},
+  };
+};
+
+const allUsers = [
+  {
+    kind: "user",
+    name: "foo",
+    admin: true,
+    groups: [],
+    server: "/user/foo/",
+    pending: null,
+    created: "2020-12-07T18:46:27.112695Z",
+    last_activity: "2020-12-07T21:00:33.336354Z",
+    servers: {
+      "": {
+        name: "",
+        last_activity: "2020-12-07T20:58:02.437408Z",
+        started: "2020-12-07T20:58:01.508266Z",
+        pending: null,
+        ready: true,
+        state: { pid: 28085 },
+        url: "/user/foo/",
+        user_options: {},
+        progress_url: "/hub/api/users/foo/server/progress",
+      },
+    },
+  },
+  {
+    kind: "user",
+    name: "bar",
+    admin: false,
+    groups: [],
+    server: null,
+    pending: null,
+    created: "2020-12-07T18:46:27.115528Z",
+    last_activity: "2020-12-07T20:43:51.013613Z",
+    servers: bar_servers,
+  },
+];
+
+for (var i = 2; i < 10; i++) {
+  allUsers.push(newUser(`test-${i}`));
+}
+
 var mockAppState = () =>
   Object.assign({}, initialState, {
-    user_data: [
-      {
-        kind: "user",
-        name: "foo",
-        admin: true,
-        groups: [],
-        server: "/user/foo/",
-        pending: null,
-        created: "2020-12-07T18:46:27.112695Z",
-        last_activity: "2020-12-07T21:00:33.336354Z",
-        servers: {
-          "": {
-            name: "",
-            last_activity: "2020-12-07T20:58:02.437408Z",
-            started: "2020-12-07T20:58:01.508266Z",
-            pending: null,
-            ready: true,
-            state: { pid: 28085 },
-            url: "/user/foo/",
-            user_options: {},
-            progress_url: "/hub/api/users/foo/server/progress",
-          },
-        },
-      },
-      {
-        kind: "user",
-        name: "bar",
-        admin: false,
-        groups: [],
-        server: null,
-        pending: null,
-        created: "2020-12-07T18:46:27.115528Z",
-        last_activity: "2020-12-07T20:43:51.013613Z",
-        servers: bar_servers,
-      },
-    ],
+    user_data: allUsers.slice(0, 2),
     user_page: {
       offset: 0,
       limit: 2,
@@ -125,7 +152,7 @@ var mockAppState = () =>
       next: {
         offset: 2,
         limit: 2,
-        url: "http://localhost:8000/hub/api/groups?offset=2&limit=2",
+        url: "http://localhost:8000/hub/api/users?offset=2&limit=2",
       },
     },
   });
@@ -143,6 +170,40 @@ var mockReducers = jest.fn((state, action) => {
   return state;
 });
 
+let mockUpdateUsers = jest.fn(({ offset, limit, sort, name_filter, state }) => {
+  /* mock updating users 
+  
+  this has tom implement the server-side filtering, sorting, etc.
+  (at least whatever we want to test of it)
+  */
+  let matchingUsers = allUsers;
+  if (state === "active") {
+    // only first user is active
+    matchingUsers = allUsers.slice(0, 1);
+  }
+  if (name_filter) {
+    matchingUsers = matchingUsers.filter((user) =>
+      user.name.startsWith(name_filter),
+    );
+  }
+
+  const total = matchingUsers.length;
+  const items = matchingUsers.slice(offset, offset + limit);
+
+  return Promise.resolve({
+    items: items,
+    _pagination: {
+      offset: offset,
+      limit: limit,
+      total: total,
+      next: {
+        offset: offset + limit,
+        limit: limit,
+      },
+    },
+  });
+});
+
 let searchParams = new URLSearchParams();
 
 beforeEach(() => {
@@ -151,6 +212,7 @@ beforeEach(() => {
     return callback(mockAppState());
   });
   searchParams = new URLSearchParams();
+  searchParams.set("limit", "2");
 
   useSearchParams.mockImplementation(() => [
     searchParams,
@@ -164,6 +226,7 @@ afterEach(() => {
   useSearchParams.mockClear();
   useSelector.mockClear();
   mockReducers.mockClear();
+  mockUpdateUsers.mockClear();
   jest.runAllTimers();
 });
 
@@ -267,71 +330,93 @@ test("Invokes the shutdownHub event on button click", async () => {
 });
 
 test("Sorts according to username", async () => {
+  let rerender;
+  const testId = "user-sort";
   await act(async () => {
-    render(serverDashboardJsx());
+    rerender = render(serverDashboardJsx()).rerender;
   });
 
-  let handler = screen.getByTestId("user-sort");
+  expect(searchParams.get("sort")).toEqual(null);
+  let handler = screen.getByTestId(testId);
   fireEvent.click(handler);
+  expect(searchParams.get("sort")).toEqual("name");
 
-  let first = screen.getAllByTestId("user-row-name")[0];
-  expect(first.textContent).toContain("bar");
-
-  fireEvent.click(handler);
-
-  first = screen.getAllByTestId("user-row-name")[0];
-  expect(first.textContent).toContain("foo");
-});
-
-test("Sorts according to admin", async () => {
   await act(async () => {
-    render(serverDashboardJsx());
+    rerender(serverDashboardJsx());
+    handler = screen.getByTestId(testId);
   });
 
-  let handler = screen.getByTestId("admin-sort");
   fireEvent.click(handler);
+  expect(searchParams.get("sort")).toEqual("-name");
 
-  let first = screen.getAllByTestId("user-row-admin")[0];
-  expect(first.textContent).toBe("admin");
+  await act(async () => {
+    rerender(serverDashboardJsx());
+    handler = screen.getByTestId(testId);
+  });
 
   fireEvent.click(handler);
-
-  first = screen.getAllByTestId("user-row-admin")[0];
-  expect(first.textContent).toBe("");
+  expect(searchParams.get("sort")).toEqual("name");
 });
 
 test("Sorts according to last activity", async () => {
+  let rerender;
+  const testId = "last-activity-sort";
   await act(async () => {
-    render(serverDashboardJsx());
+    rerender = render(serverDashboardJsx()).rerender;
   });
 
-  let handler = screen.getByTestId("last-activity-sort");
+  expect(searchParams.get("sort")).toEqual(null);
+  let handler = screen.getByTestId(testId);
   fireEvent.click(handler);
+  expect(searchParams.get("sort")).toEqual("last_activity");
 
-  let first = screen.getAllByTestId("user-row-name")[0];
-  expect(first.textContent).toContain("foo");
+  await act(async () => {
+    rerender(serverDashboardJsx());
+    handler = screen.getByTestId(testId);
+  });
 
   fireEvent.click(handler);
+  expect(searchParams.get("sort")).toEqual("-last_activity");
 
-  first = screen.getAllByTestId("user-row-name")[0];
-  expect(first.textContent).toContain("bar");
+  await act(async () => {
+    rerender(serverDashboardJsx());
+    handler = screen.getByTestId(testId);
+  });
+
+  fireEvent.click(handler);
+  expect(searchParams.get("sort")).toEqual("last_activity");
 });
 
-test("Sorts according to server status (running/not running)", async () => {
+test("Filter according to server status (running/not running)", async () => {
+  let rerender;
   await act(async () => {
-    render(serverDashboardJsx());
+    rerender = render(serverDashboardJsx()).rerender;
   });
-
-  let handler = screen.getByTestId("running-status-sort");
+  console.log(rerender);
+  console.log("begin test");
+  const label = "only active servers";
+  let handler = screen.getByLabelText(label);
+  expect(handler.checked).toEqual(false);
   fireEvent.click(handler);
 
-  let first = screen.getAllByTestId("user-row-name")[0];
-  expect(first.textContent).toContain("foo");
+  // FIXME: need to force a rerender to get updated checkbox
+  // I don't think this should be required
+  await act(async () => {
+    rerender(serverDashboardJsx());
+    handler = screen.getByLabelText(label);
+  });
+  expect(searchParams.get("state")).toEqual("active");
+  expect(handler.checked).toEqual(true);
 
   fireEvent.click(handler);
 
-  first = screen.getAllByTestId("user-row-name")[0];
-  expect(first.textContent).toContain("bar");
+  await act(async () => {
+    rerender(serverDashboardJsx());
+    handler = screen.getByLabelText(label);
+  });
+  handler = screen.getByLabelText(label);
+  expect(handler.checked).toEqual(false);
+  expect(searchParams.get("state")).toEqual(null);
 });
 
 test("Shows server details with button click", async () => {
@@ -494,23 +579,9 @@ test("Shows a UI error dialogue when stop user server returns an improper status
 
 test("Search for user calls updateUsers with name filter", async () => {
   let spy = mockAsync();
-  let mockUpdateUsers = jest.fn((offset, limit, name_filter) => {
-    return Promise.resolve({
-      items: [],
-      _pagination: {
-        offset: offset,
-        limit: limit,
-        total: offset + limit * 2,
-        next: {
-          offset: offset + limit,
-          limit: limit,
-        },
-      },
-    });
-  });
   await act(async () => {
     searchParams.set("offset", "2");
-    render(serverDashboardJsx({ updateUsers: mockUpdateUsers }));
+    render(serverDashboardJsx());
   });
 
   let search = screen.getByLabelText("user-search");
@@ -538,17 +609,15 @@ test("Search for user calls updateUsers with name filter", async () => {
 });
 
 test("Interacting with PaginationFooter causes state update and refresh via useEffect call", async () => {
-  let updateUsers = mockAsync();
-
   await act(async () => {
-    render(serverDashboardJsx({ updateUsers: updateUsers }));
+    render(serverDashboardJsx());
   });
 
-  expect(updateUsers).toBeCalledWith(0, 100, "");
+  expect(mockUpdateUsers).toBeCalledWith(defaultUpdateUsersParams);
 
   var n = 3;
   expect(searchParams.get("offset")).toEqual(null);
-  expect(searchParams.get("limit")).toEqual(null);
+  expect(searchParams.get("limit")).toEqual("2");
 
   let next = screen.getByTestId("paginate-next");
   await act(async () => {
@@ -556,8 +625,8 @@ test("Interacting with PaginationFooter causes state update and refresh via useE
     jest.runAllTimers();
   });
 
-  expect(searchParams.get("offset")).toEqual("100");
-  expect(searchParams.get("limit")).toEqual(null);
+  expect(searchParams.get("offset")).toEqual("2");
+  expect(searchParams.get("limit")).toEqual("2");
 
   // FIXME: should call updateUsers, does in reality.
   // tests don't reflect reality due to mocked state/useSelector
@@ -590,12 +659,9 @@ test("Start server and confirm pending state", async () => {
     );
   });
 
-  let mockUpdateUsers = jest.fn(() => Promise.resolve(mockAppState()));
-
   await act(async () => {
     render(
       serverDashboardJsx({
-        updateUsers: mockUpdateUsers,
         startServer: mockStartServer,
       }),
     );
@@ -604,16 +670,17 @@ test("Start server and confirm pending state", async () => {
   let actions = screen.getAllByTestId("user-row-server-activity")[1];
   let buttons = getAllByRole(actions, "button");
 
-  expect(buttons.length).toBe(2);
+  expect(buttons.length).toBe(3);
   expect(buttons[0].textContent).toBe("Start Server");
   expect(buttons[1].textContent).toBe("Spawn Page");
+  expect(buttons[2].textContent).toBe("Edit User");
 
   await act(async () => {
     fireEvent.click(buttons[0]);
   });
   expect(mockUpdateUsers.mock.calls).toHaveLength(1);
 
-  expect(buttons.length).toBe(2);
+  expect(buttons.length).toBe(3);
   expect(buttons[0].textContent).toBe("Start Server");
   expect(buttons[0]).toBeDisabled();
   expect(buttons[1].textContent).toBe("Spawn Page");
