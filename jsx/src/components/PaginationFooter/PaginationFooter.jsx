@@ -5,11 +5,12 @@ import { FormControl } from "react-bootstrap";
 import "./pagination-footer.css";
 
 const PaginationFooter = (props) => {
-  let { offset, limit, visible, total, next, prev, handleLimit } = props;
+  const { offset, limit, visible, total, next, prev, handleLimit } = props;
   return (
     <div className="pagination-footer">
       <p>
-        Displaying {offset + 1}-{offset + visible} {total ? `of ${total}` : ""}
+        Displaying {visible ? offset + 1 : offset}-{offset + visible}{" "}
+        {total ? `of ${total}` : ""}
         <br />
         {offset >= 1 ? (
           <button className="btn btn-sm btn-light spaced">
