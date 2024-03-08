@@ -4,7 +4,7 @@ import { jhapiRequest } from "./jhapiUtil";
 const withAPI = withProps(() => ({
   updateUsers: (options) => {
     let params = new URLSearchParams();
-    params["include_stopped_servers"] = "1";
+    params.set("include_stopped_servers", "1");
     for (let key in options) {
       params.set(key, options[key]);
     }
