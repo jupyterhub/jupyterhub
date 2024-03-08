@@ -1,16 +1,17 @@
 import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import PropTypes from "prop-types";
 
 const CreateGroup = (props) => {
-  var [groupName, setGroupName] = useState(""),
+  const [groupName, setGroupName] = useState(""),
     [errorAlert, setErrorAlert] = useState(null),
     limit = useSelector((state) => state.limit);
 
-  var dispatch = useDispatch();
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
 
-  var dispatchPageUpdate = (data, page) => {
+  const dispatchPageUpdate = (data, page) => {
     dispatch({
       type: "GROUPS_PAGE",
       value: {
@@ -20,7 +21,7 @@ const CreateGroup = (props) => {
     });
   };
 
-  var { createGroup, updateGroups, history } = props;
+  const { createGroup, updateGroups } = props;
 
   return (
     <>
@@ -79,7 +80,7 @@ const CreateGroup = (props) => {
                         return data.status < 300
                           ? updateGroups(0, limit)
                               .then((data) => dispatchPageUpdate(data, 0))
-                              .then(() => history.push("/groups"))
+                              .then(() => navigate("/groups"))
                               .catch(() =>
                                 setErrorAlert(`Could not update groups list.`),
                               )
@@ -108,9 +109,6 @@ const CreateGroup = (props) => {
 CreateGroup.propTypes = {
   createGroup: PropTypes.func,
   updateGroups: PropTypes.func,
-  history: PropTypes.shape({
-    push: PropTypes.func,
-  }),
 };
 
 export default CreateGroup;

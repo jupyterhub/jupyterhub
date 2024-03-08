@@ -1,15 +1,16 @@
 import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import PropTypes from "prop-types";
 
 const AddUser = (props) => {
-  var [users, setUsers] = useState([]),
+  const [users, setUsers] = useState([]),
     [admin, setAdmin] = useState(false),
     [errorAlert, setErrorAlert] = useState(null),
     limit = useSelector((state) => state.limit);
 
-  var dispatch = useDispatch();
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   var dispatchPageChange = (data, page) => {
     dispatch({
@@ -21,7 +22,7 @@ const AddUser = (props) => {
     });
   };
 
-  var { addUsers, updateUsers, history } = props;
+  var { addUsers, updateUsers } = props;
 
   return (
     <>
@@ -96,7 +97,7 @@ const AddUser = (props) => {
                         data.status < 300
                           ? updateUsers(0, limit)
                               .then((data) => dispatchPageChange(data, 0))
-                              .then(() => history.push("/"))
+                              .then(() => navigate("/"))
                               .catch(() =>
                                 setErrorAlert(`Failed to update users.`),
                               )
@@ -123,9 +124,6 @@ const AddUser = (props) => {
 AddUser.propTypes = {
   addUsers: PropTypes.func,
   updateUsers: PropTypes.func,
-  history: PropTypes.shape({
-    push: PropTypes.func,
-  }),
 };
 
 export default AddUser;
