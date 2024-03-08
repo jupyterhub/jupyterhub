@@ -75,37 +75,46 @@ class SysMonAPIHandler(APIHandler):
     ndigits = 1
     last_updated = 0
 
-    def get_memory_usage_per_user(self):
-        """Calculate RSS memory, on a system and per-user basis in MB"""
+    def get_metrics_per_user(self):
+        """Calculate RSS memory, per-user basis in MB, and cpu percent"""
         memory_rss = {"non_jupyter_users": 0, "all_jupyter_users": 0}
+        cpu_perc =  {"non_jupyter_users": 0, "all_jupyter_users": 0}
 
         jupyter_usernames = {}
         for user in self.db.query(orm.User):
             jupyter_usernames[user.name] = 0
             memory_rss[user.name] = 0
+            cpu_perc[user.name] = 0
 
-        for proc in process_iter(['pid', 'username', 'memory_info']):
+        for proc in process_iter(['pid', 'username', 'memory_info', 'cpu_percent']):
             try:
                 username = proc.info['username']
-                memory_usage = proc.info['memory_info'].rss
+                user_memory_rss = proc.info['memory_info'].rss
+                user_cpu_percent = proc.info['cpu_percent']
                 if username in jupyter_usernames:
-                    memory_rss[username] += memory_usage
-                    memory_rss["all_jupyter_users"] += memory_usage
+                    memory_rss[username] += user_memory_rss
+                    cpu_perc[username] += user_cpu_percent
+                    memory_rss["all_jupyter_users"] += user_memory_rss
+                    cpu_perc["all_jupyter_users"] += user_cpu_percent
                 else:
-                    memory_rss["non_jupyter_users"] += memory_usage
+                    memory_rss["non_jupyter_users"] += user_memory_rss
+                    cpu_perc["non_jupyter_users"] += user_cpu_percent
 
             except (NoSuchProcess, AccessDenied, ZombieProcess):
                 pass
 
         memory_rss["all_processes"] = memory_rss["all_jupyter_users"] + memory_rss["non_jupyter_users"]
+        cpu_perc["all_processes"] = cpu_perc["all_jupyter_users"] + cpu_perc["non_jupyter_users"]
         del memory_rss["non_jupyter_users"]
+        del cpu_perc["non_jupyter_users"]
 
         ## Convert Units
         for term in memory_rss:
             memory_rss[term] = round(memory_rss[term] / 1e6,
                                      ndigits=SysMonAPIHandler.ndigits)  ## MB
+            cpu_perc[term] = round(cpu_perc[term], ndigits=SysMonAPIHandler.ndigits)
 
-        return memory_rss
+        return {"cpu_percent" : cpu_perc, "memory_rss_mb" : memory_rss}
 
     def check_xsrf_cookie(self):
         return
@@ -140,7 +149,7 @@ class SysMonAPIHandler(APIHandler):
                     "cpu_usage_percent": round(cpu_percent(), ndigits=this.ndigits),
                     "cpu_count": cpu_count(),
                 },
-                "ram_rss_mb" : self.get_memory_usage_per_user(),
+                "user" : self.get_metrics_per_user(),
             }
             this.last_updated = current_time
 
