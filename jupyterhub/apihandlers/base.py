@@ -352,6 +352,10 @@ class APIHandler(BaseHandler):
             if include_stopped_servers:
                 # add any stopped servers in the db
                 seen = set(servers.keys())
+                if isinstance(user, orm.User):
+                    # need high-level User wrapper for spawner model
+                    # FIXME: this shouldn't be needed!
+                    user = self.users[user]
                 for name, orm_spawner in user.orm_spawners.items():
                     if name not in seen and scope_filter(orm_spawner, kind='server'):
                         servers[name] = self.server_model(orm_spawner, user=user)
