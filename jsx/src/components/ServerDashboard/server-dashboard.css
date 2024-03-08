@@ -7,6 +7,13 @@
   margin-left: auto;
 }
 
+.btn-light {
+  /* backport bs5 btn-light colors */
+  background-color: #f9fafb;
+  border-color: #f9fafb;
+  color: #000;
+}
+
 .server-dashboard-container .btn-light {
   border: 1px solid #ddd;
 }
@@ -47,11 +54,9 @@ tr.noborder > td {
   margin-right: 5px;
 }
 
-.form-check-inline {
-  /* inline form check doesn't get inline css 
-  I _think_ this is because our bootstrap css is outdated
-  */
-  display: inline-block;
+.admin-header-buttons {
+  /* float header action buttons to the right */
+  text-align: right;
 }
 
 /* column widths for dashboard
@@ -66,31 +71,21 @@ goals:
 
 */
 
-.admin-table-head label {
-  /* clear margin-bottom to keep label on baseline */
-  margin-bottom: 0px;
-}
-
 .admin-table-head #user-header {
 }
 .admin-table-head #admin-header {
   width: 64px;
 }
-.admin-table-head #server-header {
-}
 .admin-table-head #last-activity-header {
-  width: 180px;
-}
-.admin-table-head #running-status-header {
-  width: 300px;
+  min-width: 180px;
 }
 .admin-table-head #actions-header {
-  width: 80px;
+  width: 350px;
 }
 
 /* vertical stack server buttons on small windows */
 @media (max-width: 991px) {
-  .admin-table-head #running-status-header {
+  .admin-table-head #actions-header {
     width: 140px;
   }
 }

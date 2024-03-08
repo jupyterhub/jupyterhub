@@ -110,14 +110,18 @@ const ServerDashboard = (props) => {
     });
   };
 
-  const setStateFilter = (state_filter) => {
+  const setStateFilter = (new_state_filter) => {
     // persist ?state filter
     // store in url param, clear when value is default ('')
     setSearchParams((params) => {
-      if (!state_filter) {
+      // clear offset when filter changes
+      if (new_state_filter !== state_filter) {
+        params.delete("offset");
+      }
+      if (!new_state_filter) {
         params.delete("state");
       } else {
-        params.set("state", state_filter);
+        params.set("state", new_state_filter);
       }
       return params;
     });
@@ -196,7 +200,7 @@ const ServerDashboard = (props) => {
     });
   };
   const DeleteServerButton = ({ server, user }) => {
-    if (server.name === "") {
+    if (!server.name) {
       // It's not possible to delete unnamed servers
       return null;
     }
@@ -251,25 +255,22 @@ const ServerDashboard = (props) => {
     );
   };
 
-  const EditUserCell = ({ user }) => {
+  const EditUserButton = ({ user }) => {
     return (
-      <td>
-        <button
-          className="btn btn-primary btn-xs"
-          style={{ marginRight: 20 }}
-          onClick={() =>
-            history.push({
-              pathname: "/edit-user",
-              state: {
-                username: user.name,
-                has_admin: user.admin,
-              },
-            })
-          }
-        >
-          Edit User
-        </button>
-      </td>
+      <button
+        className="btn btn-light btn-xs"
+        onClick={() =>
+          history.push({
+            pathname: "/edit-user",
+            state: {
+              username: user.name,
+              has_admin: user.admin,
+            },
+          })
+        }
+      >
+        Edit User
+      </button>
     );
   };
 
@@ -363,8 +364,8 @@ const ServerDashboard = (props) => {
           <DeleteServerButton server={server} user={user} />
           <AccessServerButton server={server} />
           <SpawnPageButton server={server} user={user} />
+          <EditUserButton user={user} />
         </td>
-        <EditUserCell user={user} />
       </tr>,
       <tr key={`${userServerName}-detail`}>
         <td
@@ -432,6 +433,24 @@ const ServerDashboard = (props) => {
               onChange={handleSearch}
             />
           </Col>
+          <Col md={3}>
+            {/* div.checkbox required for BS3 CSS */}
+            <div class="checkbox">
+              <label title="check to only show running servers, otherwise show all">
+                <Form.Check
+                  inline
+                  type="checkbox"
+                  name="active_servers"
+                  id="active-servers-filter"
+                  checked={state_filter == "active"}
+                  onChange={(event) => {
+                    setStateFilter(event.target.checked ? "active" : null);
+                  }}
+                />
+                {"only active servers"}
+              </label>
+            </div>
+          </Col>
 
           <Col md="auto" style={{ float: "right", margin: 15 }}>
             <Link to="/groups">{"> Manage Groups"}</Link>
@@ -460,23 +479,6 @@ const ServerDashboard = (props) => {
                   testid="last-activity-sort"
                 />
               </th>
-              <th id="running-status-header">
-                <label title="only show active servers">
-                  <Form.Check
-                    inline
-                    type="checkbox"
-                    name="active_servers"
-                    aria-label="only show active servers"
-                    checked={state_filter == "active"}
-                    onChange={(event) => {
-                      setStateFilter(event.target.checked ? "active" : null);
-                    }}
-                  />
-                  {state_filter == "active"
-                    ? " Active servers"
-                    : " All servers"}
-                </label>
-              </th>
               <th id="actions-header">Actions</th>
             </tr>
           </thead>
@@ -489,14 +491,13 @@ const ServerDashboard = (props) => {
                   </Button>
                 </Link>
               </td>
-              <td></td>
-              <td></td>
-              <td>
+              <td colspan="4" className="admin-header-buttons">
                 {/* Start all servers */}
                 <Button
                   variant="primary"
                   className="start-all"
                   data-testid="start-all"
+                  title="start all servers on the current page"
                   onClick={() => {
                     Promise.all(startAll(user_data.map((e) => e.name)))
                       .then((res) => {
@@ -533,6 +534,7 @@ const ServerDashboard = (props) => {
                   variant="danger"
                   className="stop-all"
                   data-testid="stop-all"
+                  title="stop all servers on the current page"
                   onClick={() => {
                     Promise.all(stopAll(user_data.map((e) => e.name)))
                       .then((res) => {
@@ -563,8 +565,8 @@ const ServerDashboard = (props) => {
                 >
                   Stop All
                 </Button>
-              </td>
-              <td>
+                {/* spacing between start/stop and Shutdown */}
+                <span style={{ "margin-left": "56px" }}> </span>
                 {/* Shutdown Jupyterhub */}
                 <Button
                   variant="danger"
@@ -574,7 +576,6 @@ const ServerDashboard = (props) => {
                   Shutdown Hub
                 </Button>
               </td>
-              <td></td>
             </tr>
             {servers.flatMap(([user, server]) => serverRow(user, server))}
           </tbody>
