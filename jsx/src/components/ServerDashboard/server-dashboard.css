@@ -50,8 +50,8 @@ tr.noborder > td {
   vertical-align: inherit;
 }
 
-.user-row .actions > * {
-  margin-right: 5px;
+.user-row .actions button {
+  margin: 4px;
 }
 
 .admin-header-buttons {
@@ -87,5 +87,10 @@ goals:
 @media (max-width: 991px) {
   .admin-table-head #actions-header {
     width: 140px;
+  }
+  .user-row .actions button {
+    /* full-width buttons when they get collapsed into a single column */
+    margin: 4px 0px 4px 0px;
+    width: 100%;
   }
 }
