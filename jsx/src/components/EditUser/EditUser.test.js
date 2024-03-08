@@ -16,6 +16,14 @@ jest.mock("react-redux", () => ({
   useSelector: jest.fn(),
 }));
 
+jest.mock("react-router-dom", () => ({
+  ...jest.requireActual("react-router-dom"),
+  useLocation: jest.fn().mockImplementation(() => {
+    return { state: { username: "foo", has_admin: false } };
+  }),
+  useNavigate: jest.fn(),
+}));
+
 var mockAsync = (data) =>
   jest.fn().mockImplementation(() => Promise.resolve(data));
 
@@ -26,11 +34,9 @@ var editUserJsx = (callbackSpy, empty) => (
   <Provider store={createStore(() => {}, {})}>
     <HashRouter>
       <EditUser
-        location={empty ? {} : { state: { username: "foo", has_admin: false } }}
         deleteUser={callbackSpy}
         editUser={callbackSpy}
         updateUsers={callbackSpy}
-        history={{ push: () => {} }}
         noChangeEvent={callbackSpy}
       />
     </HashRouter>

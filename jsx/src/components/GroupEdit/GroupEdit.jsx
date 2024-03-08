@@ -1,17 +1,19 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import PropTypes from "prop-types";
 import GroupSelect from "../GroupSelect/GroupSelect";
 import DynamicTable from "../DynamicTable/DynamicTable";
 
 const GroupEdit = (props) => {
-  var [selected, setSelected] = useState([]),
+  const [selected, setSelected] = useState([]),
     [changed, setChanged] = useState(false),
     [errorAlert, setErrorAlert] = useState(null),
+    navigate = useNavigate(),
+    location = useLocation(),
     limit = useSelector((state) => state.limit);
 
-  var dispatch = useDispatch();
+  const dispatch = useDispatch();
   const hasDuplicates = (a) => a.filter((e, i) => a.indexOf(e) != i).length > 0;
   const dispatchPageUpdate = (data, page) => {
     dispatch({
@@ -23,28 +25,28 @@ const GroupEdit = (props) => {
     });
   };
 
-  var {
+  const {
     addToGroup,
     updateProp,
     removeFromGroup,
     deleteGroup,
     updateGroups,
     validateUser,
-    history,
-    location,
   } = props;
 
-  if (!location.state) {
-    history.push("/groups");
-    return <></>;
-  }
+  console.log("group edit", location, location.state);
 
-  var { group_data } = location.state;
-  var [propobject, setProp] = useState(group_data.properties);
-  var [propkeys, setPropKeys] = useState([]);
-  var [propvalues, setPropValues] = useState([]);
+  useEffect(() => {
+    if (!location.state) {
+      navigate("/groups");
+    }
+  }, [location]);
 
+  const { group_data } = location.state || {};
   if (!group_data) return <div></div>;
+  const [propobject, setProp] = useState(group_data.properties);
+  const [propkeys, setPropKeys] = useState([]);
+  const [propvalues, setPropValues] = useState([]);
 
   return (
     <div className="container" data-testid="container">
@@ -173,7 +175,7 @@ const GroupEdit = (props) => {
                   data.status < 300
                     ? updateGroups(0, limit)
                         .then((data) => dispatchPageUpdate(data, 0))
-                        .then(() => history.push("/groups"))
+                        .then(() => navigate("/groups"))
                     : setErrorAlert(`Failed to delete group.`);
                 })
                 .catch(() => setErrorAlert(`Failed to delete group.`));
@@ -190,15 +192,6 @@ const GroupEdit = (props) => {
 };
 
 GroupEdit.propTypes = {
-  location: PropTypes.shape({
-    state: PropTypes.shape({
-      group_data: PropTypes.object,
-      callback: PropTypes.func,
-    }),
-  }),
-  history: PropTypes.shape({
-    push: PropTypes.func,
-  }),
   addToGroup: PropTypes.func,
   removeFromGroup: PropTypes.func,
   deleteGroup: PropTypes.func,

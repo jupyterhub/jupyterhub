@@ -2,21 +2,22 @@ import React, { useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import PropTypes from "prop-types";
 
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { usePaginationParams } from "../../util/paginationParams";
 import PaginationFooter from "../PaginationFooter/PaginationFooter";
 
 const Groups = (props) => {
-  var groups_data = useSelector((state) => state.groups_data),
-    groups_page = useSelector((state) => state.groups_page),
-    dispatch = useDispatch();
+  const groups_data = useSelector((state) => state.groups_data);
+  const groups_page = useSelector((state) => state.groups_page);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
 
-  const { setOffset, offset, setLimit, handleLimit, limit, setPagination } =
+  const { setOffset, offset, handleLimit, limit, setPagination } =
     usePaginationParams();
 
-  var total = groups_page ? groups_page.total : undefined;
+  const total = groups_page ? groups_page.total : undefined;
 
-  var { updateGroups, history } = props;
+  const { updateGroups } = props;
 
   const dispatchPageUpdate = (data, page) => {
     setPagination(page);
@@ -55,14 +56,7 @@ const Groups = (props) => {
                       <span className="badge badge-pill badge-success">
                         {e.users.length + " users"}
                       </span>
-                      <Link
-                        to={{
-                          pathname: "/group-edit",
-                          state: {
-                            group_data: e,
-                          },
-                        }}
-                      >
+                      <Link to="/group-edit" state={{ group_data: e }}>
                         {e.name}
                       </Link>
                     </li>
@@ -90,7 +84,7 @@ const Groups = (props) => {
               <button
                 className="btn btn-primary adjacent-span-spacing"
                 onClick={() => {
-                  history.push("/create-group");
+                  navigate("/create-group");
                 }}
               >
                 New Group
@@ -106,12 +100,6 @@ const Groups = (props) => {
 Groups.propTypes = {
   updateUsers: PropTypes.func,
   updateGroups: PropTypes.func,
-  history: PropTypes.shape({
-    push: PropTypes.func,
-  }),
-  location: PropTypes.shape({
-    search: PropTypes.string,
-  }),
 };
 
 export default Groups;

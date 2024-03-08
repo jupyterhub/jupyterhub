@@ -16,6 +16,14 @@ jest.mock("react-redux", () => ({
   useSelector: jest.fn(),
 }));
 
+jest.mock("react-router-dom", () => ({
+  ...jest.requireActual("react-router-dom"),
+  useLocation: jest.fn().mockImplementation(() => {
+    return { state: { group_data: { users: ["foo"], name: "group" } } };
+  }),
+  useNavigate: jest.fn(),
+}));
+
 var mockAsync = (data) =>
   jest.fn().mockImplementation(() => Promise.resolve(data));
 
@@ -28,16 +36,9 @@ var groupEditJsx = (callbackSpy) => (
   <Provider store={createStore(() => {}, {})}>
     <HashRouter>
       <GroupEdit
-        location={{
-          state: {
-            group_data: { users: ["foo"], name: "group" },
-            callback: () => {},
-          },
-        }}
         addToGroup={callbackSpy}
         removeFromGroup={callbackSpy}
         deleteGroup={callbackSpy}
-        history={{ push: () => callbackSpy }}
         updateGroups={callbackSpy}
         validateUser={jest.fn().mockImplementation(() => okPacket)}
       />

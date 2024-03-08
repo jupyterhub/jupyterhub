@@ -15,7 +15,7 @@ import {
 } from "react-bootstrap";
 import ReactObjectTableViewer from "../ReactObjectTableViewer/ReactObjectTableViewer";
 
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
 
 import "./server-dashboard.css";
@@ -50,6 +50,7 @@ const ServerDashboard = (props) => {
   const total = user_page ? user_page.total : undefined;
 
   const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   var {
     updateUsers,
@@ -59,7 +60,6 @@ const ServerDashboard = (props) => {
     deleteServer,
     startAll,
     stopAll,
-    history,
   } = props;
 
   const dispatchPageUpdate = (data, page) => {
@@ -260,8 +260,7 @@ const ServerDashboard = (props) => {
       <button
         className="btn btn-light btn-xs"
         onClick={() =>
-          history.push({
-            pathname: "/edit-user",
+          navigate("/edit-user", {
             state: {
               username: user.name,
               has_admin: user.admin,
@@ -435,7 +434,7 @@ const ServerDashboard = (props) => {
           </Col>
           <Col md={3}>
             {/* div.checkbox required for BS3 CSS */}
-            <div class="checkbox">
+            <div className="checkbox">
               <label title="check to only show running servers, otherwise show all">
                 <Form.Check
                   inline
@@ -605,12 +604,6 @@ ServerDashboard.propTypes = {
   startAll: PropTypes.func,
   stopAll: PropTypes.func,
   dispatch: PropTypes.func,
-  history: PropTypes.shape({
-    push: PropTypes.func,
-  }),
-  location: PropTypes.shape({
-    search: PropTypes.string,
-  }),
 };
 
 const SortHandler = (props) => {

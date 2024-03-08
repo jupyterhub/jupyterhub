@@ -27,7 +27,7 @@ var mockAsync = () =>
 var groupsJsx = (callbackSpy) => (
   <Provider store={createStore(mockReducers, mockAppState())}>
     <HashRouter>
-      <Groups location={{ search: "0" }} updateGroups={callbackSpy} />
+      <Groups updateGroups={callbackSpy} />
     </HashRouter>
   </Provider>
 );
