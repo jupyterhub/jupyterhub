@@ -4,17 +4,19 @@
 # Distributed under the terms of the Modified BSD License.
 import json
 import sys
-from time import ctime, time
+## import logging
+## from systemd import journal
 
 from psutil import cpu_count, cpu_percent, process_iter, virtual_memory
 from psutil import AccessDenied, NoSuchProcess, ZombieProcess
+
+from time import ctime, time
 from tornado import web
 
 from .. import orm
 from .._version import __version__
 from ..scopes import needs_scope
 from .base import APIHandler
-
 
 class ShutdownAPIHandler(APIHandler):
     @needs_scope('shutdown')
@@ -74,6 +76,13 @@ class SysMonAPIHandler(APIHandler):
     update_interval = 10
     ndigits = 1
     last_updated = 0
+
+    ## Logging only occurs if someone is actively looking at the graphs
+    ## anyway, so we should do not do this.
+    ## log = logging.getLogger("jupyter-metrics")
+    ## log.addHandler(journal.JournaldLogHandler())
+    ## log.setLevel(logging.INFO)
+
 
     def get_metrics_per_user(self):
         """Calculate RSS memory, per-user basis in MB, and cpu percent"""
@@ -152,6 +161,7 @@ class SysMonAPIHandler(APIHandler):
                 "user" : self.get_metrics_per_user(),
             }
             this.last_updated = current_time
+            ###this.log.info(this.cached_data) ## only log new data
 
         show_data = this.cached_data
         next_update = this.update_interval - diff_time
