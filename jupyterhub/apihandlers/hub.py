@@ -125,9 +125,7 @@ class SysMonAPIHandler(APIHandler):
 
         return {"cpu_percent" : cpu_perc, "memory_rss_mb" : memory_rss}
 
-    def check_xsrf_cookie(self):
-        return
-
+    @needs_scope('read:users')
     def get(self):
         """GET /api/sysmon returns resource information about the server
 
@@ -170,7 +168,10 @@ class SysMonAPIHandler(APIHandler):
 
         show_data["time"]["next_update"] = round(next_update, ndigits=this.ndigits)
         show_data["time"]["last_update"] = round(diff_time, ndigits=this.ndigits)
-
+        ## Timezone on server might be different from client, so we do not give
+        ## and actual epoch value but let the client determine when it recieved
+        ## the packet.
+        ##  ## show_data["time"]["now"] = round(current_time, ndigits=0)
         self.finish(json.dumps(show_data))
 
 
