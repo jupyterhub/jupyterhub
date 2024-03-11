@@ -8,6 +8,7 @@ from jupyterhub.spawner import LocalProcessSpawner
 
 c = get_config()  # noqa
 
+
 class DemoFormSpawner(LocalProcessSpawner):
     def _options_form_default(self):
         default_env = "YOURNAME=%s\n" % self.user.name

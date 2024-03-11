@@ -954,9 +954,7 @@ class User:
             else:
                 e.reason = 'error'
                 self.log.exception(
-                    "Unhandled error waiting for {user}'s server to show up at {url}: {error}".format(
-                        user=self.name, url=server.url, error=e
-                    )
+                    f"Unhandled error waiting for {self.name}'s server to show up at {server.url}: {e}"
                 )
                 self.settings['statsd'].incr('spawner.failure.http_error')
             try:

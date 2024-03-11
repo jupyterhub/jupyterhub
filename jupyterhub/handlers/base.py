@@ -1519,9 +1519,9 @@ class UserUrlHandler(BaseHandler):
             json.dumps(
                 {
                     "message": (
-                        "JupyterHub server no longer running at {}."
-                        " Restart the server at {}"
-                    ).format(self.request.path[len(self.hub.base_url) - 1 :], spawn_url)
+                        f"JupyterHub server no longer running at {self.request.path[len(self.hub.base_url) - 1 :]}."
+                        f" Restart the server at {spawn_url}"
+                    )
                 }
             )
         )

@@ -686,7 +686,9 @@ class ConfigurableHTTPProxy(Proxy):
         cmd = []
         proxy_api = 'proxy-api'
         proxy_client = 'proxy-client'
-        api_key = self.app.internal_proxy_certs[proxy_api][
+        api_key = self.app.internal_proxy_certs[
+            proxy_api
+        ][
             'keyfile'
         ]  # Check content in next test and just patch manulaly or in the config of the file
         api_cert = self.app.internal_proxy_certs[proxy_api]['certfile']

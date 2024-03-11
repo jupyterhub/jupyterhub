@@ -6,6 +6,7 @@ Meant to be compatible with jupyter_server and classic notebook
 Use make_singleuser_app to create a compatible Application class
 with JupyterHub authentication mixins enabled.
 """
+
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import asyncio

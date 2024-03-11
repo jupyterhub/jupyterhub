@@ -10,9 +10,8 @@ import pytest
 from traitlets import TraitError
 from traitlets.config import Config
 
-from ..utils import random_port
+from ..utils import random_port, wait_for_http_server
 from ..utils import url_path_join as ujoin
-from ..utils import wait_for_http_server
 from .mocking import MockHub
 from .test_api import add_user, api_request
 from .utils import skip_if_ssl

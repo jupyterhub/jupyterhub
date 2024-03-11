@@ -2,6 +2,7 @@
 """
 whoami service authentication with the Hub
 """
+
 import json
 import os
 import secrets

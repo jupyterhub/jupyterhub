@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """The multi-user notebook application"""
+
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import asyncio
@@ -23,7 +24,6 @@ from operator import itemgetter
 from textwrap import dedent
 from typing import Optional
 from urllib.parse import unquote, urlparse, urlunparse
-
 
 import tornado.httpserver
 import tornado.options
@@ -3315,9 +3315,7 @@ class JupyterHub(Application):
         config_file_dir = os.path.dirname(os.path.abspath(self.config_file))
         if not os.path.isdir(config_file_dir):
             self.exit(
-                "{} does not exist. The destination directory must exist before generating config file.".format(
-                    config_file_dir
-                )
+                f"{config_file_dir} does not exist. The destination directory must exist before generating config file."
             )
         if os.path.exists(self.config_file) and not self.answer_yes:
             answer = ''

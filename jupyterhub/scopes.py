@@ -1270,9 +1270,7 @@ def define_custom_scopes(scopes):
                 },
             }
         )
-    """ % indent(
-        _custom_scope_description, " " * 8
-    )
+    """ % indent(_custom_scope_description, " " * 8)
     for scope, scope_definition in scopes.items():
         if scope in scope_definitions and scope_definitions[scope] != scope_definition:
             raise ValueError(

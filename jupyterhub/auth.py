@@ -196,12 +196,7 @@ class Authenticator(LoggingConfigurable):
             # protects backward-compatible config from warnings
             # if they set the same value under both names
             self.log.warning(
-                "{cls}.{old} is deprecated in JupyterHub {version}, use {cls}.{new} instead".format(
-                    cls=self.__class__.__name__,
-                    old=old_attr,
-                    new=new_attr,
-                    version=version,
-                )
+                f"{self.__class__.__name__}.{old_attr} is deprecated in JupyterHub {version}, use {self.__class__.__name__}.{new_attr} instead"
             )
             setattr(self, new_attr, change.new)
 
@@ -377,9 +372,7 @@ class Authenticator(LoggingConfigurable):
                     break
                 if has_old_name and not has_new_name:
                     warnings.warn(
-                        "{0}.{1} should be renamed to {0}.{2} for JupyterHub >= 1.2".format(
-                            cls.__name__, old_name, new_name
-                        ),
+                        f"{cls.__name__}.{old_name} should be renamed to {cls.__name__}.{new_name} for JupyterHub >= 1.2",
                         DeprecationWarning,
                     )
 
@@ -399,19 +392,17 @@ class Authenticator(LoggingConfigurable):
             ):
                 # adapt to pre-1.0 signature for compatibility
                 warnings.warn(
-                    """
-                    {0}.{1} does not support the authentication argument,
-                    added in JupyterHub 1.0. and is renamed to {2} in JupyterHub 1.2.
+                    f"""
+                    {self.__class__.__name__}.{old_name} does not support the authentication argument,
+                    added in JupyterHub 1.0. and is renamed to {new_name} in JupyterHub 1.2.
 
                     It should have the signature:
 
-                    def {2}(self, username, authentication=None):
+                    def {new_name}(self, username, authentication=None):
                         ...
 
                     Adapting for compatibility.
-                    """.format(
-                        self.__class__.__name__, old_name, new_name
-                    ),
+                    """,
                     DeprecationWarning,
                 )
 

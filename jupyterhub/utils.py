@@ -503,17 +503,14 @@ def print_ps_info(file=sys.stderr):
     threadlen = len('threads')
 
     print(
-        "{} {} {} {}".format('%CPU'.ljust(cpulen), 'MEM'.ljust(memlen), 'FDs'.ljust(fdlen), 'threads'),
+        "{} {} {} {}".format(
+            '%CPU'.ljust(cpulen), 'MEM'.ljust(memlen), 'FDs'.ljust(fdlen), 'threads'
+        ),
         file=file,
     )
 
     print(
-        "{} {} {} {}".format(
-            cpu_s.ljust(cpulen),
-            mem_s.ljust(memlen),
-            fd_s.ljust(fdlen),
-            str(p.num_threads()).ljust(7),
-        ),
+        f"{cpu_s.ljust(cpulen)} {mem_s.ljust(memlen)} {fd_s.ljust(fdlen)} {str(p.num_threads()).ljust(7)}",
         file=file,
     )
 
