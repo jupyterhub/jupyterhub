@@ -133,7 +133,6 @@ skip-string-normalization = true
 # target-version should be all supported versions, see
 # https://github.com/psf/black/issues/751#issuecomment-473066811
 target_version = [
-    "py37",
     "py38",
     "py39",
     "py310",
@@ -141,6 +140,21 @@ target_version = [
     "py312",
 ]
 
+# ruff is our linter and formatter
+
+[tool.ruff.format]
+quote-style = "preserve"
+
+[tool.ruff.lint]
+ignore = [
+    "F841", # unused variable
+]
+select = [
+    "E9", # syntax
+    "I", # isort
+    "UP", # pyupgrade
+    "F", # flake8
+]
 
 # tbump is used to simplify and standardize the release process when updating
 # the version, making a git commit and tag, and pushing changes.
