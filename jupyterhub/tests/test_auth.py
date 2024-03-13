@@ -3,12 +3,13 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import logging
+from itertools import chain
 from unittest import mock
 from urllib.parse import urlparse
 
 import pytest
 from requests import HTTPError
-from traitlets import Any
+from traitlets import Any, Tuple
 from traitlets.config import Config
 
 from jupyterhub import auth, crypto, orm
@@ -593,3 +594,172 @@ async def test_auth_managed_groups(
         assert not app.db.dirty
         groups = sorted(g.name for g in user.groups)
         assert groups == expected_refresh_groups
+
+
+@pytest.mark.parametrize(
+    "allowed_users, allow_all, allow_existing_users",
+    [
+        ('specified', False, True),
+        ('', True, False),
+    ],
+)
+def test_allow_all_defaults(app, user, allowed_users, allow_all, allow_existing_users):
+    if allowed_users:
+        allowed_users = set(allowed_users.split(','))
+    else:
+        allowed_users = set()
+    authenticator = auth.Authenticator(allowed_users=allowed_users)
+    assert authenticator.allow_all == allow_all
+    assert authenticator.allow_existing_users == allow_existing_users
+
+    # user was already in the database
+    # this happens during hub startup
+    authenticator.add_user(user)
+    if allowed_users:
+        assert user.name in authenticator.allowed_users
+    else:
+        authenticator.allowed_users == set()
+
+    assert authenticator.check_allowed("specified")
+    assert authenticator.check_allowed(user.name)
+
+
+@pytest.mark.parametrize("allow_all", [None, True, False])
+@pytest.mark.parametrize("allow_existing_users", [None, True, False])
+@pytest.mark.parametrize("allowed_users", ["existing", ""])
+def test_allow_existing_users(
+    app, user, allowed_users, allow_all, allow_existing_users
+):
+    if allowed_users:
+        allowed_users = set(allowed_users.split(','))
+    else:
+        allowed_users = set()
+    authenticator = auth.Authenticator(
+        allowed_users=allowed_users,
+    )
+    if allow_all is None:
+        # default allow_all
+        allow_all = authenticator.allow_all
+    else:
+        authenticator.allow_all = allow_all
+    if allow_existing_users is None:
+        # default allow_all
+        allow_existing_users = authenticator.allow_existing_users
+    else:
+        authenticator.allow_existing_users = allow_existing_users
+
+    # first, nobody in the database
+    assert authenticator.check_allowed("newuser") == allow_all
+
+    # user was already in the database
+    # this happens during hub startup
+    authenticator.add_user(user)
+    if allow_existing_users or allow_all:
+        assert authenticator.check_allowed(user.name)
+    else:
+        assert not authenticator.check_allowed(user.name)
+    for username in allowed_users:
+        assert authenticator.check_allowed(username)
+
+    assert authenticator.check_allowed("newuser") == allow_all
+
+
+@pytest.mark.parametrize("allow_all", [True, False])
+@pytest.mark.parametrize("allow_existing_users", [True, False])
+def test_allow_existing_users_first_time(user, allow_all, allow_existing_users):
+    # make sure that calling add_user doesn't change results
+    authenticator = auth.Authenticator(
+        allow_all=allow_all,
+        allow_existing_users=allow_existing_users,
+    )
+    allowed_before_one = authenticator.check_allowed(user.name)
+    allowed_before_two = authenticator.check_allowed("newuser")
+    # add_user is called after successful login
+    # it shouldn't change results (e.g. by switching .allowed_users from empty to non-empty)
+    if allowed_before_one:
+        authenticator.add_user(user)
+    assert authenticator.check_allowed(user.name) == allowed_before_one
+    assert authenticator.check_allowed("newuser") == allowed_before_two
+
+
+class AllowAllIgnoringAuthenticator(auth.Authenticator):
+    """Test authenticator with custom check_allowed
+
+    not updated for allow_all, allow_existing_users
+
+    Make sure new config doesn't break backward-compatibility
+    or grant unintended access for Authenticators written before JupyterHub 5.
+    """
+
+    allowed_letters = Tuple(config=True, help="Initial letters to allow")
+
+    def check_allowed(self, username, auth=None):
+        if not self.allowed_users and not self.allowed_letters:
+            # this subclass doesn't know about the JupyterHub 5 allow_all config
+            # no allow config, allow all!
+            return True
+        if self.allowed_users and username in self.allowed_users:
+            return True
+        if self.allowed_letters and username.startswith(self.allowed_letters):
+            return True
+        return False
+
+
+# allow_all is not recognized by Authenticator subclass
+# make sure it doesn't make anything more permissive, at least
+@pytest.mark.parametrize("allow_all", [True, False, None])
+@pytest.mark.parametrize(
+    "allowed_users, allowed_letters, allow_existing_users, allowed, not_allowed",
+    [
+        ("", "", None, "anyone,should-be,allowed,existing", ""),
+        ("", "a,b", None, "alice,bebe", "existing,other"),
+        ("", "a,b", False, "alice,bebe", "existing,other"),
+        ("", "a,b", True, "alice,bebe,existing", "other"),
+        ("specified", "a,b", None, "specified,alice,bebe,existing", "other"),
+        ("specified", "a,b", False, "specified,alice,bebe", "existing,other"),
+        ("specified", "a,b", True, "specified,alice,bebe,existing", "other"),
+    ],
+)
+def test_authenticator_without_allow_all(
+    app,
+    allowed_users,
+    allowed_letters,
+    allow_existing_users,
+    allowed,
+    not_allowed,
+    allow_all,
+):
+    kwargs = {}
+    if allow_all is not None:
+        kwargs["allow_all"] = allow_all
+    if allow_existing_users is not None:
+        kwargs["allow_existing_users"] = allow_existing_users
+    if allowed_users:
+        kwargs["allowed_users"] = set(allowed_users.split(','))
+    if allowed_letters:
+        kwargs["allowed_letters"] = tuple(allowed_letters.split(','))
+
+    authenticator = AllowAllIgnoringAuthenticator(**kwargs)
+
+    # load one user from db
+    existing_user = add_user(app.db, app, name="existing")
+    authenticator.add_user(existing_user)
+
+    if allowed:
+        allowed = allowed.split(",")
+    if not_allowed:
+        not_allowed = not_allowed.split(",")
+
+    expected_allowed = sorted(allowed)
+    expected_not_allowed = sorted(not_allowed)
+    to_check = list(chain(expected_allowed, expected_not_allowed))
+    are_allowed = []
+    are_not_allowed = []
+    for username in to_check:
+        if authenticator.check_allowed(username):
+            are_allowed.append(username)
+        else:
+            are_not_allowed.append(username)
+
+    assert are_allowed == expected_allowed
+    assert are_not_allowed == expected_not_allowed
