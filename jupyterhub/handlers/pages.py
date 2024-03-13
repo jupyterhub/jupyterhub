@@ -142,10 +142,8 @@ class SpawnHandler(BaseHandler):
                 if named_server_limit_per_user <= len(named_spawners):
                     raise web.HTTPError(
                         400,
-                        "User {} already has the maximum of {} named servers."
-                        "  One must be deleted before a new server can be created".format(
-                            user.name, named_server_limit_per_user
-                        ),
+                        f"User {user.name} already has the maximum of {named_server_limit_per_user} named servers."
+                        "  One must be deleted before a new server can be created",
                     )
 
         if not self.allow_named_servers and user.running:
@@ -554,7 +552,6 @@ class TokenPageHandler(BaseHandler):
 
 
 class AcceptShareHandler(BaseHandler):
-
     def _get_next_url(self, owner, spawner):
         """Get next_url for a given owner/spawner"""
         next_url = self.get_argument("next", "")

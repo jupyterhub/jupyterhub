@@ -8,6 +8,7 @@ if not api_token:
         "Make sure to `export JUPYTERHUB_API_TOKEN=$(openssl rand -hex 32)`"
     )
 
+c = get_config()  # noqa
 # tell JupyterHub to register the service as an external oauth client
 c.JupyterHub.services = [
     {

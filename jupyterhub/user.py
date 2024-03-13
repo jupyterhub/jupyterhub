@@ -897,9 +897,7 @@ class User:
                 self.settings['statsd'].incr('spawner.failure.timeout')
             else:
                 self.log.exception(
-                    "Unhandled error starting {user}'s server: {error}".format(
-                        user=self.name, error=e
-                    )
+                    f"Unhandled error starting {self.name}'s server: {e}"
                 )
                 self.settings['statsd'].incr('spawner.failure.error')
                 e.reason = 'error'
@@ -907,9 +905,7 @@ class User:
                 await self.stop(spawner.name)
             except Exception:
                 self.log.exception(
-                    "Failed to cleanup {user}'s server that failed to start".format(
-                        user=self.name
-                    ),
+                    f"Failed to cleanup {self.name}'s server that failed to start",
                     exc_info=True,
                 )
             # raise original exception
@@ -958,18 +954,14 @@ class User:
             else:
                 e.reason = 'error'
                 self.log.exception(
-                    "Unhandled error waiting for {user}'s server to show up at {url}: {error}".format(
-                        user=self.name, url=server.url, error=e
-                    )
+                    f"Unhandled error waiting for {self.name}'s server to show up at {server.url}: {e}"
                 )
                 self.settings['statsd'].incr('spawner.failure.http_error')
             try:
                 await self.stop(spawner.name)
             except Exception:
                 self.log.exception(
-                    "Failed to cleanup {user}'s server that failed to start".format(
-                        user=self.name
-                    ),
+                    f"Failed to cleanup {self.name}'s server that failed to start",
                     exc_info=True,
                 )
             # raise original TimeoutError
@@ -1031,7 +1023,7 @@ class User:
             # trigger post-stop hook
             try:
                 await maybe_future(spawner.run_post_stop_hook())
-            except:
+            except Exception:
                 self.log.exception("Error in Spawner.post_stop_hook for %s", self)
             spawner.clear_state()
             spawner.orm_spawner.state = spawner.get_state()

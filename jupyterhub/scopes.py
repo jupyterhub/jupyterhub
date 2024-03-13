@@ -212,7 +212,7 @@ def _intersect_expanded_scopes(scopes_a, scopes_b, db=None):
     scopes_b = frozenset(scopes_b)
 
     # cached lookups for group membership of users and servers
-    @lru_cache()
+    @lru_cache
     def groups_for_user(username):
         """Get set of group names for a given username"""
         # if we need a group lookup, the result is not cacheable
@@ -225,7 +225,7 @@ def _intersect_expanded_scopes(scopes_a, scopes_b, db=None):
         )
         return {row[0] for row in group_query}
 
-    @lru_cache()
+    @lru_cache
     def groups_for_server(server):
         """Get set of group names for a given server"""
         username, _, servername = server.partition("/")
@@ -456,7 +456,7 @@ def expand_share_scopes(share):
     )
 
 
-@lru_cache()
+@lru_cache
 def _expand_self_scope(username):
     """
     Users have a metascope 'self' that should be expanded to standard user privileges.
@@ -1270,9 +1270,7 @@ def define_custom_scopes(scopes):
                 },
             }
         )
-    """ % indent(
-        _custom_scope_description, " " * 8
-    )
+    """ % indent(_custom_scope_description, " " * 8)
     for scope, scope_definition in scopes.items():
         if scope in scope_definitions and scope_definitions[scope] != scope_definition:
             raise ValueError(

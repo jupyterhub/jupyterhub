@@ -202,12 +202,7 @@ class Role(Base):
     groups = relationship('Group', secondary='group_role_map', back_populates='roles')
 
     def __repr__(self):
-        return "<{} {} ({}) - scopes: {}>".format(
-            self.__class__.__name__,
-            self.name,
-            self.description,
-            self.scopes,
-        )
+        return f"<{self.__class__.__name__} {self.name} ({self.description}) - scopes: {self.scopes}>"
 
     @classmethod
     def find(cls, db, name):
@@ -365,12 +360,7 @@ class User(Base):
     kind = "user"
 
     def __repr__(self):
-        return "<{cls}({name} {running}/{total} running)>".format(
-            cls=self.__class__.__name__,
-            name=self.name,
-            total=len(self._orm_spawners),
-            running=sum(bool(s.server) for s in self._orm_spawners),
-        )
+        return f"<{self.__class__.__name__}({self.name} {sum(bool(s.server) for s in self._orm_spawners)}/{len(self._orm_spawners)} running)>"
 
     def new_api_token(self, token=None, **kwargs):
         """Create a new API token
@@ -730,7 +720,7 @@ class _Share:
         return cls._apply_filter(frozenset(scopes), spawner.user.name, spawner.name)
 
     @staticmethod
-    @lru_cache()
+    @lru_cache
     def _apply_filter(scopes, owner_name, server_name):
         """
         implementation of Share.apply_filter
@@ -1098,13 +1088,7 @@ class APIToken(Hashed, Base):
             # this shouldn't happen
             kind = 'owner'
             name = 'unknown'
-        return "<{cls}('{pre}...', {kind}='{name}', client_id={client_id!r})>".format(
-            cls=self.__class__.__name__,
-            pre=self.prefix,
-            kind=kind,
-            name=name,
-            client_id=self.client_id,
-        )
+        return f"<{self.__class__.__name__}('{self.prefix}...', {kind}='{name}', client_id={self.client_id!r})>"
 
     @classmethod
     def find(cls, db, token, *, kind=None):
@@ -1518,11 +1502,9 @@ def check_db_revision(engine):
         app_log.debug("database schema version found: %s", alembic_revision)
     else:
         raise DatabaseSchemaMismatch(
-            "Found database schema version {found} != {head}. "
+            f"Found database schema version {alembic_revision} != {head}. "
             "Backup your database and run `jupyterhub upgrade-db`"
-            " to upgrade to the latest schema.".format(
-                found=alembic_revision, head=head
-            )
+            " to upgrade to the latest schema."
         )
 
 

@@ -19,6 +19,8 @@ else:
 service_name = "fastapi"
 oauth_redirect_uri = f"{public_host}/services/{service_name}/oauth_callback"
 
+
+c = get_config()  # noqa
 c.JupyterHub.services = [
     {
         "name": service_name,

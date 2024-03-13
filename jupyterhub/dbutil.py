@@ -121,9 +121,7 @@ def upgrade_if_needed(db_url, backup=True, log=None):
     if urlinfo.password:
         # avoid logging the database password
         urlinfo = urlinfo._replace(
-            netloc='{}:[redacted]@{}:{}'.format(
-                urlinfo.username, urlinfo.hostname, urlinfo.port
-            )
+            netloc=f'{urlinfo.username}:[redacted]@{urlinfo.hostname}:{urlinfo.port}'
         )
         db_log_url = urlinfo.geturl()
     else:

@@ -163,9 +163,7 @@ class Server(HasTraits):
         return f"{self.host}{self.base_url}"
 
     def __repr__(self):
-        return "{name}(url={url}, bind_url={bind})".format(
-            name=self.__class__.__name__, url=self.url, bind=self.bind_url
-        )
+        return f"{self.__class__.__name__}(url={self.url}, bind_url={self.bind_url})"
 
     def wait_up(self, timeout=10, http=False, ssl_context=None, extra_path=""):
         """Wait for this server to come up"""

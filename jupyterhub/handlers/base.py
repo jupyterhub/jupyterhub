@@ -372,7 +372,7 @@ class BaseHandler(RequestHandler):
             auth_info['auth_state'] = await user.get_auth_state()
         return await self.auth_to_user(auth_info, user)
 
-    @functools.lru_cache()
+    @functools.lru_cache
     def get_token(self):
         """get token from authorization header"""
         token = self.get_auth_token()
@@ -473,7 +473,7 @@ class BaseHandler(RequestHandler):
                 self.expanded_scopes = scopes.get_scopes_for(self.current_user)
         self.parsed_scopes = scopes.parse_scopes(self.expanded_scopes)
 
-    @functools.lru_cache()
+    @functools.lru_cache
     def get_scope_filter(self, req_scope):
         """Produce a filter function for req_scope on resources
 
@@ -981,9 +981,7 @@ class BaseHandler(RequestHandler):
             )
             err = web.HTTPError(
                 429,
-                "Too many users trying to log in right now. Try again in {}.".format(
-                    human_retry_time
-                ),
+                f"Too many users trying to log in right now. Try again in {human_retry_time}.",
             )
             # can't call set_header directly here because it gets ignored
             # when errors are raised
@@ -1155,8 +1153,7 @@ class BaseHandler(RequestHandler):
 
                 raise web.HTTPError(
                     500,
-                    "Spawner failed to start [status=%s]. The logs for %s may contain details."
-                    % (status, spawner._log_name),
+                    f"Spawner failed to start [status={status}]. The logs for {spawner._log_name} may contain details.",
                 )
 
             if spawner._waiting_for_response:
@@ -1254,7 +1251,7 @@ class BaseHandler(RequestHandler):
                         'servername': server_name,
                     },
                 )
-            except:
+            except Exception:
                 PROXY_DELETE_DURATION_SECONDS.labels(
                     status=ProxyDeleteStatus.failure
                 ).observe(time.perf_counter() - tic)
@@ -1295,7 +1292,7 @@ class BaseHandler(RequestHandler):
         home = url_path_join(self.hub.base_url, 'home')
         return (
             "You can try restarting your server from the "
-            "<a href='{home}'>home page</a>.".format(home=home)
+            f"<a href='{home}'>home page</a>."
         )
 
     def get_template(self, name, sync=False):
@@ -1428,7 +1425,7 @@ class BaseHandler(RequestHandler):
             self.log.debug("No template for %d", status_code)
             try:
                 html = self.render_template('error.html', sync=True, **ns)
-            except:
+            except Exception:
                 # In this case, any side effect must be avoided.
                 ns['no_spawner_check'] = True
                 html = self.render_template('error.html', sync=True, **ns)
@@ -1522,9 +1519,9 @@ class UserUrlHandler(BaseHandler):
             json.dumps(
                 {
                     "message": (
-                        "JupyterHub server no longer running at {}."
-                        " Restart the server at {}"
-                    ).format(self.request.path[len(self.hub.base_url) - 1 :], spawn_url)
+                        f"JupyterHub server no longer running at {self.request.path[len(self.hub.base_url) - 1 :]}."
+                        f" Restart the server at {spawn_url}"
+                    )
                 }
             )
         )

@@ -593,10 +593,8 @@ class UserServerAPIHandler(APIHandler):
                 if named_server_limit_per_user <= len(named_spawners):
                     raise web.HTTPError(
                         400,
-                        "User {} already has the maximum of {} named servers."
-                        "  One must be deleted before a new server can be created".format(
-                            user_name, named_server_limit_per_user
-                        ),
+                        f"User {user_name} already has the maximum of {named_server_limit_per_user} named servers."
+                        "  One must be deleted before a new server can be created",
                     )
         spawner = user.get_spawner(server_name, replace_failed=True)
         pending = spawner.pending
@@ -782,7 +780,7 @@ class SpawnProgressAPIHandler(APIHandler):
                 'progress': 100,
                 'ready': True,
                 'message': f"Server ready at {url}",
-                'html_message': 'Server ready at <a href="{0}">{0}</a>'.format(url),
+                'html_message': f'Server ready at <a href="{url}">{url}</a>',
                 'url': url,
             }
             original_ready_event = ready_event.copy()
@@ -881,9 +879,7 @@ def _parse_timestamp(timestamp):
     if (dt - now) > timedelta(minutes=59):
         raise web.HTTPError(
             400,
-            "Rejecting activity from more than an hour in the future: {}".format(
-                isoformat(dt)
-            ),
+            f"Rejecting activity from more than an hour in the future: {isoformat(dt)}",
         )
     return dt
 

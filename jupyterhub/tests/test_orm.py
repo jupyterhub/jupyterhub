@@ -73,13 +73,13 @@ def test_user(db):
 
 
 def test_user_escaping(db):
-    orm_user = orm.User(name='company\\user@company.com,\"quoted\"')
+    orm_user = orm.User(name='company\\user@company.com,"quoted"')
     db.add(orm_user)
     db.commit()
     user = User(orm_user)
-    assert user.name == 'company\\user@company.com,\"quoted\"'
+    assert user.name == 'company\\user@company.com,"quoted"'
     assert user.escaped_name == 'company%5Cuser@company.com%2C%22quoted%22'
-    assert user.json_escaped_name == 'company\\\\user@company.com,\\\"quoted\\\"'
+    assert user.json_escaped_name == 'company\\\\user@company.com,\\"quoted\\"'
 
 
 def test_tokens(db):
