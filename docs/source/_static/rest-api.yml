@@ -1062,7 +1062,7 @@ paths:
       responses:
         204:
           description: |
-            All shares for teh server have been deleted
+            All shares for the server have been deleted
       security:
         - oauth2:
             - shares
