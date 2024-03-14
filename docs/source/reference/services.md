@@ -87,7 +87,7 @@ the Service. For example, a 'cull idle' notebook server task configured as a
 Hub-Managed Service would include:
 
 - the Service name,
-- admin permissions, and
+- permissions to see when users are active, and to stop servers
 - the `command` to launch the Service which will cull idle servers after a
   timeout interval
 
