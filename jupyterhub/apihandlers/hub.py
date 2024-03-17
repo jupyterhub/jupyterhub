@@ -3,6 +3,7 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import json
+import subprocess
 import sys
 ## import logging
 ## from systemd import journal
@@ -69,6 +70,60 @@ class RootAPIHandler(APIHandler):
         """
         data = {'version': __version__}
         self.finish(json.dumps(data))
+
+
+
+class DockerStatsAPIHandler(APIHandler):
+    """
+    We can do this via the docker python library, but it's far slower.
+    We could also get data in json format, for plotting, but the default
+    text format is verbose enough.
+
+    docker stats --no-stream --no-trunc
+    """
+    cached_data = { "content" : "", "time": {}}
+    update_interval = 20
+    last_updated = 0
+
+    @staticmethod
+    def capture_docker_stats():
+        comm = ['docker', 'stats'] + ['--no-stream']
+            ##['--format', 'json'] if json else []
+        try:
+            # Run the docker stats command and capture its output
+            result = subprocess.run(comm, capture_output=True, text=True, check=True)
+            output = result.stdout
+            # Return the captured output as is, without dict
+            return output
+        except subprocess.CalledProcessError as e:
+            # If the command returns a non-zero exit status, handle the error
+            print("Error:", e)
+            return None
+
+    @needs_scope('read:users')
+    def get(self):
+        conf = self.settings["config"]["JupyterHub"]
+        this = DockerStatsAPIHandler
+
+        if "dockermetrics_interval" in conf:
+            this.update_interval = conf["dockermetrics_interval"]
+
+        current_time = time()
+        diff_time = current_time - this.last_updated
+
+        if diff_time >= this.update_interval:
+            this.cached_data["content"] = this.capture_docker_stats()
+            this.last_updated = current_time
+
+        show_data = this.cached_data
+        next_update = this.update_interval - diff_time
+        if next_update < 0:
+            next_update = this.update_interval
+
+        show_data["time"]["next_update"] = round(next_update, ndigits=2)
+        show_data["time"]["last_update"] = round(diff_time, ndigits=2)
+
+        self.finish(json.dumps(show_data))
 
 
 class SysMonAPIHandler(APIHandler):
@@ -210,4 +265,5 @@ default_handlers = [
     (r"/api/?", RootAPIHandler),
     (r"/api/info", InfoAPIHandler),
     (r"/api/sysmon", SysMonAPIHandler),
+    (r"/api/dockerstats", DockerStatsAPIHandler),
 ]
