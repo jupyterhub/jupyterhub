@@ -288,7 +288,14 @@ async def wait_for_http_server(url, timeout=10, ssl_context=None):
             else:
                 app_log.debug("Server at %s responded with %s", url, e.code)
                 return e.response
-        except Exception as e:
+        except OSError as e:
+            if e.errno not in {
+                errno.ECONNABORTED,
+                errno.ECONNREFUSED,
+                errno.ECONNRESET,
+            }:
+                app_log.warning("Failed to connect to %s (%s)", url, e)
+        except ValueError as e:
             app_log.warning("Error while waiting for server %s (%s)", url, e)
         return False
 
