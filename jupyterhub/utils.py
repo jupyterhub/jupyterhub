@@ -295,7 +295,7 @@ async def wait_for_http_server(url, timeout=10, ssl_context=None):
                 errno.ECONNRESET,
             }:
                 app_log.warning("Failed to connect to %s (%s)", url, e)
-        except ValueError as e:
+        except Exception as e:
             app_log.warning("Error while waiting for server %s (%s)", url, e)
         return False
 
