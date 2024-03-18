@@ -13,14 +13,24 @@ You can restrict which users are allowed to login with a set,
 
 ```python
 c.Authenticator.allowed_users = {'mal', 'zoe', 'inara', 'kaylee'}
+c.Authenticator.allow_all = False
+c.Authenticator.allow_existing_users = False
 ```
 
-Users in the `allowed_users` set are added to the Hub database when the Hub is
-started.
+Users in the `allowed_users` set are added to the Hub database when the Hub is started.
 
 ```{warning}
-If this configuration value is not set, then **all authenticated users will be allowed into your hub**.
+If `allowed_users` is not specified, then by default **all authenticated users will be allowed into your hub**,
+i.e. `allow_all` defaults to True if neither `allowed_users` nor `allow_all` are set.
 ```
+
+:::{versionadded} 5.0
+{attr}`Authenticator.allow_all` and {attr}`Authenticator.allow_existing_users` are new in JupyterHub 5.0.
+
+By default, `allow_all` is True when `allowed_users` is empty,
+and `allow_existing_users` is True when `allowed_users` is not empty.
+This is to ensure backward-compatibility.
+:::
 
 ## One Time Passwords ( request_otp )
 
@@ -42,7 +52,7 @@ c.Authenticator.otp_prompt = 'Google Authenticator:'
 ```{note}
 As of JupyterHub 2.0, the full permissions of `admin_users`
 should not be required.
-Instead, you can assign [roles](define-role-target) to users or groups
+Instead, it is best to assign [roles](define-role-target) to users or groups
 with only the scopes they require.
 ```
 
@@ -68,26 +78,49 @@ group. For example, we can let any user in the `wheel` group be an admin:
 c.PAMAuthenticator.admin_groups = {'wheel'}
 ```
 
-## Give admin access to other users' notebook servers (`admin_access`)
+## Give some users access to other users' notebook servers
 
-Since the default `JupyterHub.admin_access` setting is `False`, the admins
-do not have permission to log in to the single user notebook servers
-owned by _other users_. If `JupyterHub.admin_access` is set to `True`,
-then admins have permission to log in _as other users_ on their
-respective machines for debugging. **As a courtesy, you should make
-sure your users know if admin_access is enabled.**
+The `access:servers` scope can be granted to users to give them permission to visit other users' servers.
+For example, to give members of the `teachers` group access to the servers of members of the `students` group:
+
+```python
+c.JupyterHub.load_roles = [
+  {
+    "name": "teachers",
+    "scopes": [
+      "admin-ui",
+      "list:users",
+      "access:servers!group=students",
+    ],
+    "groups": ["teachers"],
+  }
+]
+```
+
+By default, only the deprecated `admin` role has global `access` permissions.
+**As a courtesy, you should make sure your users know if admin access is enabled.**
 
 ## Add or remove users from the Hub
 
 Users can be added to and removed from the Hub via the admin
-panel or the REST API. When a user is **added**, the user will be
-automatically added to the `allowed_users` set and database. Restarting the Hub
-will not require manually updating the `allowed_users` set in your config file,
+panel or the REST API.
+
+To enable this behavior, set:
+
+```python
+c.Authenticator.allow_existing_users = True
+```
+
+When a user is **added**, the user will be
+automatically added to the `allowed_users` set and database.
+If `allow_existing_users` is True, restarting the Hub will not require manually updating the `allowed_users` set in your config file,
 as the users will be loaded from the database.
+If `allow_existing_users` is False, users not granted access by configuration such as `allowed_users` will not be permitted to login,
+even if they are present in the database.
 
 After starting the Hub once, it is not sufficient to **remove** a user
 from the allowed users set in your config file. You must also remove the user
-from the Hub's database, either by deleting the user from JupyterHub's
+from the Hub's database, either by deleting the user via JupyterHub's
 admin page, or you can clear the `jupyterhub.sqlite` database and start
 fresh.
 

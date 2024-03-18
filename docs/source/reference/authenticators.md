@@ -37,14 +37,14 @@ A [generic implementation](https://github.com/jupyterhub/oauthenticator/blob/mas
 ## The Dummy Authenticator
 
 When testing, it may be helpful to use the
-{class}`jupyterhub.auth.DummyAuthenticator`. This allows for any username and
-password unless if a global password has been set. Once set, any username will
+{class}`~.jupyterhub.auth.DummyAuthenticator`. This allows for any username and
+password unless a global password has been set. Once set, any username will
 still be accepted but the correct password will need to be provided.
 
 ## Additional Authenticators
 
-A partial list of other authenticators is available on the
-[JupyterHub wiki](https://github.com/jupyterhub/jupyterhub/wiki/Authenticators).
+Additional authenticators can be found on GitHub
+by searching for [topic:jupyterhub topic:authenticator](https://github.com/search?q=topic%3Ajupyterhub%20topic%3Aauthenticator&type=repositories).
 
 ## Technical Overview of Authentication
 
@@ -54,9 +54,9 @@ The base authenticator uses simple username and password authentication.
 
 The base Authenticator has one central method:
 
-#### Authenticator.authenticate method
+#### Authenticator.authenticate
 
-    Authenticator.authenticate(handler, data)
+{meth}`.Authenticator.authenticate`
 
 This method is passed the Tornado `RequestHandler` and the `POST data`
 from JupyterHub's login form. Unless the login form has been customized,
@@ -81,7 +81,7 @@ Writing an Authenticator that looks up passwords in a dictionary
 requires only overriding this one method:
 
 ```python
-from IPython.utils.traitlets import Dict
+from traitlets import Dict
 from jupyterhub.auth import Authenticator
 
 class DictionaryAuthenticator(Authenticator):
@@ -136,7 +136,7 @@ To only allow usernames that start with 'w':
 c.Authenticator.username_pattern = r'w.*'
 ```
 
-### How to write a custom authenticator
+## How to write a custom authenticator
 
 You can use custom Authenticator subclasses to enable authentication
 via other mechanisms. One such example is using [GitHub OAuth][].
@@ -147,11 +147,6 @@ For example, the Authenticator methods, {meth}`.Authenticator.pre_spawn_start`
 and {meth}`.Authenticator.post_spawn_stop`, are hooks that can be used to do
 auth-related startup (e.g. opening PAM sessions) and cleanup
 (e.g. closing PAM sessions).
-
-See a list of custom Authenticators [on the wiki](https://github.com/jupyterhub/jupyterhub/wiki/Authenticators).
-
-If you are interested in writing a custom authenticator, you can read
-[this tutorial](http://jupyterhub-tutorial.readthedocs.io/en/latest/authenticators.html).
 
 ### Registering custom Authenticators via entry points
 
@@ -187,6 +182,104 @@ previously required.
 Additionally, configurable attributes for your authenticator will
 appear in jupyterhub help output and auto-generated configuration files
 via `jupyterhub --generate-config`.
+
+(authenticator-allow)=
+
+### Allowing access
+
+When dealing with logging in, there are generally two _separate_ steps:
+
+authentication
+: identifying who is logged in, and
+
+authorization
+: deciding whether an authenticated user is logged in
+
+{meth}`Authenticator.authenticate` is responsible for authenticating users.
+It is perfectly fine in the simplest cases for `Authenticator.authenticate` to be responsible for authentication _and_ authorization,
+in which case `authenticate` may return `None` if the user is not authorized.
+
+However, Authenticators also have have two methods {meth}`~.Authenticator.check_allowed` and {meth}`~.Authenticator.check_blocked_users`, which are called after successful authentication to further check if the user is allowed.
+
+If `check_blocked_users()` returns False, authorization stops and the user is not allowed.
+
+If `check_allowed()` returns True, authorization proceeds.
+
+:::{versionadded} 5.0
+{attr}`Authenticator.allow_all` and {attr}`Authenticator.allow_existing_users` are new in JupyterHub 5.0.
+
+By default, `allow_all` is True when `allowed_users` is empty,
+and `allow_existing_users` is True when `allowed_users` is not empty.
+This is to ensure backward-compatibility, but subclasses are free to pick more restrictive defaults.
+:::
+
+### Overriding `check_allowed`
+
+The base implementation of {meth}`~.Authenticator.check_allowed` checks:
+
+- if `allow_all` is True, return True
+- if username is in the `allowed_users` set, return True
+- else return False
+
+If a custom Authenticator defines additional sources of `allow` configuration,
+such as membership in a group or other information,
+it should override `check_allowed` to account for this.
+`allow_` configuration should generally be _additive_,
+i.e. if permission is granted by _any_ allow configuration,
+a user should be authorized.
+
+:::{note}
+For backward-compatibility, it is the responsibility of `Authenticator.check_allowed()` to check `.allow_all`.
+This is to avoid the backward-compatible default values from granting permissions unexpectedly.
+:::
+
+If an Authenticator defines additional `allow` configuration, it must at least:
+
+1. override `check_allowed`, and
+2. override the default for `allow_all`
+
+The default for `allow_all` in a custom authenticator should be one of `False` or a dynamic default matching something like `if not any allow configuration specified`.
+False is recommended for authenticators which source much larger pools of users than are _typically_ allowed to access a Hub (e.g. generic OAuth providers like Google, GitHub, etc.).
+
+For example, here is how `PAMAuthenticator` extends the base class to add `allowed_groups`:
+
+```python
+from traitlets import default
+
+@default("allow_all")
+def _allow_all_default(self):
+    if self.allowed_users or self.allowed_groups:
+        # if any allow config is specified, default to False
+        return False
+    return True
+
+def check_allowed(self, username, authentication=None):
+    if self.allow_all:
+        return True
+    if self.check_allowed_groups(username, authentication):
+        return True
+    return super().check_allowed(username, authentication)
+```
+
+Important points to note:
+
+- overriding the default for `allow_all` is required to avoid `allow_all` being True when `allowed_groups` is specified, but `allowed_users` is not.
+- `allow_all` must be checked inside `check_allowed`
+- `allowed_groups` strictly expands who is authorized,
+  it does not apply restrictions `allowed_users`.
+  This is recommended for all `allow_` configuration added by Authenticators.
+
+#### Custom error messages
+
+Any of these authentication and authorization methods may
+
+```python
+from tornado import web
+
+raise web.HTTPError(403, "informative message")
+```
+
+if you want to show a more informative login failure message rather than the generic one.
 
 (authenticator-auth-state)=
 
