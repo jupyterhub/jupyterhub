@@ -45,20 +45,14 @@ from traitlets.config import Configurable
 from .._version import __version__, _check_version
 from ..log import log_request
 from ..services.auth import HubOAuth, HubOAuthCallbackHandler, HubOAuthenticated
-from ..utils import exponential_backoff, isoformat, make_ssl_context, url_path_join
+from ..utils import (
+    _bool_env,
+    exponential_backoff,
+    isoformat,
+    make_ssl_context,
+    url_path_join,
+)
 from ._disable_user_config import _disable_user_config, _exclude_home
-
-
-def _bool_env(key):
-    """Cast an environment variable to bool
-
-    0, empty, or unset is False; All other values are True.
-    """
-    if os.environ.get(key, "") in {"", "0"}:
-        return False
-    else:
-        return True
-
 
 # Authenticate requests with the Hub
 
@@ -683,10 +677,10 @@ class SingleUserNotebookAppMixin(Configurable):
         )
         headers = s.setdefault('headers', {})
         headers['X-JupyterHub-Version'] = __version__
-        # set CSP header directly to workaround bugs in jupyter/notebook 5.0
+        # set default CSP to prevent iframe embedding across jupyterhub components
         headers.setdefault(
             'Content-Security-Policy',
-            ';'.join(["frame-ancestors 'self'", "report-uri " + csp_report_uri]),
+            ';'.join(["frame-ancestors 'none'", "report-uri " + csp_report_uri]),
         )
         super().init_webapp()
 

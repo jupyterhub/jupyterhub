@@ -8,6 +8,57 @@ command line for details.
 
 ## [Unreleased]
 
+## 4.1
+
+### 4.1.0 - 2024-03
+
+JupyterHub 4.1 is a security release, fixing [CVE-2024-28233].
+All JupyterHub deployments are encouraged to upgrade,
+especially those with other user content on peer domains to JupyterHub.
+
+As always, JupyterHub deployments are especially encouraged to enable per-user domains if protecting users from each other is a concern.
+
+For more information on securely deploying JupyterHub, see the [web security documentation](web-security).
+
+[CVE-2024-28233]: https://github.com/jupyterhub/jupyterhub/security/advisories/GHSA-7r3h-4ph8-w38g
+
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/4.0.2...4.1.0))
+
+#### Enhancements made
+
+- Backport PR #4628 on branch 4.x (Include LDAP groups in local spawner gids) [#4735](https://github.com/jupyterhub/jupyterhub/pull/4735) ([@minrk](https://github.com/minrk))
+- Backport PR #4561 on branch 4.x (Improve debugging when waiting for servers) [#4714](https://github.com/jupyterhub/jupyterhub/pull/4714) ([@minrk](https://github.com/minrk))
+- Backport PR #4563 on branch 4.x (only set 'domain' field on session-id cookie) [#4707](https://github.com/jupyterhub/jupyterhub/pull/4707) ([@minrk](https://github.com/minrk))
+
+#### Bugs fixed
+
+- Backport PR #4733 on branch 4.x (Catch ValueError while waiting for server to be reachable) [#4734](https://github.com/jupyterhub/jupyterhub/pull/4734) ([@minrk](https://github.com/minrk))
+- Backport PR #4679 on branch 4.x (Unescape jinja username) [#4705](https://github.com/jupyterhub/jupyterhub/pull/4705) ([@minrk](https://github.com/minrk))
+- Backport PR #4630: avoid setting unused oauth state cookies on API requests [#4697](https://github.com/jupyterhub/jupyterhub/pull/4697) ([@minrk](https://github.com/minrk))
+- Backport PR #4632: simplify, avoid errors in parsing accept headers [#4696](https://github.com/jupyterhub/jupyterhub/pull/4696) ([@minrk](https://github.com/minrk))
+- Backport PR #4677 on branch 4.x (Improve validation, docs for token.expires_in) [#4692](https://github.com/jupyterhub/jupyterhub/pull/4692) ([@minrk](https://github.com/minrk))
+- Backport PR #4570 on branch 4.x (fix mutation of frozenset in scope intersection) [#4691](https://github.com/jupyterhub/jupyterhub/pull/4691) ([@minrk](https://github.com/minrk))
+- Backport PR #4562 on branch 4.x (Use `user.stop` to cleanup spawners that stopped while Hub was down) [#4690](https://github.com/jupyterhub/jupyterhub/pull/4690) ([@minrk](https://github.com/minrk))
+- Backport PR #4542 on branch 4.x (Fix include_stopped_servers in paginated next_url) [#4689](https://github.com/jupyterhub/jupyterhub/pull/4689) ([@minrk](https://github.com/minrk))
+- Backport PR #4651 on branch 4.x (avoid attempting to patch removed IPythonHandler with notebook v7) [#4688](https://github.com/jupyterhub/jupyterhub/pull/4688) ([@minrk](https://github.com/minrk))
+- Backport PR #4560 on branch 4.x (singleuser extension: persist token from ?token=... url in cookie) [#4687](https://github.com/jupyterhub/jupyterhub/pull/4687) ([@minrk](https://github.com/minrk))
+
+#### Maintenance and upkeep improvements
+
+- Backport quay.io publishing [#4698](https://github.com/jupyterhub/jupyterhub/pull/4698) ([@minrk](https://github.com/minrk))
+- Backport PR #4617: try to improve reliability of test_external_proxy [#4695](https://github.com/jupyterhub/jupyterhub/pull/4695) ([@minrk](https://github.com/minrk))
+- Backport PR #4618 on branch 4.x (browser test: wait for token request to finish before reloading) [#4694](https://github.com/jupyterhub/jupyterhub/pull/4694) ([@minrk](https://github.com/minrk))
+- preparing 4.x branch [#4685](https://github.com/jupyterhub/jupyterhub/pull/4685) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+
+#### Contributors to this release
+
+The following people contributed discussions, new ideas, code and documentation contributions, and review.
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/#how-does-this-tool-define-contributions-in-the-reports).
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2023-08-10&to=2024-03-19&type=c))
+
+@Achele ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3AAchele+updated%3A2023-08-10..2024-03-19&type=Issues)) | @akashthedeveloper ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aakashthedeveloper+updated%3A2023-08-10..2024-03-19&type=Issues)) | @balajialg ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Abalajialg+updated%3A2023-08-10..2024-03-19&type=Issues)) | @BhavyaT-135 ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3ABhavyaT-135+updated%3A2023-08-10..2024-03-19&type=Issues)) | @blink1073 ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ablink1073+updated%3A2023-08-10..2024-03-19&type=Issues)) | @consideRatio ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3AconsideRatio+updated%3A2023-08-10..2024-03-19&type=Issues)) | @fcollonval ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Afcollonval+updated%3A2023-08-10..2024-03-19&type=Issues)) | @I-Am-D-B ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3AI-Am-D-B+updated%3A2023-08-10..2024-03-19&type=Issues)) | @jakirkham ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ajakirkham+updated%3A2023-08-10..2024-03-19&type=Issues)) | @ktaletsk ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aktaletsk+updated%3A2023-08-10..2024-03-19&type=Issues)) | @kzgrzendek ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Akzgrzendek+updated%3A2023-08-10..2024-03-19&type=Issues)) | @lumberbot-app ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Alumberbot-app+updated%3A2023-08-10..2024-03-19&type=Issues)) | @manics ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amanics+updated%3A2023-08-10..2024-03-19&type=Issues)) | @mbiette ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ambiette+updated%3A2023-08-10..2024-03-19&type=Issues)) | @minrk ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk+updated%3A2023-08-10..2024-03-19&type=Issues)) | @rcthomas ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Arcthomas+updated%3A2023-08-10..2024-03-19&type=Issues)) | @ryanlovett ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aryanlovett+updated%3A2023-08-10..2024-03-19&type=Issues)) | @sgaist ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Asgaist+updated%3A2023-08-10..2024-03-19&type=Issues)) | @shubham0473 ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ashubham0473+updated%3A2023-08-10..2024-03-19&type=Issues)) | @Temidayo32 ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3ATemidayo32+updated%3A2023-08-10..2024-03-19&type=Issues)) | @willingc ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Awillingc+updated%3A2023-08-10..2024-03-19&type=Issues)) | @yuvipanda ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ayuvipanda+updated%3A2023-08-10..2024-03-19&type=Issues))
+
 ## 4.0
 
 ### 4.0.2 - 2023-08-10
