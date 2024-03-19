@@ -12,7 +12,7 @@ development.
 ### Install Python
 
 JupyterHub is written in the [Python](https://python.org) programming language and
-requires you have at least version 3.6 installed locally. If you haven’t
+requires you have at least version 3.8 installed locally. If you haven’t
 installed Python before, the recommended way to install it is to use
 [Miniforge](https://github.com/conda-forge/miniforge#download).
 
@@ -59,7 +59,7 @@ a more detailed discussion.
    python -V
    ```
 
-   This should return a version number greater than or equal to 3.6.
+   This should return a version number greater than or equal to 3.8.
 
    ```bash
    npm -v
