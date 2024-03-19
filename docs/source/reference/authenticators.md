@@ -291,7 +291,7 @@ c.Authenticator.manage_groups = True
 to enable this behavior.
 The default is False for Authenticators that ship with JupyterHub,
 but may be True for custom Authenticators.
-Check your Authenticator's documentation for manage_groups support.
+Check your Authenticator's documentation for `manage_groups` support.
 
 If True, {meth}`.Authenticator.authenticate` and {meth}`.Authenticator.refresh_user` may include a field `groups`
 which is a list of group names the user should be a member of:
@@ -302,7 +302,42 @@ which is a list of group names the user should be a member of:
 - If `None` is returned, no changes are made to the user's group membership
 
 If authenticator-managed groups are enabled,
-all group-management via the API is disabled.
+all group-management via the API is disabled,
+and roles cannot be specified with ``load_groups`` traitlet.
+
+(authenticator-roles)=
+
+## Authenticator-managed roles
+
+:::{versionadded} 5.0
+:::
+
+Some identity providers may have their own concept of role membership that you would like to preserve in JupyterHub.
+This is now possible with `Authenticator.manage_roles`.
+
+You can set the config:
+
+```python
+c.Authenticator.manage_roles = True
+```
+
+to enable this behavior.
+The default is False for Authenticators that ship with JupyterHub,
+but may be True for custom Authenticators.
+Check your Authenticator's documentation for `manage_roles` support.
+
+If True, {meth}`.Authenticator.authenticate` and {meth}`.Authenticator.refresh_user` may include a field `roles`
+which is a list of roles that user should be assigned to:
+
+- User will be assigned each role in the list
+- User will be revoked roles not in the list (but they may still retain the role privileges if they inherit the role from their group)
+- Any roles not already present in the database will be created
+- Attributes of the roles such as `description`, `scopes`, and `groups` (but not `users`??) will be updated if given
+- If `None` is returned, no changes are made to the user's roles
+
+If authenticator-managed groups are enabled,
+all group-management via the API is disabled,
+and roles cannot be specified with `load_roles` traitlet.
 
 ## pre_spawn_start and post_spawn_stop hooks
 
