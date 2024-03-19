@@ -595,7 +595,7 @@ async def test_auth_managed_groups(
         assert groups == expected_refresh_groups
 
 
-def getRoleNames(role_list):
+def get_role_names(role_list):
     return [role['name'] for role in role_list]
 
 
@@ -643,21 +643,12 @@ async def test_auth_managed_roles(app, user, role, authenticated_roles, refresh_
     else:
         expected_authenticated_roles = authenticated_roles
 
-    if authenticated_roles is None:
-        expected_authenticated_groups = before_roles
-    else:
-        expected_authenticated_groups = authenticated_roles
-    if refresh_roles is None:
-        expected_refresh_groups = expected_authenticated_groups
-    else:
-        expected_refresh_groups = refresh_roles
-
     # Check if user gets auth-managed roles
     with mock.patch.dict(app.tornado_settings, {"authenticator": authenticator}):
         assert not app.db.dirty
         all_roles = app.db.query(orm.Role).all()
         user_roles = sorted(g.name for g in user.roles)
-        expected_authenticated_roles_names = getRoleNames(expected_authenticated_roles)
+        expected_authenticated_roles_names = get_role_names(expected_authenticated_roles)
         for name in expected_authenticated_roles_names:
             assert name in user_roles
             role = orm.Role.find(app.db, name)
