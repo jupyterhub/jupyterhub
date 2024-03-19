@@ -360,7 +360,7 @@ class HubAuth(SingletonConfigurable):
     ).tag(config=True)
 
     allow_token_in_url = Bool(
-        _bool_env("JUPYTERHUB_ALLOW_TOKEN_IN_URL", default=True),
+        _bool_env("JUPYTERHUB_ALLOW_TOKEN_IN_URL", default=False),
         help="""Allow requests to pages with ?token=... in the URL
         
         This allows starting a user session by sharing a URL with credentials,
