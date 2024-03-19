@@ -1,4 +1,5 @@
 """HTTP Handlers for the hub server"""
+
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import asyncio
@@ -105,6 +106,8 @@ class LoginHandler(BaseHandler):
                     'next': self.get_argument('next', ''),
                 },
             ),
+            "authenticator": self.authenticator,
+            "xsrf": self.xsrf_token.decode('ascii'),
         }
         custom_html = Template(
             self.authenticator.get_custom_html(self.hub.base_url)

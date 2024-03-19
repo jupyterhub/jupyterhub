@@ -1,4 +1,5 @@
 """Miscellaneous utilities"""
+
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import asyncio
@@ -8,19 +9,24 @@ import functools
 import hashlib
 import inspect
 import random
+import re
 import secrets
 import socket
 import ssl
+import string
 import sys
 import threading
+import time
 import uuid
 import warnings
 from binascii import b2a_hex
 from datetime import datetime, timezone
+from functools import lru_cache
 from hmac import compare_digest
 from operator import itemgetter
 from urllib.parse import quote
 
+import idna
 from async_generator import aclosing
 from sqlalchemy.exc import SQLAlchemyError
 from tornado import gen, ioloop, web
@@ -89,6 +95,8 @@ def can_connect(ip, port):
     except OSError as e:
         if e.errno not in {errno.ECONNREFUSED, errno.ETIMEDOUT}:
             app_log.error("Unexpected error connecting to %s:%i %s", ip, port, e)
+        else:
+            app_log.debug("Server at %s:%i not ready: %s", ip, port, e)
         return False
     else:
         return True
@@ -241,13 +249,15 @@ async def wait_for_server(ip, port, timeout=10):
     """Wait for any server to show up at ip:port."""
     if ip in {'', '0.0.0.0', '::'}:
         ip = '127.0.0.1'
+    app_log.debug("Waiting %ss for server at %s:%s", timeout, ip, port)
+    tic = time.perf_counter()
     await exponential_backoff(
         lambda: can_connect(ip, port),
-        "Server at {ip}:{port} didn't respond in {timeout} seconds".format(
-            ip=ip, port=port, timeout=timeout
-        ),
+        f"Server at {ip}:{port} didn't respond in {timeout} seconds",
         timeout=timeout,
     )
+    toc = time.perf_counter()
+    app_log.debug("Server at %s:%s responded in %.2fs", ip, port, toc - tic)
 
 
 async def wait_for_http_server(url, timeout=10, ssl_context=None):
@@ -255,11 +265,12 @@ async def wait_for_http_server(url, timeout=10, ssl_context=None):
 
     Any non-5XX response code will do, even 404.
     """
-    loop = ioloop.IOLoop.current()
-    tic = loop.time()
     client = AsyncHTTPClient()
     if ssl_context:
         client.ssl_options = ssl_context
+
+    app_log.debug("Waiting %ss for server at %s", timeout, url)
+    tic = time.perf_counter()
 
     async def is_reachable():
         try:
@@ -284,15 +295,17 @@ async def wait_for_http_server(url, timeout=10, ssl_context=None):
                 errno.ECONNRESET,
             }:
                 app_log.warning("Failed to connect to %s (%s)", url, e)
+        except Exception as e:
+            app_log.warning("Error while waiting for server %s (%s)", url, e)
         return False
 
     re = await exponential_backoff(
         is_reachable,
-        "Server at {url} didn't respond in {timeout} seconds".format(
-            url=url, timeout=timeout
-        ),
+        f"Server at {url} didn't respond in {timeout} seconds",
         timeout=timeout,
     )
+    toc = time.perf_counter()
+    app_log.debug("Server at %s responded in %.2fs", url, toc - tic)
     return re
 
 
@@ -492,19 +505,14 @@ def print_ps_info(file=sys.stderr):
     threadlen = len('threads')
 
     print(
-        "%s %s %s %s"
-        % ('%CPU'.ljust(cpulen), 'MEM'.ljust(memlen), 'FDs'.ljust(fdlen), 'threads'),
+        "{} {} {} {}".format(
+            '%CPU'.ljust(cpulen), 'MEM'.ljust(memlen), 'FDs'.ljust(fdlen), 'threads'
+        ),
         file=file,
     )
 
     print(
-        "%s %s %s %s"
-        % (
-            cpu_s.ljust(cpulen),
-            mem_s.ljust(memlen),
-            fd_s.ljust(fdlen),
-            str(p.num_threads()).ljust(7),
-        ),
+        f"{cpu_s.ljust(cpulen)} {mem_s.ljust(memlen)} {fd_s.ljust(fdlen)} {str(p.num_threads()).ljust(7)}",
         file=file,
     )
 
@@ -640,65 +648,50 @@ async def iterate_until(deadline_future, generator):
                 continue
 
 
-def utcnow():
-    """Return timezone-aware utcnow"""
-    return datetime.now(timezone.utc)
+def utcnow(*, with_tz=True):
+    """Return utcnow
+
+    with_tz (default): returns tz-aware datetime in UTC
+
+    if with_tz=False, returns UTC timestamp without tzinfo
+    (used for most internal timestamp storage because databases often don't preserve tz info)
+    """
+    now = datetime.now(timezone.utc)
+    if not with_tz:
+        now = now.replace(tzinfo=None)
+    return now
 
 
 def _parse_accept_header(accept):
     """
-    Parse the Accept header *accept*
+    Parse the Accept header
 
-    Return a list with 3-tuples of
-    [(str(media_type), dict(params), float(q_value)),] ordered by q values.
-    If the accept header includes vendor-specific types like::
-        application/vnd.yourcompany.yourproduct-v1.1+json
-    It will actually convert the vendor and version into parameters and
-    convert the content type into `application/json` so appropriate content
-    negotiation decisions can be made.
+    Return a list with 2-tuples of
+    [(str(media_type), float(q_value)),] ordered by q values (descending).
+
     Default `q` for values that are not specified is 1.0
-
-    From: https://gist.github.com/samuraisam/2714195
     """
     result = []
+    if not accept:
+        return result
     for media_range in accept.split(","):
-        parts = media_range.split(";")
-        media_type = parts.pop(0).strip()
-        media_params = []
-        # convert vendor-specific content type to application/json
-        typ, subtyp = media_type.split('/')
-        # check for a + in the sub-type
-        if '+' in subtyp:
-            # if it exists, determine if the subtype is a vendor-specific type
-            vnd, sep, extra = subtyp.partition('+')
-            if vnd.startswith('vnd'):
-                # and then... if it ends in something like "-v1.1" parse the
-                # version out
-                if '-v' in vnd:
-                    vnd, sep, rest = vnd.rpartition('-v')
-                    if len(rest):
-                        # add the version as a media param
-                        try:
-                            version = media_params.append(('version', float(rest)))
-                        except ValueError:
-                            version = 1.0  # could not be parsed
-                # add the vendor code as a media param
-                media_params.append(('vendor', vnd))
-                # and re-write media_type to something like application/json so
-                # it can be used usefully when looking up emitters
-                media_type = f'{typ}/{extra}'
+        media_type, *parts = media_range.split(";")
+        media_type = media_type.strip()
+        if not media_type:
+            continue
 
         q = 1.0
         for part in parts:
-            (key, value) = part.lstrip().split("=", 1)
+            (key, _, value) = part.partition("=")
             key = key.strip()
-            value = value.strip()
             if key == "q":
-                q = float(value)
-            else:
-                media_params.append((key, value))
-        result.append((media_type, dict(media_params), q))
-    result.sort(key=itemgetter(2))
+                try:
+                    q = float(value)
+                except ValueError:
+                    pass
+                break
+        result.append((media_type, q))
+    result.sort(key=itemgetter(1), reverse=True)
     return result
 
 
@@ -711,7 +704,7 @@ def get_accepted_mimetype(accept_header, choices=None):
     Return `None` if choices is given and no match is found,
     or nothing is specified.
     """
-    for mime, params, q in _parse_accept_header(accept_header):
+    for mime, q in _parse_accept_header(accept_header):
         if choices:
             if mime in choices:
                 return mime
@@ -779,3 +772,153 @@ def get_browser_protocol(request):
 
     # no forwarded headers
     return request.protocol
+
+
+# set of chars that are safe in dns labels
+# (allow '.' because we don't mind multiple levels of subdomains)
+_dns_safe = set(string.ascii_letters + string.digits + '-.')
+# don't escape % because it's the escape char and we handle it separately
+_dns_needs_replace = _dns_safe | {"%"}
+
+
+@lru_cache
+def _dns_quote(name):
+    """Escape a name for use in a dns label
+
+    this is _NOT_ fully domain-safe, but works often enough for realistic usernames.
+    Fully safe would be full IDNA encoding,
+    PLUS escaping non-IDNA-legal ascii,
+    PLUS some encoding of boundary conditions
+    """
+    # escape name for subdomain label
+    label = quote(name, safe="").lower()
+    # some characters are not handled by quote,
+    # because they are legal in URLs but not domains,
+    # specifically _ and ~ (starting in 3.7).
+    # Escape these in the same way (%{hex_codepoint}).
+    unique_chars = set(label)
+    for c in unique_chars:
+        if c not in _dns_needs_replace:
+            label = label.replace(c, f"%{ord(c):x}")
+
+    # underscore is our escape char -
+    # it's not officially legal in hostnames,
+    # but is valid in _domain_ names (?),
+    # and seems to always work in practice.
+    label = label.replace("%", "_")
+    return label
+
+
+def subdomain_hook_legacy(name, domain, kind):
+    """Legacy (default) hook for subdomains
+
+    Users are at '$user.$host' where $user is _mostly_ DNS-safe.
+    Services are all simultaneously on 'services.$host`.
+    """
+    if kind == "user":
+        # backward-compatibility
+        return f"{_dns_quote(name)}.{domain}"
+    elif kind == "service":
+        return f"services.{domain}"
+    else:
+        raise ValueError(f"kind must be 'service' or 'user', not {kind!r}")
+
+
+# strict dns-safe characters (excludes '-')
+_strict_dns_safe = set(string.ascii_lowercase) | set(string.digits)
+
+
+def _trim_and_hash(name):
+    """Always-safe fallback for a DNS label
+
+    Produces a valid and unique DNS label for any string
+
+    - prefix with 'u-' to avoid collisions and first-character rules
+    - Selects the first N characters that are safe ('x' if none are safe)
+    - suffix with truncated hash of true name
+    - length is guaranteed to be < 32 characters
+      leaving room for additional components to build a DNS label.
+      Will currently be between 12-19 characters:
+        4 (prefix, delimiters) + 7 (hash) + 1-8 (name stub)
+    """
+    name_hash = hashlib.sha256(name.encode('utf8')).hexdigest()[:7]
+
+    safe_chars = [c for c in name.lower() if c in _strict_dns_safe]
+    name_stub = ''.join(safe_chars[:8])
+    # We MUST NOT put the `--` in the 3rd and 4th position (RFC 5891)
+    # which is reserved for IDNs
+    # It would be if name_stub were empty, so put 'x' here
+    # (value doesn't matter, as uniqueness is in the hash - the stub is more of a hint, anyway)
+    if not name_stub:
+        name_stub = "x"
+    return f"u-{name_stub}--{name_hash}"
+
+
+# A host name (label) can start or end with a letter or a number
+# this pattern doesn't need to handle the boundary conditions,
+# which are handled more simply with starts/endswith
+_dns_re = re.compile(r'^[a-z0-9-]{1,63}$', flags=re.IGNORECASE)
+
+
+def _is_dns_safe(label, max_length=63):
+    # A host name (label) MUST NOT consist of all numeric values
+    if label.isnumeric():
+        return False
+    # A host name (label) can be up to 63 characters
+    if not 0 < len(label) <= max_length:
+        return False
+    # A host name (label) MUST NOT start or end with a '-' (dash)
+    if label.startswith('-') or label.endswith('-'):
+        return False
+    return bool(_dns_re.match(label))
+
+
+def _strict_dns_safe_encode(name, max_length=63):
+    """Will encode a username to a guaranteed-safe DNS label
+
+    - if it contains '--' at all, jump to the end and take the hash route to avoid collisions with escaped
+    - if safe, use it
+    - if not, use IDNA encoding
+    - if a safe encoding cannot be produced, use stripped safe characters + '--{hash}`
+    - allow specifying a max_length, to give room for additional components,
+      if used as only a _part_ of a DNS label.
+    """
+    # short-circuit: avoid accepting already-encoded results
+    # which all include '--'
+    if '--' in name:
+        return _trim_and_hash(name)
+
+    # if name is already safe (and can't collide with an escaped result) use it
+    if _is_dns_safe(name, max_length=max_length):
+        return name
+
+    # next: use IDNA encoding, if applicable
+    try:
+        idna_name = idna.encode(name).decode("ascii")
+    except ValueError:
+        idna_name = None
+
+    if idna_name and idna_name != name and _is_dns_safe(idna_name):
+        return idna_name
+
+    # fallback, always works: trim to safe characters and hash
+    return _trim_and_hash(name)
+
+
+def subdomain_hook_idna(name, domain, kind):
+    """New, reliable subdomain hook
+
+    More reliable than previous, should always produce valid domains
+
+    - uses IDNA encoding for simple unicode names
+    - separate domain for each service
+    - uses stripped name and hash, where above schemes fail to produce a valid domain
+    """
+    safe_name = _strict_dns_safe_encode(name)
+    if kind == 'user':
+        # 'user' namespace is special-cased as the default
+        # for aesthetics and backward-compatibility for names that don't need escaping
+        suffix = ""
+    else:
+        suffix = f"--{kind}"
+    return f"{safe_name}{suffix}.{domain}"

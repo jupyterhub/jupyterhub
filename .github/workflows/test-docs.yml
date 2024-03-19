@@ -36,22 +36,31 @@ env:
 
 jobs:
   validate-rest-api-definition:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
 
       - name: Validate REST API definition
-        uses: char0n/swagger-editor-validate@v1.3.2
-        with:
-          definition-file: docs/source/_static/rest-api.yml
+        run: |
+          npx @redocly/cli lint
 
   test-docs:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
         with:
-          python-version: "3.9"
+          # make rediraffecheckdiff requires git history to compare current
+          # commit with the main branch and previous releases.
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
       - name: Install requirements
         run: |
@@ -72,3 +81,31 @@ jobs:
         run: |
           cd docs
           make linkcheck
+
+      # make rediraffecheckdiff compares files for different changesets
+      # these diff targets aren't always available
+      # - compare with base ref (usually 'main', always on 'origin') for pull requests
+      # - only compare with tags when running against jupyterhub/jupyterhub
+      #   to avoid errors on forks, which often lack tags
+      - name: check redirects for this PR
+        if: github.event_name == 'pull_request'
+        run: |
+          cd docs
+          export REDIRAFFE_BRANCH=origin/${{ github.base_ref }}
+          make rediraffecheckdiff
+
+      # this should check currently published 'stable' links for redirects
+      - name: check redirects since last release
+        if: github.repository == 'jupyterhub/jupyterhub'
+        run: |
+          cd docs
+          export REDIRAFFE_BRANCH=$(git describe --tags --abbrev=0)
+          make rediraffecheckdiff
+
+      # longer-term redirect check (fixed version) for older links
+      - name: check redirects since 3.0.0
+        if: github.repository == 'jupyterhub/jupyterhub'
+        run: |
+          cd docs
+          export REDIRAFFE_BRANCH=3.0.0
+          make rediraffecheckdiff

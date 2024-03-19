@@ -1,4 +1,5 @@
 """Base Authenticator class and the default PAM Authenticator"""
+
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 import inspect
@@ -129,11 +130,14 @@ class Authenticator(LoggingConfigurable):
         help="""
         Set of usernames that are allowed to log in.
 
-        Use this with supported authenticators to restrict which users can log in. This is an
-        additional list that further restricts users, beyond whatever restrictions the
-        authenticator has in place. Any user in this list is granted the 'user' role on hub startup.
+        Use this to limit which authenticated users may login.
+        Default behavior: only users in this set are allowed.
+        
+        If empty, does not perform any restriction,
+        in which case any authenticated user is allowed.
 
-        If empty, does not perform any additional restriction.
+        Authenticators may extend :meth:`.Authenticator.check_allowed` to combine `allowed_users` with other configuration
+        to either expand or restrict access.
 
         .. versionchanged:: 1.2
             `Authenticator.whitelist` renamed to `allowed_users`
@@ -157,6 +161,25 @@ class Authenticator(LoggingConfigurable):
         """
     ).tag(config=True)
 
+    otp_prompt = Any(
+        "OTP:",
+        help="""
+        The prompt string for the extra OTP (One Time Password) field.
+
+        .. versionadded:: 5.0
+        """,
+    ).tag(config=True)
+
+    request_otp = Bool(
+        False,
+        config=True,
+        help="""
+        Prompt for OTP (One Time Password) in the login form.
+
+        .. versionadded:: 5.0
+        """,
+    )
+
     _deprecated_aliases = {
         "whitelist": ("allowed_users", "1.2"),
         "blacklist": ("blocked_users", "1.2"),
@@ -173,12 +196,7 @@ class Authenticator(LoggingConfigurable):
             # protects backward-compatible config from warnings
             # if they set the same value under both names
             self.log.warning(
-                "{cls}.{old} is deprecated in JupyterHub {version}, use {cls}.{new} instead".format(
-                    cls=self.__class__.__name__,
-                    old=old_attr,
-                    new=new_attr,
-                    version=version,
-                )
+                f"{self.__class__.__name__}.{old_attr} is deprecated in JupyterHub {version}, use {self.__class__.__name__}.{new_attr} instead"
             )
             setattr(self, new_attr, change.new)
 
@@ -298,27 +316,29 @@ class Authenticator(LoggingConfigurable):
 
         This function is called after the user has passed all authentication checks
         and is ready to successfully authenticate. This function must return the
-        authentication dict reguardless of changes to it.
+        auth_model dict reguardless of changes to it.
+        The hook is called with 3 positional arguments: `(authenticator, handler, auth_model)`.
 
-        This maybe a coroutine.
+        This may be a coroutine.
 
         .. versionadded: 1.0
 
         Example::
 
-            import os, pwd
-            def my_hook(authenticator, handler, authentication):
-                user_data = pwd.getpwnam(authentication['name'])
+            import os
+            import pwd
+            def my_hook(authenticator, handler, auth_model):
+                user_data = pwd.getpwnam(auth_model['name'])
                 spawn_data = {
                     'pw_data': user_data
-                    'gid_list': os.getgrouplist(authentication['name'], user_data.pw_gid)
+                    'gid_list': os.getgrouplist(auth_model['name'], user_data.pw_gid)
                 }
 
-                if authentication['auth_state'] is None:
-                    authentication['auth_state'] = {}
-                authentication['auth_state']['spawn_data'] = spawn_data
+                if auth_model['auth_state'] is None:
+                    auth_model['auth_state'] = {}
+                auth_model['auth_state']['spawn_data'] = spawn_data
 
-                return authentication
+                return auth_model
 
             c.Authenticator.post_auth_hook = my_hook
 
@@ -352,9 +372,7 @@ class Authenticator(LoggingConfigurable):
                     break
                 if has_old_name and not has_new_name:
                     warnings.warn(
-                        "{0}.{1} should be renamed to {0}.{2} for JupyterHub >= 1.2".format(
-                            cls.__name__, old_name, new_name
-                        ),
+                        f"{cls.__name__}.{old_name} should be renamed to {cls.__name__}.{new_name} for JupyterHub >= 1.2",
                         DeprecationWarning,
                     )
 
@@ -374,19 +392,17 @@ class Authenticator(LoggingConfigurable):
             ):
                 # adapt to pre-1.0 signature for compatibility
                 warnings.warn(
-                    """
-                    {0}.{1} does not support the authentication argument,
-                    added in JupyterHub 1.0. and is renamed to {2} in JupyterHub 1.2.
+                    f"""
+                    {self.__class__.__name__}.{old_name} does not support the authentication argument,
+                    added in JupyterHub 1.0. and is renamed to {new_name} in JupyterHub 1.2.
 
                     It should have the signature:
 
-                    def {2}(self, username, authentication=None):
+                    def {new_name}(self, username, authentication=None):
                         ...
 
                     Adapting for compatibility.
-                    """.format(
-                        self.__class__.__name__, old_name, new_name
-                    ),
+                    """,
                     DeprecationWarning,
                 )
 
@@ -397,7 +413,7 @@ class Authenticator(LoggingConfigurable):
 
                 setattr(self, old_name, partial(wrapped_method, old_method))
 
-    async def run_post_auth_hook(self, handler, authentication):
+    async def run_post_auth_hook(self, handler, auth_model):
         """
         Run the post_auth_hook if defined
 
@@ -405,17 +421,17 @@ class Authenticator(LoggingConfigurable):
 
         Args:
             handler (tornado.web.RequestHandler): the current request handler
-            authentication (dict): User authentication data dictionary. Contains the
+            auth_model (dict): User authentication data dictionary. Contains the
                 username ('name'), admin status ('admin'), and auth state dictionary ('auth_state').
         Returns:
-            Authentication (dict):
-                The hook must always return the authentication dict
+            auth_model (dict):
+                The hook must always return the auth_model dict
         """
         if self.post_auth_hook is not None:
-            authentication = await maybe_future(
-                self.post_auth_hook(self, handler, authentication)
+            auth_model = await maybe_future(
+                self.post_auth_hook(self, handler, auth_model)
             )
-        return authentication
+        return auth_model
 
     def normalize_username(self, username):
         """Normalize the given username and return it
@@ -433,6 +449,7 @@ class Authenticator(LoggingConfigurable):
         """Check if a username is allowed to authenticate based on configuration
 
         Return True if username is allowed, False otherwise.
+
         No allowed_users set means any username is allowed.
 
         Names are normalized *before* being checked against the allowed set.
@@ -442,6 +459,18 @@ class Authenticator(LoggingConfigurable):
 
         .. versionchanged:: 1.2
             Renamed check_whitelist to check_allowed
+
+        Args:
+            username (str):
+                The normalized username
+            authentication (dict):
+                The authentication model, as returned by `.authenticate()`.
+        Returns:
+            allowed (bool):
+                Whether the user is allowed
+        Raises:
+            web.HTTPError(403):
+                Raising HTTPErrors directly allows customizing the message shown to the user.
         """
         if not self.allowed_users:
             # No allowed set means any name is allowed
@@ -463,6 +492,18 @@ class Authenticator(LoggingConfigurable):
 
         .. versionchanged:: 1.2
             Renamed check_blacklist to check_blocked_users
+
+        Args:
+            username (str):
+                The normalized username
+            authentication (dict):
+                The authentication model, as returned by `.authenticate()`.
+        Returns:
+            allowed (bool):
+                Whether the user is allowed
+        Raises:
+            web.HTTPError(403, message):
+                Raising HTTPErrors directly allows customizing the message shown to the user.
         """
         if not self.blocked_users:
             # No block list means any name is allowed
@@ -485,6 +526,8 @@ class Authenticator(LoggingConfigurable):
          - `authenticate` turns formdata into a username
          - `normalize_username` normalizes the username
          - `check_allowed` checks against the allowed usernames
+         - `check_blocked_users` check against the blocked usernames
+         - `is_admin` check if a user is an admin
 
         .. versionchanged:: 0.8
             return dict instead of username
@@ -512,13 +555,12 @@ class Authenticator(LoggingConfigurable):
         blocked_pass = await maybe_future(
             self.check_blocked_users(username, authenticated)
         )
-        allowed_pass = await maybe_future(self.check_allowed(username, authenticated))
 
-        if blocked_pass:
-            pass
-        else:
+        if not blocked_pass:
             self.log.warning("User %r blocked. Stop authentication", username)
             return
+
+        allowed_pass = await maybe_future(self.check_allowed(username, authenticated))
 
         if allowed_pass:
             if authenticated['admin'] is None:
@@ -570,7 +612,7 @@ class Authenticator(LoggingConfigurable):
 
         Args:
             handler (tornado.web.RequestHandler): the current request handler
-            authentication: The authetication dict generated by `authenticate`.
+            authentication: The authentication dict generated by `authenticate`.
         Returns:
             admin_status (Bool or None):
                 The admin status of the user, or None if it could not be
@@ -585,6 +627,12 @@ class Authenticator(LoggingConfigurable):
 
         It must return the username on successful authentication,
         and return None on failed authentication.
+
+        Subclasses can also raise a `web.HTTPError(403, message)`
+        in order to halt the authentication process
+        and customize the error message that will be shown to the user.
+        This error may be raised anywhere in the authentication process
+        (`authenticate`, `check_allowed`, `check_blocked_users`).
 
         Checking allowed_users/blocked_users is handled separately by the caller.
 
@@ -603,11 +651,14 @@ class Authenticator(LoggingConfigurable):
                 The Authenticator may return a dict instead, which MUST have a
                 key `name` holding the username, and MAY have additional keys:
 
-                - `auth_state`, a dictionary of of auth state that will be
-                  persisted;
+                - `auth_state`, a dictionary of auth state that will be persisted;
                 - `admin`, the admin setting value for the user
                 - `groups`, the list of group names the user should be a member of,
                   if Authenticator.manage_groups is True.
+                  `groups` MUST always be present if manage_groups is enabled.
+        Raises:
+            web.HTTPError(403):
+                Raising errors directly allows customizing the message shown to the user.
         """
 
     def pre_spawn_start(self, user, spawner):
@@ -771,13 +822,8 @@ def _deprecated_method(old_name, new_name, version):
     def deprecated(self, *args, **kwargs):
         warnings.warn(
             (
-                "{cls}.{old_name} is deprecated in JupyterHub {version}."
-                " Please use {cls}.{new_name} instead."
-            ).format(
-                cls=self.__class__.__name__,
-                old_name=old_name,
-                new_name=new_name,
-                version=version,
+                f"{self.__class__.__name__}.{old_name} is deprecated in JupyterHub {version}."
+                f" Please use {self.__class__.__name__}.{new_name} instead."
             ),
             DeprecationWarning,
             stacklevel=2,
@@ -912,11 +958,9 @@ class LocalAuthenticator(Authenticator):
                 await maybe_future(self.add_system_user(user))
             else:
                 raise KeyError(
-                    "User {} does not exist on the system."
+                    f"User {user.name} does not exist on the system."
                     " Set LocalAuthenticator.create_system_users=True"
-                    " to automatically create system users from jupyterhub users.".format(
-                        user.name
-                    )
+                    " to automatically create system users from jupyterhub users."
                 )
 
         await maybe_future(super().add_user(user))
@@ -1114,9 +1158,16 @@ class PAMAuthenticator(LocalAuthenticator):
         Return None otherwise.
         """
         username = data['username']
+        password = data["password"]
+        if "otp" in data:
+            # OTP given, pass as tuple (requires pamela 1.1)
+            password = (data["password"], data["otp"])
         try:
             pamela.authenticate(
-                username, data['password'], service=self.service, encoding=self.encoding
+                username,
+                password,
+                service=self.service,
+                encoding=self.encoding,
             )
         except pamela.PAMError as e:
             if handler is not None:

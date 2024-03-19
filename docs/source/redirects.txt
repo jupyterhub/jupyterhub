@@ -1,23 +1,54 @@
 # This file contains rediraffe redirects as generated from the docs/source/conf.py file
 # For more information, see rediraffe configuration in the conf.py file.
 
+
 "changelog.md" "reference/changelog.md"
+"contributor-list.md" "contributing/contributor-list.md"
+"gallery-jhub-deployments.md" "reference/gallery-jhub-deployments.md"
+"installation-basics.md" "tutorial/installation-basics.md"
+"quickstart.md" "tutorial/quickstart.md"
+"quickstart-docker.md" "tutorial/quickstart-docker.md"
+"troubleshooting.md" "faq/troubleshooting.md"
+
+"admin/capacity-planning.md" "explanation/capacity-planning.md"
+"admin/log-messages.md" "howto/log-messages.md"
+"admin/upgrading.md" "howto/upgrading.md"
+
+"events/index.md" "reference/event-logging.md"
+
+"getting-started/authenticators-users-basics.md" "tutorial/getting-started/authenticators-users-basics.md"
+"getting-started/config-basics.md" "tutorial/getting-started/config-basics.md"
 "getting-started/faq.md" "faq/faq.md"
+"getting-started/institutional-faq.md" "faq/institutional-faq.md"
+"getting-started/networking-basics.md" "tutorial/getting-started/networking-basics.md"
+"getting-started/services-basics.md" "tutorial/getting-started/services-basics.md"
+"getting-started/spawners-basics.md" "tutorial/getting-started/spawners-basics.md"
+
 "reference/api-only.md" "howto/api-only.md"
 "reference/config-ghoauth.md" "howto/configuration/config-ghoauth.md"
 "reference/config-proxy.md" "howto/configuration/config-proxy.md"
-"admin/log-messages.md" "howto/log-messages.md"
+"reference/database.md" "explanation/database.md"
+"reference/oauth.md" "explanation/oauth.md"
 "reference/proxy.md" "howto/proxy.md"
 "reference/templates.md" "howto/templates.md"
-"quickstart-docker.md" "tutorial/quickstart-docker.md"
 "reference/config-examples.md" "howto/index.md"
-"getting-started/institutional-faq.md" "faq/institutional-faq.md"
-"troubleshooting.md" "faq/troubleshooting.md"
 "reference/config-sudo.md" "howto/configuration/config-sudo.md"
 "reference/config-user-env.md" "howto/configuration/config-user-env.md"
 "reference/rest.md" "howto/rest.md"
 "reference/separate-proxy.md" "howto/separate-proxy.md"
-"admin/upgrading.md" "howto/upgrading.md"
-"installation-basics.md" "tutorial/installation-basics.md"
-"quickstart.md" "tutorial/quickstart.md"
-"events/index.md" "reference/event-logging.md"
+"reference/server-api.md" "tutorial/server-api.md"
+"reference/websecurity.md" "explanation/websecurity.md"
+
+"api/app.md" "reference/api/app.md"
+"api/auth.md" "reference/api/auth.md"
+"api/index.md" "reference/api/index.md"
+"api/proxy.md" "reference/api/proxy.md"
+"api/service.md" "reference/api/service.md"
+"api/services.auth.md" "reference/api/services.auth.md"
+"api/spawner.md" "reference/api/spawner.md"
+"api/user.md" "reference/api/user.md"
+
+#  -- JupyterHub 4.0 --
+# redirects above are up-to-date as of JupyterHub 4.0
+# add future redirects below
+# (e.g. with `make rediraffewritediff`)

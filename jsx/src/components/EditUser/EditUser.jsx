@@ -1,13 +1,15 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import PropTypes from "prop-types";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 const EditUser = (props) => {
-  var limit = useSelector((state) => state.limit),
+  const limit = useSelector((state) => state.limit),
     [errorAlert, setErrorAlert] = useState(null);
 
-  var dispatch = useDispatch();
+  const dispatch = useDispatch();
+  const location = useLocation();
+  const navigate = useNavigate();
 
   var dispatchPageChange = (data, page) => {
     dispatch({
@@ -19,14 +21,19 @@ const EditUser = (props) => {
     });
   };
 
-  var { editUser, deleteUser, noChangeEvent, updateUsers, history } = props;
+  var { editUser, deleteUser, noChangeEvent, updateUsers } = props;
 
-  if (props.location.state == undefined) {
-    props.history.push("/");
-    return <></>;
+  useEffect(() => {
+    if (!location.state) {
+      navigate("/");
+    }
+  }, [location]);
+
+  if (!location.state) {
+    return null;
   }
 
-  var { username, has_admin } = props.location.state;
+  var { username, has_admin } = location.state;
 
   var [updatedUsername, setUpdatedUsername] = useState(""),
     [admin, setAdmin] = useState(has_admin);
@@ -93,7 +100,7 @@ const EditUser = (props) => {
                             data.status < 300
                               ? updateUsers(0, limit)
                                   .then((data) => dispatchPageChange(data, 0))
-                                  .then(() => history.push("/"))
+                                  .then(() => navigate("/"))
                                   .catch(() =>
                                     setErrorAlert(
                                       `Could not update users list.`,
@@ -135,7 +142,7 @@ const EditUser = (props) => {
                           data.status < 300
                             ? updateUsers(0, limit)
                                 .then((data) => dispatchPageChange(data, 0))
-                                .then(() => history.push("/"))
+                                .then(() => navigate("/"))
                                 .catch(() =>
                                   setErrorAlert(`Could not update users list.`),
                                 )
@@ -159,15 +166,6 @@ const EditUser = (props) => {
 };
 
 EditUser.propTypes = {
-  location: PropTypes.shape({
-    state: PropTypes.shape({
-      username: PropTypes.string,
-      has_admin: PropTypes.bool,
-    }),
-  }),
-  history: PropTypes.shape({
-    push: PropTypes.func,
-  }),
   editUser: PropTypes.func,
   deleteUser: PropTypes.func,
   noChangeEvent: PropTypes.func,

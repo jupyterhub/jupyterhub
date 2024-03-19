@@ -26,11 +26,7 @@ var mockAsyncRejection = () =>
 var addUserJsx = (spy, spy2, spy3) => (
   <Provider store={createStore(() => {}, {})}>
     <HashRouter>
-      <AddUser
-        addUsers={spy}
-        updateUsers={spy3 || spy2 || spy}
-        history={{ push: () => {} }}
-      />
+      <AddUser addUsers={spy} updateUsers={spy3 || spy2 || spy} />
     </HashRouter>
   </Provider>
 );

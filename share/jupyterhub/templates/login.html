@@ -52,7 +52,6 @@
       class="form-control"
       name="username"
       val="{{username}}"
-      tabindex="1"
       autofocus="autofocus"
     />
     <label for='password_input'>Password:</label>
@@ -62,8 +61,16 @@
       autocomplete="current-password"
       name="password"
       id="password_input"
-      tabindex="2"
     />
+    {% if authenticator.request_otp %}
+    <label for='otp_input'>{{ authenticator.otp_prompt }}</label>
+    <input
+      class="form-control"
+      autocomplete="one-time-password"
+      name="otp"
+      id="otp_input"
+    />
+    {% endif %}
 
     <div class="feedback-container">
       <input

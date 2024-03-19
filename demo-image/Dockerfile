@@ -3,7 +3,7 @@
 # This should only be used for demo or testing and not as a base image to build on.
 #
 # It includes the notebook package and it uses the DummyAuthenticator and the SimpleLocalProcessSpawner.
-ARG BASE_IMAGE=jupyterhub/jupyterhub-onbuild
+ARG BASE_IMAGE=quay.io/jupyterhub/jupyterhub-onbuild
 FROM ${BASE_IMAGE}
 
 # Install the notebook package

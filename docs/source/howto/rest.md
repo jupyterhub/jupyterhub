@@ -24,6 +24,7 @@ such as:
 
 - Checking which users are active
 - Adding or removing users
+- Adding or removing services
 - Stopping or starting single user notebook servers
 - Authenticating services
 - Communicating with an individual Jupyter server's REST API
@@ -33,36 +34,13 @@ such as:
 To send requests using the JupyterHub API, you must pass an API token with
 the request.
 
-The preferred way of generating an API token is by running:
-
-```bash
-openssl rand -hex 32
-```
-
-This `openssl` command generates a potential token that can then be
-added to JupyterHub using `.api_tokens` configuration setting in
-`jupyterhub_config.py`.
-
-```{note}
-The api_tokens configuration has been softly deprecated since the introduction of services.
-```
-
-Alternatively, you can use the `jupyterhub token` command to generate a token
-for a specific hub user by passing the **username**:
-
-```bash
-jupyterhub token <username>
-```
-
-This command generates a random string to use as a token and registers
-it for the given user with the Hub's database.
-
-In [version 0.8.0](changelog), a token request page for
-generating an API token is available from the JupyterHub user interface:
+While JupyterHub is running, any JupyterHub user can request a token via the `token` page.
+This is accessible via a `token` link in the top nav bar from the JupyterHub home page,
+or at the URL `/hub/token`.
 
 :::{figure-md}
 
-![token request page](../images/token-request.png)
+![token request page](../images/token-page.png)
 
 JupyterHub's API token page
 :::
@@ -73,6 +51,40 @@ JupyterHub's API token page
 JupyterHub's token page after successfully requesting a token.
 
 :::
+
+### Register API tokens via configuration
+
+Sometimes, you'll want to pre-generate a token for access to JupyterHub,
+typically for use by external services,
+so that both JupyterHub and the service have access to the same value.
+
+First, you need to generate a good random secret.
+A good way of generating an API token is by running:
+
+```bash
+openssl rand -hex 32
+```
+
+This `openssl` command generates a random token that can be added to the JupyterHub configuration in `jupyterhub_config.py`.
+
+For external services, this would be registered with JupyterHub via configuration:
+
+```python
+c.JupyterHub.services = [
+    {
+        "name": "my-service",
+        "api_token": the_secret_value,
+    },
+]
+```
+
+At this point, requests authenticated with the token will be associated with The service `my-service`.
+
+```{note}
+You can also load additional tokens for users via the `JupyterHub.api_tokens` configuration.
+
+However, this option has been deprecated since the introduction of services.
+```
 
 ## Assigning permissions to a token
 
@@ -87,8 +99,45 @@ In JupyterHub 2.0,
 specific permissions are now defined as '**scopes**',
 and can be assigned both at the user/service level,
 and at the individual token level.
+The previous behavior is represented by the scope `inherit`,
+and is still the default behavior for requesting a token if limited permissions are not specified.
 
 This allows e.g. a user with full admin permissions to request a token with limited permissions.
+
+In JupyterHub 5.0, you can specify scopes for a token when requesting it via the `/hub/tokens` page as a space-separated list.
+In JupyterHub 3.0 and later, you can also request tokens with limited scopes via the JupyterHub API (provided you already have a token!):
+
+```python
+import json
+from urllib.parse import quote
+
+import requests
+
+def request_token(
+    username, *, api_token, scopes=None, expires_in=0, hub_url="http://127.0.0.1:8081"
+):
+    """Request a new token for a user"""
+    request_body = {}
+    if expires_in:
+        request_body["expires_in"] = expires_in
+    if scopes:
+        request_body["scopes"] = scopes
+    url = hub_url.rstrip("/") + f"/hub/api/users/{quote(username)}/tokens"
+    r = requests.post(
+        url,
+        data=json.dumps(request_body),
+        headers={"Authorization": f"token {api_token}"},
+    )
+    if r.status_code >= 400:
+        # extract error message for nicer error messages
+        r.reason = r.json().get("message", r.text)
+    r.raise_for_status()
+    # response is a dict and will include the token itself in the 'token' field,
+    # as well as other fields about the token
+    return r.json()
+
+request_token("myusername", scopes=["list:users"], api_token="abc123")
+```
 
 ## Updating to admin services
 
@@ -153,7 +202,7 @@ Authorization header.
 ### Use requests
 
 Using the popular Python [requests](https://docs.python-requests.org)
-library, an API GET request is made, and the request sends an API token for
+library, an API GET request is made to [/users](rest-api-get-users), and the request sends an API token for
 authorization. The response contains information about the users, here's example code to make an API request for the users of a JupyterHub deployment
 
 ```python
@@ -171,7 +220,7 @@ r.raise_for_status()
 users = r.json()
 ```
 
-This example provides a slightly more complicated request, yet the
+This example provides a slightly more complicated request (to [/groups/formgrade-data301/users](rest-api-post-group-users)), yet the
 process is very similar:
 
 ```python
@@ -205,7 +254,7 @@ provided by notebook servers managed by JupyterHub if it has the necessary `acce
 
 Pagination is available through the `offset` and `limit` query parameters on
 list endpoints, which can be used to return ideally sized windows of results.
-Here's example code demonstrating pagination on the `GET /users`
+Here's example code demonstrating pagination on the [`GET /users`](rest-api-get-users)
 endpoint to fetch the first 20 records.
 
 ```python
@@ -304,12 +353,18 @@ hub:
 
 With that setting in place, a new named-server is activated like this:
 
+```{parsed-literal}
+[POST /api/users/:username/servers/:servername](rest-api-post-user-server-name)
+```
+
+e.g.
+
 ```bash
 curl -X POST -H "Authorization: token <token>" "http://127.0.0.1:8081/hub/api/users/<user>/servers/<serverA>"
 curl -X POST -H "Authorization: token <token>" "http://127.0.0.1:8081/hub/api/users/<user>/servers/<serverB>"
 ```
 
-The same servers can be stopped by substituting `DELETE` for `POST` above.
+The same servers can be [stopped](rest-api-delete-user-server-name) by substituting `DELETE` for `POST` above.
 
 ### Some caveats for using named-servers
 

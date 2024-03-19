@@ -1,4 +1,5 @@
 """Test version checking"""
+
 import logging
 
 import pytest
@@ -16,7 +17,8 @@ def setup_function(function):
         ('0.8.0', '0.8.0', logging.DEBUG, 'both on version'),
         ('0.8.0', '0.8.1', logging.DEBUG, ''),
         ('0.8.0', '0.8.0.dev', logging.DEBUG, ''),
-        ('0.8.0', '0.9.0', logging.WARNING, 'This could cause failure to authenticate'),
+        ('2.0.0', '2.1.0', logging.DEBUG, ''),
+        ('1.0.0', '2.0.0', logging.WARNING, 'This could cause failure to authenticate'),
         ('', '0.8.0', logging.WARNING, 'Hub has no version header'),
         ('0.8.0', '', logging.WARNING, 'Single-user server has no version header'),
     ],
@@ -37,8 +39,8 @@ def test_check_version_singleton(caplog):
     # once.
     for x in range(2):
         test_check_version(
-            '1.2.0',
-            '1.1.0',
+            '2.0.0',
+            '1.0.0',
             logging.WARNING,
             'This could cause failure to authenticate',
             caplog,
@@ -47,8 +49,8 @@ def test_check_version_singleton(caplog):
     # a warning.
     caplog.clear()
     test_check_version(
-        '1.2.0',
-        '1.1.1',
+        '2.0.0',
+        '1.1.0',
         logging.WARNING,
         'This could cause failure to authenticate',
         caplog,

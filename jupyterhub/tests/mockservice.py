@@ -12,6 +12,7 @@ Handlers and their purpose include:
 - WhoAmIHandler: returns name of user making a request (deprecated cookie login)
 - OWhoAmIHandler: returns name of user making a request (OAuth login)
 """
+
 import json
 import os
 import pprint

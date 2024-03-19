@@ -4,11 +4,12 @@ Run with old versions of jupyterhub to test upgrade/downgrade
 
 used in test_db.py
 """
-from datetime import datetime
+
 from functools import partial
 
 import jupyterhub
 from jupyterhub import orm
+from jupyterhub.utils import utcnow
 
 
 def populate_db(url):
@@ -117,10 +118,11 @@ def populate_db(url):
     assert user.created
     assert admin.created
     # set last_activity
-    user.last_activity = datetime.utcnow()
+    now = utcnow().replace(tzinfo=None)
+    user.last_activity = now
     spawner = user.orm_spawners['']
-    spawner.started = datetime.utcnow()
-    spawner.last_activity = datetime.utcnow()
+    spawner.started = now
+    spawner.last_activity = now
     db.commit()
 
 

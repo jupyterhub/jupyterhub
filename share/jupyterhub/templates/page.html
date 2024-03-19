@@ -68,7 +68,12 @@
         base_url: "{{base_url}}",
         prefix: "{{prefix}}",
         {% if user %}
-        user: "{{user.json_escaped_name}}",
+        {#
+          Autoescaping in templates is turned on in JupyterHub,
+          need `| safe` to prevent escaping
+          https://github.com/pallets/markupsafe/blob/2.1.4/src/markupsafe/_native.py#L6
+        #}
+        user: "{{ user.json_escaped_name | safe }}",
         {% endif %}
         {% if admin_access %}
         admin_access: true,
@@ -132,7 +137,7 @@
               <ul class="dropdown-menu">
               {% for service in services %}
               {% block service scoped %}
-                <li><a class="dropdown-item" href="{{service.prefix}}">{{service.name}}</a></li>
+                <li><a class="dropdown-item" href="{{service.href}}">{{service.name}}</a></li>
               {% endblock %}
               {% endfor %}
               </ul>

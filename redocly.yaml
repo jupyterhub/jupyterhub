@@ -1,0 +1,50 @@
+extends:
+  - recommended-strict
+
+apis:
+  rest:
+    root: ./docs/source/_static/rest-api.yml
+    rules:
+      info-license-url: off
+      operation-4xx-response: off
+
+# custom rules
+# https://redocly.com/docs/cli/rules/configurable-rules/
+rules:
+  rule/required-items-in-array-schemas:
+    subject:
+      type: Schema
+    assertions:
+      required:
+        - items
+    where:
+      - subject:
+          type: Schema
+          property: type
+        assertions:
+          const: array
+          defined: true
+    message: The 'items' field is required for schemas of array type.
+
+  rule/require-schema-type:
+    subject:
+      type: Schema
+      property: type
+    assertions:
+      defined: true
+    message: schema missing type
+    where:
+      # don't require type on schemas that reference other schemas, which already must specify type
+      - subject:
+          type: Schema
+          property: allOf
+        assertions:
+          defined: false
+
+  rule/require-parameter-schema:
+    subject:
+      type: Parameter
+      property: schema
+    assertions:
+      defined: true
+    message: Parameter missing schema

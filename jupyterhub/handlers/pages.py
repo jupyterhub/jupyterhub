@@ -1,4 +1,5 @@
 """Basic html-rendering handlers."""
+
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import asyncio
@@ -11,10 +12,10 @@ from jinja2 import TemplateNotFound
 from tornado import web
 from tornado.httputil import url_concat
 
-from .. import __version__
+from .. import __version__, orm
 from ..metrics import SERVER_POLL_DURATION_SECONDS, ServerPollStatus
-from ..scopes import needs_scope
-from ..utils import maybe_future, url_escape_path, url_path_join
+from ..scopes import describe_raw_scopes, needs_scope
+from ..utils import maybe_future, url_escape_path, url_path_join, utcnow
 from .base import BaseHandler
 
 
@@ -141,10 +142,8 @@ class SpawnHandler(BaseHandler):
                 if named_server_limit_per_user <= len(named_spawners):
                     raise web.HTTPError(
                         400,
-                        "User {} already has the maximum of {} named servers."
-                        "  One must be deleted before a new server can be created".format(
-                            user.name, named_server_limit_per_user
-                        ),
+                        f"User {user.name} already has the maximum of {named_server_limit_per_user} named servers."
+                        "  One must be deleted before a new server can be created",
                     )
 
         if not self.allow_named_servers and user.running:
@@ -484,7 +483,7 @@ class TokenPageHandler(BaseHandler):
         def sort_key(token):
             return (token.last_activity or never, token.created or never)
 
-        now = datetime.utcnow()
+        now = utcnow(with_tz=False)
 
         # group oauth client tokens by client id
         all_tokens = defaultdict(list)
@@ -552,6 +551,83 @@ class TokenPageHandler(BaseHandler):
         self.finish(html)
 
 
+class AcceptShareHandler(BaseHandler):
+    def _get_next_url(self, owner, spawner):
+        """Get next_url for a given owner/spawner"""
+        next_url = self.get_argument("next", "")
+        next_url = self._validate_next_url(next_url)
+        if next_url:
+            return next_url
+
+        # default behavior:
+        # if it's active, redirect to server URL
+        if spawner.name in owner.spawners:
+            spawner = owner.spawners[spawner.name]
+            if spawner.active:
+                # redirect to spawner url
+                next_url = owner.server_url(spawner.name)
+
+        if not next_url:
+            # spawner not active
+            # TODO: next_url not specified and not running, what do we do?
+            # for now, redirect as if it's running,
+            # but that's very likely to fail on "You can't launch this server"
+            # is there a better experience for this?
+            next_url = owner.server_url(spawner.name)
+        # validate again, which strips away host to just absolute path
+        return self._validate_next_url(next_url)
+
+    @web.authenticated
+    async def get(self):
+        code = self.get_argument("code")
+        share_code = orm.ShareCode.find(self.db, code=code)
+        if share_code is None:
+            raise web.HTTPError(404, "Share not found or expired")
+        if share_code.owner == self.current_user.orm_user:
+            raise web.HTTPError(403, "You can't share with yourself!")
+
+        scope_descriptions = describe_raw_scopes(
+            share_code.scopes,
+            username=self.current_user.name,
+        )
+        owner = self._user_from_orm(share_code.owner)
+        spawner = share_code.spawner
+        if spawner.name in owner.spawners:
+            spawner = owner.spawners[spawner.name]
+            spawner_ready = spawner.ready
+        else:
+            spawner_ready = False
+
+        html = await self.render_template(
+            'accept-share.html',
+            code=code,
+            owner=owner,
+            spawner=spawner,
+            spawner_ready=spawner_ready,
+            spawner_url=owner.server_url(spawner.name),
+            scope_descriptions=scope_descriptions,
+            next_url=self._get_next_url(owner, spawner),
+        )
+        self.finish(html)
+
+    @web.authenticated
+    def post(self):
+        code = self.get_argument("code")
+        self.log.debug("Looking up %s", code)
+        share_code = orm.ShareCode.find(self.db, code=code)
+        if share_code is None:
+            raise web.HTTPError(400, f"Invalid share code: {code}")
+        if share_code.owner == self.current_user.orm_user:
+            raise web.HTTPError(400, "You can't share with yourself!")
+        user = self.current_user
+        share = share_code.exchange(user.orm_user)
+        owner = self._user_from_orm(share.owner)
+        spawner = share.spawner
+
+        next_url = self._get_next_url(owner, spawner)
+        self.redirect(next_url)
+
+
 class ProxyErrorHandler(BaseHandler):
     """Handler for rendering proxy error pages"""
 
@@ -608,6 +684,7 @@ default_handlers = [
     (r'/spawn/([^/]+)', SpawnHandler),
     (r'/spawn/([^/]+)/([^/]+)', SpawnHandler),
     (r'/token', TokenPageHandler),
+    (r'/accept-share', AcceptShareHandler),
     (r'/error/(\d+)', ProxyErrorHandler),
     (r'/health$', HealthCheckHandler),
     (r'/api/health$', HealthCheckHandler),

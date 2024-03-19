@@ -1,3 +1,4 @@
 share/jupyterhub/templates/
 share/jupyterhub/static/js/admin-react.js
 jupyterhub/singleuser/templates/
+docs/source/_templates/

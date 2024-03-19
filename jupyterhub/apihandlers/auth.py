@@ -1,8 +1,8 @@
 """Authorization handlers"""
+
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import json
-from datetime import datetime
 from unittest import mock
 from urllib.parse import parse_qsl, quote, urlencode, urlparse, urlunparse
 
@@ -10,7 +10,7 @@ from oauthlib import oauth2
 from tornado import web
 
 from .. import orm, roles, scopes
-from ..utils import get_browser_protocol, token_authenticated
+from ..utils import get_browser_protocol, token_authenticated, utcnow
 from .base import APIHandler, BaseHandler
 
 
@@ -39,7 +39,7 @@ class TokenAPIHandler(APIHandler):
             self.parsed_scopes = scopes.parse_scopes(self.expanded_scopes)
 
         # record activity whenever we see a token
-        now = orm_token.last_activity = datetime.utcnow()
+        now = orm_token.last_activity = utcnow(with_tz=False)
         if orm_token.user:
             orm_token.user.last_activity = now
             model = self.user_model(self.users[orm_token.user])
@@ -110,14 +110,20 @@ class OAuthHandler:
         redirect_uri = self.get_argument('redirect_uri')
         if not redirect_uri or not redirect_uri.startswith('/'):
             return uri
+
         # make absolute local redirects full URLs
         # to satisfy oauthlib's absolute URI requirement
-        redirect_uri = (
-            get_browser_protocol(self.request)
-            + "://"
-            + self.request.host
-            + redirect_uri
-        )
+
+        public_url = self.settings.get("public_url")
+        if public_url:
+            proto = public_url.scheme
+            host = public_url.netloc
+        else:
+            # guess from request
+            proto = get_browser_protocol(self.request)
+            host = self.request.host
+        redirect_uri = f"{proto}://{host}{redirect_uri}"
+
         parsed_url = urlparse(uri)
         query_list = parse_qsl(parsed_url.query, keep_blank_values=True)
         for idx, item in enumerate(query_list):

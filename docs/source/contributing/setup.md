@@ -98,20 +98,13 @@ a more detailed discussion.
    python3 -m pip install --editable ".[test]"
    ```
 
-5. Set up a database.
-
-   The default database engine is `sqlite` so if you are just trying
-   to get up and running quickly for local development that should be
-   available via [Python](https://docs.python.org/3.5/library/sqlite3.html).
-   See [The Hub's Database](hub-database) for details on other supported databases.
-
-6. You are now ready to start JupyterHub!
+5. You are now ready to start JupyterHub!
 
    ```bash
    jupyterhub
    ```
 
-7. You can access JupyterHub from your browser at
+6. You can access JupyterHub from your browser at
    `http://localhost:8000` now.
 
 Happy developing!
@@ -130,8 +123,8 @@ configuration:
 jupyterhub -f testing/jupyterhub_config.py
 ```
 
-The default JupyterHub [authenticator](https://jupyterhub.readthedocs.io/en/stable/reference/authenticators.html#the-default-pam-authenticator)
-& [spawner](https://jupyterhub.readthedocs.io/en/stable/api/spawner.html#localprocessspawner)
+The default JupyterHub [authenticator](PAMAuthenticator)
+& [spawner](LocalProcessSpawner)
 require your system to have user accounts for each user you want to log in to
 JupyterHub as.
 
@@ -172,4 +165,47 @@ development updates, with:
 python3 setup.py js    # fetch updated client-side js
 python3 setup.py css   # recompile CSS from LESS sources
 python3 setup.py jsx   # build React admin app
+```
+
+### Failed to bind XXX to `http://127.0.0.1:<port>/<path>`
+
+This error can happen when there's already an application or a service using this
+port.
+
+Use the following command to find out which service is using this port.
+
+```bash
+lsof -P -i TCP:<port> -sTCP:LISTEN
+```
+
+If nothing shows up, it likely means there's a system service that uses it but
+your current user cannot list it. Reuse the same command with sudo.
+
+```bash
+sudo lsof -P -i TCP:<port> -sTCP:LISTEN
+```
+
+Depending on the result of the above commands, the most simple solution is to
+configure JupyterHub to use a different port for the service that is failing.
+
+As an example, the following is a frequently seen issue:
+
+`Failed to bind hub to http://127.0.0.1:8081/hub/`
+
+Using the procedure described above, start with:
+
+```bash
+lsof -P -i TCP:8081 -sTCP:LISTEN
+```
+
+and if nothing shows up:
+
+```bash
+sudo lsof -P -i TCP:8081 -sTCP:LISTEN
+```
+
+Finally, depending on your findings, you can apply the following change and start JupyterHub again:
+
+```python
+c.JupyterHub.hub_port = 9081 # Or any other free port
 ```

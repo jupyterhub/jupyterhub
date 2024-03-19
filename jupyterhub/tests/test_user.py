@@ -1,3 +1,6 @@
+from unittest import mock
+from urllib.parse import urlparse
+
 import pytest
 
 from .. import orm
@@ -53,3 +56,55 @@ def test_sync_groups(app, user, group_names):
             assert user.orm_user in group.users
         else:
             assert user.orm_user not in group.users
+
+
+@pytest.mark.parametrize(
+    "server_name, path",
+    [
+        ("", ""),
+        ("name", "name/"),
+        ("næme", "n%C3%A6me/"),
+    ],
+)
+def test_server_url(app, user, server_name, path):
+    user_url = user.url
+    assert user.server_url(server_name) == user_url + path
+
+
+@pytest.mark.parametrize(
+    "server_name, public_url, subdomain_host, expected_url",
+    [
+        ("", "", "", ""),
+        ("name", "", "", ""),
+        ("", "https://hub.tld/PREFIX/", "", "https://hub.tld/PREFIX/user/USERNAME/"),
+        (
+            "name",
+            "https://hub.tld/PREFIX/",
+            "",
+            "https://hub.tld/PREFIX/user/USERNAME/name/",
+        ),
+        (
+            "name",
+            "",
+            "https://hub.tld:123",
+            "https://USERNAME.hub.tld:123/PREFIX/user/USERNAME/name/",
+        ),
+    ],
+)
+def test_public_url(app, user, server_name, public_url, subdomain_host, expected_url):
+    expected_url = expected_url.replace("USERNAME", user.escaped_name).replace(
+        "PREFIX", app.base_url.strip("/")
+    )
+    if public_url:
+        public_url = public_url.replace("PREFIX", app.base_url.strip("/"))
+        public_url = urlparse(public_url)
+    with mock.patch.dict(
+        user.settings,
+        {
+            "subdomain_host": subdomain_host,
+            "domain": urlparse(subdomain_host).hostname,
+            "public_url": public_url,
+        },
+    ):
+        public_server_url = user.public_url(server_name)
+    assert public_server_url == expected_url

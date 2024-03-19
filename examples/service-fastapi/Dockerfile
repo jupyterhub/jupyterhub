@@ -1,9 +1,9 @@
-FROM jupyterhub/jupyterhub
+FROM quay.io/jupyterhub/jupyterhub
 
-# Create test user (PAM auth) and install single-user Jupyter 
+# Create test user (PAM auth) and install single-user Jupyter
 RUN useradd testuser --create-home --shell /bin/bash
 RUN echo 'testuser:passwd' | chpasswd
-RUN pip install jupyter 
+RUN pip install jupyter
 
 COPY app ./app
 COPY jupyterhub_config.py .

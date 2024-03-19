@@ -1,7 +1,10 @@
 """Tests for jupyterhub.singleuser"""
+
 import os
 import sys
 from contextlib import nullcontext
+from pathlib import Path
+from pprint import pprint
 from subprocess import CalledProcessError, check_output
 from unittest import mock
 from urllib.parse import urlencode, urlparse
@@ -15,6 +18,14 @@ from .. import orm
 from ..utils import url_path_join
 from .mocking import public_url
 from .utils import AsyncSession, async_requests, get_page
+
+IS_JUPYVERSE = os.environ.get("JUPYTERHUB_SINGLEUSER_APP") == "jupyverse"
+
+
+@pytest.fixture(autouse=True)
+def _jupyverse(app):
+    if IS_JUPYVERSE:
+        app.config.Spawner.default_url = "/lab"
 
 
 @pytest.mark.parametrize(
@@ -132,7 +143,10 @@ async def test_singleuser_auth(
     await user.stop(server_name)
 
 
-async def test_disable_user_config(request, app, tmpdir, full_spawn):
+@pytest.mark.skipif(
+    IS_JUPYVERSE, reason="jupyverse doesn't look up directories for configuration files"
+)
+async def test_disable_user_config(request, app, tmp_path, full_spawn):
     # login, start the server
     cookies = await app.login_user('nandy')
     user = app.users['nandy']
@@ -143,14 +157,21 @@ async def test_disable_user_config(request, app, tmpdir, full_spawn):
     # start with new config:
     user.spawner.debug = True
     user.spawner.disable_user_config = True
-    home_dir = tmpdir.join("home")
-    home_dir.mkdir()
+    user.spawner.default_url = "/jupyterhub-test-info"
+
+    # make sure it's resolved to start
+    tmp_path = tmp_path.resolve()
+    real_home_dir = tmp_path / "realhome"
+    real_home_dir.mkdir()
+    # make symlink to test resolution
+    home_dir = tmp_path / "home"
+    home_dir.symlink_to(real_home_dir)
     # home_dir is defined on SimpleSpawner
-    user.spawner.home_dir = home = str(home_dir)
-    jupyter_config_dir = home_dir.join(".jupyter")
+    user.spawner.home_dir = str(home_dir)
+    jupyter_config_dir = home_dir / ".jupyter"
     jupyter_config_dir.mkdir()
     # verify config paths
-    with jupyter_config_dir.join("jupyter_server_config.py").open("w") as f:
+    with (jupyter_config_dir / "jupyter_server_config.py").open("w") as f:
         f.write("c.TestSingleUser.jupyter_config_py = True")
 
     await user.spawn()
@@ -161,31 +182,22 @@ async def test_disable_user_config(request, app, tmpdir, full_spawn):
     # with cookies, login successful
     r = await async_requests.get(url, cookies=cookies)
     r.raise_for_status()
-    assert r.url.rstrip('/').endswith(
-        url_path_join('/user/nandy', user.spawner.default_url or "/tree")
-    )
+    assert r.url.endswith('/user/nandy/jupyterhub-test-info')
     assert r.status_code == 200
-
-    r = await async_requests.get(
-        url_path_join(public_url(app, user), 'jupyterhub-test-info'), cookies=cookies
-    )
-    r.raise_for_status()
     info = r.json()
-    import pprint
-
-    pprint.pprint(info)
+    pprint(info)
     assert info['disable_user_config']
     server_config = info['config']
     settings = info['settings']
     assert 'TestSingleUser' not in server_config
-    # check config paths
-    norm_home = os.path.realpath(os.path.abspath(home))
 
+    # check against tmp_path, the parent of both our home directories
+    # (symlink and real)
     def assert_not_in_home(path, name):
-        path = os.path.realpath(os.path.abspath(path))
-        assert not path.startswith(
-            norm_home + os.path.sep
-        ), f"{name}: {path} is in home {norm_home}"
+        path = Path(path).resolve()
+        assert not (str(path) + os.path.sep).startswith(
+            str(tmp_path) + os.path.sep
+        ), f"{name}: {path} is in home {tmp_path}"
 
     for path in info['config_file_paths']:
         assert_not_in_home(path, 'config_file_paths')
@@ -198,6 +210,83 @@ async def test_disable_user_config(request, app, tmpdir, full_spawn):
                 assert_not_in_home(path, key)
 
 
+@pytest.mark.parametrize("extension", [True, False])
+@pytest.mark.parametrize("notebook_dir", ["", "~", "~/sub", "ABS"])
+@pytest.mark.skipif(
+    IS_JUPYVERSE, reason="jupyverse has not notebook directory configuration"
+)
+async def test_notebook_dir(
+    request, app, tmpdir, user, full_spawn, extension, notebook_dir
+):
+    if extension:
+        try:
+            import jupyter_server  # noqa
+        except ImportError:
+            pytest.skip("needs jupyter-server 2")
+        else:
+            if jupyter_server.version_info < (2,):
+                pytest.skip("needs jupyter-server 2")
+
+    token = user.new_api_token(scopes=["access:servers!user"])
+    headers = {"Authorization": f"Bearer {token}"}
+
+    spawner = user.spawner
+    if extension:
+        user.spawner.environment["JUPYTERHUB_SINGLEUSER_EXTENSION"] = "1"
+    else:
+        user.spawner.environment["JUPYTERHUB_SINGLEUSER_EXTENSION"] = "0"
+
+    home_dir = tmpdir.join("home").mkdir()
+    sub_dir = home_dir.join("sub").mkdir()
+    with sub_dir.join("subfile.txt").open("w") as f:
+        f.write("txt\n")
+    abs_dir = tmpdir.join("abs").mkdir()
+    with abs_dir.join("absfile.txt").open("w") as f:
+        f.write("absfile\n")
+
+    if notebook_dir:
+        expected_root_dir = notebook_dir.replace("ABS", str(abs_dir)).replace(
+            "~", str(home_dir)
+        )
+    else:
+        expected_root_dir = str(home_dir)
+
+    spawner.notebook_dir = notebook_dir.replace("ABS", str(abs_dir))
+
+    # home_dir is defined on SimpleSpawner
+    user.spawner.home_dir = home = str(home_dir)
+    spawner.environment["HOME"] = home
+    await user.spawn()
+    await app.proxy.add_user(user)
+    url = public_url(app, user)
+    r = await async_requests.get(
+        url_path_join(public_url(app, user), 'jupyterhub-test-info'), headers=headers
+    )
+    r.raise_for_status()
+    info = r.json()
+    pprint(info)
+
+    assert info["root_dir"] == expected_root_dir
+    # secondary check: make sure it has the intended effect on root_dir
+    r = await async_requests.get(
+        url_path_join(public_url(app, user), 'api/contents/'), headers=headers
+    )
+    r.raise_for_status()
+    root_contents = sorted(item['name'] for item in r.json()['content'])
+
+    # check contents
+    if not notebook_dir or notebook_dir == "~":
+        # use any to avoid counting possible automatically created files in $HOME
+        assert 'sub' in root_contents
+    elif notebook_dir == "ABS":
+        assert 'absfile.txt' in root_contents
+    elif notebook_dir == "~/sub":
+        assert 'subfile.txt' in root_contents
+    else:
+        raise ValueError(f"No contents check for {notebook_dir=}")
+
+
+@pytest.mark.skipif(IS_JUPYVERSE, reason="jupyverse has no --help-all")
 def test_help_output():
     out = check_output(
         [sys.executable, '-m', 'jupyterhub.singleuser', '--help-all']
@@ -205,6 +294,7 @@ def test_help_output():
     assert 'JupyterHub' in out
 
 
+@pytest.mark.skipif(IS_JUPYVERSE, reason="jupyverse has not --version")
 def test_version():
     out = check_output(
         [sys.executable, '-m', 'jupyterhub.singleuser', '--version']
@@ -271,9 +361,11 @@ def test_singleuser_app_class(JUPYTERHUB_SINGLEUSER_APP):
         assert '--NotebookApp.' not in out
 
 
+@pytest.mark.skipif(IS_JUPYVERSE, reason="nbclassic specific test")
 async def test_nbclassic_control_panel(app, user, full_spawn):
     # login, start the server
     await user.spawn()
+    await app.proxy.add_user(user)
     cookies = await app.login_user(user.name)
     next_url = url_path_join(user.url, "tree/")
     url = '/?' + urlencode({'next': next_url})
@@ -288,3 +380,38 @@ async def test_nbclassic_control_panel(app, user, full_spawn):
     else:
         prefix = app.base_url
     assert link["href"] == url_path_join(prefix, "hub/home")
+
+
+@pytest.mark.skipif(
+    IS_JUPYVERSE, reason="jupyverse doesn't implement token authentication"
+)
+async def test_token_url_cookie(app, user, full_spawn):
+    await user.spawn()
+    await app.proxy.add_user(user)
+    token = user.new_api_token(scopes=["access:servers!user"])
+    url = url_path_join(public_url(app, user), user.spawner.default_url or "/tree/")
+
+    # first request: auth with token in URL
+    r = await async_requests.get(url + f"?token={token}", allow_redirects=False)
+    print(r.url, r.status_code)
+    assert r.status_code == 200
+    assert r.cookies
+    # second request, use cookies set by first response,
+    # no token in URL
+    r = await async_requests.get(url, cookies=r.cookies, allow_redirects=False)
+    assert r.status_code == 200
+
+    await user.stop()
+
+
+async def test_api_403_no_cookie(app, user, full_spawn):
+    """unused oauth cookies don't get set for failed requests to API handlers"""
+    await user.spawn()
+    await app.proxy.add_user(user)
+    url = url_path_join(public_url(app, user), "/api/contents/")
+    r = await async_requests.get(url, allow_redirects=False)
+    # 403, not redirect
+    assert r.status_code == 403
+    # no state cookie set
+    assert not r.cookies
+    await user.stop()

@@ -1,4 +1,5 @@
 """Tests for HTML pages"""
+
 import asyncio
 import sys
 from unittest import mock
@@ -220,15 +221,17 @@ async def test_spawn_other_user(
     cookies = await app.login_user(username)
     requester = app.users[username]
     name = user.name
+    assert username != user.name
 
     if has_access:
         if has_access == "group":
-            group.users.append(user)
+            group.users.append(user.orm_user)
             app.db.commit()
             scopes = [
                 f"access:servers!group={group.name}",
                 f"servers!group={group.name}",
             ]
+            assert group in user.orm_user.groups
         elif has_access == "all":
             scopes = ["access:servers", "servers"]
         elif has_access == "user":
@@ -305,7 +308,7 @@ async def test_spawn_page_access(
     requester = app.users[username]
     if has_access:
         if has_access == "group":
-            group.users.append(user)
+            group.users.append(user.orm_user)
             app.db.commit()
             scopes = [
                 f"access:servers!group={group.name}",
@@ -408,7 +411,7 @@ async def test_spawn_form_other_user(
     requester = app.users[username]
     if has_access:
         if has_access == "group":
-            group.users.append(user)
+            group.users.append(user.orm_user)
             app.db.commit()
             scopes = [
                 f"access:servers!group={group.name}",
@@ -635,7 +638,7 @@ async def test_other_user_url(app, username, user, group, create_temp_role, has_
     other_user_url = f"/user/{other_user.name}"
     if has_access:
         if has_access == "group":
-            group.users.append(other_user)
+            group.users.append(other_user.orm_user)
             app.db.commit()
             scopes = [f"access:servers!group={group.name}"]
         elif has_access == "all":
@@ -761,7 +764,7 @@ async def test_login_strip(app, form_user, auth_user, form_password):
         (False, '', '', None),
         # next_url is respected
         (False, '/hub/admin', '/hub/admin', None),
-        (False, '/user/other', '/hub/user/other', None),
+        (False, '/user/other', '/user/other', None),
         (False, '/absolute', '/absolute', None),
         (False, '/has?query#andhash', '/has?query#andhash', None),
         # :// in query string or fragment
@@ -1286,3 +1289,37 @@ async def test_pre_spawn_start_exc_options_form(app):
         # spawning the user server should throw the pre_spawn_start error
         with pytest.raises(Exception, match="%s" % exc):
             await user.spawn()
+
+
+@pytest.mark.parametrize(
+    "scope, display, present",
+    [
+        ("access:services", True, True),
+        ("access:services!service=SERVICE", True, True),
+        ("access:services!service=SERVICE", False, False),
+        ("access:services!service=other", True, False),
+        ("", True, False),
+    ],
+)
+async def test_services_nav_links(
+    app, mockservice_url, create_user_with_scopes, scope, display, present
+):
+    service = mockservice_url
+    service.display = display
+    scopes = []
+    if scope:
+        scope = scope.replace("SERVICE", service.name)
+        scopes.append(scope)
+    user = create_user_with_scopes(*scopes)
+
+    cookies = await app.login_user(user.name)
+    r = await get_page("home", app, cookies=cookies)
+    assert r.status_code == 200
+    page = BeautifulSoup(r.text)
+    nav = page.find("ul", class_="nav")
+    # find service links
+    nav_urls = [a["href"] for a in nav.find_all("a")]
+    if present:
+        assert service.href in nav_urls
+    else:
+        assert service.href not in nav_urls

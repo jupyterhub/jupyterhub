@@ -60,8 +60,9 @@ The essential pieces for using JupyterHub as an OAuth provider are:
            "name": "my-service",
            # the oauth client id of your service
            # must be unique but isn't private
-           # can be randomly generated or hand-written
-           "oauth_client_id": "abc123",
+           # can be randomly generated or hand-written, but must
+           # begin with service-
+           "oauth_client_id": "service-abc123",
            # the API token and client secret of the service
            # should be generated securely,
            # e.g. via `openssl rand -hex 32`
@@ -77,7 +78,7 @@ The essential pieces for using JupyterHub as an OAuth provider are:
 
 The relevant OAuth URLs and keys for using JupyterHub as an OAuth provider are:
 
-1. the client_id, used in oauth requests
+1. the client_id, used in oauth requests. This must begin with the characters `service-`
 2. the api token registered with jupyterhub is the client_secret for oauth requests
 3. oauth url of the Hub, which is "/hub/api/oauth2/authorize", e.g. `https://myhub.horse/hub/api/oauth2/authorize`
 4. a redirect handler to receive the authenticated response

@@ -1,4 +1,5 @@
 """Test a proxy being started before the Hub"""
+
 import json
 import os
 from contextlib import contextmanager
@@ -9,8 +10,8 @@ import pytest
 from traitlets import TraitError
 from traitlets.config import Config
 
+from ..utils import random_port, wait_for_http_server
 from ..utils import url_path_join as ujoin
-from ..utils import wait_for_http_server
 from .mocking import MockHub
 from .test_api import add_user, api_request
 from .utils import skip_if_ssl
@@ -19,18 +20,19 @@ from .utils import skip_if_ssl
 @pytest.fixture
 def disable_check_routes(app):
     # disable periodic check_routes while we are testing
-    app.last_activity_callback.stop()
+    app._periodic_callbacks["last_activity"].stop()
     try:
         yield
     finally:
-        app.last_activity_callback.start()
+        app._periodic_callbacks["last_activity"].start()
 
 
 @skip_if_ssl
+@pytest.mark.flaky(reruns=2)
 async def test_external_proxy(request):
     auth_token = 'secret!'
     proxy_ip = '127.0.0.1'
-    proxy_port = 54321
+    proxy_port = random_port()
     cfg = Config()
     cfg.ConfigurableHTTPProxy.auth_token = auth_token
     cfg.ConfigurableHTTPProxy.api_url = 'http://%s:%i' % (proxy_ip, proxy_port)
@@ -127,7 +129,7 @@ async def test_external_proxy(request):
     proxy.wait(timeout=10)
     new_auth_token = 'different!'
     env['CONFIGPROXY_AUTH_TOKEN'] = new_auth_token
-    proxy_port = 55432
+    proxy_port = random_port()
     cmd = [
         'configurable-http-proxy',
         '--ip',

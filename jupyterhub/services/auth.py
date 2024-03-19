@@ -23,21 +23,21 @@ If you are using OAuth, you will also need to register an oauth callback handler
 A tornado implementation is provided in :class:`HubOAuthCallbackHandler`.
 
 """
+
 import asyncio
-import base64
 import hashlib
 import json
 import os
 import random
 import re
+import secrets
 import socket
 import string
 import time
-import uuid
 import warnings
 from http import HTTPStatus
 from unittest import mock
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 from tornado.httputil import url_concat
@@ -106,14 +106,24 @@ class _ExpiringDict(dict):
     """
 
     max_age = 0
+    purge_interval = 0
 
-    def __init__(self, max_age=0):
+    def __init__(self, max_age=0, purge_interval="max_age"):
         self.max_age = max_age
+        if purge_interval == "max_age":
+            # default behavior: use max_age
+            purge_interval = max_age
+        self.purge_interval = purge_interval
         self.timestamps = {}
         self.values = {}
+        self._last_purge = time.monotonic()
+
+    def __len__(self):
+        return len(self.values)
 
     def __setitem__(self, key, value):
         """Store key and record timestamp"""
+        self._maybe_purge()
         self.timestamps[key] = time.monotonic()
         self.values[key] = value
 
@@ -139,6 +149,7 @@ class _ExpiringDict(dict):
         if self.max_age > 0 and timestamp + self.max_age < now:
             self.values.pop(key)
             self.timestamps.pop(key)
+        self._maybe_purge()
 
     def __contains__(self, key):
         """dict check for `key in dict`"""
@@ -150,17 +161,57 @@ class _ExpiringDict(dict):
         self._check_age(key)
         return self.values[key]
 
+    def __delitem__(self, key):
+        del self.values[key]
+        del self.timestamps[key]
+
     def get(self, key, default=None):
-        """dict-like get:"""
+        """dict-like get"""
         try:
             return self[key]
         except KeyError:
             return default
 
+    def pop(self, key, default="_raise"):
+        """Remove and return an item"""
+        if key in self:
+            value = self.values.pop(key)
+            del self.timestamps[key]
+            return value
+        else:
+            if default == "_raise":
+                raise KeyError(key)
+            else:
+                return default
+
     def clear(self):
         """Clear the cache"""
         self.values.clear()
         self.timestamps.clear()
+        self._last_purge = time.monotonic()
+
+    # extended methods
+    def _maybe_purge(self):
+        """purge expired values _if_ it's been purge_interval since the last purge
+
+        Called on every get/set, to keep the expired values clear.
+        """
+        if not self.purge_interval > 0:
+            return
+        now = time.monotonic()
+        if self._last_purge < (now - self.purge_interval):
+            self.purge_expired()
+
+    def purge_expired(self):
+        """Purge all expired values"""
+        if not self.max_age > 0:
+            return
+        now = self._last_purge = time.monotonic()
+        cutoff = now - self.max_age
+        for key in list(self.timestamps):
+            timestamp = self.timestamps[key]
+            if timestamp < cutoff:
+                del self[key]
 
 
 class HubAuth(SingletonConfigurable):
@@ -596,6 +647,9 @@ class HubAuth(SingletonConfigurable):
         - in URL parameters: ?token=<token>
         - in header: Authorization: token <token>
         - in cookie (stored after oauth), if in_cookie is True
+
+        Args:
+            handler (tornado.web.RequestHandler): the current request handler
         """
 
         user_token = handler.get_argument('token', '')
@@ -623,6 +677,9 @@ class HubAuth(SingletonConfigurable):
         """Get the jupyterhub session id
 
         from the jupyterhub-session-id cookie.
+
+        Args:
+            handler (tornado.web.RequestHandler): the current request handler
         """
         return handler.get_cookie('jupyterhub-session-id', '')
 
@@ -679,6 +736,33 @@ class HubAuth(SingletonConfigurable):
     def check_scopes(self, required_scopes, user):
         """Check whether the user has required scope(s)"""
         return check_scopes(required_scopes, set(user["scopes"]))
+
+    def _persist_url_token_if_set(self, handler):
+        """Persist ?token=... from URL in cookie if set
+
+        for use in future cookie-authenticated requests.
+
+        Allows initiating an authenticated session
+        via /user/name/?token=abc...,
+        otherwise only the initial request will be authenticated.
+
+        No-op if no token URL parameter is given.
+        """
+        url_token = handler.get_argument('token', '')
+        if not url_token:
+            # no token to persist
+            return
+        # only do this if the token in the URL is the source of authentication
+        if not getattr(handler, '_token_authenticated', False):
+            return
+        if not hasattr(self, 'set_cookie'):
+            # only HubOAuth can persist cookies
+            return
+        self.log.info(
+            "Storing token from url in cookie for %s",
+            handler.request.remote_ip,
+        )
+        self.set_cookie(handler, url_token)
 
 
 class HubOAuth(HubAuth):
@@ -821,37 +905,32 @@ class HubOAuth(HubAuth):
 
         return token_reply['access_token']
 
-    def _encode_state(self, state):
-        """Encode a state dict as url-safe base64"""
-        # trim trailing `=` because = is itself not url-safe!
-        json_state = json.dumps(state)
-        return (
-            base64.urlsafe_b64encode(json_state.encode('utf8'))
-            .decode('ascii')
-            .rstrip('=')
-        )
+    # state-related
 
-    def _decode_state(self, b64_state):
-        """Decode a base64 state
+    oauth_state_max_age = Integer(
+        600,
+        config=True,
+        help="""Max age (seconds) of oauth state.
+        
+        Governs both oauth state cookie Max-Age,
+        as well as the in-memory _oauth_states cache.
+        """,
+    )
+    _oauth_states = Instance(
+        _ExpiringDict,
+        allow_none=False,
+        help="""
+        Store oauth state info for each oauth request, such as next_url
+        
+        The oauth state field only contains the oauth state _id_ of each pending request,
+        while other information such as the cookie name, next_url
+        are stored in this dictionary.
+        """,
+    )
 
-        Always returns a dict.
-        The dict will be empty if the state is invalid.
-        """
-        if isinstance(b64_state, str):
-            b64_state = b64_state.encode('ascii')
-        if len(b64_state) != 4:
-            # restore padding
-            b64_state = b64_state + (b'=' * (4 - len(b64_state) % 4))
-        try:
-            json_state = base64.urlsafe_b64decode(b64_state).decode('utf8')
-        except ValueError:
-            app_log.error("Failed to b64-decode state: %r", b64_state)
-            return {}
-        try:
-            return json.loads(json_state)
-        except ValueError:
-            app_log.error("Failed to json-decode state: %r", json_state)
-            return {}
+    @default('_oauth_states')
+    def _default_oauth_states(self):
+        return _ExpiringDict(max_age=self.oauth_state_max_age)
 
     def set_state_cookie(self, handler, next_url=None):
         """Generate an OAuth state and store it in a cookie
@@ -881,7 +960,7 @@ class HubOAuth(HubAuth):
             extra_state['cookie_name'] = cookie_name
         else:
             cookie_name = self.state_cookie_name
-        b64_state = self.generate_state(next_url, **extra_state)
+        state_id = self.generate_state(next_url, **extra_state)
         kwargs = {
             'path': self.base_url,
             'httponly': True,
@@ -891,15 +970,30 @@ class HubOAuth(HubAuth):
             # OAuth that doesn't complete shouldn't linger too long.
             'max_age': 600,
         }
-        if get_browser_protocol(handler.request) == 'https':
-            kwargs['secure'] = True
+        public_url = os.getenv("JUPYTERHUB_PUBLIC_URL")
+        if public_url:
+            if urlparse(public_url).scheme == 'https':
+                kwargs['secure'] = True
+        else:
+            if get_browser_protocol(handler.request) == 'https':
+                kwargs['secure'] = True
+
+        # don't allow overriding some fields
+        no_override_keys = set(kwargs.keys()) | {"expires_days", "expires"}
+
         # load user cookie overrides
-        kwargs.update(self.cookie_options)
-        handler.set_secure_cookie(cookie_name, b64_state, **kwargs)
-        return b64_state
+        for key, value in self.cookie_options.items():
+            # don't include overrides
+            if key.lower() not in no_override_keys:
+                kwargs[key] = value
+        handler.set_secure_cookie(cookie_name, state_id, **kwargs)
+        return state_id
 
     def generate_state(self, next_url=None, **extra_state):
         """Generate a state string, given a next_url redirect target
+
+        The state info is stored locally in self._oauth_states,
+        and only the state id is returned for use in the oauth state field (cookie, redirect param)
 
         Parameters
         ----------
@@ -908,24 +1002,44 @@ class HubOAuth(HubAuth):
 
         Returns
         -------
-        state (str): The base64-encoded state string.
+        state_id (str): The state string to be used as a cookie value.
         """
-        state = {'uuid': uuid.uuid4().hex, 'next_url': next_url}
-        state.update(extra_state)
-        return self._encode_state(state)
+        state_id = secrets.token_urlsafe(16)
+        state = {'next_url': next_url}
+        if extra_state:
+            state.update(extra_state)
+        self._oauth_states[state_id] = state
+        return state_id
 
-    def get_next_url(self, b64_state=''):
+    def clear_oauth_state(self, state_id):
+        """Clear persisted oauth state"""
+        self._oauth_states.pop(state_id, None)
+        self._oauth_states.purge_expired()
+
+    def clear_oauth_state_cookies(self, handler):
+        """Clear persisted oauth state"""
+        for cookie_name, cookie in handler.request.cookies.items():
+            if cookie_name.startswith(self.state_cookie_name):
+                handler.clear_cookie(
+                    cookie_name,
+                    path=self.base_url,
+                )
+
+    def _decode_state(self, state_id, /):
+        return self._oauth_states.get(state_id, {})
+
+    def get_next_url(self, state_id='', /):
         """Get the next_url for redirection, given an encoded OAuth state"""
-        state = self._decode_state(b64_state)
+        state = self._decode_state(state_id)
         return state.get('next_url') or self.base_url
 
-    def get_state_cookie_name(self, b64_state=''):
+    def get_state_cookie_name(self, state_id='', /):
         """Get the cookie name for oauth state, given an encoded OAuth state
 
         Cookie name is stored in the state itself because the cookie name
         is randomized to deal with races between concurrent oauth sequences.
         """
-        state = self._decode_state(b64_state)
+        state = self._decode_state(state_id)
         return state.get('cookie_name') or self.state_cookie_name
 
     def set_cookie(self, handler, access_token):
@@ -944,7 +1058,11 @@ class HubOAuth(HubAuth):
         handler.set_secure_cookie(self.cookie_name, access_token, **kwargs)
 
     def clear_cookie(self, handler):
-        """Clear the OAuth cookie"""
+        """Clear the OAuth cookie
+
+        Args:
+            handler (tornado.web.RequestHandler): the current request handler
+        """
         handler.clear_cookie(self.cookie_name, path=self.base_url)
 
 
@@ -1042,19 +1160,30 @@ class HubAuthenticated:
     def hub_auth(self, auth):
         self._hub_auth = auth
 
+    _hub_login_url = None
+
     def get_login_url(self):
         """Return the Hub's login URL"""
-        login_url = self.hub_auth.login_url
-        if isinstance(self.hub_auth, HubOAuth):
-            # add state argument to OAuth url
-            state = self.hub_auth.set_state_cookie(self, next_url=self.request.uri)
-            login_url = url_concat(login_url, {'state': state})
+        if self._hub_login_url is not None:
+            # cached value, don't call this more than once per handler
+            return self._hub_login_url
         # temporary override at setting level,
         # to allow any subclass overrides of get_login_url to preserve their effect
         # for example, APIHandler raises 403 to prevent redirects
-        with mock.patch.dict(self.application.settings, {"login_url": login_url}):
-            app_log.debug("Redirecting to login url: %s", login_url)
-            return super().get_login_url()
+        with mock.patch.dict(
+            self.application.settings, {"login_url": self.hub_auth.login_url}
+        ):
+            login_url = super().get_login_url()
+        app_log.debug("Redirecting to login url: %s", login_url)
+
+        if isinstance(self.hub_auth, HubOAuth):
+            # add state argument to OAuth url
+            # must do this _after_ allowing get_login_url to raise
+            # so we don't set unused cookies
+            state = self.hub_auth.set_state_cookie(self, next_url=self.request.uri)
+            login_url = url_concat(login_url, {'state': state})
+        self._hub_login_url = login_url
+        return login_url
 
     def check_hub_user(self, model):
         """Check whether Hub-authenticated user or service should be allowed.
@@ -1165,18 +1294,7 @@ class HubAuthenticated:
             self._hub_auth_user_cache = None
             raise
 
-        # store ?token=... tokens passed via url in a cookie for future requests
-        url_token = self.get_argument('token', '')
-        if (
-            user_model
-            and url_token
-            and getattr(self, '_token_authenticated', False)
-            and hasattr(self.hub_auth, 'set_cookie')
-        ):
-            # authenticated via `?token=`
-            # set a cookie for future requests
-            # hub_auth.set_cookie is only available on HubOAuth
-            self.hub_auth.set_cookie(self, url_token)
+        self.hub_auth._persist_url_token_if_set(self)
         return self._hub_auth_user_cache
 
 
@@ -1204,23 +1322,42 @@ class HubOAuthCallbackHandler(HubOAuthenticated, RequestHandler):
 
         code = self.get_argument("code", False)
         if not code:
-            raise HTTPError(400, "oauth callback made without a token")
+            raise HTTPError(400, "OAuth callback made without a token")
 
         # validate OAuth state
         arg_state = self.get_argument("state", None)
         if arg_state is None:
-            raise HTTPError(500, "oauth state is missing. Try logging in again.")
+            raise HTTPError(400, "OAuth state is missing. Try logging in again.")
         cookie_name = self.hub_auth.get_state_cookie_name(arg_state)
         cookie_state = self.get_secure_cookie(cookie_name)
         # clear cookie state now that we've consumed it
-        self.clear_cookie(cookie_name, path=self.hub_auth.base_url)
+        if cookie_state:
+            self.clear_cookie(cookie_name, path=self.hub_auth.base_url)
+        else:
+            # completing oauth with stale state, but already logged in.
+            # stop here and redirect to default URL
+            # don't complete oauth (no new token), but do complete redirecting to the destination
+            if self.current_user:
+                app_log.warning("Attempting oauth completion after already logging in.")
+                self.hub_auth.clear_oauth_state_cookies(self)
+                next_url = self.hub_auth.get_next_url(arg_state)
+                self.redirect(next_url)
+                return
+
         if isinstance(cookie_state, bytes):
             cookie_state = cookie_state.decode('ascii', 'replace')
+
         # check that state matches
         if arg_state != cookie_state:
             app_log.warning("oauth state %r != %r", arg_state, cookie_state)
-            raise HTTPError(403, "oauth state does not match. Try logging in again.")
+            raise HTTPError(403, "OAuth state does not match. Try logging in again.")
         next_url = self.hub_auth.get_next_url(cookie_state)
+        # clear consumed state from _oauth_states cache now that we're done with it
+        self.hub_auth.clear_oauth_state(cookie_state)
+        # clear _all_ oauth state cookies on success
+        # This prevents multiple concurrent logins in the same browser,
+        # which is probably okay.
+        self.hub_auth.clear_oauth_state_cookies(self)
 
         token = await self.hub_auth.token_for_code(code, sync=False)
         session_id = self.hub_auth.get_session_id(self)
@@ -1229,6 +1366,7 @@ class HubOAuthCallbackHandler(HubOAuthenticated, RequestHandler):
         )
         if user_model is None:
             raise HTTPError(500, "oauth callback failed to identify a user")
-        app_log.info("Logged-in user %s", user_model)
+        app_log.info("Logged-in user %s", user_model['name'])
+        app_log.debug("User model %s", user_model)
         self.hub_auth.set_cookie(self, token)
         self.redirect(next_url or self.hub_auth.base_url)

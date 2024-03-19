@@ -14,6 +14,7 @@ intersection : set of expanded scopes as intersection of 2 expanded scope sets
 identify scopes: set of expanded scopes needed for identify (whoami) endpoints
 reduced scopes: expanded scopes that have been reduced
 """
+
 import functools
 import inspect
 import re
@@ -123,6 +124,10 @@ scope_definitions = {
     'delete:groups': {
         'description': "Delete groups.",
     },
+    'admin:services': {
+        'description': 'Create, read, update, delete services, not including services defined from config files.',
+        'subscopes': ['list:services', 'read:services', 'read:roles:services'],
+    },
     'list:services': {
         'description': 'List services, including at least their names.',
         'subscopes': ['read:services:name'],
@@ -138,6 +143,36 @@ scope_definitions = {
     },
     'access:services': {
         'description': 'Access services via API or browser.',
+    },
+    'users:shares': {
+        'description': "Read and revoke a user's access to shared servers.",
+        'subscopes': [
+            'read:users:shares',
+        ],
+    },
+    'read:users:shares': {
+        'description': "Read servers shared with a user.",
+    },
+    'groups:shares': {
+        'description': "Read and revoke a group's access to shared servers.",
+        'subscopes': [
+            'read:groups:shares',
+        ],
+    },
+    'read:groups:shares': {
+        'description': "Read servers shared with a group.",
+    },
+    'read:shares': {
+        'description': "Read information about shared access to servers.",
+    },
+    'shares': {
+        'description': "Manage access to shared servers.",
+        'subscopes': [
+            'access:servers',
+            'read:shares',
+            'users:shares',
+            'groups:shares',
+        ],
     },
     'proxy': {
         'description': 'Read information about the proxy’s routing table, sync the Hub with the proxy and notify the Hub about a new proxy.'
@@ -173,24 +208,24 @@ def _intersect_expanded_scopes(scopes_a, scopes_b, db=None):
     Otherwise, it can result in lower than intended permissions,
           (i.e. users!group=x & users!user=y will be empty, even if user y is in group x.)
     """
-    empty_set = frozenset()
     scopes_a = frozenset(scopes_a)
     scopes_b = frozenset(scopes_b)
 
     # cached lookups for group membership of users and servers
-    @lru_cache()
+    @lru_cache
     def groups_for_user(username):
         """Get set of group names for a given username"""
         # if we need a group lookup, the result is not cacheable
         nonlocal needs_db
         needs_db = True
-        user = db.query(orm.User).filter_by(name=username).first()
-        if user is None:
-            return empty_set
-        else:
-            return {group.name for group in user.groups}
+        group_query = (
+            db.query(orm.Group.name)
+            .join(orm.User.groups)
+            .filter(orm.User.name == username)
+        )
+        return {row[0] for row in group_query}
 
-    @lru_cache()
+    @lru_cache
     def groups_for_server(server):
         """Get set of group names for a given server"""
         username, _, servername = server.partition("/")
@@ -253,8 +288,12 @@ def _intersect_expanded_scopes(scopes_a, scopes_b, db=None):
             }
 
             # resolve hierarchies (group/user/server) in both directions
-            common_servers = common_filters[base].get("server", set())
-            common_users = common_filters[base].get("user", set())
+            common_servers = initial_common_servers = common_filters[base].get(
+                "server", frozenset()
+            )
+            common_users = initial_common_users = common_filters[base].get(
+                "user", frozenset()
+            )
 
             for a, b in [(filters_a, filters_b), (filters_b, filters_a)]:
                 if 'server' in a and b.get('server') != a['server']:
@@ -266,7 +305,7 @@ def _intersect_expanded_scopes(scopes_a, scopes_b, db=None):
                         for server in servers:
                             username, _, servername = server.partition("/")
                             if username in b['user']:
-                                common_servers.add(server)
+                                common_servers = common_servers | {server}
 
                     # resolve group/server hierarchy if db available
                     servers = servers.difference(common_servers)
@@ -275,7 +314,7 @@ def _intersect_expanded_scopes(scopes_a, scopes_b, db=None):
                         for server in servers:
                             server_groups = groups_for_server(server)
                             if server_groups & b['group']:
-                                common_servers.add(server)
+                                common_servers = common_servers | {server}
 
                 # resolve group/user hierarchy if db available and user sets aren't identical
                 if (
@@ -289,14 +328,16 @@ def _intersect_expanded_scopes(scopes_a, scopes_b, db=None):
                     for username in users:
                         groups = groups_for_user(username)
                         if groups & b["group"]:
-                            common_users.add(username)
+                            common_users = common_users | {username}
 
-            # add server filter if there wasn't one before
-            if common_servers and "server" not in common_filters[base]:
+            # add server filter if it's non-empty
+            # and it changed
+            if common_servers and common_servers != initial_common_servers:
                 common_filters[base]["server"] = common_servers
 
-            # add user filter if it's non-empty and there wasn't one before
-            if common_users and "user" not in common_filters[base]:
+            # add user filter if it's non-empty
+            # and it changed
+            if common_users and common_users != initial_common_users:
                 common_filters[base]["user"] = common_users
 
     intersection = unparse_scopes(common_filters)
@@ -337,6 +378,9 @@ def get_scopes_for(orm_object):
         owner = orm_object.user or orm_object.service
         owner_roles = roles.get_roles_for(owner)
         owner_scopes = roles.roles_to_expanded_scopes(owner_roles, owner)
+        if owner is orm_object.user:
+            for share in owner.shared_with_me:
+                owner_scopes |= frozenset(share.scopes)
 
         token_scopes = set(orm_object.scopes)
         if 'inherit' in token_scopes:
@@ -390,13 +434,29 @@ def get_scopes_for(orm_object):
             roles.get_roles_for(orm_object),
             owner=orm_object,
         )
-        if isinstance(orm_object, (orm.User, orm.Service)):
-            owner = orm_object
+
+        # add permissions granted from 'shares'
+        if hasattr(orm_object, "shared_with_me"):
+            for share in orm_object.shared_with_me:
+                expanded_scopes |= expand_share_scopes(share)
+        if isinstance(orm_object, orm.User):
+            for group in orm_object.groups:
+                for share in group.shared_with_me:
+                    expanded_scopes |= expand_share_scopes(share)
 
     return expanded_scopes
 
 
-@lru_cache()
+def expand_share_scopes(share):
+    """Get expanded scopes for a Share"""
+    return expand_scopes(
+        share.scopes,
+        owner=share.user or share.group,
+        oauth_client=share.spawner.oauth_client,
+    )
+
+
+@lru_cache
 def _expand_self_scope(username):
     """
     Users have a metascope 'self' that should be expanded to standard user privileges.
@@ -420,6 +480,9 @@ def _expand_self_scope(username):
         'read:users',
         'read:users:name',
         'read:users:groups',
+        'users:shares',
+        'read:users:shares',
+        'read:shares',
         'users:activity',
         'read:users:activity',
         'servers',
@@ -435,7 +498,7 @@ def _expand_self_scope(username):
 
 @lru_cache(maxsize=65535)
 def _expand_scope(scope):
-    """Returns a scope and all all subscopes
+    """Returns a scope and all subscopes
 
     Arguments:
       scope (str): the scope to expand
@@ -636,68 +699,112 @@ def _resolve_requested_scopes(requested_scopes, have_scopes, user, client, db):
     return (allowed_scopes, disallowed_scopes)
 
 
-def _needs_scope_expansion(filter_, filter_value, sub_scope):
+def _needs_group_expansion(filter_, filter_value, sub_scope):
     """
     Check if there is a requirements to expand the `group` scope to individual `user` scopes.
     Assumptions:
     filter_ != Scope.ALL
     """
-    if not (filter_ == 'user' and 'group' in sub_scope):
+    if not (filter_ in {'user', 'server'} and 'group' in sub_scope):
         return False
-    if 'user' in sub_scope:
-        return filter_value not in sub_scope['user']
+    if filter_ in sub_scope:
+        return filter_value not in sub_scope[filter_]
     else:
         return True
 
 
-def _check_user_in_expanded_scope(handler, user_name, scope_group_names):
-    """Check if username is present in set of allowed groups"""
-    user = handler.find_user(user_name)
-    if user is None:
-        raise web.HTTPError(404, "No access to resources or resources not found")
-    group_names = {group.name for group in user.groups}
-    return bool(set(scope_group_names) & group_names)
+def _has_scope_key(scope, have_scopes, *, post_filter=False, db=None):
+    """Cache key for has_scope"""
+    if isinstance(have_scopes, dict):
+        have_scopes = FrozenDict(have_scopes)
+    else:
+        have_scopes = frozenset(have_scopes)
+    return (scope, have_scopes, post_filter)
 
 
-def _check_scope_access(api_handler, req_scope, **kwargs):
-    """Check if scopes satisfy requirements
-    Returns True for (potentially restricted) access, False for refused access
+@lru_cache_key(_has_scope_key)
+def has_scope(scope, have_scopes, *, post_filter=False, db=None):
+    """Boolean function for whether we have a given scope
+
+    Args:
+        scope (str): a single scope
+        have_scopes: parsed_scopes dict or expanded_scopes set
+        post_filter (bool):
+            Allows returning true if _some_ access is granted,
+            if not full access.
+            Only allowed if scope has no filter
+        db (optional): the db session
+            Required to check group membership,
+            unused otherwise
+    Returns:
+        True if access is allowed, False otherwise.
+        If post_filer is True and have_scopes contains _filtered_ access,
+        will return True, assuming filtered-access will be handled later
+        (e.g. in the listing-users handler)
     """
-    # Parse user name and server name together
-    try:
-        api_name = api_handler.request.path
-    except AttributeError:
-        api_name = type(api_handler).__name__
-    if 'user' in kwargs and 'server' in kwargs:
-        kwargs['server'] = "{}/{}".format(kwargs['user'], kwargs['server'])
-    if req_scope not in api_handler.parsed_scopes:
-        app_log.debug("No access to %s via %s", api_name, req_scope)
-        return False
-    if api_handler.parsed_scopes[req_scope] == Scope.ALL:
-        app_log.debug("Unrestricted access to %s via %s", api_name, req_scope)
-        return True
-    # Apply filters
-    sub_scope = api_handler.parsed_scopes[req_scope]
-    if not kwargs:
-        app_log.debug(
-            "Client has restricted access to %s via %s. Internal filtering may apply",
-            api_name,
-            req_scope,
+    req_scope, _, full_filter = scope.partition("!")
+    filter_, _, filter_value = full_filter.partition("=")
+    if filter_ and not filter_value:
+        raise ValueError(
+            f"Unexpanded scope filter {scope} not allowed. Use expanded scopes."
         )
+
+    if isinstance(have_scopes, dict):
+        parsed_scopes = have_scopes
+    else:
+        parsed_scopes = parse_scopes(have_scopes)
+
+    if req_scope not in parsed_scopes:
+        return False
+    have_scope_filters = parsed_scopes[req_scope]
+    if have_scope_filters == Scope.ALL:
+        # access to all resources
         return True
-    for filter_, filter_value in kwargs.items():
-        if filter_ in sub_scope and filter_value in sub_scope[filter_]:
-            app_log.debug("Argument-based access to %s via %s", api_name, req_scope)
+
+    if not filter_:
+        if post_filter:
+            # allow filtering after the fact
             return True
-        if _needs_scope_expansion(filter_, filter_value, sub_scope):
-            group_names = sub_scope['group']
-            if _check_user_in_expanded_scope(api_handler, filter_value, group_names):
-                app_log.debug("Restricted client access supported with group expansion")
-                return True
-    app_log.debug(
-        "Client access refused; filters do not match API endpoint %s request" % api_name
-    )
-    raise web.HTTPError(404, "No access to resources or resources not found")
+        else:
+            return False
+
+    if post_filter:
+        raise ValueError("post_filter=True only allowed for unfiltered scopes")
+    _db_used = False
+
+    if filter_ in have_scope_filters and filter_value in have_scope_filters[filter_]:
+        return True
+
+    # server->user
+    if filter_ == "server" and "user" in have_scope_filters:
+        user_name = filter_value.partition("/")[0]
+        if user_name in have_scope_filters["user"]:
+            return True
+
+    if db and _needs_group_expansion(filter_, filter_value, have_scope_filters):
+        _db_used = True
+        if filter_ == "user":
+            user_name = filter_value
+        elif filter_ == "server":
+            user_name = filter_value.partition("/")[0]
+        else:
+            raise ValueError(
+                f"filter_ should be 'user' or 'server' here, not {filter_!r}"
+            )
+        group_names = have_scope_filters['group']
+        have_group_query = (
+            db.query(orm.Group.name)
+            .join(orm.User.groups)
+            .filter(orm.User.name == user_name)
+            .filter(orm.Group.name.in_(group_names))
+        )
+        if have_group_query.count() > 0:
+            return DoNotCache(True)
+
+    if _db_used:
+        return DoNotCache(False)
+    else:
+        return False
 
 
 def _check_scopes_exist(scopes, who_for=None):
@@ -802,6 +909,8 @@ def parse_scopes(scope_list):
 
         if parsed_scopes[base_scope] != Scope.ALL:
             key, _, value = filter_.partition('=')
+            if not value:
+                raise ValueError(f"Empty string is not a valid filter: {scope}")
             if key not in parsed_scopes[base_scope]:
                 parsed_scopes[base_scope][key] = {value}
             else:
@@ -812,7 +921,7 @@ def parse_scopes(scope_list):
 
 @lru_cache_key(FrozenDict)
 def unparse_scopes(parsed_scopes):
-    """Turn a parsed_scopes dictionary back into a expanded scopes set"""
+    """Turn a parsed_scopes dictionary back into an expanded scopes set"""
     expanded_scopes = set()
     for base, filters in parsed_scopes.items():
         if filters == Scope.ALL:
@@ -845,6 +954,15 @@ def needs_scope(*scopes):
     def scope_decorator(func):
         @functools.wraps(func)
         def _auth_func(self, *args, **kwargs):
+            if not self.current_user:
+                # not authenticated at all, fail with more generic message
+                # this is the most likely permission error - missing or mis-specified credentials,
+                # don't indicate that they have insufficient permissions.
+                raise web.HTTPError(
+                    403,
+                    "Missing or invalid credentials.",
+                )
+
             sig = inspect.signature(func)
             bound_sig = sig.bind(self, *args, **kwargs)
             bound_sig.apply_defaults()
@@ -853,31 +971,64 @@ def needs_scope(*scopes):
                 self.expanded_scopes = {}
                 self.parsed_scopes = {}
 
+            try:
+                end_point = self.request.path
+            except AttributeError:
+                end_point = self.__name__
+
             s_kwargs = {}
             for resource in {'user', 'server', 'group', 'service'}:
                 resource_name = resource + '_name'
                 if resource_name in bound_sig.arguments:
                     resource_value = bound_sig.arguments[resource_name]
                     s_kwargs[resource] = resource_value
+
+            if "server" in s_kwargs:
+                # merge user_name, server_name into server=user/server
+                if "user" not in s_kwargs:
+                    raise ValueError(
+                        "Cannot filter on 'server_name' without 'user_name'"
+                    )
+                s_kwargs["server"] = f"{s_kwargs['user']}/{s_kwargs['server']}"
+                s_kwargs.pop("user")
+            if len(s_kwargs) > 1:
+                raise ValueError(
+                    f"Cannot filter on more than one field, got {s_kwargs}"
+                )
+            elif s_kwargs:
+                filter_, filter_value = next(iter(s_kwargs.items()))
+            else:
+                filter_ = filter_value = None
+
             for scope in scopes:
-                app_log.debug("Checking access via scope %s", scope)
-                has_access = _check_scope_access(self, scope, **s_kwargs)
+                if filter_ is not None:
+                    scope = f"{scope}!{filter_}={filter_value}"
+                app_log.debug("Checking access to %s via scope %s", end_point, scope)
+                has_access = has_scope(
+                    scope,
+                    self.parsed_scopes,
+                    post_filter=filter_ is None,
+                    db=self.db,
+                )
                 if has_access:
                     return func(self, *args, **kwargs)
-            try:
-                end_point = self.request.path
-            except AttributeError:
-                end_point = self.__name__
             app_log.warning(
-                "Not authorizing access to {}. Requires any of [{}], not derived from scopes [{}]".format(
-                    end_point, ", ".join(scopes), ", ".join(self.expanded_scopes)
-                )
+                "Not authorizing access to %s. Requires any of [%s] on %s, not derived from scopes [%s]",
+                end_point,
+                ", ".join(scopes),
+                "*" if filter_ is None else f"{filter_}={filter_value}",
+                ", ".join(self.expanded_scopes),
             )
+            if filter_ and any(scope in self.parsed_scopes for scope in scopes):
+                # not allowed due do filtered access,
+                # same error for nonexistence as missing permission
+                raise web.HTTPError(
+                    404, "No access to resources or resources not found"
+                )
             raise web.HTTPError(
                 403,
-                "Action is not authorized with current scopes; requires any of [{}]".format(
-                    ", ".join(scopes)
-                ),
+                "Action is not authorized with current scopes;"
+                f" requires any of [{', '.join(scopes)}]",
             )
 
         return _auth_func
@@ -918,17 +1069,28 @@ def identify_scopes(obj=None):
         raise TypeError(f"Expected orm.User or orm.Service, got {obj!r}")
 
 
-@lru_cache_key(lambda oauth_client: oauth_client.identifier)
-def access_scopes(oauth_client):
+def _access_cache_key(oauth_client=None, *, spawner=None, service=None):
+    if oauth_client:
+        return ("oauth", oauth_client.identifier)
+    elif spawner:
+        return ("spawner", spawner.user.name, spawner.name)
+    elif service:
+        return ("service", service.name)
+
+
+@lru_cache_key(_access_cache_key)
+def access_scopes(oauth_client=None, *, spawner=None, service=None):
     """Return scope(s) required to access an oauth client"""
     scopes = set()
-    if oauth_client.identifier == "jupyterhub":
+    if oauth_client and oauth_client.identifier == "jupyterhub":
         return frozenset()
-    spawner = oauth_client.spawner
+    if spawner is None and oauth_client:
+        spawner = oauth_client.spawner
     if spawner:
         scopes.add(f"access:servers!server={spawner.user.name}/{spawner.name}")
     else:
-        service = oauth_client.service
+        if service is None:
+            service = oauth_client.service
         if service:
             scopes.add(f"access:services!service={service.name}")
         else:
@@ -988,7 +1150,6 @@ def describe_parsed_scopes(parsed_scopes, username=None):
     """
     descriptions = []
     for scope, filters in parsed_scopes.items():
-        base_text = scope_definitions[scope]["description"]
         if filters == Scope.ALL:
             # no filter
             filter_text = ""
@@ -998,9 +1159,6 @@ def describe_parsed_scopes(parsed_scopes, username=None):
                 if kind == 'user' and names == {username}:
                     filter_chunks.append("only you")
                 else:
-                    kind_text = kind
-                    if kind == 'group':
-                        kind_text = "users in group"
                     if len(names) == 1:
                         filter_chunks.append(f"{kind}: {list(names)[0]}")
                     else:
@@ -1025,7 +1183,6 @@ def describe_raw_scopes(raw_scopes, username=None):
     descriptions = []
     for raw_scope in raw_scopes:
         scope, _, filter_ = raw_scope.partition("!")
-        base_text = scope_definitions[scope]["description"]
         if not filter_:
             # no filter
             filter_text = ""
@@ -1113,9 +1270,7 @@ def define_custom_scopes(scopes):
                 },
             }
         )
-    """ % indent(
-        _custom_scope_description, " " * 8
-    )
+    """ % indent(_custom_scope_description, " " * 8)
     for scope, scope_definition in scopes.items():
         if scope in scope_definitions and scope_definitions[scope] != scope_definition:
             raise ValueError(

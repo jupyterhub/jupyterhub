@@ -26,6 +26,7 @@ Other components
 - public_url
 
 """
+
 import asyncio
 import os
 import sys
@@ -35,6 +36,7 @@ from unittest import mock
 from urllib.parse import urlparse
 
 from pamela import PAMError
+from sqlalchemy import event
 from tornado.httputil import url_concat
 from traitlets import Bool, Dict, default
 
@@ -307,6 +309,21 @@ class MockHub(JupyterHub):
             for role in self.db.query(orm.Role):
                 self.db.delete(role)
             self.db.commit()
+
+        # count db requests
+        self.db_query_count = 0
+        engine = self.db.get_bind()
+
+        @event.listens_for(engine, "before_execute")
+        def before_execute(conn, clauseelement, multiparams, params, execution_options):
+            self.db_query_count += 1
+
+    def init_logging(self):
+        super().init_logging()
+        # enable log propagation for pytest capture
+        self.log.propagate = True
+        # clear unneeded handlers
+        self.log.handlers.clear()
 
     async def initialize(self, argv=None):
         self.pid_file = NamedTemporaryFile(delete=False).name

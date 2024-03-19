@@ -178,6 +178,57 @@ Note that only the {ref}`horizontal filtering <horizontal-filtering-target>` can
 Metascopes `self` and `all`, `<resource>`, `<resource>:<subresource>`, `read:<resource>`, `admin:<resource>`, and `access:<resource>` scopes are predefined and cannot be changed otherwise.
 ```
 
+(access-scopes)=
+
+### Access scopes
+
+An **access scope** is used to govern _access_ to a JupyterHub service or a user's single-user server.
+This means making API requests, or visiting via a browser using OAuth.
+Without the appropriate access scope, a user or token should not be permitted to make requests of the service.
+
+When you attempt to access a service or server authenticated with JupyterHub, it will begin the [oauth flow](jupyterhub-oauth) for issuing a token that can be used to access the service.
+If the user does not have the access scope for the relevant service or server, JupyterHub will not permit the oauth process to complete.
+If oauth completes, the token will have at least the access scope for the service.
+For minimal permissions, this is the _only_ scope granted to tokens issued during oauth by default,
+but can be expanded via {attr}`.Spawner.oauth_client_allowed_scopes` or a service's [`oauth_client_allowed_scopes`](service-credentials) configuration.
+
+:::{seealso}
+[Further explanation of OAuth in JupyterHub](jupyterhub-oauth)
+:::
+
+If a given service or single-user server can be governed by a single boolean "yes, you can use this service" or "no, you can't," or limiting via other existing scopes, access scopes are enough to manage access to the service.
+But you can also further control granular access to servers or services with [custom scopes](custom-scopes), to limit access to particular APIs within the service, e.g. read-only access.
+
+#### Example access scopes
+
+Some example access scopes for services:
+
+access:services
+: access to all services
+
+access:services!service=somename
+: access to the service named `somename`
+
+and for user servers:
+
+access:servers
+: access to all user servers
+
+access:servers!user
+: access to all of a user's _own_ servers (never in _resolved_ scopes, but may be used in configuration)
+
+access:servers!user=name
+: access to all of `name`'s servers
+
+access:servers!group=groupname
+: access to all servers owned by a user in the group `groupname`
+
+access:servers!server
+: access to only the issuing server (only relevant when applied to oauth tokens associated with a particular server, e.g. via the {attr}`Spawner.oauth_client_allowed_scopes` configuration.
+
+access:servers!server=username/
+: access to only `username`'s _default_ server.
+
 (custom-scopes)=
 
 ### Custom scopes
@@ -298,8 +349,24 @@ class MyHandler(HubOAuthenticated, BaseHandler):
 Existing scope filters (`!user=`, etc.) may be applied to custom scopes.
 Custom scope _filters_ are NOT supported.
 
+:::{warning}
+JupyterHub allows you to define custom scopes,
+but it does not enforce that your services apply them.
+
+For example, if you enable read-only access to servers via custom JupyterHub
+(as seen in the `read-only` example),
+it is the administrator's responsibility to enforce that they are applied.
+If you allow users to launch servers without that custom Authorizer,
+read-only permissions will not be enforced, and the default behavior of unrestricted access via the `access:servers` scope will be applied.
+:::
+
 ### Scopes and APIs
 
-The scopes are also listed in the [](jupyterhub-rest-API) documentation. Each API endpoint has a list of scopes which can be used to access the API; if no scopes are listed, the API is not authenticated and can be accessed without any permissions (i.e., no scopes).
+The scopes are also listed in the [](jupyterhub-rest-API) documentation.
+Each API endpoint has a list of scopes which can be used to access the API;
+if no scopes are listed, the API is not authenticated and can be accessed without any permissions (i.e., no scopes).
 
-Listed scopes by each API endpoint reflect the "lowest" permissions required to gain any access to the corresponding API. For example, posting user's activity (_POST /users/:name/activity_) needs `users:activity` scope. If scope `users` is passed during the request, the access will be granted as the required scope is a subscope of the `users` scope. If, on the other hand, `read:users:activity` scope is passed, the access will be denied.
+Listed scopes by each API endpoint reflect the "lowest" permissions required to gain any access to the corresponding API.
+For example, posting user's activity (_POST /users/:name/activity_) needs `users:activity` scope.
+If scope `users` is held by the request, the access will be granted as the required scope is a subscope of the `users` scope.
+If, on the other hand, `read:users:activity` scope is the only scope held, the request will be denied.

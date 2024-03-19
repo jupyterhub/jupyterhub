@@ -14,6 +14,7 @@ Route Specification:
   'host.tld/path/' for host-based routing or '/path/' for default routing.
 - Route paths should be normalized to always start and end with '/'
 """
+
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import asyncio
@@ -48,7 +49,7 @@ from jupyterhub.traitlets import Command
 from . import utils
 from .metrics import CHECK_ROUTES_DURATION_SECONDS, PROXY_POLL_DURATION_SECONDS
 from .objects import Server
-from .utils import AnyTimeoutError, exponential_backoff, url_escape_path, url_path_join
+from .utils import exponential_backoff, url_escape_path, url_path_join
 
 
 def _one_at_a_time(method):
@@ -336,8 +337,7 @@ class Proxy(LoggingConfigurable):
 
         if spawner.pending and spawner.pending != 'spawn':
             raise RuntimeError(
-                "%s is pending %s, shouldn't be added to the proxy yet!"
-                % (spawner._log_name, spawner.pending)
+                f"{spawner._log_name} is pending {spawner.pending}, shouldn't be added to the proxy yet!"
             )
 
         await self.add_route(
@@ -686,7 +686,9 @@ class ConfigurableHTTPProxy(Proxy):
         cmd = []
         proxy_api = 'proxy-api'
         proxy_client = 'proxy-client'
-        api_key = self.app.internal_proxy_certs[proxy_api][
+        api_key = self.app.internal_proxy_certs[
+            proxy_api
+        ][
             'keyfile'
         ]  # Check content in next test and just patch manulaly or in the config of the file
         api_cert = self.app.internal_proxy_certs[proxy_api]['certfile']
@@ -766,24 +768,67 @@ class ConfigurableHTTPProxy(Proxy):
 
         self._write_pid_file()
 
-        def _check_process():
-            status = self.proxy_process.poll()
-            if status is not None:
-                with self.proxy_process:
-                    e = RuntimeError("Proxy failed to start with exit code %i" % status)
-                    raise e from None
+        async def wait_for_process():
+            """Watch proxy process for early termination
 
-        for server in (public_server, api_server):
-            for i in range(10):
-                _check_process()
-                try:
-                    await server.wait_up(1)
-                except AnyTimeoutError:
-                    continue
-                else:
-                    break
-            await server.wait_up(1)
-        _check_process()
+            Runs forever, checking every 0.5s if the process has exited
+            so we don't keep waiting for endpoints after the proxy has stopped.
+
+            Raises RuntimeError if/when the proxy process exits,
+            otherwise runs forever.
+            Should be cancelled when servers become ready.
+            """
+            while True:
+                status = self.proxy_process.poll()
+                if status is not None:
+                    with self.proxy_process:
+                        e = RuntimeError(
+                            f"Proxy failed to start with exit code {status}"
+                        )
+                        raise e from None
+                await asyncio.sleep(0.5)
+
+        # process_exited can only resolve with a RuntimeError when the process has exited,
+        # otherwise it must be cancelled.
+        process_exited = asyncio.ensure_future(wait_for_process())
+
+        # wait for both servers to be ready (or one server to fail)
+        server_futures = [
+            asyncio.ensure_future(server.wait_up(10))
+            for server in (public_server, api_server)
+        ]
+        servers_ready = asyncio.gather(*server_futures)
+
+        # wait for process to crash or servers to be ready,
+        # whichever comes first
+        wait_timeout = 15
+        ready, pending = await asyncio.wait(
+            [
+                process_exited,
+                servers_ready,
+            ],
+            return_when=asyncio.FIRST_COMPLETED,
+            timeout=wait_timeout,
+        )
+        for task in [servers_ready, process_exited] + server_futures:
+            # cancel any pending tasks
+            if not task.done():
+                task.cancel()
+        if not ready:
+            # timeouts passed to wait_up should prevent this,
+            # but weird things like DNS delays may result in
+            # wait_up taking a lot longer than it should
+            raise TimeoutError(
+                f"Waiting for proxy endpoints didn't complete in {wait_timeout}s"
+            )
+        if process_exited in ready:
+            # process exited, this will raise RuntimeError
+            await process_exited
+        else:
+            # if we got here, servers_ready is done
+            # await it to make sure exceptions are raised
+            await servers_ready
+
         self.log.debug("Proxy started and appears to be up")
         pc = PeriodicCallback(self.check_running, 1e3 * self.check_running_interval)
         self._check_running_callback = pc
@@ -897,9 +942,7 @@ class ConfigurableHTTPProxy(Proxy):
                 # errors.
                 if e.code >= 500:
                     self.log.warning(
-                        "api_request to the proxy failed with status code {}, retrying...".format(
-                            e.code
-                        )
+                        f"api_request to the proxy failed with status code {e.code}, retrying..."
                     )
                     return False  # a falsy return value make exponential_backoff retry
                 else:

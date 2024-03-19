@@ -1,4 +1,5 @@
 """Tests for PAM authentication"""
+
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import logging
@@ -105,7 +106,8 @@ async def test_pam_auth_admin_groups():
         _getgrouplist=getgrouplist,
     ):
         authorized = await authenticator.get_authenticated_user(
-            None, {'username': 'also_group_admin', 'password': 'also_group_admin'}
+            None,
+            {'username': 'also_group_admin', 'password': 'also_group_admin'},
         )
     assert authorized['name'] == 'also_group_admin'
     assert authorized['admin'] is True
@@ -118,7 +120,8 @@ async def test_pam_auth_admin_groups():
         _getgrouplist=getgrouplist,
     ):
         authorized = await authenticator.get_authenticated_user(
-            None, {'username': 'override_admin', 'password': 'override_admin'}
+            None,
+            {'username': 'override_admin', 'password': 'override_admin'},
         )
     assert authorized['name'] == 'override_admin'
     assert authorized['admin'] is True

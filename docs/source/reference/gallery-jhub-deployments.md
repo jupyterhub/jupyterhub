@@ -16,8 +16,6 @@ Please submit pull requests to update information or to add new institutions or 
 
 - [BIDS - Berkeley Institute for Data Science](https://bids.berkeley.edu/)
 
-  - [Teaching with Jupyter notebooks and JupyterHub](https://bids.berkeley.edu/resources/videos/teaching-ipythonjupyter-notebooks-and-jupyterhub)
-
 - [Data 8](http://data8.org/)
 
   - [GitHub organization](https://github.com/data-8)
@@ -63,6 +61,15 @@ easy to do with RStudio too.
 
 - [jupyterhub-deploy-teaching](https://github.com/jupyterhub/jupyterhub-deploy-teaching) based on work by Brian Granger for Cal Poly's Data Science 301 Course
 
+### CERN
+
+[CERN](https://home.cern/), also known as the European Organization for Nuclear Research, is a world-renowned scientific research centre and the home of the Large Hadron Collider (LHC).
+
+Within CERN, there are two noteworthy JupyterHub deployments in operation:
+
+- [SWAN](https://swan.web.cern.ch/swan/), which stands for Service for Web based Analysis, serves as an interactive data analysis platform primarily utilized at CERN.
+- [VRE](https://vre-hub.github.io/), which stands for Virtual Research Environment, is an analysis platform developed within the [EOSC Project](https://eoscfuture.eu/) to cater to the needs of scientific communities involved in European projects.
+
 ### Chameleon
 
 [Chameleon](https://www.chameleoncloud.org) is a NSF-funded configurable experimental environment for large-scale computer science systems research with [bare metal reconfigurability](https://chameleoncloud.readthedocs.io/en/latest/technical/baremetal.html). Chameleon users utilize JupyterHub to document and reproduce their complex CISE and networking experiments.
@@ -83,6 +90,14 @@ easy to do with RStudio too.
     - Slurm job dispatched on Crestone compute cluster
     - log troubleshooting
     - Profiles in IPython Clusters tab
+
+### ETH Zurich
+
+[ETH Zurich](https://ethz.ch/en.html), (Federal Institute of Technology Zurich), is a public research university in Zürich, Switzerland, with focus on science, technology, engineering, and mathematics, although its 16 departments span a variety of disciplines and subjects.
+
+The [Educational Development and Technology](https://ethz.ch/en/the-eth-zurich/organisation/departments/educational-development-and-technology.html) unit provides JupyterHub exclusively for teaching and learning, integrated in the learning management system [Moodle](https://ethz.ch/staffnet/en/teaching/academic-support/it-services-teaching/teaching-applications/moodle-service.html). Each course gets its individually configured JupyterHub environment deployed on a on-premise Kubernetes cluster.
+
+- [ETH JupyterHub](https://ethz.ch/staffnet/en/teaching/academic-support/it-services-teaching/teaching-applications/jupyterhub.html) for teaching and learning
 
 ### George Washington University
 
@@ -178,6 +193,12 @@ easy to do with RStudio too.
 ### Hadoop
 
 - [Deploying JupyterHub on Hadoop](https://jupyterhub-on-hadoop.readthedocs.io)
+
+### Sirepo
+
+- Sirepo is an online Computer-Aided Engineering gateway that contains a JupyterHub instance. Sirepo is provided at no cost for community use, but users must request login access.
+- [Sirepo.com](https://www.sirepo.com)
+- [Sirepo Jupyter](https://www.sirepo.com/jupyter)
 
 ## Miscellaneous
 

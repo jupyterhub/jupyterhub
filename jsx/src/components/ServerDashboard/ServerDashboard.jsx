@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Fragment } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { debounce } from "lodash";
 import PropTypes from "prop-types";
@@ -7,72 +7,69 @@ import {
   Button,
   Col,
   Row,
+  Form,
   FormControl,
   Card,
   CardGroup,
   Collapse,
 } from "react-bootstrap";
-import ReactObjectTableViewer from "react-object-table-viewer";
+import ReactObjectTableViewer from "../ReactObjectTableViewer/ReactObjectTableViewer";
 
-import { Link } from "react-router-dom";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
 
 import "./server-dashboard.css";
 import { timeSince } from "../../util/timeSince";
+import { usePaginationParams } from "../../util/paginationParams";
 import PaginationFooter from "../PaginationFooter/PaginationFooter";
 
-const AccessServerButton = ({ url }) => (
-  <a href={url || ""}>
-    <button className="btn btn-primary btn-xs" style={{ marginRight: 20 }}>
-      Access Server
-    </button>
-  </a>
+const RowListItem = ({ text }) => (
+  <span className="server-dashboard-row-list-item">{text}</span>
 );
+RowListItem.propTypes = {
+  text: PropTypes.string,
+};
 
 const ServerDashboard = (props) => {
-  let base_url = window.base_url || "/";
-  // sort methods
-  var usernameDesc = (e) => e.sort((a, b) => (a.name > b.name ? 1 : -1)),
-    usernameAsc = (e) => e.sort((a, b) => (a.name < b.name ? 1 : -1)),
-    adminDesc = (e) => e.sort((a) => (a.admin ? -1 : 1)),
-    adminAsc = (e) => e.sort((a) => (a.admin ? 1 : -1)),
-    dateDesc = (e) =>
-      e.sort((a, b) =>
-        new Date(a.last_activity) - new Date(b.last_activity) > 0 ? -1 : 1,
-      ),
-    dateAsc = (e) =>
-      e.sort((a, b) =>
-        new Date(a.last_activity) - new Date(b.last_activity) > 0 ? 1 : -1,
-      ),
-    runningAsc = (e) => e.sort((a) => (a.server == null ? -1 : 1)),
-    runningDesc = (e) => e.sort((a) => (a.server == null ? 1 : -1));
+  const base_url = window.base_url || "/";
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  var [errorAlert, setErrorAlert] = useState(null);
-  var [sortMethod, setSortMethod] = useState(null);
-  var [disabledButtons, setDisabledButtons] = useState({});
-  var [collapseStates, setCollapseStates] = useState({});
+  const [errorAlert, setErrorAlert] = useState(null);
+  const [collapseStates, setCollapseStates] = useState({});
 
-  var user_data = useSelector((state) => state.user_data),
-    user_page = useSelector((state) => state.user_page),
-    name_filter = useSelector((state) => state.name_filter);
+  let user_data = useSelector((state) => state.user_data);
+  const user_page = useSelector((state) => state.user_page);
 
-  var offset = user_page ? user_page.offset : 0;
-  var limit = user_page ? user_page.limit : window.api_page_limit;
-  var total = user_page ? user_page.total : undefined;
+  const { setOffset, offset, setLimit, handleLimit, limit, setPagination } =
+    usePaginationParams();
+
+  const name_filter = searchParams.get("name_filter") || "";
+  const sort = searchParams.get("sort") || "id";
+  const state_filter = searchParams.get("state") || "";
+
+  const total = user_page ? user_page.total : undefined;
 
   const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   var {
     updateUsers,
     shutdownHub,
     startServer,
     stopServer,
+    deleteServer,
     startAll,
     stopAll,
-    history,
   } = props;
 
   const dispatchPageUpdate = (data, page) => {
+    // trigger page update in state
+    // in response to fetching updated user list
+    // data is list of user records
+    // page is _pagination part of response
+    // persist page info in url query
+    setPagination(page);
+    // persist user data, triggers rerender
     dispatch({
       type: "USER_PAGE",
       value: {
@@ -82,143 +79,197 @@ const ServerDashboard = (props) => {
     });
   };
 
-  const setOffset = (newOffset) => {
-    dispatch({
-      type: "USER_OFFSET",
-      value: {
-        offset: newOffset,
-      },
+  const setNameFilter = (new_name_filter) => {
+    // persist ?name_filter parameter
+    // store in url param, clear when value is empty
+    setSearchParams((params) => {
+      // clear offset when name filter changes
+      if (new_name_filter !== name_filter) {
+        params.delete("offset");
+      }
+      if (new_name_filter) {
+        params.set("name_filter", new_name_filter);
+      } else {
+        params.delete("name_filter");
+      }
+      return params;
     });
   };
 
-  const setNameFilter = (name_filter) => {
-    dispatch({
-      type: "USER_NAME_FILTER",
-      value: {
-        name_filter: name_filter,
-      },
+  const setSort = (sort) => {
+    // persist ?sort parameter
+    // store in url param, clear when value is default ('id')
+    setSearchParams((params) => {
+      if (sort === "id") {
+        params.delete("id");
+      } else {
+        params.set("sort", sort);
+      }
+      return params;
     });
   };
+
+  const setStateFilter = (new_state_filter) => {
+    // persist ?state filter
+    // store in url param, clear when value is default ('')
+    setSearchParams((params) => {
+      // clear offset when filter changes
+      if (new_state_filter !== state_filter) {
+        params.delete("offset");
+      }
+      if (!new_state_filter) {
+        params.delete("state");
+      } else {
+        params.set("state", new_state_filter);
+      }
+      console.log("setting search params", params.toString());
+      return params;
+    });
+  };
+
+  // the callback to update the displayed user list
+  const updateUsersWithParams = () =>
+    updateUsers({
+      offset,
+      limit,
+      name_filter,
+      sort,
+      state: state_filter,
+    });
 
   useEffect(() => {
-    updateUsers(offset, limit, name_filter)
+    updateUsersWithParams()
       .then((data) => dispatchPageUpdate(data.items, data._pagination))
       .catch((err) => setErrorAlert("Failed to update user list."));
-  }, [offset, limit, name_filter]);
+  }, [offset, limit, name_filter, sort, state_filter]);
 
   if (!user_data || !user_page) {
     return <div data-testid="no-show"></div>;
   }
 
-  var slice = [offset, limit, name_filter];
-
   const handleSearch = debounce(async (event) => {
     setNameFilter(event.target.value);
   }, 300);
 
-  if (sortMethod != null) {
-    user_data = sortMethod(user_data);
-  }
-
-  const StopServerButton = ({ serverName, userName }) => {
+  const ServerButton = ({ server, user, action, name, extraClass }) => {
     var [isDisabled, setIsDisabled] = useState(false);
     return (
       <button
-        className="btn btn-danger btn-xs stop-button"
-        disabled={isDisabled}
+        className={`btn btn-xs ${extraClass}`}
+        disabled={isDisabled || server.pending}
         onClick={() => {
           setIsDisabled(true);
-          stopServer(userName, serverName)
+          action(user.name, server.name)
             .then((res) => {
               if (res.status < 300) {
-                updateUsers(...slice)
+                updateUsersWithParams()
                   .then((data) => {
-                    dispatchPageUpdate(
-                      data.items,
-                      data._pagination,
-                      name_filter,
-                    );
+                    dispatchPageUpdate(data.items, data._pagination);
                   })
                   .catch(() => {
                     setIsDisabled(false);
                     setErrorAlert(`Failed to update users list.`);
                   });
               } else {
-                setErrorAlert(`Failed to stop server.`);
+                setErrorAlert(`Failed to ${name.toLowerCase()}.`);
                 setIsDisabled(false);
               }
               return res;
             })
             .catch(() => {
-              setErrorAlert(`Failed to stop server.`);
+              setErrorAlert(`Failed to ${name.toLowerCase()}.`);
               setIsDisabled(false);
             });
         }}
       >
-        Stop Server
+        {name}
       </button>
     );
   };
 
-  const StartServerButton = ({ serverName, userName }) => {
-    var [isDisabled, setIsDisabled] = useState(false);
+  const StopServerButton = ({ server, user }) => {
+    if (!server.ready) {
+      return null;
+    }
+    return ServerButton({
+      server,
+      user,
+      action: stopServer,
+      name: "Stop Server",
+      extraClass: "btn-danger stop-button",
+    });
+  };
+  const DeleteServerButton = ({ server, user }) => {
+    if (!server.name) {
+      // It's not possible to delete unnamed servers
+      return null;
+    }
+    if (server.ready || server.pending) {
+      return null;
+    }
+    return ServerButton({
+      server,
+      user,
+      action: deleteServer,
+      name: "Delete Server",
+      extraClass: "btn-danger stop-button",
+    });
+  };
+
+  const StartServerButton = ({ server, user }) => {
+    if (server.ready) {
+      return null;
+    }
+    return ServerButton({
+      server,
+      user,
+      action: startServer,
+      name: server.pending ? "Server is pending" : "Start Server",
+      extraClass: "btn-success start-button",
+    });
+  };
+
+  const SpawnPageButton = ({ server, user }) => {
+    if (server.ready) {
+      return null;
+    }
+    return (
+      <a
+        href={`${base_url}spawn/${user.name}${
+          server.name ? "/" + server.name : ""
+        }`}
+      >
+        <button className="btn btn-light btn-xs">Spawn Page</button>
+      </a>
+    );
+  };
+
+  const AccessServerButton = ({ server }) => {
+    if (!server.ready) {
+      return null;
+    }
+    return (
+      <a href={server.url || ""}>
+        <button className="btn btn-primary btn-xs">Access Server</button>
+      </a>
+    );
+  };
+
+  const EditUserButton = ({ user }) => {
     return (
       <button
-        className="btn btn-success btn-xs start-button"
-        disabled={isDisabled}
-        onClick={() => {
-          setIsDisabled(true);
-          startServer(userName, serverName)
-            .then((res) => {
-              if (res.status < 300) {
-                updateUsers(...slice)
-                  .then((data) => {
-                    dispatchPageUpdate(
-                      data.items,
-                      data._pagination,
-                      name_filter,
-                    );
-                  })
-                  .catch(() => {
-                    setErrorAlert(`Failed to update users list.`);
-                    setIsDisabled(false);
-                  });
-              } else {
-                setErrorAlert(`Failed to start server.`);
-                setIsDisabled(false);
-              }
-              return res;
-            })
-            .catch(() => {
-              setErrorAlert(`Failed to start server.`);
-              setIsDisabled(false);
-            });
-        }}
+        className="btn btn-light btn-xs"
+        onClick={() =>
+          navigate("/edit-user", {
+            state: {
+              username: user.name,
+              has_admin: user.admin,
+            },
+          })
+        }
       >
-        Start Server
+        Edit User
       </button>
-    );
-  };
-
-  const EditUserCell = ({ user }) => {
-    return (
-      <td>
-        <button
-          className="btn btn-primary btn-xs"
-          style={{ marginRight: 20 }}
-          onClick={() =>
-            history.push({
-              pathname: "/edit-user",
-              state: {
-                username: user.name,
-                has_admin: user.admin,
-              },
-            })
-          }
-        >
-          Edit User
-        </button>
-      </td>
     );
   };
 
@@ -236,8 +287,13 @@ const ServerDashboard = (props) => {
             break;
         }
         if (Array.isArray(value)) {
-          // cast arrays (e.g. roles, groups) to string
-          value = value.sort().join(", ");
+          value = (
+            <Fragment>
+              {value.sort().flatMap((v) => (
+                <RowListItem text={v} />
+              ))}
+            </Fragment>
+          );
         }
         result[key] = value;
         return result;
@@ -266,7 +322,11 @@ const ServerDashboard = (props) => {
     const userServerName = user.name + serverNameDash;
     const open = collapseStates[userServerName] || false;
     return [
-      <tr key={`${userServerName}-row`} className="user-row">
+      <tr
+        key={`${userServerName}-row`}
+        data-testid={`user-row-${userServerName}`}
+        className="user-row"
+      >
         <td data-testid="user-row-name">
           <span>
             <Button
@@ -297,39 +357,16 @@ const ServerDashboard = (props) => {
         <td data-testid="user-row-last-activity">
           {server.last_activity ? timeSince(server.last_activity) : "Never"}
         </td>
-        <td data-testid="user-row-server-activity">
-          {server.ready ? (
-            // Stop Single-user server
-            <>
-              <StopServerButton serverName={server.name} userName={user.name} />
-              <AccessServerButton url={server.url} />
-            </>
-          ) : (
-            // Start Single-user server
-            <>
-              <StartServerButton
-                serverName={server.name}
-                userName={user.name}
-                style={{ marginRight: 20 }}
-              />
-              <a
-                href={`${base_url}spawn/${user.name}${
-                  server.name ? "/" + server.name : ""
-                }`}
-              >
-                <button
-                  className="btn btn-secondary btn-xs"
-                  style={{ marginRight: 20 }}
-                >
-                  Spawn Page
-                </button>
-              </a>
-            </>
-          )}
+        <td data-testid="user-row-server-activity" className="actions">
+          <StartServerButton server={server} user={user} />
+          <StopServerButton server={server} user={user} />
+          <DeleteServerButton server={server} user={user} />
+          <AccessServerButton server={server} />
+          <SpawnPageButton server={server} user={user} />
+          <EditUserButton user={user} />
         </td>
-        <EditUserCell user={user} />
       </tr>,
-      <tr>
+      <tr key={`${userServerName}-detail`}>
         <td
           colSpan={6}
           style={{ padding: 0 }}
@@ -395,6 +432,24 @@ const ServerDashboard = (props) => {
               onChange={handleSearch}
             />
           </Col>
+          <Col md={3}>
+            {/* div.checkbox required for BS3 CSS */}
+            <div className="checkbox">
+              <label title="check to only show running servers, otherwise show all">
+                <Form.Check
+                  inline
+                  type="checkbox"
+                  name="active_servers"
+                  id="active-servers-filter"
+                  checked={state_filter == "active"}
+                  onChange={(event) => {
+                    setStateFilter(event.target.checked ? "active" : null);
+                  }}
+                />
+                {"only active servers"}
+              </label>
+            </div>
+          </Col>
 
           <Col md="auto" style={{ float: "right", margin: 15 }}>
             <Link to="/groups">{"> Manage Groups"}</Link>
@@ -406,41 +461,21 @@ const ServerDashboard = (props) => {
               <th id="user-header">
                 User{" "}
                 <SortHandler
-                  sorts={{ asc: usernameAsc, desc: usernameDesc }}
-                  callback={(method) => setSortMethod(() => method)}
+                  currentSort={sort}
+                  setSort={setSort}
+                  sortKey="name"
                   testid="user-sort"
                 />
               </th>
-              <th id="admin-header">
-                Admin{" "}
-                <SortHandler
-                  sorts={{ asc: adminAsc, desc: adminDesc }}
-                  callback={(method) => setSortMethod(() => method)}
-                  testid="admin-sort"
-                />
-              </th>
-              <th id="server-header">
-                Server{" "}
-                <SortHandler
-                  sorts={{ asc: usernameAsc, desc: usernameDesc }}
-                  callback={(method) => setSortMethod(() => method)}
-                  testid="server-sort"
-                />
-              </th>
+              <th id="admin-header">Admin</th>
+              <th id="server-header">Server</th>
               <th id="last-activity-header">
                 Last Activity{" "}
                 <SortHandler
-                  sorts={{ asc: dateAsc, desc: dateDesc }}
-                  callback={(method) => setSortMethod(() => method)}
+                  currentSort={sort}
+                  setSort={setSort}
+                  sortKey="last_activity"
                   testid="last-activity-sort"
-                />
-              </th>
-              <th id="running-status-header">
-                Running{" "}
-                <SortHandler
-                  sorts={{ asc: runningAsc, desc: runningDesc }}
-                  callback={(method) => setSortMethod(() => method)}
-                  testid="running-status-sort"
                 />
               </th>
               <th id="actions-header">Actions</th>
@@ -449,18 +484,19 @@ const ServerDashboard = (props) => {
           <tbody>
             <tr className="noborder">
               <td>
-                <Button variant="light" className="add-users-button">
-                  <Link to="/add-users">Add Users</Link>
-                </Button>
+                <Link to="/add-users">
+                  <Button variant="light" className="add-users-button">
+                    Add Users
+                  </Button>
+                </Link>
               </td>
-              <td></td>
-              <td></td>
-              <td>
+              <td colSpan={4} className="admin-header-buttons">
                 {/* Start all servers */}
                 <Button
                   variant="primary"
                   className="start-all"
                   data-testid="start-all"
+                  title="start all servers on the current page"
                   onClick={() => {
                     Promise.all(startAll(user_data.map((e) => e.name)))
                       .then((res) => {
@@ -477,13 +513,9 @@ const ServerDashboard = (props) => {
                         return res;
                       })
                       .then((res) => {
-                        updateUsers(...slice)
+                        updateUsersWithParams()
                           .then((data) => {
-                            dispatchPageUpdate(
-                              data.items,
-                              data._pagination,
-                              name_filter,
-                            );
+                            dispatchPageUpdate(data.items, data._pagination);
                           })
                           .catch(() =>
                             setErrorAlert(`Failed to update users list.`),
@@ -501,6 +533,7 @@ const ServerDashboard = (props) => {
                   variant="danger"
                   className="stop-all"
                   data-testid="stop-all"
+                  title="stop all servers on the current page"
                   onClick={() => {
                     Promise.all(stopAll(user_data.map((e) => e.name)))
                       .then((res) => {
@@ -517,13 +550,9 @@ const ServerDashboard = (props) => {
                         return res;
                       })
                       .then((res) => {
-                        updateUsers(...slice)
+                        updateUsersWithParams()
                           .then((data) => {
-                            dispatchPageUpdate(
-                              data.items,
-                              data._pagination,
-                              name_filter,
-                            );
+                            dispatchPageUpdate(data.items, data._pagination);
                           })
                           .catch(() =>
                             setErrorAlert(`Failed to update users list.`),
@@ -535,8 +564,8 @@ const ServerDashboard = (props) => {
                 >
                   Stop All
                 </Button>
-              </td>
-              <td>
+                {/* spacing between start/stop and Shutdown */}
+                <span style={{ marginLeft: "56px" }}> </span>
                 {/* Shutdown Jupyterhub */}
                 <Button
                   variant="danger"
@@ -557,6 +586,7 @@ const ServerDashboard = (props) => {
           total={total}
           next={() => setOffset(offset + limit)}
           prev={() => setOffset(offset - limit)}
+          handleLimit={handleLimit}
         />
         <br></br>
       </div>
@@ -570,42 +600,34 @@ ServerDashboard.propTypes = {
   shutdownHub: PropTypes.func,
   startServer: PropTypes.func,
   stopServer: PropTypes.func,
+  deleteServer: PropTypes.func,
   startAll: PropTypes.func,
   stopAll: PropTypes.func,
   dispatch: PropTypes.func,
-  history: PropTypes.shape({
-    push: PropTypes.func,
-  }),
-  location: PropTypes.shape({
-    search: PropTypes.string,
-  }),
 };
 
 const SortHandler = (props) => {
-  var { sorts, callback, testid } = props;
+  const { currentSort, setSort, sortKey, testid } = props;
 
-  var [direction, setDirection] = useState(undefined);
-
+  const currentlySorted = currentSort && currentSort.endsWith(sortKey);
+  const descending = currentSort && currentSort.startsWith("-");
   return (
     <div
       className="sort-icon"
       data-testid={testid}
       onClick={() => {
-        if (!direction) {
-          callback(sorts.desc);
-          setDirection("desc");
-        } else if (direction == "asc") {
-          callback(sorts.desc);
-          setDirection("desc");
+        if (!currentlySorted) {
+          setSort(sortKey);
+        } else if (descending) {
+          setSort(sortKey);
         } else {
-          callback(sorts.asc);
-          setDirection("asc");
+          setSort("-" + sortKey);
         }
       }}
     >
-      {!direction ? (
+      {!currentlySorted ? (
         <FaSort />
-      ) : direction == "asc" ? (
+      ) : descending ? (
         <FaSortDown />
       ) : (
         <FaSortUp />
@@ -615,8 +637,9 @@ const SortHandler = (props) => {
 };
 
 SortHandler.propTypes = {
-  sorts: PropTypes.object,
-  callback: PropTypes.func,
+  currentSort: PropTypes.string,
+  setSort: PropTypes.func,
+  sortKey: PropTypes.string,
   testid: PropTypes.string,
 };
 

@@ -4,6 +4,7 @@ This example service serves `/services/whoami-oauth/`,
 authenticated with the Hub,
 showing the user their own info.
 """
+
 import json
 import os
 from urllib.parse import urlparse

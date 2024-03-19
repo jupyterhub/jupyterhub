@@ -51,5 +51,6 @@ Further tutorials of configuring JupyterHub for specific tasks
 ```{toctree}
 :maxdepth: 1
 
+sharing
 collaboration-users
 ```

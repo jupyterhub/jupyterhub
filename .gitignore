@@ -12,6 +12,8 @@ docs/source/rbac/scope-table.md
 docs/source/reference/metrics.md
 
 .ipynb_checkpoints
+.virtual_documents
+
 jsx/build/
 # ignore config file at the top-level of the repo
 # but not sub-dirs
@@ -19,7 +21,6 @@ jsx/build/
 jupyterhub_cookie_secret
 jupyterhub.sqlite
 jupyterhub.sqlite*
-package-lock.json
 share/jupyterhub/static/components
 share/jupyterhub/static/css/style.min.css
 share/jupyterhub/static/css/style.min.css.map
@@ -37,3 +38,5 @@ docs/source/reference/metrics.rst
 oldest-requirements.txt
 jupyterhub-proxy.pid
 examples/server-api/service-token
+
+*.hot-update*

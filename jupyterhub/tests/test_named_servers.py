@@ -1,4 +1,5 @@
 """Tests for named servers"""
+
 import asyncio
 import json
 import time
@@ -76,6 +77,7 @@ async def test_default_server(app, named_servers):
             'server': user.url,
             'servers': {
                 '': {
+                    'full_name': f"{username}/",
                     'name': '',
                     'started': TIMESTAMP,
                     'last_activity': TIMESTAMP,
@@ -83,9 +85,7 @@ async def test_default_server(app, named_servers):
                     'pending': None,
                     'ready': True,
                     'stopped': False,
-                    'progress_url': 'PREFIX/hub/api/users/{}/server/progress'.format(
-                        username
-                    ),
+                    'progress_url': f'PREFIX/hub/api/users/{username}/server/progress',
                     'state': {'pid': 0},
                     'user_options': {},
                 }
@@ -164,6 +164,7 @@ async def test_create_named_server(
             'auth_state': None,
             'servers': {
                 servername: {
+                    'full_name': f"{username}/{servername}",
                     'name': name,
                     'started': TIMESTAMP,
                     'last_activity': TIMESTAMP,
@@ -171,9 +172,7 @@ async def test_create_named_server(
                     'pending': None,
                     'ready': True,
                     'stopped': False,
-                    'progress_url': 'PREFIX/hub/api/users/{}/servers/{}/progress'.format(
-                        username, escapedname
-                    ),
+                    'progress_url': f'PREFIX/hub/api/users/{username}/servers/{escapedname}/progress',
                     'state': {'pid': 0},
                     'user_options': {},
                 }

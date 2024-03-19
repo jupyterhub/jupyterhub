@@ -1,4 +1,5 @@
 """Tests for process spawning"""
+
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import asyncio
@@ -18,7 +19,7 @@ from .. import orm
 from .. import spawner as spawnermod
 from ..objects import Hub, Server
 from ..scopes import access_scopes
-from ..spawner import LocalProcessSpawner, Spawner
+from ..spawner import SimpleLocalProcessSpawner, Spawner
 from ..user import User
 from ..utils import AnyTimeoutError, maybe_future, new_token, url_path_join
 from .mocking import public_url
@@ -46,7 +47,7 @@ def setup():
 
 
 def new_spawner(db, **kwargs):
-    user = kwargs.setdefault('user', User(db.query(orm.User).first(), {}))
+    user = kwargs.setdefault("user", User(db.query(orm.User).one(), {}))
     kwargs.setdefault('cmd', [sys.executable, '-c', _echo_sleep])
     kwargs.setdefault('hub', Hub())
     kwargs.setdefault('notebook_dir', os.getcwd())
@@ -56,7 +57,7 @@ def new_spawner(db, **kwargs):
     kwargs.setdefault('term_timeout', 1)
     kwargs.setdefault('kill_timeout', 1)
     kwargs.setdefault('poll_interval', 1)
-    return user._new_spawner('', spawner_class=LocalProcessSpawner, **kwargs)
+    return user._new_spawner('', spawner_class=SimpleLocalProcessSpawner, **kwargs)
 
 
 async def test_spawner(db, request):
@@ -380,7 +381,11 @@ async def test_spawner_bad_api_token(app):
         (
             ["self", "read:groups!group=x", "users:activity"],
             ["admin:groups", "users:activity"],
-            ["read:groups!group=x", "read:groups:name!group=x", "users:activity"],
+            [
+                "read:groups!group=x",
+                "read:groups:name!group=x",
+                "users:activity",
+            ],
         ),
     ],
 )

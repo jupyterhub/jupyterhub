@@ -130,22 +130,30 @@ class JupyterHubIdentityProvider(IdentityProvider):
     def _patch_get_login_url(self, handler):
         original_get_login_url = handler.get_login_url
 
+        _hub_login_url = None
+
         def get_login_url():
             """Return the Hub's login URL, to begin login redirect"""
-            login_url = self.hub_auth.login_url
-            # add state argument to OAuth url
-            state = self.hub_auth.set_state_cookie(
-                handler, next_url=handler.request.uri
-            )
-            login_url = url_concat(login_url, {'state': state})
-            # temporary override at setting level,
+            nonlocal _hub_login_url
+            if _hub_login_url is not None:
+                # cached value, don't call this more than once per handler
+                return _hub_login_url
+            # temporary override at settings level,
             # to allow any subclass overrides of get_login_url to preserve their effect;
             # for example, APIHandler raises 403 to prevent redirects
             with mock.patch.dict(
-                handler.application.settings, {"login_url": login_url}
+                handler.application.settings, {"login_url": self.hub_auth.login_url}
             ):
-                self.log.debug("Redirecting to login url: %s", login_url)
-                return original_get_login_url()
+                login_url = original_get_login_url()
+            self.log.debug("Redirecting to login url: %s", login_url)
+            # add state argument to OAuth url
+            # must do this _after_ allowing get_login_url to raise
+            # so we don't set unused cookies
+            state = self.hub_auth.set_state_cookie(
+                handler, next_url=handler.request.uri
+            )
+            _hub_login_url = url_concat(login_url, {'state': state})
+            return _hub_login_url
 
         handler.get_login_url = get_login_url
 
@@ -187,6 +195,7 @@ class JupyterHubIdentityProvider(IdentityProvider):
 
             return None
         handler._jupyterhub_user = JupyterHubUser(user)
+        self.hub_auth._persist_url_token_if_set(handler)
         return handler._jupyterhub_user
 
     def get_handlers(self):
@@ -216,6 +225,7 @@ class JupyterHubIdentityProvider(IdentityProvider):
         user = handler.current_user
         # originally implemented in jupyterlab's LabApp
         page_config["hubUser"] = user.name if user else ""
+        page_config["hubServerUser"] = os.environ.get("JUPYTERHUB_USER", "")
         page_config["hubPrefix"] = hub_prefix = self.hub_auth.hub_prefix
         page_config["hubHost"] = self.hub_auth.hub_host
         page_config["shareUrl"] = url_path_join(hub_prefix, "user-redirect")
@@ -483,6 +493,11 @@ class JupyterHubSingleUser(ExtensionApp):
         cfg.answer_yes = True
         self.config.FileContentsManager.delete_to_trash = False
 
+        # load Spawner.notebook_dir configuration, if given
+        root_dir = os.getenv("JUPYTERHUB_ROOT_DIR", None)
+        if root_dir:
+            cfg.root_dir = os.path.expanduser(root_dir)
+
         # load http server config from environment
         url = urlparse(os.environ['JUPYTERHUB_SERVICE_URL'])
         if url.port:
@@ -511,16 +526,25 @@ class JupyterHubSingleUser(ExtensionApp):
 
         # Jupyter Server default: config files have higher priority than extensions,
         # by:
-        # 1. load config files
+        # 1. load config files and CLI
         # 2. load extension config
         # 3. merge file config into extension config
 
         # we invert that by merging our extension config into server config before
         # they get merged the other way
         # this way config from this extension should always have highest priority
+
+        # but this also puts our config above _CLI_ options,
+        # and CLI should come before env,
+        # so merge that into _our_ config before loading
+        if self.serverapp.cli_config:
+            for cls_name, cls_config in self.serverapp.cli_config.items():
+                if cls_name in self.config:
+                    self.config[cls_name].merge(cls_config)
+
         self.serverapp.update_config(self.config)
 
-        # add our custom templates
+        # config below here has _lower_ priority than user config
         self.config.NotebookApp.extra_template_paths.append(SINGLEUSER_TEMPLATES_DIR)
 
     @default("default_url")
@@ -590,9 +614,9 @@ class JupyterHubSingleUser(ExtensionApp):
         jinja_template_vars['logo_url'] = self.hub_auth.hub_host + url_path_join(
             self.hub_auth.hub_prefix, 'logo'
         )
-        jinja_template_vars[
-            'hub_control_panel_url'
-        ] = self.hub_auth.hub_host + url_path_join(self.hub_auth.hub_prefix, 'home')
+        jinja_template_vars['hub_control_panel_url'] = (
+            self.hub_auth.hub_host + url_path_join(self.hub_auth.hub_prefix, 'home')
+        )
 
     _activity_task = None
 
@@ -605,10 +629,12 @@ class JupyterHubSingleUser(ExtensionApp):
 
         super().initialize()
         app = self.serverapp
-        app.web_app.settings[
-            "page_config_hook"
-        ] = app.identity_provider.page_config_hook
-        app.web_app.settings["log_function"] = log_request
+        app.web_app.settings["page_config_hook"] = (
+            app.identity_provider.page_config_hook
+        )
+        # if the user has configured a log function in the tornado settings, do not override it
+        if not 'log_function' in app.config.ServerApp.get('tornado_settings', {}):
+            app.web_app.settings["log_function"] = log_request
         # add jupyterhub version header
         headers = app.web_app.settings.setdefault("headers", {})
         headers["X-JupyterHub-Version"] = __version__
@@ -628,7 +654,7 @@ class JupyterHubSingleUser(ExtensionApp):
     disable_user_config = Bool()
 
     @default("disable_user_config")
-    def _defaut_disable_user_config(self):
+    def _default_disable_user_config(self):
         return _bool_env("JUPYTERHUB_DISABLE_USER_CONFIG")
 
     @classmethod

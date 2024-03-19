@@ -1,7 +1,9 @@
 """Tests for service authentication"""
+
 import copy
 import os
 import sys
+import time
 from binascii import hexlify
 from unittest import mock
 from urllib.parse import parse_qs, urlparse
@@ -519,27 +521,42 @@ async def test_oauth_page_hit(
         assert r.url == url
 
 
-async def test_oauth_cookie_collision(app, mockservice_url, create_user_with_scopes):
+@pytest.mark.parametrize("finish_first", [1, 2])
+async def test_oauth_cookie_collision(
+    app, mockservice_url, create_user_with_scopes, finish_first
+):
     service = mockservice_url
-    url = url_path_join(public_url(app, mockservice_url), 'owhoami/')
+    service_url = public_url(app, mockservice_url)
+    url = url_path_join(service_url, 'owhoami/')
     print(url)
     s = AsyncSession()
     name = 'mypha'
-    user = create_user_with_scopes("access:services", name=name)
+    create_user_with_scopes("access:services", name=name)
     s.cookies = await app.login_user(name)
     state_cookie_name = 'service-%s-oauth-state' % service.name
     service_cookie_name = 'service-%s' % service.name
-    oauth_1 = await s.get(url)
-    print(oauth_1.headers)
-    print(oauth_1.cookies, oauth_1.url, url)
+    url_1 = url + "?oauth_test=1"
+    oauth_1 = await s.get(url_1)
     assert state_cookie_name in s.cookies
     state_cookies = [c for c in s.cookies.keys() if c.startswith(state_cookie_name)]
     # only one state cookie
     assert state_cookies == [state_cookie_name]
+    # create dict of Cookie objects, so we can check properties
+    # cookies.__getitem__ returns only cookie _value_, but we want to check expiration
+    cookie_dict = {cookie.name: cookie for cookie in s.cookies}
+    state_cookie = cookie_dict[state_cookie_name]
+
+    # check state cookie properties
+    # should expire in 10 minutes (600 seconds)
+    assert time.time() < state_cookie.expires < time.time() + 630
+    # path is set right
+    assert state_cookie.path == service.prefix
+
     state_1 = s.cookies[state_cookie_name]
 
     # start second oauth login before finishing the first
-    oauth_2 = await s.get(url)
+    url_2 = url + "?oauth_test=2"
+    oauth_2 = await s.get(url_2)
     state_cookies = [c for c in s.cookies.keys() if c.startswith(state_cookie_name)]
     assert len(state_cookies) == 2
     # get the random-suffix cookie name
@@ -547,33 +564,48 @@ async def test_oauth_cookie_collision(app, mockservice_url, create_user_with_sco
     # we didn't clobber the default cookie
     assert s.cookies[state_cookie_name] == state_1
 
-    # finish oauth 2
+    # select which oauth process to finish
+    if finish_first == 1:
+        oauth = oauth_1
+        expected_url = url_1
+        second_oauth = oauth_2
+        second_url = url_2
+    elif finish_first == 2:
+        oauth = oauth_2
+        expected_url = url_2
+        second_oauth = oauth_1
+        second_url = url_1
+    else:
+        raise ValueError(f"finish_first should be 1 or 2, not {finish_first!r}")
     # submit the oauth form to complete authorization
     r = await s.post(
-        oauth_2.url, data={'scopes': ['identify'], "_xsrf": s.cookies["_xsrf"]}
+        oauth.url, data={'scopes': ['identify'], "_xsrf": s.cookies["_xsrf"]}
     )
     r.raise_for_status()
-    assert r.url == url
-    # after finishing, state cookie is cleared
+    assert r.url == expected_url
+    # after finishing, state cookies are all cleared
+    assert state_cookie_name not in s.cookies
     assert state_cookie_2 not in s.cookies
+    # finishing one oauth clears all state cookies
+    state_cookies = [c for c in s.cookies.keys() if c.startswith(state_cookie_name)]
+    assert state_cookies == []
+
     # service login cookie is set
     assert service_cookie_name in s.cookies
-    service_cookie_2 = s.cookies[service_cookie_name]
+    service_cookie = s.cookies[service_cookie_name]
+    assert service_cookie
 
-    # finish oauth 1
+    # finish other oauth
     r = await s.post(
-        oauth_1.url, data={'scopes': ['identify'], "_xsrf": s.cookies["_xsrf"]}
+        second_oauth.url, data={'scopes': ['identify'], "_xsrf": s.cookies["_xsrf"]}
     )
     r.raise_for_status()
-    assert r.url == url
 
-    # after finishing, state cookie is cleared (again)
-    assert state_cookie_name not in s.cookies
-    # service login cookie is set (again, to a different value)
-    assert service_cookie_name in s.cookies
-    assert s.cookies[service_cookie_name] != service_cookie_2
+    # second oauth doesn't complete,
+    # but is short-circuited because already logged in
+    assert r.url == second_url
 
-    # after completing both OAuth logins, no OAuth state cookies remain
+    # make sure we didn't leave any cookie lying around
     state_cookies = [s for s in s.cookies.keys() if s.startswith(state_cookie_name)]
     assert state_cookies == []
 

@@ -38,6 +38,7 @@ A hub-managed service with no URL::
     }
 
 """
+
 import asyncio
 import copy
 import os
@@ -52,8 +53,10 @@ from traitlets import (
     HasTraits,
     Instance,
     List,
+    Set,
     Unicode,
     default,
+    observe,
     validate,
 )
 from traitlets.config import LoggingConfigurable
@@ -174,15 +177,18 @@ class Service(LoggingConfigurable):
         Command for JupyterHub to spawn the service.
         Only use this if the service should be a subprocess.
         If command is not specified, it is assumed to be managed
-        by a
+        by an external process.
     - environment: dict
         Additional environment variables for the service.
     - user: str
         The name of a system user to become.
         If unspecified, run as the same user as the Hub.
+
     """
 
-    # inputs:
+    # traits tagged with `input=True` are accepted as input from configuration / API
+    # input traits are also persisted to the db UNLESS they are also tagged with `in_db=False`
+
     name = Unicode(
         help="""The name of the service.
 
@@ -205,7 +211,7 @@ class Service(LoggingConfigurable):
 
         DEPRECATED in 3.0: use oauth_client_allowed_scopes
       """
-    ).tag(input=True)
+    ).tag(input=True, in_db=False)
 
     oauth_client_allowed_scopes = List(
         help="""OAuth allowed scopes.
@@ -225,7 +231,7 @@ class Service(LoggingConfigurable):
 
         If unspecified, an API token will be generated for managed services.
         """
-    ).tag(input=True)
+    ).tag(input=True, in_db=False)
 
     info = Dict(
         help="""Provide a place to include miscellaneous information about the service,
@@ -303,6 +309,7 @@ class Service(LoggingConfigurable):
     cookie_options = Dict()
 
     oauth_provider = Any()
+    _oauth_specified = Set(help="List of oauth config fields specified via config.")
 
     oauth_client_id = Unicode(
         help="""OAuth client ID for this service.
@@ -310,7 +317,7 @@ class Service(LoggingConfigurable):
         You shouldn't generally need to change this.
         Default: `service-<name>`
         """
-    ).tag(input=True)
+    ).tag(input=True, in_db=False)
 
     @default('oauth_client_id')
     def _default_client_id(self):
@@ -331,7 +338,7 @@ class Service(LoggingConfigurable):
         You shouldn't generally need to change this.
         Default: `/services/:name/oauth_callback`
         """
-    ).tag(input=True)
+    ).tag(input=True, in_db=False)
 
     @default('oauth_redirect_uri')
     def _default_redirect_uri(self):
@@ -339,13 +346,23 @@ class Service(LoggingConfigurable):
             return ''
         return self.host + url_path_join(self.prefix, 'oauth_callback')
 
+    @observe("oauth_client_id", "oauth_redirect_uri", "oauth_no_confirm")
+    def _oauth_config_set(self, change):
+        # record that some oauth config is specified
+        if change.new in {"", None}:
+            # this shouldn't happen, but empty values
+            # may sometimes be set to 'un-set' config
+            self._oauth_specified.pop(change.name, None)
+        else:
+            self._oauth_specified.add(change.name)
+
     @property
     def oauth_available(self):
         """Is OAuth available for this client?
 
-        Returns True if a server is defined or oauth_redirect_uri is specified manually
+        Returns True if a server is defined or any oauth config is provided explicitly
         """
-        return bool(self.server is not None or self.oauth_redirect_uri)
+        return bool(self.server is not None or self._oauth_specified)
 
     @property
     def oauth_client(self):
@@ -363,6 +380,14 @@ class Service(LoggingConfigurable):
         return url_path_join(self.base_url, 'services', self.name + '/')
 
     @property
+    def href(self):
+        """Convenient 'href' to use for links to this service"""
+        if self.domain:
+            return f"//{self.domain}{self.prefix}"
+        else:
+            return self.prefix
+
+    @property
     def proxy_spec(self):
         if not self.server:
             return ''
@@ -370,6 +395,11 @@ class Service(LoggingConfigurable):
             return self.domain + self.server.base_url
         else:
             return self.server.base_url
+
+    @property
+    def from_config(self):
+        """Is the service defined from config file?"""
+        return self.orm.from_config
 
     def __repr__(self):
         return "<{cls}(name={name}{managed})>".format(

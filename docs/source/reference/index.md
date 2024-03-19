@@ -21,7 +21,9 @@ services
 urls
 event-logging
 monitoring
+sharing
 gallery-jhub-deployments
 changelog
+rest-api
 api/index.md
 ```

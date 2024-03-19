@@ -1,6 +1,7 @@
 """
 Contains base Spawner class & default implementation
 """
+
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import ast
@@ -162,6 +163,8 @@ class Spawner(LoggingConfigurable):
     hub = Any()
     orm_spawner = Any()
     cookie_options = Dict()
+    public_url = Unicode(help="Public URL of this spawner's server")
+    public_hub_url = Unicode(help="Public URL of the Hub itself")
 
     db = Any()
 
@@ -273,8 +276,6 @@ class Spawner(LoggingConfigurable):
     admin_access = Bool(False)
     api_token = Unicode()
     oauth_client_id = Unicode()
-
-    oauth_scopes = List(Unicode())
 
     @property
     def oauth_scopes(self):
@@ -489,6 +490,20 @@ class Spawner(LoggingConfigurable):
         At every poll interval, each spawner's `.poll` method is called, which checks
         if the single-user server is still running. If it isn't running, then JupyterHub modifies
         its own state accordingly and removes appropriate routes from the configurable proxy.
+        """,
+    ).tag(config=True)
+
+    poll_jitter = Float(
+        0.1,
+        min=0,
+        max=1,
+        help="""
+        Jitter fraction for poll_interval.
+        
+        Avoids alignment of poll calls for many Spawners,
+        e.g. when restarting JupyterHub, which restarts all polls for running Spawners.
+
+        `poll_jitter=0` means no jitter, 0.1 means 10%, etc.
         """,
     ).tag(config=True)
 
@@ -840,6 +855,27 @@ class Spawner(LoggingConfigurable):
         """,
     ).tag(config=True)
 
+    progress_ready_hook = Any(
+        help="""
+        An optional hook function that you can implement to modify the
+        ready event, which will be shown to the user on the spawn progress page when their server
+        is ready.
+
+        This can be set independent of any concrete spawner implementation.
+
+        This maybe a coroutine.
+
+        Example::
+
+            async def my_ready_hook(spawner, ready_event):
+                ready_event["html_message"] = f"Server {spawner.name} is ready for {spawner.user.name}"
+                return ready_event
+
+            c.Spawner.progress_ready_hook = my_ready_hook
+
+        """
+    ).tag(config=True)
+
     pre_spawn_hook = Any(
         help="""
         An optional hook function that you can implement to do some
@@ -852,10 +888,9 @@ class Spawner(LoggingConfigurable):
 
         Example::
 
-            from subprocess import check_call
             def my_hook(spawner):
                 username = spawner.user.name
-                check_call(['./examples/bootstrap-script/bootstrap.sh', username])
+                spawner.environment["GREETING"] = f"Hello {username}"
 
             c.Spawner.pre_spawn_hook = my_hook
 
@@ -1014,6 +1049,10 @@ class Spawner(LoggingConfigurable):
         proto = 'https' if self.internal_ssl else 'http'
         bind_url = f"{proto}://{self.ip}:{self.port}{base_url}"
         env["JUPYTERHUB_SERVICE_URL"] = bind_url
+
+        # the public URLs of this server and the Hub
+        env["JUPYTERHUB_PUBLIC_URL"] = self.public_url
+        env["JUPYTERHUB_PUBLIC_HUB_URL"] = self.public_hub_url
 
         # Put in limit and guarantee info if they exist.
         # Note that this is for use by the humans / notebook extensions in the
@@ -1386,7 +1425,9 @@ class Spawner(LoggingConfigurable):
         self.stop_polling()
 
         self._poll_callback = PeriodicCallback(
-            self.poll_and_notify, 1e3 * self.poll_interval
+            self.poll_and_notify,
+            1e3 * self.poll_interval,
+            jitter=self.poll_jitter,
         )
         self._poll_callback.start()
 
@@ -1455,14 +1496,13 @@ def set_user_setuid(username, chdir=True):
     Returned preexec_fn will set uid/gid, and attempt to chdir to the target user's
     home directory.
     """
-    import grp
     import pwd
 
     user = pwd.getpwnam(username)
     uid = user.pw_uid
     gid = user.pw_gid
     home = user.pw_dir
-    gids = [g.gr_gid for g in grp.getgrall() if username in g.gr_mem]
+    gids = os.getgrouplist(username, gid)
 
     def preexec():
         """Set uid/gid of current process
@@ -1735,7 +1775,7 @@ class LocalProcessSpawner(Spawner):
             self.clear_state()
             return 0
 
-        # We use pustil.pid_exists on windows
+        # We use psutil.pid_exists on windows
         if os.name == 'nt':
             alive = psutil.pid_exists(self.pid)
         else:

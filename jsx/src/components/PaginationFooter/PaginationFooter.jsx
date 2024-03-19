@@ -1,16 +1,17 @@
 import React from "react";
 import PropTypes from "prop-types";
+import { FormControl } from "react-bootstrap";
 
 import "./pagination-footer.css";
 
 const PaginationFooter = (props) => {
-  let { offset, limit, visible, total, next, prev } = props;
+  const { offset, limit, visible, total, next, prev, handleLimit } = props;
   return (
     <div className="pagination-footer">
       <p>
-        Displaying {offset}-{offset + visible}
-        <br></br>
-        <br></br>
+        Displaying {visible ? offset + 1 : offset}-{offset + visible}{" "}
+        {total ? `of ${total}` : ""}
+        <br />
         {offset >= 1 ? (
           <button className="btn btn-sm btn-light spaced">
             <span
@@ -41,6 +42,19 @@ const PaginationFooter = (props) => {
             <span className="inactive-pagination">Next</span>
           </button>
         )}
+        <label>
+          Items per page:
+          <FormControl
+            type="number"
+            min="25"
+            step="25"
+            name="pagination-limit"
+            placeholder={limit}
+            aria-label="pagination-limit"
+            defaultValue={limit}
+            onChange={handleLimit}
+          />
+        </label>
       </p>
     </div>
   );
@@ -48,10 +62,13 @@ const PaginationFooter = (props) => {
 
 PaginationFooter.propTypes = {
   endpoint: PropTypes.string,
-  page: PropTypes.number,
+  offset: PropTypes.number,
   limit: PropTypes.number,
-  numOffset: PropTypes.number,
-  numElements: PropTypes.number,
+  visible: PropTypes.number,
+  total: PropTypes.number,
+  handleLimit: PropTypes.func,
+  next: PropTypes.func,
+  prev: PropTypes.func,
 };
 
 export default PaginationFooter;

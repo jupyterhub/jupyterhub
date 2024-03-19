@@ -1,5 +1,7 @@
 const webpack = require("webpack");
 const path = require("path");
+const user_json = require("./testing/user.json");
+const group_json = require("./testing/group.json");
 
 module.exports = {
   entry: path.resolve(__dirname, "src", "App.jsx"),
@@ -26,38 +28,28 @@ module.exports = {
   output: {
     publicPath: "/",
     filename: "admin-react.js",
-    path: path.resolve(__dirname, "build"),
+    path: path.resolve(__dirname, "../share/jupyterhub/static/js/"),
   },
   resolve: {
     extensions: [".css", ".js", ".jsx"],
   },
   plugins: [new webpack.HotModuleReplacementPlugin()],
   devServer: {
-    static: {
-      directory: path.resolve(__dirname, "build"),
+    client: {
+      overlay: false,
     },
+    static: ["build", "testing", "../share/jupyterhub"],
     port: 9000,
     onBeforeSetupMiddleware: (devServer) => {
       const app = devServer.app;
 
-      var user_data = JSON.parse(
-        '[{"kind":"user","name":"foo","admin":true,"groups":[],"server":"/user/foo/","pending":null,"created":"2020-12-07T18:46:27.112695Z","last_activity":"2020-12-07T21:00:33.336354Z","servers":{"":{"name":"","last_activity":"2020-12-07T20:58:02.437408Z","started":"2020-12-07T20:58:01.508266Z","pending":null,"ready":true,"state":{"pid":28085},"url":"/user/foo/","user_options":{},"progress_url":"/hub/api/users/foo/server/progress"}}},{"kind":"user","name":"bar","admin":false,"groups":[],"server":null,"pending":null,"created":"2020-12-07T18:46:27.115528Z","last_activity":"2020-12-07T20:43:51.013613Z","servers":{}}]',
-      );
-      var group_data = JSON.parse(
-        '[{"kind":"group","name":"testgroup","users":[]}, {"kind":"group","name":"testgroup2","users":["foo", "bar"]}]',
-      );
-
       // get user_data
       app.get("/hub/api/users", (req, res) => {
-        res
-          .set("Content-Type", "application/json")
-          .send(JSON.stringify(user_data));
+        res.set("Content-Type", "application/json").send(user_json);
       });
       // get group_data
       app.get("/hub/api/groups", (req, res) => {
-        res
-          .set("Content-Type", "application/json")
-          .send(JSON.stringify(group_data));
+        res.set("Content-Type", "application/json").send(group_json);
       });
       // add users to group
       app.post("/hub/api/groups/*/users", (req, res) => {

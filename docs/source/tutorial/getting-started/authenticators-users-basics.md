@@ -22,6 +22,21 @@ started.
 If this configuration value is not set, then **all authenticated users will be allowed into your hub**.
 ```
 
+## One Time Passwords ( request_otp )
+
+By setting `request_otp` to true, the login screen will show and additional password input field
+to accept an OTP:
+
+```python
+c.Authenticator.request_otp = True
+```
+
+By default, the prompt label is `OTP:`, but this can be changed by setting `otp_prompt`:
+
+```python
+c.Authenticator.otp_prompt = 'Google Authenticator:'
+```
+
 ## Configure admins (`admin_users`)
 
 ```{note}
@@ -112,7 +127,6 @@ popular services:
 - [Globus](https://oauthenticator.readthedocs.io/en/latest/reference/api/gen/oauthenticator.globus.html)
 - [Google](https://oauthenticator.readthedocs.io/en/latest/reference/api/gen/oauthenticator.google.html)
 - [MediaWiki](https://oauthenticator.readthedocs.io/en/latest/reference/api/gen/oauthenticator.mediawiki.html)
-- [Okpy](https://oauthenticator.readthedocs.io/en/latest/reference/api/gen/oauthenticator.okpy.html)
 - [OpenShift](https://oauthenticator.readthedocs.io/en/latest/reference/api/gen/oauthenticator.openshift.html)
 
 A [generic implementation](https://oauthenticator.readthedocs.io/en/latest/reference/api/gen/oauthenticator.generic.html), which you can use for OAuth authentication

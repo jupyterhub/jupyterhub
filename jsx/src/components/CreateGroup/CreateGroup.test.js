@@ -25,11 +25,7 @@ var mockAsyncRejection = () =>
 var createGroupJsx = (callbackSpy) => (
   <Provider store={createStore(() => {}, {})}>
     <HashRouter>
-      <CreateGroup
-        createGroup={callbackSpy}
-        updateGroups={callbackSpy}
-        history={{ push: () => {} }}
-      />
+      <CreateGroup createGroup={callbackSpy} updateGroups={callbackSpy} />
     </HashRouter>
   </Provider>
 );

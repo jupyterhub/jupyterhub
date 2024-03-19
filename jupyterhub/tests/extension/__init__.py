@@ -6,7 +6,15 @@ state we want to check about the server
 
 import json
 
-from jupyter_server.base.handlers import JupyterHandler
+try:
+    from jupyter_server.base.handlers import JupyterHandler
+except ImportError:
+    from notebook.base.handlers import IPythonHandler as JupyterHandler
+
+    is_notebook_classic = True
+else:
+    is_notebook_classic = False
+
 from tornado import web
 
 
@@ -30,6 +38,7 @@ class JupyterHubTestHandler(JupyterHandler):
         info = {
             "current_user": self.current_user,
             "config": self.app.config,
+            "root_dir": self.contents_manager.root_dir,
             "disable_user_config": getattr(self.app, "disable_user_config", None),
             "settings": self.settings,
             "config_file_paths": self.app.config_file_paths,
@@ -53,3 +62,8 @@ def _load_jupyter_server_extension(serverapp):
         )
     ]
     serverapp.web_app.add_handlers('.*$', handlers)
+
+
+# classic notebook (<7) name
+if is_notebook_classic:
+    load_jupyter_server_extension = _load_jupyter_server_extension

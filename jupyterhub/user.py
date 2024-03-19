@@ -1,12 +1,10 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import json
-import string
 import warnings
 from collections import defaultdict
-from datetime import datetime, timedelta
-from functools import lru_cache
-from urllib.parse import quote, urlparse
+from datetime import timedelta
+from urllib.parse import quote, urlparse, urlunparse
 
 from sqlalchemy import inspect
 from tornado import gen, web
@@ -21,10 +19,13 @@ from .objects import Server
 from .spawner import LocalProcessSpawner
 from .utils import (
     AnyTimeoutError,
+    _strict_dns_safe,
     make_ssl_context,
     maybe_future,
+    subdomain_hook_legacy,
     url_escape_path,
     url_path_join,
+    utcnow,
 )
 
 # detailed messages about the most common failure-to-start errors,
@@ -54,42 +55,6 @@ Common causes of this timeout, and debugging tips:
    To fix: increase `Spawner.http_timeout` configuration
    to a number of seconds that is enough for servers to become responsive.
 """
-
-# set of chars that are safe in dns labels
-# (allow '.' because we don't mind multiple levels of subdomains)
-_dns_safe = set(string.ascii_letters + string.digits + '-.')
-# don't escape % because it's the escape char and we handle it separately
-_dns_needs_replace = _dns_safe | {"%"}
-
-
-@lru_cache()
-def _dns_quote(name):
-    """Escape a name for use in a dns label
-
-    this is _NOT_ fully domain-safe, but works often enough for realistic usernames.
-    Fully safe would be full IDNA encoding,
-    PLUS escaping non-IDNA-legal ascii,
-    PLUS some encoding of boundary conditions
-    """
-    # escape name for subdomain label
-    label = quote(name, safe="").lower()
-    # some characters are not handled by quote,
-    # because they are legal in URLs but not domains,
-    # specifically _ and ~ (starting in 3.7).
-    # Escape these in the same way (%{hex_codepoint}).
-    unique_chars = set(label)
-    for c in unique_chars:
-        if c not in _dns_needs_replace:
-            label = label.replace(c, f"%{ord(c):x}")
-
-    # underscore is our escape char -
-    # it's not officially legal in hostnames,
-    # but is valid in _domain_ names (?),
-    # and always works in practice.
-    # FIXME: We should consider switching to proper IDNA encoding
-    # for 3.0.
-    label = label.replace("%", "_")
-    return label
 
 
 class UserDict(dict):
@@ -223,7 +188,7 @@ class UserDict(dict):
 
         Returns dict with counts of active/pending/ready servers
         """
-        counts = defaultdict(lambda: 0)
+        counts = defaultdict(int)
         for user in self.values():
             for spawner in user.spawners.values():
                 pending = spawner.pending
@@ -544,6 +509,20 @@ class User:
             )
             spawn_kwargs.update(ssl_kwargs)
 
+        # public URLs
+        if self.settings.get("public_url"):
+            public_url = self.settings["public_url"]
+            hub = self.settings.get('hub')
+            if hub is None:
+                # only in mock tests
+                hub_path = "/hub/"
+            else:
+                hub_path = hub.base_url
+            spawn_kwargs["public_hub_url"] = urlunparse(
+                public_url._replace(path=hub_path)
+            )
+        spawn_kwargs["public_url"] = self.public_url(server_name)
+
         # update with kwargs. Mainly for testing.
         spawn_kwargs.update(kwargs)
         spawner = spawner_class(**spawn_kwargs)
@@ -630,18 +609,36 @@ class User:
     @property
     def domain(self):
         """Get the domain for my server."""
+        hook = self.settings.get("subdomain_hook", subdomain_hook_legacy)
+        return hook(self.name, self.settings['domain'], kind='user')
 
-        return _dns_quote(self.name) + '.' + self.settings['domain']
+    @property
+    def dns_safe_name(self):
+        """Get a dns-safe encoding of my name
+
+        - always safe value for a single DNS label
+        - max 40 characters, leaving room for additional components
+
+        .. versionadded:: 5.0
+        """
+        return _strict_dns_safe(self.name, max_length=40)
 
     @property
     def host(self):
         """Get the *host* for my server (proto://domain[:port])"""
-        # FIXME: escaped_name probably isn't escaped enough in general for a domain fragment
-        parsed = urlparse(self.settings['subdomain_host'])
-        h = f'{parsed.scheme}://{self.domain}'
-        if parsed.port:
-            h += ':%i' % parsed.port
-        return h
+        # if subdomains are used, use our domain
+
+        if self.settings.get('subdomain_host'):
+            parsed = urlparse(self.settings['subdomain_host'])
+            h = f"{parsed.scheme}://{self.domain}"
+            if parsed.port:
+                h = f"{h}:{parsed.port}"
+            return h
+        elif self.settings.get("public_url"):
+            # no subdomain, use public host url without path
+            return urlunparse(self.settings["public_url"]._replace(path=""))
+        else:
+            return ""
 
     @property
     def url(self):
@@ -649,8 +646,8 @@ class User:
 
         Full name.domain/path if using subdomains, otherwise just my /base/url
         """
-        if self.settings.get('subdomain_host'):
-            return f'{self.host}{self.base_url}'
+        if self.settings.get("subdomain_host"):
+            return f"{self.host}{self.base_url}"
         else:
             return self.base_url
 
@@ -659,7 +656,25 @@ class User:
         if not server_name:
             return self.url
         else:
-            return url_path_join(self.url, url_escape_path(server_name))
+            return url_path_join(self.url, url_escape_path(server_name), "/")
+
+    def public_url(self, server_name=''):
+        """Get the public URL of a server by name
+
+        Like server_url, but empty if no public URL is specified
+        """
+        # server_url will be a full URL if using subdomains
+        url = self.server_url(server_name)
+        if "://" not in url:
+            # not using subdomains, public URL may be specified
+            if self.settings.get("public_url"):
+                # add server's base_url path prefix to public host
+                url = urlunparse(self.settings["public_url"]._replace(path=url))
+            else:
+                # no public url (from subdomain or host),
+                # leave unspecified
+                url = ""
+        return url
 
     def progress_url(self, server_name=''):
         """API URL for progress endpoint for a server with a given name"""
@@ -851,9 +866,9 @@ class User:
             await spawner.run_auth_state_hook(auth_state)
 
             # update spawner start time, and activity for both spawner and user
-            self.last_activity = (
-                spawner.orm_spawner.started
-            ) = spawner.orm_spawner.last_activity = datetime.utcnow()
+            self.last_activity = spawner.orm_spawner.started = (
+                spawner.orm_spawner.last_activity
+            ) = utcnow(with_tz=False)
             db.commit()
             # wait for spawner.start to return
             # run optional preparation work to bootstrap the notebook
@@ -953,9 +968,7 @@ class User:
                 self.settings['statsd'].incr('spawner.failure.timeout')
             else:
                 self.log.exception(
-                    "Unhandled error starting {user}'s server: {error}".format(
-                        user=self.name, error=e
-                    )
+                    f"Unhandled error starting {self.name}'s server: {e}"
                 )
                 self.settings['statsd'].incr('spawner.failure.error')
                 e.reason = 'error'
@@ -963,9 +976,7 @@ class User:
                 await self.stop(spawner.name)
             except Exception:
                 self.log.exception(
-                    "Failed to cleanup {user}'s server that failed to start".format(
-                        user=self.name
-                    ),
+                    f"Failed to cleanup {self.name}'s server that failed to start",
                     exc_info=True,
                 )
             # raise original exception
@@ -997,7 +1008,10 @@ class User:
         ssl_context = make_ssl_context(key, cert, cafile=ca)
         try:
             resp = await server.wait_up(
-                http=True, timeout=spawner.http_timeout, ssl_context=ssl_context
+                http=True,
+                timeout=spawner.http_timeout,
+                ssl_context=ssl_context,
+                extra_path="api",
             )
         except Exception as e:
             if isinstance(e, AnyTimeoutError):
@@ -1011,18 +1025,14 @@ class User:
             else:
                 e.reason = 'error'
                 self.log.exception(
-                    "Unhandled error waiting for {user}'s server to show up at {url}: {error}".format(
-                        user=self.name, url=server.url, error=e
-                    )
+                    f"Unhandled error waiting for {self.name}'s server to show up at {server.url}: {e}"
                 )
                 self.settings['statsd'].incr('spawner.failure.http_error')
             try:
                 await self.stop(spawner.name)
             except Exception:
                 self.log.exception(
-                    "Failed to cleanup {user}'s server that failed to start".format(
-                        user=self.name
-                    ),
+                    f"Failed to cleanup {self.name}'s server that failed to start",
                     exc_info=True,
                 )
             # raise original TimeoutError
@@ -1057,7 +1067,9 @@ class User:
             status = await spawner.poll()
             if status is None:
                 await spawner.stop()
-            self.last_activity = spawner.orm_spawner.last_activity = datetime.utcnow()
+            self.last_activity = spawner.orm_spawner.last_activity = utcnow(
+                with_tz=False
+            )
             # remove server entry from db
             spawner.server = None
             if not spawner.will_resume:
@@ -1082,7 +1094,7 @@ class User:
             # trigger post-stop hook
             try:
                 await maybe_future(spawner.run_post_stop_hook())
-            except:
+            except Exception:
                 self.log.exception("Error in Spawner.post_stop_hook for %s", self)
             spawner.clear_state()
             spawner.orm_spawner.state = spawner.get_state()

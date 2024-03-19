@@ -1,4 +1,5 @@
 """Tests for utilities"""
+
 import asyncio
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -122,3 +123,96 @@ def test_browser_protocol(x_scheme, x_forwarded_proto, forwarded, expected):
 
     proto = utils.get_browser_protocol(request)
     assert proto == expected
+
+
+@pytest.mark.parametrize(
+    "name, expected",
+    [
+        ("safe", "safe"),
+        ("has--doubledash", "u-hasdoubl--cb052ae"),
+        ("uhasdoubl--cb052ae", "u-uhasdoub--3c0d1c9"),
+        ("üni", "xn--ni-wka"),
+        ("xn--ni-wka", "u-xnniwka--ceb4edd"),
+        ("x", "x"),
+        ("-pre", "u-pre--0e46e7b"),
+        ("É", "u-x--a755f65"),
+        ("é", "xn--9ca"),
+        ("a" * 64, "u-aaaaaaaa--ffe054f"),
+        ("a.b", "u-ab--2e7336d"),
+    ],
+)
+def test_subdomain_hook_idna(name, expected):
+    expected_domain = expected + ".domain"
+    resolved = utils.subdomain_hook_idna(name, "domain", "user")
+    assert resolved == expected_domain
+
+
+@pytest.mark.parametrize(
+    "name, expected",
+    [
+        ("safe", "safe"),
+        ("üni", "_c3_bcni"),
+        ("x", "x"),
+        ("É", "_c3_89"),
+        ("é", "_c3_a9"),
+        # bad cases:
+        ("a.b", "a.b"),
+        ("has--doubledash", "has--doubledash"),
+        ("-pre", "-pre"),
+        ("a" * 64, "a" * 64),
+    ],
+)
+def test_subdomain_hook_legacy(name, expected):
+    expected_domain = expected + ".domain"
+    resolved = utils.subdomain_hook_legacy(name, "domain", "user")
+    assert resolved == expected_domain
+
+
+@pytest.mark.parametrize(
+    "accept_header, choices, expected",
+    [
+        (
+            "",
+            ["application/json"],
+            None,
+        ),
+        (
+            "text/html",
+            ["application/json"],
+            None,
+        ),
+        (
+            "nonsense",
+            ["application/json"],
+            None,
+        ),
+        (
+            "text/html, application/json",
+            ["application/json"],
+            "application/json",
+        ),
+        (
+            "text/html, application/json",
+            ["application/json", "text/html"],
+            "text/html",
+        ),
+        (
+            "text/html; q=0.8, application/json; q=0.9",
+            ["application/json", "text/html"],
+            "application/json",
+        ),
+        (
+            "text/html, application/json; q=0.9",
+            ["application/json", "text/html"],
+            "text/html",
+        ),
+        (
+            "text/html; q=notunderstood, application/json; q=0.9",
+            ["application/json", "text/html"],
+            "text/html",
+        ),
+    ],
+)
+def test_get_accepted_mimetype(accept_header, choices, expected):
+    accepted = utils.get_accepted_mimetype(accept_header, choices=choices)
+    assert accepted == expected
