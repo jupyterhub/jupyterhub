@@ -74,18 +74,20 @@ async def test_singleuser_auth(
     spawner = user.spawners[server_name]
     url = url_path_join(public_url(app, user), server_name)
 
+    s = AsyncSession()
+
     # no cookies, redirects to login page
-    r = await async_requests.get(url)
+    r = await s.get(url)
     r.raise_for_status()
     assert '/hub/login' in r.url
 
     # unauthenticated /api/ should 403, not redirect
     api_url = url_path_join(url, "api/status")
-    r = await async_requests.get(api_url, allow_redirects=False)
+    r = await s.get(api_url, allow_redirects=False)
     assert r.status_code == 403
 
     # with cookies, login successful
-    r = await async_requests.get(url, cookies=cookies)
+    r = await s.get(url, cookies=cookies)
     r.raise_for_status()
     assert (
         urlparse(r.url)
@@ -99,7 +101,7 @@ async def test_singleuser_auth(
     assert r.status_code == 200
 
     # logout
-    r = await async_requests.get(url_path_join(url, 'logout'), cookies=cookies)
+    r = await s.get(url_path_join(url, 'logout'))
     assert len(r.cookies) == 0
 
     # accessing another user's server hits the oauth confirmation page
@@ -145,6 +147,8 @@ async def test_singleuser_auth(
 async def test_disable_user_config(request, app, tmpdir, full_spawn):
     # login, start the server
     cookies = await app.login_user('nandy')
+    s = AsyncSession()
+    s.cookies = cookies
     user = app.users['nandy']
     # stop spawner, if running:
     if user.running:
@@ -169,16 +173,14 @@ async def test_disable_user_config(request, app, tmpdir, full_spawn):
     url = public_url(app, user)
 
     # with cookies, login successful
-    r = await async_requests.get(url, cookies=cookies)
+    r = await s.get(url)
     r.raise_for_status()
     assert r.url.rstrip('/').endswith(
         url_path_join('/user/nandy', user.spawner.default_url or "/tree")
     )
     assert r.status_code == 200
 
-    r = await async_requests.get(
-        url_path_join(public_url(app, user), 'jupyterhub-test-info'), cookies=cookies
-    )
+    r = await s.get(url_path_join(public_url(app, user), 'jupyterhub-test-info'))
     r.raise_for_status()
     info = r.json()
     pprint(info)
@@ -374,19 +376,31 @@ async def test_nbclassic_control_panel(app, user, full_spawn):
 @pytest.mark.skipif(
     IS_JUPYVERSE, reason="jupyverse doesn't implement token authentication"
 )
-async def test_token_url_cookie(app, user, full_spawn):
+@pytest.mark.parametrize("accept_token_in_url", ["1", "0", ""])
+async def test_token_url_cookie(app, user, full_spawn, accept_token_in_url):
+    if accept_token_in_url:
+        user.spawner.environment["JUPYTERHUB_ALLOW_TOKEN_IN_URL"] = accept_token_in_url
+    should_accept = accept_token_in_url != "0"
+
     await user.spawn()
+    await app.proxy.add_user(user)
+
     token = user.new_api_token(scopes=["access:servers!user"])
     url = url_path_join(public_url(app, user), user.spawner.default_url or "/tree/")
 
     # first request: auth with token in URL
-    r = await async_requests.get(url + f"?token={token}", allow_redirects=False)
+    s = AsyncSession()
+    r = await s.get(url + f"?token={token}", allow_redirects=False)
     print(r.url, r.status_code)
+    if not should_accept:
+        assert r.status_code == 302
+        return
+
     assert r.status_code == 200
-    assert r.cookies
+    assert s.cookies
     # second request, use cookies set by first response,
     # no token in URL
-    r = await async_requests.get(url, cookies=r.cookies, allow_redirects=False)
+    r = await s.get(url, allow_redirects=False)
     assert r.status_code == 200
     await user.stop()
 
@@ -396,7 +410,8 @@ async def test_api_403_no_cookie(app, user, full_spawn):
     await user.spawn()
     await app.proxy.add_user(user)
     url = url_path_join(public_url(app, user), "/api/contents/")
-    r = await async_requests.get(url, allow_redirects=False)
+    s = AsyncSession()
+    r = await s.get(url, allow_redirects=False)
     # 403, not redirect
     assert r.status_code == 403
     # no state cookie set

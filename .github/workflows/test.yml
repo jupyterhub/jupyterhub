@@ -101,6 +101,9 @@ jobs:
           - python: "3.11"
             browser: browser
           - python: "3.11"
+            subdomain: subdomain
+            browser: browser
+          - python: "3.11"
             main_dependencies: main_dependencies
 
     steps:

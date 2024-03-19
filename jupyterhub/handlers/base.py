@@ -24,6 +24,7 @@ from tornado.log import app_log
 from tornado.web import RequestHandler, addslash
 
 from .. import __version__, orm, roles, scopes
+from .._xsrf_utils import _anonymous_xsrf_id, check_xsrf_cookie, get_xsrf_token
 from ..metrics import (
     PROXY_ADD_DURATION_SECONDS,
     PROXY_DELETE_DURATION_SECONDS,
@@ -99,7 +100,14 @@ class BaseHandler(RequestHandler):
                 self.log.error("Rolling back session due to database error")
                 self.db.rollback()
         self._resolve_roles_and_scopes()
-        return await maybe_future(super().prepare())
+        await maybe_future(super().prepare())
+        # run xsrf check after prepare
+        # because our version takes auth info into account
+        if (
+            self.request.method not in self._xsrf_safe_methods
+            and self.application.settings.get("xsrf_cookies")
+        ):
+            self.check_xsrf_cookie()
 
     @property
     def log(self):
@@ -200,9 +208,13 @@ class BaseHandler(RequestHandler):
         """The default Content-Security-Policy header
 
         Can be overridden by defining Content-Security-Policy in settings['headers']
+
+        ..versionchanged:: 4.1
+
+            Change default frame-ancestors from 'self' to 'none'
         """
         return '; '.join(
-            ["frame-ancestors 'self'", "report-uri " + self.csp_report_uri]
+            ["frame-ancestors 'none'", "report-uri " + self.csp_report_uri]
         )
 
     def get_content_type(self):
@@ -212,7 +224,6 @@ class BaseHandler(RequestHandler):
         """
         Set any headers passed as tornado_settings['headers'].
 
-        By default sets Content-Security-Policy of frame-ancestors 'self'.
         Also responsible for setting content-type header
         """
         # wrap in HTTPHeaders for case-insensitivity
@@ -234,17 +245,63 @@ class BaseHandler(RequestHandler):
     # Login and cookie-related
     # ---------------------------------------------------------------
 
+    _xsrf_safe_methods = {"GET", "HEAD", "OPTIONS"}
+
+    @property
+    def _xsrf_token_id(self):
+        """Value to be signed/encrypted for xsrf token
+
+        include login info in xsrf token
+        this means xsrf tokens are tied to logged-in users,
+        and change after a user logs in.
+
+        While the user is not yet logged in,
+        an anonymous value is used, to prevent portability.
+        These anonymous values are short-lived.
+        """
+        # cases:
+        # 1. logged in, session id (session_id:user_id)
+        # 2. logged in, no session id (anonymous_id:user_id)
+        # 3. not logged in, session id (session_id:anonymous_id)
+        # 4. no cookies at all, use single anonymous value (:anonymous_id)
+        session_id = self.get_session_cookie()
+        if self.current_user:
+            if isinstance(self.current_user, User):
+                user_id = self.current_user.cookie_id
+            else:
+                # this shouldn't happen, but may if e.g. a Service attempts to fetch a page,
+                # which usually won't work, but this method should not be what raises
+                user_id = ""
+            if not session_id:
+                # no session id, use non-portable anonymous id
+                session_id = _anonymous_xsrf_id(self)
+        else:
+            # not logged in yet, use non-portable anonymous id
+            user_id = _anonymous_xsrf_id(self)
+        xsrf_id = f"{session_id}:{user_id}".encode("utf8", "replace")
+        return xsrf_id
+
+    @property
+    def xsrf_token(self):
+        """Override tornado's xsrf token with further restrictions
+
+        - only set cookie for regular pages
+        - include login info in xsrf token
+        - verify signature
+        """
+        return get_xsrf_token(self, cookie_path=self.hub.base_url)
+
     def check_xsrf_cookie(self):
-        try:
-            return super().check_xsrf_cookie()
-        except web.HTTPError as e:
-            # ensure _jupyterhub_user is defined on rejected requests
-            if not hasattr(self, "_jupyterhub_user"):
-                self._jupyterhub_user = None
-            self._resolve_roles_and_scopes()
-            # rewrite message because we use this on methods other than POST
-            e.log_message = e.log_message.replace("POST", self.request.method)
-            raise
+        """Check that xsrf cookie matches xsrf token in request"""
+        # overrides tornado's implementation
+        # because we changed what a correct value should be in xsrf_token
+
+        if not hasattr(self, "_jupyterhub_user"):
+            # run too early to check the value
+            # tornado runs this before 'prepare',
+            # but we run it again after so auth info is available, which happens in 'prepare'
+            return None
+        return check_xsrf_cookie(self)
 
     @property
     def admin_users(self):
@@ -517,6 +574,16 @@ class BaseHandler(RequestHandler):
             user = self._user_from_orm(u)
         return user
 
+    def clear_cookie(self, cookie_name, **kwargs):
+        """Clear a cookie
+
+        overrides RequestHandler to always handle __Host- prefix correctly
+        """
+        if cookie_name.startswith("__Host-"):
+            kwargs["path"] = "/"
+            kwargs["secure"] = True
+        return super().clear_cookie(cookie_name, **kwargs)
+
     def clear_login_cookie(self, name=None):
         kwargs = {}
         user = self.get_current_user_cookie()
@@ -583,6 +650,11 @@ class BaseHandler(RequestHandler):
         kwargs.update(self.settings.get('cookie_options', {}))
         kwargs.update(overrides)
 
+        if key.startswith("__Host-"):
+            # __Host- cookies must be secure and on /
+            kwargs["path"] = "/"
+            kwargs["secure"] = True
+
         if encrypted:
             set_cookie = self.set_secure_cookie
         else:
@@ -612,7 +684,9 @@ class BaseHandler(RequestHandler):
         Session id cookie is *not* encrypted,
         so other services on this domain can read it.
         """
-        session_id = uuid.uuid4().hex
+        if not hasattr(self, "_session_id"):
+            self._session_id = uuid.uuid4().hex
+        session_id = self._session_id
         # if using subdomains, set session cookie on the domain,
         # which allows it to be shared by subdomains.
         # if domain is unspecified, it is _more_ restricted to only the setting domain

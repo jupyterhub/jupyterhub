@@ -96,7 +96,7 @@ async def test_post_content_type(app, content_type, status):
     assert r.status_code == status
 
 
-@mark.parametrize("xsrf_in_url", [True, False])
+@mark.parametrize("xsrf_in_url", [True, False, "invalid"])
 @mark.parametrize(
     "method, path",
     [
@@ -107,6 +107,13 @@ async def test_post_content_type(app, content_type, status):
 async def test_xsrf_check(app, username, method, path, xsrf_in_url):
     cookies = await app.login_user(username)
     xsrf = cookies['_xsrf']
+    if xsrf_in_url == "invalid":
+        cookies.pop("_xsrf")
+        # a valid old-style tornado xsrf token is no longer valid
+        xsrf = cookies['_xsrf'] = (
+            "2|7329b149|d837ced983e8aac7468bc7a61ce3d51a|1708610065"
+        )
+
     url = path.format(username=username)
     if xsrf_in_url:
         url = f"{url}?_xsrf={xsrf}"
@@ -117,7 +124,7 @@ async def test_xsrf_check(app, username, method, path, xsrf_in_url):
         noauth=True,
         cookies=cookies,
     )
-    if xsrf_in_url:
+    if xsrf_in_url is True:
         assert r.status_code == 200
     else:
         assert r.status_code == 403

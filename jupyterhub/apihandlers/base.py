@@ -76,15 +76,8 @@ class APIHandler(BaseHandler):
 
         return True
 
-    async def prepare(self):
-        await super().prepare()
-        # tornado only checks xsrf on non-GET
-        # we also check xsrf on GETs to API endpoints
-        # make sure this runs after auth, which happens in super().prepare()
-        if self.request.method not in {"HEAD", "OPTIONS"} and self.settings.get(
-            "xsrf_cookies"
-        ):
-            self.check_xsrf_cookie()
+    # we also check xsrf on GETs to API endpoints
+    _xsrf_safe_methods = {"HEAD", "OPTIONS"}
 
     def check_xsrf_cookie(self):
         if not hasattr(self, '_jupyterhub_user'):
