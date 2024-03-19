@@ -1273,6 +1273,30 @@ async def test_admin_role_membership(in_db, role_users, admin_users, expected_me
     assert role_members == expected_members
 
 
+async def test_manage_roles_disallows_load_roles():
+    roles_to_load = [
+        {
+            'name': 'elephant',
+            'description': 'pacing about',
+            'scopes': ['read:hub'],
+        },
+    ]
+    hub = MockHub(load_roles=roles_to_load)
+    hub.init_db()
+    hub.authenticator.manage_roles = True
+    with pytest.raises(ValueError, match="offloaded to the authenticator"):
+        await hub.init_role_creation()
+
+
+async def test_manage_roles_loads_default_roles():
+    hub = MockHub()
+    hub.init_db()
+    hub.authenticator.manage_roles = True
+    await hub.init_role_creation()
+    admin_role = orm.Role.find(hub.db, 'admin')
+    assert admin_role
+
+
 async def test_no_default_service_role():
     services = [
         {

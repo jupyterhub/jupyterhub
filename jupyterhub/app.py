@@ -2240,6 +2240,10 @@ class JupyterHub(Application):
         if self.custom_scopes:
             self.log.info(f"Defining {len(self.custom_scopes)} custom scopes.")
             scopes.define_custom_scopes(self.custom_scopes)
+
+        if self.authenticator.manage_roles and self.load_roles:
+            raise ValueError("Role management has been offloaded to the authenticator")
+
         self.log.debug('Loading roles into database')
         default_roles = roles.get_default_roles()
         config_role_names = [r['name'] for r in self.load_roles]
