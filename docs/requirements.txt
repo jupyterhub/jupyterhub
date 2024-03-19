@@ -1,13 +1,6 @@
-# We install the jupyterhub package to help autodoc-traits inspect it and
-# generate documentation.
-#
-# FIXME: If there is a way for this requirements.txt file to pass a flag that
-#        the build system can intercept to not build the javascript artifacts,
-#        then do so so. That would mean that installing the documentation can
-#        avoid needing node/npm installed.
-#
---editable .
-
+# docs also require jupyterhub itself to be installed
+# don't depend on it here, as that often results in a duplicate
+# installation of jupyterhub that's already installed
 autodoc-traits
 jupyterhub-sphinx-theme
 myst-parser>=0.19
