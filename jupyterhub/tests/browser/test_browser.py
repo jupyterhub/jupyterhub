@@ -44,7 +44,7 @@ async def test_submit_login_form(app, browser, user_special_chars):
     login_url = url_path_join(public_host(app), app.hub.base_url, "login")
     await browser.goto(login_url)
     await login(browser, user.name, password=user.name)
-    expected_url = ujoin(public_url(app), f"/user/{user_special_chars.urlname}/")
+    expected_url = public_url(app, user)
     await expect(browser).to_have_url(expected_url)
 
 
@@ -56,7 +56,7 @@ async def test_submit_login_form(app, browser, user_special_chars):
             # will encode given parameters for an unauthenticated URL in the next url
             # the next parameter will contain the app base URL (replaces BASE_URL in tests)
             'spawn',
-            [('param', 'value')],
+            {'param': 'value'},
             '/hub/login?next={{BASE_URL}}hub%2Fspawn%3Fparam%3Dvalue',
             '/hub/login?next={{BASE_URL}}hub%2Fspawn%3Fparam%3Dvalue',
         ),
@@ -64,15 +64,15 @@ async def test_submit_login_form(app, browser, user_special_chars):
             # login?param=fromlogin&next=encoded(/hub/spawn?param=value)
             # will drop parameters given to the login page, passing only the next url
             'login',
-            [('param', 'fromlogin'), ('next', '/hub/spawn?param=value')],
-            '/hub/login?param=fromlogin&next=%2Fhub%2Fspawn%3Fparam%3Dvalue',
-            '/hub/login?next=%2Fhub%2Fspawn%3Fparam%3Dvalue',
+            {'param': 'fromlogin', 'next': '/hub/spawn?param=value'},
+            '/hub/login?param=fromlogin&next={{BASE_URL}}hub%2Fspawn%3Fparam%3Dvalue',
+            '/hub/login?next={{BASE_URL}}hub%2Fspawn%3Fparam%3Dvalue',
         ),
         (
             # login?param=value&anotherparam=anothervalue
             # will drop parameters given to the login page, and use an empty next url
             'login',
-            [('param', 'value'), ('anotherparam', 'anothervalue')],
+            {'param': 'value', 'anotherparam': 'anothervalue'},
             '/hub/login?param=value&anotherparam=anothervalue',
             '/hub/login?next=',
         ),
@@ -80,7 +80,7 @@ async def test_submit_login_form(app, browser, user_special_chars):
             # login
             # simplest case, accessing the login URL, gives an empty next url
             'login',
-            [],
+            {},
             '/hub/login',
             '/hub/login?next=',
         ),
@@ -98,6 +98,8 @@ async def test_open_url_login(
     user = user_special_chars.user
     login_url = url_path_join(public_host(app), app.hub.base_url, url)
     await browser.goto(login_url)
+    if params.get("next"):
+        params["next"] = url_path_join(app.base_url, params["next"])
     url_new = url_path_join(public_host(app), app.hub.base_url, url_concat(url, params))
     print(url_new)
     await browser.goto(url_new)
@@ -853,12 +855,15 @@ async def test_oauth_page(
     oauth_client.allowed_scopes = sorted(roles.roles_to_scopes([service_role]))
     app.db.commit()
     # open the service url in the browser
-    service_url = url_path_join(public_url(app, service) + 'owhoami/?arg=x')
+    service_url = url_path_join(public_url(app, service), 'owhoami/?arg=x')
     await browser.goto(service_url)
 
-    expected_redirect_url = url_path_join(
-        app.base_url + f"services/{service.name}/oauth_callback"
-    )
+    if app.subdomain_host:
+        expected_redirect_url = url_path_join(
+            public_url(app, service), "oauth_callback"
+        )
+    else:
+        expected_redirect_url = url_path_join(service.prefix, "oauth_callback")
     expected_client_id = f"service-{service.name}"
 
     # decode the URL

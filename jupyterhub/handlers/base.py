@@ -38,7 +38,6 @@ from ..metrics import (
     ServerStopStatus,
 )
 from ..objects import Server
-from ..scopes import needs_scope
 from ..spawner import LocalProcessSpawner
 from ..user import User
 from ..utils import (
@@ -1557,10 +1556,28 @@ class UserUrlHandler(BaseHandler):
     delete = non_get
 
     @web.authenticated
-    @needs_scope("access:servers")
     async def get(self, user_name, user_path):
         if not user_path:
             user_path = '/'
+        path_parts = user_path.split("/", 2)
+        server_names = [""]
+        if len(path_parts) >= 3:
+            # second part _may_ be a server name
+            server_names.append(path_parts[1])
+
+        access_scopes = [
+            f"access:servers!server={user_name}/{server_name}"
+            for server_name in server_names
+        ]
+        if not any(self.has_scope(scope) for scope in access_scopes):
+            self.log.warning(
+                "Not authorizing access to %s. Requires any of [%s], not derived from scopes [%s]",
+                self.request.path,
+                ", ".join(access_scopes),
+                ", ".join(self.expanded_scopes),
+            )
+            raise web.HTTPError(404, "No access to resources or resources not found")
+
         current_user = self.current_user
         if user_name != current_user.name:
             user = self.find_user(user_name)
