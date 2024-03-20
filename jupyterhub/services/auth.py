@@ -1203,6 +1203,7 @@ class HubOAuth(HubAuth):
         for cookie_name, cookie in handler.request.cookies.items():
             if cookie_name.startswith(self.state_cookie_name):
                 self._clear_cookie(
+                    handler,
                     cookie_name,
                     path=self.cookie_path,
                 )

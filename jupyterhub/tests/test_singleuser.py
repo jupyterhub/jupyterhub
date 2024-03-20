@@ -394,7 +394,7 @@ async def test_nbclassic_control_panel(app, user, full_spawn):
 async def test_token_url_cookie(app, user, full_spawn, accept_token_in_url):
     if accept_token_in_url:
         user.spawner.environment["JUPYTERHUB_ALLOW_TOKEN_IN_URL"] = accept_token_in_url
-    should_accept = accept_token_in_url != "0"
+    should_accept = accept_token_in_url == "1"
 
     await user.spawn()
     await app.proxy.add_user(user)
