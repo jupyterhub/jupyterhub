@@ -36,6 +36,7 @@ import string
 import time
 import uuid
 import warnings
+from functools import partial
 from http import HTTPStatus
 from unittest import mock
 from urllib.parse import urlencode
@@ -46,6 +47,7 @@ from tornado.log import app_log
 from tornado.web import HTTPError, RequestHandler
 from traitlets import (
     Any,
+    Bool,
     Dict,
     Instance,
     Integer,
@@ -57,8 +59,9 @@ from traitlets import (
 )
 from traitlets.config import SingletonConfigurable
 
+from .._xsrf_utils import _anonymous_xsrf_id, check_xsrf_cookie, get_xsrf_token
 from ..scopes import _intersect_expanded_scopes
-from ..utils import get_browser_protocol, url_path_join
+from ..utils import _bool_env, get_browser_protocol, url_path_join
 
 
 def check_scopes(required_scopes, scopes):
@@ -306,6 +309,46 @@ class HubAuth(SingletonConfigurable):
         """,
     ).tag(config=True)
 
+    allow_token_in_url = Bool(
+        _bool_env("JUPYTERHUB_ALLOW_TOKEN_IN_URL", default=True),
+        help="""Allow requests to pages with ?token=... in the URL
+        
+        This allows starting a user session by sharing a URL with credentials,
+        bypassing authentication with the Hub.
+        
+        If False, tokens in URLs will be ignored by the server,
+        except on websocket requests.
+        
+        Has no effect on websocket requests,
+        which can only reliably authenticate via token in the URL,
+        as recommended by browser Websocket implementations.
+
+        This will default to False in JupyterHub 5.
+
+        .. versionadded:: 4.1
+
+        .. versionchanged:: 5.0
+            default changed to False
+        """,
+    ).tag(config=True)
+
+    allow_websocket_cookie_auth = Bool(
+        _bool_env("JUPYTERHUB_ALLOW_WEBSOCKET_COOKIE_AUTH", default=True),
+        help="""Allow websocket requests with only cookie for authentication
+
+        Cookie-authenticated websockets cannot be protected from other user servers unless per-user domains are used.
+        Disabling cookie auth on websockets protects user servers from each other,
+        but may break some user applications.
+        Per-user domains eliminate the need to lock this down.
+        
+        JupyterLab 4.1.2 and Notebook 6.5.6, 7.1.0 will not work
+        because they rely on cookie authentication without
+        API or XSRF tokens.
+        
+        .. versionadded:: 4.1
+        """,
+    ).tag(config=True)
+
     cookie_options = Dict(
         help="""Additional options to pass when setting cookies.
 
@@ -323,6 +366,40 @@ class HubAuth(SingletonConfigurable):
             return json.loads(options_env)
         else:
             return {}
+
+    cookie_host_prefix_enabled = Bool(
+        False,
+        help="""Enable `__Host-` prefix on authentication cookies.
+        
+        The `__Host-` prefix on JupyterHub cookies provides further
+        protection against cookie tossing when untrusted servers
+        may control subdomains of your jupyterhub deployment.
+        
+        _However_, it also requires that cookies be set on the path `/`,
+        which means they are shared by all JupyterHub components,
+        so a compromised server component will have access to _all_ JupyterHub-related
+        cookies of the visiting browser.
+        It is recommended to only combine `__Host-` cookies with per-user domains.
+        
+        Set via $JUPYTERHUB_COOKIE_HOST_PREFIX_ENABLED
+        """,
+    ).tag(config=True)
+
+    @default("cookie_host_prefix_enabled")
+    def _default_cookie_host_prefix_enabled(self):
+        return _bool_env("JUPYTERHUB_COOKIE_HOST_PREFIX_ENABLED")
+
+    @property
+    def cookie_path(self):
+        """
+        Path prefix on which to set cookies
+
+        self.base_url, but '/' when cookie_host_prefix_enabled is True
+        """
+        if self.cookie_host_prefix_enabled:
+            return "/"
+        else:
+            return self.base_url
 
     cookie_cache_max_age = Integer(help="DEPRECATED. Use cache_max_age")
 
@@ -586,6 +663,17 @@ class HubAuth(SingletonConfigurable):
     auth_header_name = 'Authorization'
     auth_header_pat = re.compile(r'(?:token|bearer)\s+(.+)', re.IGNORECASE)
 
+    def _get_token_url(self, handler):
+        """Get the token from the URL
+
+        Always run for websockets,
+        otherwise run only if self.allow_token_in_url
+        """
+        fetch_mode = handler.request.headers.get("Sec-Fetch-Mode", "unspecified")
+        if self.allow_token_in_url or fetch_mode == "websocket":
+            return handler.get_argument("token", "")
+        return ""
+
     def get_token(self, handler, in_cookie=True):
         """Get the token authenticating a request
 
@@ -598,8 +686,7 @@ class HubAuth(SingletonConfigurable):
         - in header: Authorization: token <token>
         - in cookie (stored after oauth), if in_cookie is True
         """
-
-        user_token = handler.get_argument('token', '')
+        user_token = self._get_token_url(handler)
         if not user_token:
             # get it from Authorization header
             m = self.auth_header_pat.match(
@@ -646,12 +733,23 @@ class HubAuth(SingletonConfigurable):
         """
         return self._call_coroutine(sync, self._get_user, handler)
 
+    def _patch_xsrf(self, handler):
+        """Overridden in HubOAuth
+
+        HubAuth base class doesn't handle xsrf,
+        which is only relevant for cookie-based auth
+        """
+        return
+
     async def _get_user(self, handler):
         # only allow this to be called once per handler
         # avoids issues if an error is raised,
         # since this may be called again when trying to render the error page
         if hasattr(handler, '_cached_hub_user'):
             return handler._cached_hub_user
+
+        # patch XSRF checks, which will apply after user check
+        self._patch_xsrf(handler)
 
         handler._cached_hub_user = user_model = None
         session_id = self.get_session_id(handler)
@@ -738,7 +836,10 @@ class HubOAuth(HubAuth):
         because we don't want to use the same cookie name
         across OAuth clients.
         """
-        return self.oauth_client_id
+        cookie_name = self.oauth_client_id
+        if self.cookie_host_prefix_enabled:
+            cookie_name = "__Host-" + cookie_name
+        return cookie_name
 
     @property
     def state_cookie_name(self):
@@ -750,22 +851,103 @@ class HubOAuth(HubAuth):
 
     def _get_token_cookie(self, handler):
         """Base class doesn't store tokens in cookies"""
+
+        fetch_mode = handler.request.headers.get("Sec-Fetch-Mode", "unset")
+        if fetch_mode == "websocket" and not self.allow_websocket_cookie_auth:
+            # disallow cookie auth on websockets
+            return None
+
         token = handler.get_secure_cookie(self.cookie_name)
         if token:
             # decode cookie bytes
             token = token.decode('ascii', 'replace')
         return token
 
-    async def _get_user_cookie(self, handler):
+    def _get_xsrf_token_id(self, handler):
+        """Get contents for xsrf token for a given Handler
+
+        This is the value to be encrypted & signed in the xsrf token
+        """
         token = self._get_token_cookie(handler)
         session_id = self.get_session_id(handler)
+        if token:
+            token_hash = hashlib.sha256(token.encode("ascii", "replace")).hexdigest()
+            if not session_id:
+                session_id = _anonymous_xsrf_id(handler)
+        else:
+            token_hash = _anonymous_xsrf_id(handler)
+        return f"{session_id}:{token_hash}".encode("ascii", "replace")
+
+    def _patch_xsrf(self, handler):
+        """Patch handler to inject JuptyerHub xsrf token behavior"""
+        handler._xsrf_token_id = self._get_xsrf_token_id(handler)
+        # override xsrf_token property on class,
+        # so it's still a getter, not invoked immediately
+        handler.__class__.xsrf_token = property(
+            partial(get_xsrf_token, cookie_path=self.base_url)
+        )
+        handler.check_xsrf_cookie = partial(self.check_xsrf_cookie, handler)
+
+    def check_xsrf_cookie(self, handler):
+        """check_xsrf_cookie patch
+
+        Applies JupyterHub check_xsrf_cookie if not token authenticated
+        """
+        if getattr(handler, '_token_authenticated', False):
+            return
+        check_xsrf_cookie(handler)
+
+    def _clear_cookie(self, handler, cookie_name, **kwargs):
+        """Clear a cookie, handling __Host- prefix"""
+        # Set-Cookie is rejected without 'secure',
+        # this includes clearing cookies!
+        if cookie_name.startswith("__Host-"):
+            kwargs["path"] = "/"
+            kwargs["secure"] = True
+        return handler.clear_cookie(cookie_name, **kwargs)
+
+    def _needs_check_xsrf(self, handler):
+        """Does the given cookie-authenticated request need to check xsrf?"""
+        if getattr(handler, "_token_authenticated", False):
+            return False
+
+        fetch_mode = handler.request.headers.get("Sec-Fetch-Mode", "unspecified")
+        if fetch_mode in {"websocket", "no-cors"} or (
+            fetch_mode in {"navigate", "unspecified"}
+            and handler.request.method.lower() in {"get", "head", "options"}
+        ):
+            # no xsrf check needed for regular page views or no-cors
+            # or websockets after allow_websocket_cookie_auth passes
+            if fetch_mode == "unspecified":
+                self.log.warning(
+                    f"Skipping XSRF check for insecure request {handler.request.method} {handler.request.path}"
+                )
+            return False
+        else:
+            return True
+
+    async def _get_user_cookie(self, handler):
+        # check xsrf if needed
+        token = self._get_token_cookie(handler)
+        session_id = self.get_session_id(handler)
+        if token and self._needs_check_xsrf(handler):
+            try:
+                self.check_xsrf_cookie(handler)
+            except HTTPError as e:
+                self.log.error(
+                    f"Not accepting cookie auth on {handler.request.method} {handler.request.path}: {e}"
+                )
+                # don't proceed with cookie auth unless xsrf is okay
+                # don't raise either, because that makes a mess
+                return None
+
         if token:
             user_model = await self.user_for_token(
                 token, session_id=session_id, sync=False
             )
             if user_model is None:
                 app_log.warning("Token stored in cookie may have expired")
-                handler.clear_cookie(self.cookie_name)
+                self._clear_cookie(handler, self.cookie_name, path=self.cookie_path)
             return user_model
 
     # HubOAuth API
@@ -911,7 +1093,7 @@ class HubOAuth(HubAuth):
             cookie_name = self.state_cookie_name
         b64_state = self.generate_state(next_url, **extra_state)
         kwargs = {
-            'path': self.base_url,
+            'path': self.cookie_path,
             'httponly': True,
             # Expire oauth state cookie in ten minutes.
             # Usually this will be cleared by completed login
@@ -919,8 +1101,12 @@ class HubOAuth(HubAuth):
             # OAuth that doesn't complete shouldn't linger too long.
             'max_age': 600,
         }
-        if get_browser_protocol(handler.request) == 'https':
+        if (
+            get_browser_protocol(handler.request) == 'https'
+            or self.cookie_host_prefix_enabled
+        ):
             kwargs['secure'] = True
+
         # load user cookie overrides
         kwargs.update(self.cookie_options)
         handler.set_secure_cookie(cookie_name, b64_state, **kwargs)
@@ -958,8 +1144,11 @@ class HubOAuth(HubAuth):
 
     def set_cookie(self, handler, access_token):
         """Set a cookie recording OAuth result"""
-        kwargs = {'path': self.base_url, 'httponly': True}
-        if get_browser_protocol(handler.request) == 'https':
+        kwargs = {'path': self.cookie_path, 'httponly': True}
+        if (
+            get_browser_protocol(handler.request) == 'https'
+            or self.cookie_host_prefix_enabled
+        ):
             kwargs['secure'] = True
         # load user cookie overrides
         kwargs.update(self.cookie_options)
@@ -973,7 +1162,7 @@ class HubOAuth(HubAuth):
 
     def clear_cookie(self, handler):
         """Clear the OAuth cookie"""
-        handler.clear_cookie(self.cookie_name, path=self.base_url)
+        self._clear_cookie(handler, self.cookie_name, path=self.cookie_path)
 
 
 class UserNotAllowed(Exception):
@@ -1185,7 +1374,7 @@ class HubAuthenticated:
             return
         try:
             self._hub_auth_user_cache = self.check_hub_user(user_model)
-        except UserNotAllowed as e:
+        except UserNotAllowed:
             # cache None, in case get_user is called again while processing the error
             self._hub_auth_user_cache = None
 
@@ -1206,6 +1395,25 @@ class HubAuthenticated:
 
         self.hub_auth._persist_url_token_if_set(self)
         return self._hub_auth_user_cache
+
+    @property
+    def _xsrf_token_id(self):
+        if hasattr(self, "__xsrf_token_id"):
+            return self.__xsrf_token_id
+        if not isinstance(self.hub_auth, HubOAuth):
+            return ""
+        return self.hub_auth._get_xsrf_token_id(self)
+
+    @_xsrf_token_id.setter
+    def _xsrf_token_id(self, value):
+        self.__xsrf_token_id = value
+
+    @property
+    def xsrf_token(self):
+        return get_xsrf_token(self, cookie_path=self.hub_auth.base_url)
+
+    def check_xsrf_cookie(self):
+        return self.hub_auth.check_xsrf_cookie(self)
 
 
 class HubOAuthenticated(HubAuthenticated):
@@ -1241,12 +1449,22 @@ class HubOAuthCallbackHandler(HubOAuthenticated, RequestHandler):
         cookie_name = self.hub_auth.get_state_cookie_name(arg_state)
         cookie_state = self.get_secure_cookie(cookie_name)
         # clear cookie state now that we've consumed it
-        self.clear_cookie(cookie_name, path=self.hub_auth.base_url)
+        clear_kwargs = {}
+        if self.hub_auth.cookie_host_prefix_enabled:
+            # Set-Cookie is rejected without 'secure',
+            # this includes clearing cookies!
+            clear_kwargs["secure"] = True
+        self.hub_auth._clear_cookie(self, cookie_name, path=self.hub_auth.cookie_path)
         if isinstance(cookie_state, bytes):
             cookie_state = cookie_state.decode('ascii', 'replace')
         # check that state matches
         if arg_state != cookie_state:
-            app_log.warning("oauth state %r != %r", arg_state, cookie_state)
+            app_log.warning(
+                "oauth state argument %r != cookie %s=%r",
+                arg_state,
+                cookie_name,
+                cookie_state,
+            )
             raise HTTPError(403, "oauth state does not match. Try logging in again.")
         next_url = self.hub_auth.get_next_url(cookie_state)
 

@@ -401,6 +401,25 @@ class JupyterHub(Application):
         Useful for daemonizing JupyterHub.
         """,
     ).tag(config=True)
+
+    cookie_host_prefix_enabled = Bool(
+        False,
+        help="""Enable `__Host-` prefix on authentication cookies.
+        
+        The `__Host-` prefix on JupyterHub cookies provides further
+        protection against cookie tossing when untrusted servers
+        may control subdomains of your jupyterhub deployment.
+        
+        _However_, it also requires that cookies be set on the path `/`,
+        which means they are shared by all JupyterHub components,
+        so a compromised server component will have access to _all_ JupyterHub-related
+        cookies of the visiting browser.
+        It is recommended to only combine `__Host-` cookies with per-user domains.
+
+        .. versionadded:: 4.1
+        """,
+    ).tag(config=True)
+
     cookie_max_age_days = Float(
         14,
         help="""Number of days for a login cookie to be valid.
@@ -1898,6 +1917,8 @@ class JupyterHub(Application):
             hub_args['port'] = self.hub_port
 
         self.hub = Hub(**hub_args)
+        if self.cookie_host_prefix_enabled:
+            self.hub.cookie_name = "__Host-" + self.hub.cookie_name
 
         if not self.subdomain_host:
             api_prefix = url_path_join(self.hub.base_url, "api/")
@@ -2760,6 +2781,7 @@ class JupyterHub(Application):
             base_url=self.base_url,
             default_url=self.default_url,
             cookie_secret=self.cookie_secret,
+            cookie_host_prefix_enabled=self.cookie_host_prefix_enabled,
             cookie_max_age_days=self.cookie_max_age_days,
             redirect_to_server=self.redirect_to_server,
             login_url=login_url,

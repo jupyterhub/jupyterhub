@@ -8,6 +8,7 @@ import errno
 import functools
 import hashlib
 import inspect
+import os
 import random
 import secrets
 import socket
@@ -28,6 +29,21 @@ from sqlalchemy.exc import SQLAlchemyError
 from tornado import gen, ioloop, web
 from tornado.httpclient import AsyncHTTPClient, HTTPError
 from tornado.log import app_log
+
+
+def _bool_env(key, default=False):
+    """Cast an environment variable to bool
+
+    If unset or empty, return `default`
+    `0` is False; all other values are True.
+    """
+    value = os.environ.get(key, "")
+    if value == "":
+        return default
+    if value.lower() in {"0", "false"}:
+        return False
+    else:
+        return True
 
 
 # Deprecated aliases: no longer needed now that we require 3.7

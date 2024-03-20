@@ -385,7 +385,7 @@ async def test_oauth_service_roles(
     # token-authenticated request to HubOAuth
     token = app.users[name].new_api_token()
     # token in ?token parameter
-    r = await async_requests.get(url_concat(url, {'token': token}))
+    r = await async_requests.get(url_concat(url, {'token': token}), headers=s.headers)
     r.raise_for_status()
     reply = r.json()
     assert reply['name'] == name
@@ -393,7 +393,9 @@ async def test_oauth_service_roles(
     # verify that ?token= requests set a cookie
     assert len(r.cookies) != 0
     # ensure cookie works in future requests
-    r = await async_requests.get(url, cookies=r.cookies, allow_redirects=False)
+    r = await async_requests.get(
+        url, cookies=r.cookies, allow_redirects=False, headers=s.headers
+    )
     r.raise_for_status()
     assert r.url == url
     reply = r.json()
