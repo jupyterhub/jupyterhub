@@ -163,6 +163,7 @@ class Spawner(LoggingConfigurable):
     hub = Any()
     orm_spawner = Any()
     cookie_options = Dict()
+    cookie_host_prefix_enabled = Bool()
     public_url = Unicode(help="Public URL of this spawner's server")
     public_hub_url = Unicode(help="Public URL of the Hub itself")
 
@@ -1006,6 +1007,10 @@ class Spawner(LoggingConfigurable):
         env['JUPYTERHUB_CLIENT_ID'] = self.oauth_client_id
         if self.cookie_options:
             env['JUPYTERHUB_COOKIE_OPTIONS'] = json.dumps(self.cookie_options)
+
+        env["JUPYTERHUB_COOKIE_HOST_PREFIX_ENABLED"] = str(
+            int(self.cookie_host_prefix_enabled)
+        )
         env['JUPYTERHUB_HOST'] = self.hub.public_host
         env['JUPYTERHUB_OAUTH_CALLBACK_URL'] = url_path_join(
             self.user.url, url_escape_path(self.name), 'oauth_callback'

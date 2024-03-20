@@ -42,6 +42,13 @@ async_requests = _AsyncRequests()
 class AsyncSession(requests.Session):
     """requests.Session object that runs in the background thread"""
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        # session requests are for cookie authentication
+        # and should look like regular page views,
+        # so set Sec-Fetch-Mode: navigate
+        self.headers.setdefault("Sec-Fetch-Mode", "navigate")
+
     def request(self, *args, **kwargs):
         return async_requests.executor.submit(super().request, *args, **kwargs)
 
@@ -157,6 +164,7 @@ async def api_request(
     else:
         base_url = public_url(app, path='hub')
     headers = kwargs.setdefault('headers', {})
+    headers.setdefault("Sec-Fetch-Mode", "cors")
     if 'Authorization' not in headers and not noauth and 'cookies' not in kwargs:
         # make a copy to avoid modifying arg in-place
         kwargs['headers'] = h = {}
@@ -176,7 +184,7 @@ async def api_request(
         kwargs['cert'] = (app.internal_ssl_cert, app.internal_ssl_key)
         kwargs["verify"] = app.internal_ssl_ca
     resp = await f(url, **kwargs)
-    assert "frame-ancestors 'self'" in resp.headers['Content-Security-Policy']
+    assert "frame-ancestors 'none'" in resp.headers['Content-Security-Policy']
     assert (
         ujoin(app.hub.base_url, "security/csp-report")
         in resp.headers['Content-Security-Policy']
@@ -197,6 +205,9 @@ def get_page(path, app, hub=True, **kw):
     else:
         prefix = app.base_url
     base_url = ujoin(public_host(app), prefix)
+    # Sec-Fetch-Mode=navigate to look like a regular page view
+    headers = kw.setdefault("headers", {})
+    headers.setdefault("Sec-Fetch-Mode", "navigate")
     return async_requests.get(ujoin(base_url, path), **kw)
 
 

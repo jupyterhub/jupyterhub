@@ -685,11 +685,10 @@ async def test_other_user_url(app, username, user, group, create_temp_role, has_
     ],
 )
 async def test_page_with_token(app, user, url, token_in):
-    cookies = await app.login_user(user.name)
     token = user.new_api_token()
     if token_in == "url":
         url = url_concat(url, {"token": token})
-        headers = None
+        headers = {}
     elif token_in == "header":
         headers = {
             "Authorization": f"token {token}",
@@ -734,14 +733,13 @@ async def test_login_strip(app, form_user, auth_user, form_password):
     """Test that login form strips space form usernames, but not passwords"""
     form_data = {"username": form_user, "password": form_password}
     expected_auth = {"username": auth_user, "password": form_password}
-    base_url = public_url(app)
     called_with = []
 
     async def mock_authenticate(handler, data):
         called_with.append(data)
 
     with mock.patch.object(app.authenticator, 'authenticate', mock_authenticate):
-        r = await async_requests.get(base_url + 'hub/login')
+        r = await get_page('login', app)
         r.raise_for_status()
         cookies = r.cookies
         xsrf = cookies['_xsrf']
@@ -922,17 +920,19 @@ async def test_auto_login(app, request):
 async def test_auto_login_logout(app):
     name = 'burnham'
     cookies = await app.login_user(name)
+    s = AsyncSession()
+    s.cookies = cookies
 
     with mock.patch.dict(
         app.tornado_settings, {'authenticator': Authenticator(auto_login=True)}
     ):
-        r = await async_requests.get(
+        r = await s.get(
             public_host(app) + app.tornado_settings['logout_url'], cookies=cookies
         )
     r.raise_for_status()
     logout_url = public_host(app) + app.tornado_settings['logout_url']
     assert r.url == logout_url
-    assert r.cookies == {}
+    assert list(s.cookies.keys()) == ["_xsrf"]
     # don't include logged-out user in page:
     try:
         idx = r.text.index(name)
@@ -946,19 +946,23 @@ async def test_auto_login_logout(app):
 async def test_logout(app):
     name = 'wash'
     cookies = await app.login_user(name)
-    r = await async_requests.get(
-        public_host(app) + app.tornado_settings['logout_url'], cookies=cookies
+    s = AsyncSession()
+    s.cookies = cookies
+    r = await s.get(
+        public_host(app) + app.tornado_settings['logout_url'],
     )
     r.raise_for_status()
     login_url = public_host(app) + app.tornado_settings['login_url']
     assert r.url == login_url
-    assert r.cookies == {}
+    assert list(s.cookies.keys()) == ["_xsrf"]
 
 
 @pytest.mark.parametrize('shutdown_on_logout', [True, False])
 async def test_shutdown_on_logout(app, shutdown_on_logout):
     name = 'shutitdown'
     cookies = await app.login_user(name)
+    s = AsyncSession()
+    s.cookies = cookies
     user = app.users[name]
 
     # start the user's server
@@ -978,14 +982,14 @@ async def test_shutdown_on_logout(app, shutdown_on_logout):
     with mock.patch.dict(
         app.tornado_settings, {'shutdown_on_logout': shutdown_on_logout}
     ):
-        r = await async_requests.get(
+        r = await s.get(
             public_host(app) + app.tornado_settings['logout_url'], cookies=cookies
         )
         r.raise_for_status()
 
     login_url = public_host(app) + app.tornado_settings['login_url']
     assert r.url == login_url
-    assert r.cookies == {}
+    assert list(s.cookies.keys()) == ["_xsrf"]
 
     # wait for any pending state to resolve
     for i in range(50):
