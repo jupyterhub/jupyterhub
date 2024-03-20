@@ -739,8 +739,11 @@ class BaseHandler(RequestHandler):
         if not self.get_session_cookie():
             self.set_session_cookie()
 
-        # create and set a new cookie token for the hub
-        if not self.get_current_user_cookie():
+        # create and set a new cookie for the hub
+        cookie_user = self.get_current_user_cookie()
+        if cookie_user is None or cookie_user.id != user.id:
+            if cookie_user:
+                self.log.info(f"User {cookie_user.name} is logging in as {user.name}")
             self.set_hub_cookie(user)
 
     def authenticate(self, data):
