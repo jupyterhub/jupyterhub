@@ -70,6 +70,7 @@ myst_enable_extensions = [
 myst_substitutions = {
     # date example: Dev 07, 2022
     "date": datetime.date.today().strftime("%b %d, %Y").title(),
+    "python_min": "3.8",
     "version": jupyterhub.__version__,
 }
 
