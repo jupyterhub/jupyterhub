@@ -23,7 +23,7 @@ installed Python before, the recommended way to install it is to use
 If you have not installed NodeJS before, we recommend installing it in the `miniconda` environment you set up for Python.
 You can do so with `conda install nodejs`.
 
-Many in the Jupyter community use \[`nvm`\](<https://github.com/nvm-sh/nvm>) to
+Many in the Jupyter community use [`nvm`](https://github.com/nvm-sh/nvm) to
 managing node dependencies.
 
 ### Install git
