@@ -19,7 +19,7 @@ from .utils import add_user, async_requests, get_page, public_url
 
 
 async def test_pam_auth():
-    authenticator = MockPAMAuthenticator()
+    authenticator = MockPAMAuthenticator(allow_all=True)
     authorized = await authenticator.get_authenticated_user(
         None, {'username': 'match', 'password': 'match'}
     )
@@ -38,7 +38,7 @@ async def test_pam_auth():
 
 
 async def test_pam_auth_account_check_disabled():
-    authenticator = MockPAMAuthenticator(check_account=False)
+    authenticator = MockPAMAuthenticator(allow_all=True, check_account=False)
     authorized = await authenticator.get_authenticated_user(
         None, {'username': 'allowedmatch', 'password': 'allowedmatch'}
     )
@@ -83,7 +83,9 @@ async def test_pam_auth_admin_groups():
         return user_group_map[name]
 
     authenticator = MockPAMAuthenticator(
-        admin_groups={'jh_admins', 'wheel'}, admin_users={'override_admin'}
+        admin_groups={'jh_admins', 'wheel'},
+        admin_users={'override_admin'},
+        allow_all=True,
     )
 
     # Check admin_group applies as expected
@@ -142,7 +144,10 @@ async def test_pam_auth_admin_groups():
 
 
 async def test_pam_auth_allowed():
-    authenticator = MockPAMAuthenticator(allowed_users={'wash', 'kaylee'})
+    authenticator = MockPAMAuthenticator(
+        allowed_users={'wash', 'kaylee'}, allow_all=False
+    )
+
     authorized = await authenticator.get_authenticated_user(
         None, {'username': 'kaylee', 'password': 'kaylee'}
     )
@@ -163,7 +168,7 @@ async def test_pam_auth_allowed_groups():
     def getgrnam(name):
         return MockStructGroup('grp', ['kaylee'])
 
-    authenticator = MockPAMAuthenticator(allowed_groups={'group'})
+    authenticator = MockPAMAuthenticator(allowed_groups={'group'}, allow_all=False)
 
     with mock.patch.object(authenticator, '_getgrnam', getgrnam):
         authorized = await authenticator.get_authenticated_user(
@@ -180,14 +185,14 @@ async def test_pam_auth_allowed_groups():
 
 async def test_pam_auth_blocked():
     # Null case compared to next case
-    authenticator = MockPAMAuthenticator()
+    authenticator = MockPAMAuthenticator(allow_all=True)
     authorized = await authenticator.get_authenticated_user(
         None, {'username': 'wash', 'password': 'wash'}
     )
     assert authorized['name'] == 'wash'
 
-    # Blacklist basics
-    authenticator = MockPAMAuthenticator(blocked_users={'wash'})
+    # Blocklist basics
+    authenticator = MockPAMAuthenticator(blocked_users={'wash'}, allow_all=True)
     authorized = await authenticator.get_authenticated_user(
         None, {'username': 'wash', 'password': 'wash'}
     )
@@ -195,7 +200,9 @@ async def test_pam_auth_blocked():
 
     # User in both allowed and blocked: default deny.  Make error someday?
     authenticator = MockPAMAuthenticator(
-        blocked_users={'wash'}, allowed_users={'wash', 'kaylee'}
+        blocked_users={'wash'},
+        allowed_users={'wash', 'kaylee'},
+        allow_all=True,
     )
     authorized = await authenticator.get_authenticated_user(
         None, {'username': 'wash', 'password': 'wash'}
@@ -204,7 +211,8 @@ async def test_pam_auth_blocked():
 
     # User not in blocked set can log in
     authenticator = MockPAMAuthenticator(
-        blocked_users={'wash'}, allowed_users={'wash', 'kaylee'}
+        blocked_users={'wash'},
+        allowed_users={'wash', 'kaylee'},
     )
     authorized = await authenticator.get_authenticated_user(
         None, {'username': 'kaylee', 'password': 'kaylee'}
@@ -222,7 +230,8 @@ async def test_pam_auth_blocked():
 
     # User in neither list
     authenticator = MockPAMAuthenticator(
-        blocked_users={'mal'}, allowed_users={'wash', 'kaylee'}
+        blocked_users={'mal'},
+        allowed_users={'wash', 'kaylee'},
     )
     authorized = await authenticator.get_authenticated_user(
         None, {'username': 'simon', 'password': 'simon'}
@@ -258,7 +267,9 @@ async def test_deprecated_signatures():
 
 
 async def test_pam_auth_no_such_group():
-    authenticator = MockPAMAuthenticator(allowed_groups={'nosuchcrazygroup'})
+    authenticator = MockPAMAuthenticator(
+        allowed_groups={'nosuchcrazygroup'},
+    )
     authorized = await authenticator.get_authenticated_user(
         None, {'username': 'kaylee', 'password': 'kaylee'}
     )
@@ -406,7 +417,7 @@ async def test_auth_state_disabled(app, auth_state_unavailable):
 
 
 async def test_normalize_names():
-    a = MockPAMAuthenticator()
+    a = MockPAMAuthenticator(allow_all=True)
     authorized = await a.get_authenticated_user(
         None, {'username': 'ZOE', 'password': 'ZOE'}
     )
@@ -429,7 +440,7 @@ async def test_normalize_names():
 
 
 async def test_username_map():
-    a = MockPAMAuthenticator(username_map={'wash': 'alpha'})
+    a = MockPAMAuthenticator(username_map={'wash': 'alpha'}, allow_all=True)
     authorized = await a.get_authenticated_user(
         None, {'username': 'WASH', 'password': 'WASH'}
     )
@@ -459,7 +470,7 @@ async def test_post_auth_hook():
         authentication['testkey'] = 'testvalue'
         return authentication
 
-    a = MockPAMAuthenticator(post_auth_hook=test_auth_hook)
+    a = MockPAMAuthenticator(allow_all=True, post_auth_hook=test_auth_hook)
 
     authorized = await a.get_authenticated_user(
         None, {'username': 'test_user', 'password': 'test_user'}
@@ -567,6 +578,7 @@ async def test_auth_managed_groups(
         parent=app,
         authenticated_groups=authenticated_groups,
         refresh_groups=refresh_groups,
+        allow_all=True,
     )
 
     user.groups.append(group)
@@ -600,15 +612,18 @@ async def test_auth_managed_groups(
     "allowed_users, allow_all, allow_existing_users",
     [
         ('specified', False, True),
-        ('', True, False),
+        ('', False, False),
     ],
 )
-def test_allow_all_defaults(app, user, allowed_users, allow_all, allow_existing_users):
+async def test_allow_defaults(
+    app, user, allowed_users, allow_all, allow_existing_users
+):
     if allowed_users:
         allowed_users = set(allowed_users.split(','))
     else:
         allowed_users = set()
     authenticator = auth.Authenticator(allowed_users=allowed_users)
+    authenticator.authenticate = lambda handler, data: data["username"]
     assert authenticator.allow_all == allow_all
     assert authenticator.allow_existing_users == allow_existing_users
 
@@ -620,8 +635,21 @@ def test_allow_all_defaults(app, user, allowed_users, allow_all, allow_existing_
     else:
         authenticator.allowed_users == set()
 
-    assert authenticator.check_allowed("specified")
-    assert authenticator.check_allowed(user.name)
+    specified_allowed = await authenticator.get_authenticated_user(
+        None, {"username": "specified"}
+    )
+    if "specified" in allowed_users:
+        assert specified_allowed is not None
+    else:
+        assert specified_allowed is None
+
+    existing_allowed = await authenticator.get_authenticated_user(
+        None, {"username": user.name}
+    )
+    if allow_existing_users:
+        assert existing_allowed is not None
+    else:
+        assert existing_allowed is None
 
 
 @pytest.mark.parametrize("allow_all", [None, True, False])
@@ -693,6 +721,9 @@ class AllowAllIgnoringAuthenticator(auth.Authenticator):
 
     allowed_letters = Tuple(config=True, help="Initial letters to allow")
 
+    def authenticate(self, handler, data):
+        return {"name": data["username"]}
+
     def check_allowed(self, username, auth=None):
         if not self.allowed_users and not self.allowed_letters:
             # this subclass doesn't know about the JupyterHub 5 allow_all config
@@ -707,7 +738,7 @@ class AllowAllIgnoringAuthenticator(auth.Authenticator):
 
 # allow_all is not recognized by Authenticator subclass
 # make sure it doesn't make anything more permissive, at least
-@pytest.mark.parametrize("allow_all", [True, False, None])
+@pytest.mark.parametrize("allow_all", [True, False])
 @pytest.mark.parametrize(
     "allowed_users, allowed_letters, allow_existing_users, allowed, not_allowed",
     [
@@ -720,7 +751,7 @@ class AllowAllIgnoringAuthenticator(auth.Authenticator):
         ("specified", "a,b", True, "specified,alice,bebe,existing", "other"),
     ],
 )
-def test_authenticator_without_allow_all(
+async def test_authenticator_without_allow_all(
     app,
     allowed_users,
     allowed_letters,
@@ -753,10 +784,14 @@ def test_authenticator_without_allow_all(
     expected_allowed = sorted(allowed)
     expected_not_allowed = sorted(not_allowed)
     to_check = list(chain(expected_allowed, expected_not_allowed))
+    if allow_all:
+        expected_allowed = to_check
+        expected_not_allowed = []
+
     are_allowed = []
     are_not_allowed = []
     for username in to_check:
-        if authenticator.check_allowed(username):
+        if await authenticator.get_authenticated_user(None, {"username": username}):
             are_allowed.append(username)
         else:
             are_not_allowed.append(username)

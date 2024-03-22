@@ -41,6 +41,11 @@ When testing, it may be helpful to use the
 password unless a global password has been set. Once set, any username will
 still be accepted but the correct password will need to be provided.
 
+:::{versionadded} 5.0
+The DummyAuthenticator's default `allow_all` is True,
+unlike most other Authenticators.
+:::
+
 ## Additional Authenticators
 
 Additional authenticators can be found on GitHub
@@ -81,6 +86,7 @@ Writing an Authenticator that looks up passwords in a dictionary
 requires only overriding this one method:
 
 ```python
+from secrets import compare_digest
 from traitlets import Dict
 from jupyterhub.auth import Authenticator
 
@@ -91,8 +97,14 @@ class DictionaryAuthenticator(Authenticator):
     )
 
     async def authenticate(self, handler, data):
-        if self.passwords.get(data['username']) == data['password']:
-            return data['username']
+        username = data["username"]
+        password = data["password"]
+        check_password = self.passwords.get(username, "")
+        # always call compare_digest, for timing attacks
+        if compare_digest(check_password, password) and username in self.passwords:
+            return username
+        else:
+            return None
 ```
 
 #### Normalize usernames
@@ -190,10 +202,10 @@ via `jupyterhub --generate-config`.
 When dealing with logging in, there are generally two _separate_ steps:
 
 authentication
-: identifying who is logged in, and
+: identifying who is trying to log in, and
 
 authorization
-: deciding whether an authenticated user is logged in
+: deciding whether an authenticated user is allowed to access your JupyterHub
 
 {meth}`Authenticator.authenticate` is responsible for authenticating users.
 It is perfectly fine in the simplest cases for `Authenticator.authenticate` to be responsible for authentication _and_ authorization,
@@ -203,71 +215,137 @@ However, Authenticators also have have two methods {meth}`~.Authenticator.check_
 
 If `check_blocked_users()` returns False, authorization stops and the user is not allowed.
 
-If `check_allowed()` returns True, authorization proceeds.
+If `Authenticator.allow_all` is True OR `check_allowed()` returns True, authorization proceeds.
 
 :::{versionadded} 5.0
-{attr}`Authenticator.allow_all` and {attr}`Authenticator.allow_existing_users` are new in JupyterHub 5.0.
+{attr}`.Authenticator.allow_all` and {attr}`.Authenticator.allow_existing_users` are new in JupyterHub 5.0.
 
-By default, `allow_all` is True when `allowed_users` is empty,
-and `allow_existing_users` is True when `allowed_users` is not empty.
-This is to ensure backward-compatibility, but subclasses are free to pick more restrictive defaults.
+By default, `allow_all` is False,
+which is a change from pre-5.0, where `allow_all` was implicitly True if `allowed_users` was empty.
 :::
 
 ### Overriding `check_allowed`
 
+:::{versionchanged} 5.0
+`check_allowed()` is **not called** is `allow_all` is True.
+:::
+
+:::{versionchanged} 5.0
+Starting with 5.0, `check_allowed()` should **NOT** return True if no allow config
+is specified (`allow_all` should be used instead).
+
+:::
+
 The base implementation of {meth}`~.Authenticator.check_allowed` checks:
 
-- if `allow_all` is True, return True
 - if username is in the `allowed_users` set, return True
 - else return False
 
-If a custom Authenticator defines additional sources of `allow` configuration,
-such as membership in a group or other information,
-it should override `check_allowed` to account for this.
-`allow_` configuration should generally be _additive_,
-i.e. if permission is granted by _any_ allow configuration,
-a user should be authorized.
-
-:::{note}
-For backward-compatibility, it is the responsibility of `Authenticator.check_allowed()` to check `.allow_all`.
-This is to avoid the backward-compatible default values from granting permissions unexpectedly.
-:::
-
-If an Authenticator defines additional `allow` configuration, it must at least:
-
-1. override `check_allowed`, and
-2. override the default for `allow_all`
-
-The default for `allow_all` in a custom authenticator should be one of `False` or a dynamic default matching something like `if not any allow configuration specified`.
-False is recommended for authenticators which source much larger pools of users than are _typically_ allowed to access a Hub (e.g. generic OAuth providers like Google, GitHub, etc.).
-
-For example, here is how `PAMAuthenticator` extends the base class to add `allowed_groups`:
+:::{versionchanged} 5.0
+Prior to 5.0, the check was
 
 ```python
-from traitlets import default
-
-@default("allow_all")
-def _allow_all_default(self):
-    if self.allowed_users or self.allowed_groups:
-        # if any allow config is specified, default to False
-        return False
-    return True
-
-def check_allowed(self, username, authentication=None):
-    if self.allow_all:
-        return True
-    if self.check_allowed_groups(username, authentication):
-        return True
-    return super().check_allowed(username, authentication)
+if (not allowed_users) or username in allowed_users:
 ```
 
-Important points to note:
+but the implicit `not allowed_users` has been replaced by explicit `allow_all`, which is checked _before_ calling `check_allowed`.
+`check_allowed` **is not called** if `allow_all` is True.
 
-- overriding the default for `allow_all` is required to avoid `allow_all` being True when `allowed_groups` is specified, but `allowed_users` is not.
-- `allow_all` must be checked inside `check_allowed`
-- `allowed_groups` strictly expands who is authorized,
-  it does not apply restrictions `allowed_users`.
-  This is recommended for all `allow_` configuration added by Authenticators.
+If your Authenticator subclass similarly returns True when no allow config is defined,
+this is fully backward compatible for your users, but means `allow_all = False` has no real effect.
+
+You can make your Authenticator forward-compatible with JupyterHub 5 by defining `allow_all` as a boolean config trait on your class:
+
+```python
+class MyAuthenticator(Authenticator):
+
+    # backport allow_all from JupyterHub 5
+    allow_all = Bool(False, config=True)
+
+    def check_allowed(self, username, authentication):
+        if self.allow_all:
+            # replaces previous "if no auth config"
+            return True
+        ...
+```
+
+:::
+
+If an Authenticator defines additional sources of `allow` configuration,
+such as membership in a group or other information,
+it should override `check_allowed` to account for this.
+
+:::{note}
+`allow_` configuration should generally be _additive_,
+i.e. if access is granted by _any_ allow configuration,
+a user should be authorized.
+
+JupyterHub recommends that Authenticators applying _restrictive_ configuration should use names like `block_` or `require_`,
+and check this during `check_blocked_users` or `authenticate`, not `check_allowed`.
+:::
+
+In general, an Authenticator's skeleton should look like:
+
+```python
+class MyAuthenticator(Authenticator):
+    # backport allow_all for compatibility with JupyterHub < 5
+    allow_all = Bool(False, config=True)
+    require_something = List(config=True)
+    allowed_something = Set()
+
+    def authenticate(self, data, handler):
+        ...
+        if success:
+            return {"username": username, "auth_state": {...}}
+        else:
+            return None
+
+    def check_blocked_users(self, username, authentication=None):
+        """Apply _restrictive_ configuration"""
+
+        if self.require_something and not has_something(username, self.request_):
+            return False
+        # repeat for each restriction
+        if restriction_defined and restriction_not_met:
+            return False
+        return super().check_blocked_users(self, username, authentication)
+
+    def check_allowed(self, username, authentication=None):
+        """Apply _permissive_ configuration
+
+        Only called if check_blocked_users returns True
+        AND allow_all is False
+        """
+        if self.allow_all:
+            # check here to backport allow_all behavior
+            # from JupyterHub 5
+            # this branch will never be taken with jupyterhub >=5
+            return True
+        if self.allowed_something and user_has_something(username):
+            return True
+        # repeat for each allow
+        if allow_config and allow_met:
+            return True
+        # should always have this at the end
+        if self.allowed_users and username in self.allowed_users:
+            return True
+        # do not call super!
+        # super().check_allowed is not safe with JupyterHub < 5.0,
+        # as it will return True if allowed_users is empty
+        return False
+```
+
+Key points:
+
+- `allow_all` is backported from JupyterHub 5, for consistent behavior in all versions of JupyterHub (optional)
+- restrictive configuration is checked in `check_blocked_users`
+- if any restriction is not met, `check_blocked_users` returns False
+- permissive configuration is checked in `check_allowed`
+- if any `allow` condition is met, `check_allowed` returns True
+
+So the logical expression for a user being authorized should look like:
+
+> if ALL restrictions are met AND ANY admissions are met: user is authorized
 
 #### Custom error messages
 

@@ -6,30 +6,57 @@ The default Authenticator uses [PAM][] (Pluggable Authentication Module) to auth
 their usernames and passwords. With the default Authenticator, any user
 with an account and password on the system will be allowed to login.
 
-## Create a set of allowed users (`allowed_users`)
+## Deciding who is allowed
+
+In the base Authenticator, there are 3 configuration options for granting users access to your Hub:
+
+1. `allow_all` grants any user who can successfully authenticate access to the Hub
+2. `allowed_users` defines a set of users who can access the Hub
+3. `allow_existing_users` enables managing users via the JupyterHub API or admin page
+
+These options should apply to all Authenticators.
+Your chosen Authenticator may add additional configuration options to admit users, such as team membership, course enrollment, etc.
+
+:::{important}
+You should always specify at least one allow configuration if you want people to be able to access your Hub!
+In most cases, this looks like:
+
+```python
+c.Authenticator.allow_all = True
+# or
+c.Authenticator.allowed_users = {"name", ...}
+```
+
+:::
+
+:::{versionchanged} 5.0
+If no allow config is specified, then by default **nobody will have access to your Hub**.
+Prior to 5.0, the opposite was true; effectively `allow_all = True` if no other allow config was specified.
+:::
 
 You can restrict which users are allowed to login with a set,
 `Authenticator.allowed_users`:
 
 ```python
 c.Authenticator.allowed_users = {'mal', 'zoe', 'inara', 'kaylee'}
-c.Authenticator.allow_all = False
+# c.Authenticator.allow_all = False
 c.Authenticator.allow_existing_users = False
 ```
 
 Users in the `allowed_users` set are added to the Hub database when the Hub is started.
 
-```{warning}
-If `allowed_users` is not specified, then by default **all authenticated users will be allowed into your hub**,
-i.e. `allow_all` defaults to True if neither `allowed_users` nor `allow_all` are set.
-```
+:::{versionchanged} 5.0
+{attr}`.Authenticator.allow_all` and {attr}`.Authenticator.allow_existing_users` are new in JupyterHub 5.0
+to enable explicit configuration of previously implicit behavior.
 
-:::{versionadded} 5.0
-{attr}`Authenticator.allow_all` and {attr}`Authenticator.allow_existing_users` are new in JupyterHub 5.0.
+Prior to 5.0, `allow_all` was implicitly True if `allowed_users` was empty.
+Starting with 5.0, to allow all authenticated users by default,
+`allow_all` must be explicitly set to True.
 
-By default, `allow_all` is True when `allowed_users` is empty,
-and `allow_existing_users` is True when `allowed_users` is not empty.
-This is to ensure backward-compatibility.
+By default, `allow_existing_users` is True when `allowed_users` is not empty,
+to ensure backward-compatibility.
+To make the `allowed_users` set _restrictive_,
+set `allow_existing_users = False`.
 :::
 
 ## One Time Passwords ( request_otp )
@@ -101,6 +128,11 @@ By default, only the deprecated `admin` role has global `access` permissions.
 **As a courtesy, you should make sure your users know if admin access is enabled.**
 
 ## Add or remove users from the Hub
+
+:::{versionadded} 5.0
+`c.Authenticator.allow_existing_users` is added in 5.0 and enabled by default.
+Prior to 5.0, this behavior was not optional.
+:::
 
 Users can be added to and removed from the Hub via the admin
 panel or the REST API.
