@@ -203,14 +203,6 @@ class UserDict(dict):
         return counts
 
 
-def _get_role_names(role_list):
-    return [role['name'] for role in role_list]
-
-
-def _get_role_object(role_list, role_name):
-    return [role for role in role_list if role['name'] == role_name][0]
-
-
 class _SpawnerDict(dict):
     def __init__(self, spawner_factory):
         self.spawner_factory = spawner_factory
@@ -311,65 +303,75 @@ class User:
 
     def sync_roles(self, auth_roles):
         """Synchronize roles with database"""
-        current_roles = {g.name for g in self.db.query(orm.Role).all()}
+        auth_roles_by_name = {
+            role['name']: role
+            for role in auth_roles
+        }
 
-        auth_roles_names = _get_role_names(auth_roles)
+        current_user_roles = {r.name for r in self.orm_user.roles}
+        new_user_roles = set(auth_roles_by_name.keys())
 
-        new_roles_names = set(auth_roles_names).difference(current_roles)
-        if new_roles_names:
-            self.log.info(f"Adding new roles {new_roles_names} to the database")
-        if auth_roles:
-            roles = self.db.query(orm.Role).all()
-            existing_roles = {g.name for g in roles}
-            for role_name in auth_roles_names:
-                if role_name not in existing_roles:
-                    # create roles that don't exist yet
-                    self.log.info(f"Creating new role {role_name}")
+        granted_roles = new_user_roles.difference(current_user_roles)
+        stripped_roles = current_user_roles.difference(new_user_roles)
 
-                    role = _get_role_object(auth_roles, role_name)
+        if granted_roles:
+            self.log.info(f"Granting user {self.name} roles(s): {granted_roles}")
+        if stripped_roles:
+            self.log.info(f"Stripping user {self.name} roles(s): {stripped_roles}")
 
-                    role_name = []
-                    if 'name' in role.keys():
-                        role_name = role['name']
+        all_roles = {r.name for r in self.db.query(orm.Role).all()}
+        created_roles = all_roles.difference(granted_roles)
 
-                    scopes = []
-                    if 'scopes' in role.keys():
-                        scopes = role['scopes']
-                        from .scopes import _check_scopes_exist
+        if created_roles:
+            self.log.info(f"Creating new roles {created_roles} in the database")
 
-                        try:
-                            _check_scopes_exist(scopes, who_for=f"role {role_name}")
-                        except:
-                            raise web.HTTPError(409, "One of the scopes does not exist")
+        for role_name in new_user_roles:
+            if role_name in created_roles:
+                self.log.info(f"Creating new role {role_name}")
+            else:
+                self.log.debug(f"Updating existing role {role_name}")
 
-                    groups = []
-                    if 'groups' in role.keys():
-                        for group_name in role['groups']:
-                            group = orm.Group.find(self.db, group_name)
-                            if group is not None:
-                                groups.append(group)
+            role = auth_roles_by_name[role_name]
 
-                    services = []
-                    if 'services' in role.keys():
-                        for service_name in role['services']:
-                            service = orm.Service.find(self.db, service_name)
-                            if service is not None:
-                                services.append(service)
-                    users = []
-                    if 'users' in role.keys():
-                        for user_name in role['users']:
-                            user = orm.User.find(self.db, user_name)
-                            if user is not None:
-                                users.append(user)
-                    orm_role = orm.Role(
-                        name=role_name,
-                        scopes=scopes,
-                        groups=groups,
-                        services=services,
-                        users=users,
-                    )
-                    self.db.add(orm_role)
-                    roles.append(orm_role)
+            # creates role, or if it exists, update its `description` and `scopes`
+            try:
+                orm_role = roles.create_role(self.db, role, commit=False)
+            except (roles.RoleValueError, roles.InvalidNameError, scopes.ScopeNotFound) as e:
+                raise web.HTTPError(409, e.value)
+
+            # Update the groups, services and users for the role
+            groups = []
+            if 'groups' in role.keys():
+                for group_name in role['groups']:
+                    group = orm.Group.find(self.db, group_name)
+                    if group is not None:
+                        groups.append(group)
+
+            services = []
+            if 'services' in role.keys():
+                for service_name in role['services']:
+                    service = orm.Service.find(self.db, service_name)
+                    if service is not None:
+                        services.append(service)
+            users = []
+            if 'users' in role.keys():
+                for user_name in role['users']:
+                    user = orm.User.find(self.db, user_name)
+                    if user is not None:
+                        users.append(user)
+
+            orm_role.groups = groups
+            orm_role.services = services
+            orm_role.users = users
+
+        # assign the granted roles to the current user
+        for role_name in granted_roles:
+            roles.grant_role(self.db, entity=self.orm_user, rolename=role_name, commit=False)
+
+        # strip the user of roles no longer directly granted
+        for role_name in stripped_roles:
+            roles.strip_role(self.db, entity=self.orm_user, rolename=role_name, commit=False)
+
         self.db.commit()
 
     async def save_auth_state(self, auth_state):

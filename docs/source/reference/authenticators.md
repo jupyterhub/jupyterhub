@@ -332,7 +332,7 @@ which is a list of roles that user should be assigned to:
 - User will be assigned each role in the list
 - User will be revoked roles not in the list (but they may still retain the role privileges if they inherit the role from their group)
 - Any roles not already present in the database will be created
-- Attributes of the roles such as `description`, `scopes`, and `groups` (but not `users`??) will be updated if given
+- Attributes of the roles (`description`, `scopes`, `groups`, `users`, and `services`) will be updated if given
 - If `None` is returned, no changes are made to the user's roles
 
 If authenticator-managed groups are enabled,

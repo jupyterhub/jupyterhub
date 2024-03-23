@@ -117,13 +117,21 @@ def roles_to_expanded_scopes(roles, owner):
 _role_name_pattern = re.compile(r'^[a-z][a-z0-9\-_~\.]{1,253}[a-z0-9]$')
 
 
+class RoleValueError(ValueError):
+    pass
+
+
+class InvalidNameError(ValueError):
+    pass
+
+
 def _validate_role_name(name):
     """Ensure a role has a valid name
 
-    Raises ValueError if role name is invalid
+    Raises InvalidNameError if role name is invalid
     """
     if not _role_name_pattern.match(name):
-        raise ValueError(
+        raise InvalidNameError(
             f"Invalid role name: {name!r}."
             " Role names must:\n"
             " - be 3-255 characters\n"
@@ -134,8 +142,16 @@ def _validate_role_name(name):
     return True
 
 
-def create_role(db, role_dict):
-    """Adds a new role to database or modifies an existing one"""
+def create_role(db, role_dict, commit=True):
+    """Adds a new role to database or modifies an existing one
+
+    Raises ScopeNotFound if one of the scopes defined for the role does not exist.
+    Raises KeyError when the 'name' key is missing.
+    Raises RoleValueError when attempting to override the `admin` role.
+    Raises InvalidRoleNameError if role name is invalid.
+
+    Returns the role object.
+    """
     default_roles = get_default_roles()
 
     if 'name' not in role_dict.keys():
@@ -155,7 +171,7 @@ def create_role(db, role_dict):
                 break
         for key in ["description", "scopes"]:
             if key in role_dict and role_dict[key] != admin_spec[key]:
-                raise ValueError(
+                raise RoleValueError(
                     f"Cannot override admin role admin.{key} = {role_dict[key]}"
                 )
 
@@ -191,7 +207,9 @@ def create_role(db, role_dict):
                     old_value,
                     new_value,
                 )
-    db.commit()
+    if commit:
+        db.commit()
+    return role
 
 
 def delete_role(db, rolename):
@@ -229,7 +247,7 @@ def _existing_only(func):
 
 
 @_existing_only
-def grant_role(db, entity, role):
+def grant_role(db, entity, role, commit=True):
     """Adds a role for users, services, groups or tokens"""
     if isinstance(entity, orm.APIToken):
         entity_repr = entity
@@ -244,11 +262,12 @@ def grant_role(db, entity, role):
             type(entity).__name__,
             entity_repr,
         )
-        db.commit()
+        if commit:
+            db.commit()
 
 
 @_existing_only
-def strip_role(db, entity, role):
+def strip_role(db, entity, role, commit=True):
     """Removes a role for users, services, groups or tokens"""
     if isinstance(entity, orm.APIToken):
         entity_repr = entity
@@ -256,7 +275,8 @@ def strip_role(db, entity, role):
         entity_repr = entity.name
     if role in entity.roles:
         entity.roles.remove(role)
-        db.commit()
+        if commit:
+            db.commit()
         app_log.info(
             'Removing role %s for %s: %s',
             role.name,
