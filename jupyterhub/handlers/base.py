@@ -856,7 +856,6 @@ class BaseHandler(RequestHandler):
                 user.sync_groups(group_names)
         # apply authenticator-managed roles
         if self.authenticator.manage_roles:
-            print(authenticated)
             auth_roles = authenticated.get("roles")
             if auth_roles is not None:
                 user.sync_roles(auth_roles)
