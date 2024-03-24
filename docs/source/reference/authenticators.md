@@ -303,7 +303,7 @@ which is a list of group names the user should be a member of:
 
 If authenticator-managed groups are enabled,
 all group-management via the API is disabled,
-and roles cannot be specified with ``load_groups`` traitlet.
+and roles cannot be specified with `load_groups` traitlet.
 
 (authenticator-roles)=
 
