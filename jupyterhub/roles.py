@@ -232,7 +232,7 @@ def _existing_only(func):
     """Decorator for checking if roles exist"""
 
     @wraps(func)
-    def _check_existence(db, entity, role=None, *, rolename=None):
+    def _check_existence(db, entity, role=None, commit=True, *, rolename=None):
         if isinstance(role, str):
             rolename = role
         if rolename is not None:
@@ -241,7 +241,7 @@ def _existing_only(func):
         if role is None:
             raise ValueError(f"Role {rolename} does not exist")
 
-        return func(db, entity, role)
+        return func(db, entity, role, commit=commit)
 
     return _check_existence
 

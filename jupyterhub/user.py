@@ -303,10 +303,7 @@ class User:
 
     def sync_roles(self, auth_roles):
         """Synchronize roles with database"""
-        auth_roles_by_name = {
-            role['name']: role
-            for role in auth_roles
-        }
+        auth_roles_by_name = {role['name']: role for role in auth_roles}
 
         current_user_roles = {r.name for r in self.orm_user.roles}
         new_user_roles = set(auth_roles_by_name.keys())
@@ -336,8 +333,12 @@ class User:
             # creates role, or if it exists, update its `description` and `scopes`
             try:
                 orm_role = roles.create_role(self.db, role, commit=False)
-            except (roles.RoleValueError, roles.InvalidNameError, scopes.ScopeNotFound) as e:
-                raise web.HTTPError(409, e.value)
+            except (
+                roles.RoleValueError,
+                roles.InvalidNameError,
+                scopes.ScopeNotFound,
+            ) as e:
+                raise web.HTTPError(409, str(e))
 
             # Update the groups, services and users for the role
             groups = []
@@ -366,11 +367,15 @@ class User:
 
         # assign the granted roles to the current user
         for role_name in granted_roles:
-            roles.grant_role(self.db, entity=self.orm_user, rolename=role_name, commit=False)
+            roles.grant_role(
+                self.db, entity=self.orm_user, rolename=role_name, commit=False
+            )
 
         # strip the user of roles no longer directly granted
         for role_name in stripped_roles:
-            roles.strip_role(self.db, entity=self.orm_user, rolename=role_name, commit=False)
+            roles.strip_role(
+                self.db, entity=self.orm_user, rolename=role_name, commit=False
+            )
 
         self.db.commit()
 
