@@ -936,13 +936,39 @@ class HubOAuth(HubAuth):
 
     def _patch_xsrf(self, handler):
         """Patch handler to inject JuptyerHub xsrf token behavior"""
-        handler._xsrf_token_id = self._get_xsrf_token_id(handler)
-        # override xsrf_token property on class,
-        # so it's still a getter, not invoked immediately
-        handler.__class__.xsrf_token = property(
-            partial(get_xsrf_token, cookie_path=self.base_url)
-        )
-        handler.check_xsrf_cookie = partial(self.check_xsrf_cookie, handler)
+        if isinstance(handler, HubAuthenticated):
+            # doesn't need patch
+            return
+
+        # patch in our xsrf token handling
+        # overrides tornado and jupyter_server defaults,
+        # but not others.
+        # subclasses will still inherit our overridden behavior,
+        # but their overrides (if any) will take precedence over ours
+        # such as jupyter-server-proxy
+        for cls in handler.__class__.__mro__:
+            # search for the nearest parent class defined
+            # in one of the 'base' Handler-defining packages.
+            # In current implementations, this will
+            # generally be jupyter_server.base.handlers.JupyterHandler
+            # or tornado.web.RequestHandler,
+            # but doing it this way ensures consistent results
+            if (cls.__module__ or '').partition('.')[0] not in {
+                "jupyter_server",
+                "notebook",
+                "tornado",
+            }:
+                continue
+            # override check_xsrf_cookie where it's defined
+            if "check_xsrf_cookie" in cls.__dict__:
+                if "_get_xsrf_token_id" in cls.__dict__:
+                    # already patched
+                    return
+                cls._xsrf_token_id = property(self._get_xsrf_token_id)
+                cls.xsrf_token = property(
+                    partial(get_xsrf_token, cookie_path=self.base_url)
+                )
+                cls.check_xsrf_cookie = lambda handler: self.check_xsrf_cookie(handler)
 
     def check_xsrf_cookie(self, handler):
         """check_xsrf_cookie patch
@@ -987,8 +1013,10 @@ class HubOAuth(HubAuth):
         token = self._get_token_cookie(handler)
         session_id = self.get_session_id(handler)
         if token and self._needs_check_xsrf(handler):
+            # call handler.check_xsrf_cookie instead of self.check_xsrf_cookie
+            # to allow subclass overrides
             try:
-                self.check_xsrf_cookie(handler)
+                handler.check_xsrf_cookie()
             except HTTPError as e:
                 self.log.error(
                     f"Not accepting cookie auth on {handler.request.method} {handler.request.path}: {e}"
