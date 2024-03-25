@@ -244,7 +244,7 @@ class MockHub(JupyterHub):
             kwargs['external_certs'] = ssl_setup(cert_location, 'hub-ca')
         super().__init__(*args, **kwargs)
         if 'allow_all' not in self.config.Authenticator:
-            self.config.Authenticatorallow_all = True
+            self.config.Authenticator.allow_all = True
 
     @default('subdomain_host')
     def _subdomain_host_default(self):
