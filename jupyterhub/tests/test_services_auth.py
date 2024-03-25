@@ -552,9 +552,8 @@ async def test_oauth_cookie_collision(
     else:
         raise ValueError(f"finish_first should be 1 or 2, not {finish_first!r}")
     # submit the oauth form to complete authorization
-    r = await s.post(
-        oauth.url, data={'scopes': ['identify'], "_xsrf": s.cookies["_xsrf"]}
-    )
+    hub_xsrf = s.cookies.get("_xsrf", path=app.hub.base_url)
+    r = await s.post(oauth.url, data={'scopes': ['identify'], "_xsrf": hub_xsrf})
     r.raise_for_status()
     assert r.url == expected_url
     # after finishing, state cookies are all cleared
@@ -570,9 +569,7 @@ async def test_oauth_cookie_collision(
     assert service_cookie
 
     # finish other oauth
-    r = await s.post(
-        second_oauth.url, data={'scopes': ['identify'], "_xsrf": s.cookies["_xsrf"]}
-    )
+    r = await s.post(second_oauth.url, data={'scopes': ['identify'], "_xsrf": hub_xsrf})
     r.raise_for_status()
 
     # second oauth doesn't complete,
@@ -638,7 +635,7 @@ async def test_oauth_logout(app, mockservice_url, create_user_with_scopes):
     r = await s.get(public_url(app, path='hub/logout'))
     r.raise_for_status()
     # verify that all cookies other than the service cookie are cleared
-    assert sorted(s.cookies.keys()) == ["_xsrf", service_cookie_name]
+    assert sorted(set(s.cookies.keys())) == ["_xsrf", service_cookie_name]
     # verify that clearing session id invalidates service cookie
     # i.e. redirect back to login page
     r = await s.get(url)

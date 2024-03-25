@@ -478,8 +478,6 @@ def create_user_with_scopes(app, create_temp_role):
         return app.users[orm_user.id]
 
     yield temp_user_creator
-    for user in temp_users:
-        app.users.delete(user)
 
 
 @fixture
