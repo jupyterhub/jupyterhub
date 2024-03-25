@@ -738,7 +738,9 @@ class BaseHandler(RequestHandler):
         # make sure xsrf cookie is updated
         # this avoids needing a second request to set the right xsrf cookie
         self._jupyterhub_user = user
-        _set_xsrf_cookie(self, self._xsrf_token_id, cookie_path=self.hub.base_url)
+        _set_xsrf_cookie(
+            self, self._xsrf_token_id, cookie_path=self.hub.base_url, authenticated=True
+        )
 
     def authenticate(self, data):
         return maybe_future(self.authenticator.get_authenticated_user(self, data))

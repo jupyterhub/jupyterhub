@@ -104,13 +104,20 @@ def _get_xsrf_token_cookie(handler):
     return (None, None)
 
 
-def _set_xsrf_cookie(handler, xsrf_id, cookie_path=""):
+def _set_xsrf_cookie(handler, xsrf_id, *, cookie_path="", authenticated=None):
     """Set xsrf token cookie"""
     xsrf_token = _create_signed_value_urlsafe(handler, "_xsrf", xsrf_id)
     xsrf_cookie_kwargs = {}
     xsrf_cookie_kwargs.update(handler.settings.get('xsrf_cookie_kwargs', {}))
     xsrf_cookie_kwargs.setdefault("path", cookie_path)
-    if not handler.current_user:
+    if authenticated is None:
+        try:
+            current_user = handler.current_user
+        except Exception:
+            authenticated = False
+        else:
+            authenticated = bool(current_user)
+    if not authenticated:
         # limit anonymous xsrf cookies to one hour
         xsrf_cookie_kwargs.pop("expires", None)
         xsrf_cookie_kwargs.pop("expires_days", None)
@@ -166,7 +173,7 @@ def get_xsrf_token(handler, cookie_path=""):
             )
 
     if _set_cookie:
-        _set_xsrf_cookie(handler, xsrf_id, cookie_path)
+        _set_xsrf_cookie(handler, xsrf_id, cookie_path=cookie_path)
     handler._xsrf_token = xsrf_token
     return xsrf_token
 

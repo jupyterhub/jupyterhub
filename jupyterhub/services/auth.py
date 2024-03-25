@@ -45,6 +45,7 @@ from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 from tornado.httputil import url_concat
 from tornado.log import app_log
 from tornado.web import HTTPError, RequestHandler
+from tornado.websocket import WebSocketHandler
 from traitlets import (
     Any,
     Bool,
@@ -805,6 +806,10 @@ class HubAuth(SingletonConfigurable):
         if not hasattr(self, 'set_cookie'):
             # only HubOAuth can persist cookies
             return
+        fetch_mode = handler.request.headers.get("Sec-Fetch-Mode", "navigate")
+        if isinstance(handler, WebSocketHandler) or fetch_mode != "navigate":
+            # don't do this on websockets or non-navigate requests
+            return
         self.log.info(
             "Storing token from url in cookie for %s",
             handler.request.remote_ip,
@@ -1197,7 +1202,12 @@ class HubOAuth(HubAuth):
         # set updated xsrf token cookie,
         # which changes after login
         handler._hub_auth_token_cookie = access_token
-        _set_xsrf_cookie(handler, handler._xsrf_token_id, cookie_path=self.base_url)
+        _set_xsrf_cookie(
+            handler,
+            handler._xsrf_token_id,
+            cookie_path=self.base_url,
+            authenticated=True,
+        )
 
     def clear_cookie(self, handler):
         """Clear the OAuth cookie"""
