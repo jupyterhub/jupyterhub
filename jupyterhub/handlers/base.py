@@ -24,7 +24,12 @@ from tornado.log import app_log
 from tornado.web import RequestHandler, addslash
 
 from .. import __version__, orm, roles, scopes
-from .._xsrf_utils import _anonymous_xsrf_id, check_xsrf_cookie, get_xsrf_token
+from .._xsrf_utils import (
+    _anonymous_xsrf_id,
+    _set_xsrf_cookie,
+    check_xsrf_cookie,
+    get_xsrf_token,
+)
 from ..metrics import (
     PROXY_ADD_DURATION_SECONDS,
     PROXY_DELETE_DURATION_SECONDS,
@@ -729,6 +734,13 @@ class BaseHandler(RequestHandler):
         # create and set a new cookie token for the hub
         if not self.get_current_user_cookie():
             self.set_hub_cookie(user)
+
+        # make sure xsrf cookie is updated
+        # this avoids needing a second request to set the right xsrf cookie
+        self._jupyterhub_user = user
+        _set_xsrf_cookie(
+            self, self._xsrf_token_id, cookie_path=self.hub.base_url, authenticated=True
+        )
 
     def authenticate(self, data):
         return maybe_future(self.authenticator.get_authenticated_user(self, data))

@@ -528,7 +528,7 @@ async def test_oauth_cookie_collision(app, mockservice_url, create_user_with_sco
     print(url)
     s = AsyncSession()
     name = 'mypha'
-    user = create_user_with_scopes("access:services", name=name)
+    create_user_with_scopes("access:services", name=name)
     s.cookies = await app.login_user(name)
     state_cookie_name = 'service-%s-oauth-state' % service.name
     service_cookie_name = 'service-%s' % service.name
@@ -551,10 +551,9 @@ async def test_oauth_cookie_collision(app, mockservice_url, create_user_with_sco
     assert s.cookies[state_cookie_name] == state_1
 
     # finish oauth 2
+    hub_xsrf = s.cookies.get("_xsrf", path=app.hub.base_url)
     # submit the oauth form to complete authorization
-    r = await s.post(
-        oauth_2.url, data={'scopes': ['identify'], "_xsrf": s.cookies["_xsrf"]}
-    )
+    r = await s.post(oauth_2.url, data={'scopes': ['identify'], "_xsrf": hub_xsrf})
     r.raise_for_status()
     assert r.url == url
     # after finishing, state cookie is cleared
@@ -564,9 +563,7 @@ async def test_oauth_cookie_collision(app, mockservice_url, create_user_with_sco
     service_cookie_2 = s.cookies[service_cookie_name]
 
     # finish oauth 1
-    r = await s.post(
-        oauth_1.url, data={'scopes': ['identify'], "_xsrf": s.cookies["_xsrf"]}
-    )
+    r = await s.post(oauth_1.url, data={'scopes': ['identify'], "_xsrf": hub_xsrf})
     r.raise_for_status()
     assert r.url == url
 
@@ -635,7 +632,7 @@ async def test_oauth_logout(app, mockservice_url, create_user_with_scopes):
     r = await s.get(public_url(app, path='hub/logout'))
     r.raise_for_status()
     # verify that all cookies other than the service cookie are cleared
-    assert sorted(s.cookies.keys()) == ["_xsrf", service_cookie_name]
+    assert sorted(set(s.cookies.keys())) == ["_xsrf", service_cookie_name]
     # verify that clearing session id invalidates service cookie
     # i.e. redirect back to login page
     r = await s.get(url)
