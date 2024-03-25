@@ -316,8 +316,11 @@ class User:
         if stripped_roles:
             self.log.info(f"Stripping user {self.name} roles(s): {stripped_roles}")
 
-        all_roles = {r.name for r in self.db.query(orm.Role).all()}
-        created_roles = all_roles.difference(granted_roles)
+        existing_granted_roles = {
+            r.name
+            for r in self.db.query(orm.Role).filter(orm.Role.name.in_(granted_roles))
+        }
+        created_roles = existing_granted_roles.difference(granted_roles)
 
         if created_roles:
             self.log.info(f"Creating new roles {created_roles} in the database")
