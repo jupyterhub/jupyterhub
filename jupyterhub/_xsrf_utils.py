@@ -10,11 +10,9 @@ in both Hub and single-user code
 
 import base64
 import hashlib
-from datetime import datetime, timedelta, timezone
 from http.cookies import SimpleCookie
 
 from tornado import web
-from tornado.httputil import format_timestamp
 from tornado.log import app_log
 
 
@@ -60,41 +58,69 @@ def _create_signed_value_urlsafe(handler, name, value):
     return base64.urlsafe_b64encode(signed_value).rstrip(b"=")
 
 
-def _clear_invalid_xsrf_cookie(handler, cookie_path):
+def _get_xsrf_token_cookie(handler):
     """
-    Clear invalid XSRF cookie
+    Get the _valid_ XSRF token and id from Cookie
 
-    This may an old XSRF token, or one set on / by another application.
-    Because we cannot trust browsers or tornado to give us the more specific cookie,
-    try to clear _both_ on / and on our prefix,
-    then reload the page.
+    Returns (xsrf_token, xsrf_id) found in Cookies header.
+
+    multiple xsrf cookies may be set on multiple paths;
+
+    RFC 6265 states that they should be in order of more specific path to less,
+    but ALSO states that servers should never rely on order.
+
+    Tornado (6.4) and stdlib (3.12) SimpleCookie explicitly use the _last_ value,
+    which means the cookie with the _least_ specific prefix will be used if more than one is present.
+
+    Because we sign values, we can get the first valid cookie and not worry about order too much.
+
+    This is simplified from tornado's HTTPRequest.cookies property
+    only looking for a single cookie.
     """
 
-    expired = format_timestamp(datetime.now(timezone.utc) - timedelta(days=366))
-    cookie = SimpleCookie()
-    cookie["_xsrf"] = ""
-    morsel = cookie["_xsrf"]
-    morsel["expires"] = expired
-    morsel["path"] = "/"
-    # use Set-Cookie directly,
-    # because tornado's set_cookie and clear_cookie use a single _dict_,
-    # so we can't clear a cookie on multiple paths and then set it
-    handler.add_header("Set-Cookie", morsel.OutputString(None))
-    if cookie_path != "/":
-        # clear it multiple times!
-        morsel["path"] = cookie_path
-        handler.add_header("Set-Cookie", morsel.OutputString(None))
+    if "Cookie" not in handler.request.headers:
+        return (None, None)
 
-    if (
-        handler.request.method.lower() == "get"
-        and handler.request.headers.get("Sec-Fetch-Mode", "navigate") == "navigate"
-    ):
-        # reload current page because any subsequent set_cookie
-        # will cancel the clearing of the cookie
-        # this only makes sense on GET requests
-        handler.redirect(handler.request.uri)
-        # halt any other processing of the request
-        raise web.Finish()
+    for chunk in handler.request.headers["Cookie"].split(";"):
+        key = chunk.partition("=")[0].strip()
+        if key != "_xsrf":
+            # we are only looking for the _xsrf cookie
+            # ignore everything else
+            continue
+
+        # use stdlib parsing to handle quotes, validation, etc.
+        try:
+            xsrf_token = SimpleCookie(chunk)[key].value.encode("ascii")
+        except (ValueError, KeyError):
+            continue
+
+        xsrf_token_id = _get_signed_value_urlsafe(handler, "_xsrf", xsrf_token)
+
+        if xsrf_token_id:
+            # only return if we found a _valid_ xsrf cookie
+            # otherwise, keep looking
+            return (xsrf_token, xsrf_token_id)
+    # no valid token found found
+    return (None, None)
+
+
+def _set_xsrf_cookie(handler, xsrf_id, cookie_path=""):
+    """Set xsrf token cookie"""
+    xsrf_token = _create_signed_value_urlsafe(handler, "_xsrf", xsrf_id)
+    xsrf_cookie_kwargs = {}
+    xsrf_cookie_kwargs.update(handler.settings.get('xsrf_cookie_kwargs', {}))
+    xsrf_cookie_kwargs.setdefault("path", cookie_path)
+    if not handler.current_user:
+        # limit anonymous xsrf cookies to one hour
+        xsrf_cookie_kwargs.pop("expires", None)
+        xsrf_cookie_kwargs.pop("expires_days", None)
+        xsrf_cookie_kwargs["max_age"] = 3600
+    app_log.info(
+        "Setting new xsrf cookie for %r %r",
+        xsrf_id,
+        xsrf_cookie_kwargs,
+    )
+    handler.set_cookie("_xsrf", xsrf_token, **xsrf_cookie_kwargs)
 
 
 def get_xsrf_token(handler, cookie_path=""):
@@ -110,23 +136,8 @@ def get_xsrf_token(handler, cookie_path=""):
 
     _set_cookie = False
     # the raw cookie is the token
-    xsrf_token = xsrf_cookie = handler.get_cookie("_xsrf")
-    if xsrf_token:
-        try:
-            xsrf_token = xsrf_token.encode("ascii")
-        except UnicodeEncodeError:
-            xsrf_token = None
-
-    xsrf_id_cookie = _get_signed_value_urlsafe(handler, "_xsrf", xsrf_token)
-    if xsrf_cookie and not xsrf_id_cookie:
-        # we have a cookie, but it's invalid!
-        # handle possibility of _xsrf being set multiple times,
-        # e.g. on / and on /hub/
-        # this will reload the page if it's a GET request
-        app_log.warning(
-            "Attempting to clear invalid _xsrf cookie %r", xsrf_cookie[:4] + "..."
-        )
-        _clear_invalid_xsrf_cookie(handler, cookie_path)
+    xsrf_token, xsrf_id_cookie = _get_xsrf_token_cookie(handler)
+    cookie_token = xsrf_token
 
     # check the decoded, signed value for validity
     xsrf_id = handler._xsrf_token_id
@@ -146,22 +157,16 @@ def get_xsrf_token(handler, cookie_path=""):
         _set_cookie = (
             handler.request.headers.get("Sec-Fetch-Mode", "navigate") == "navigate"
         )
+        if xsrf_id_cookie and not _set_cookie:
+            # if we aren't setting a cookie here but we got one,
+            # this means things probably aren't going to work
+            app_log.warning(
+                "Not accepting incorrect xsrf token id in cookie on %s",
+                handler.request.path,
+            )
 
     if _set_cookie:
-        xsrf_cookie_kwargs = {}
-        xsrf_cookie_kwargs.update(handler.settings.get('xsrf_cookie_kwargs', {}))
-        xsrf_cookie_kwargs.setdefault("path", cookie_path)
-        if not handler.current_user:
-            # limit anonymous xsrf cookies to one hour
-            xsrf_cookie_kwargs.pop("expires", None)
-            xsrf_cookie_kwargs.pop("expires_days", None)
-            xsrf_cookie_kwargs["max_age"] = 3600
-        app_log.info(
-            "Setting new xsrf cookie for %r %r",
-            xsrf_id,
-            xsrf_cookie_kwargs,
-        )
-        handler.set_cookie("_xsrf", xsrf_token, **xsrf_cookie_kwargs)
+        _set_xsrf_cookie(handler, xsrf_id, cookie_path)
     handler._xsrf_token = xsrf_token
     return xsrf_token
 
