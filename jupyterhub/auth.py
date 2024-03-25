@@ -730,7 +730,9 @@ class Authenticator(LoggingConfigurable):
         may return a list of roles in the 'roles' field,
         which will be added to the database.
 
-        All role-assignment APIs are disabled if this is True.
+        When enabled, all role management will be handled by the
+        authenticator; in particular, assignment of roles via
+        `JupyterHub.load_roles` traitlet will not be possible.
         """,
     )
     auto_login = Bool(
