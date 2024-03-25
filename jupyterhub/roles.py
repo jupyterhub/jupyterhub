@@ -142,7 +142,7 @@ def _validate_role_name(name):
     return True
 
 
-def create_role(db, role_dict, commit=True):
+def create_role(db, role_dict, *, commit=True):
     """Adds a new role to database or modifies an existing one
 
     Raises ScopeNotFound if one of the scopes defined for the role does not exist.
@@ -232,7 +232,7 @@ def _existing_only(func):
     """Decorator for checking if roles exist"""
 
     @wraps(func)
-    def _check_existence(db, entity, role=None, commit=True, *, rolename=None):
+    def _check_existence(db, entity, role=None, *, commit=True, rolename=None):
         if isinstance(role, str):
             rolename = role
         if rolename is not None:
