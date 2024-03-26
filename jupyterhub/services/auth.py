@@ -987,7 +987,9 @@ class HubOAuth(HubAuth):
 
         Applies JupyterHub check_xsrf_cookie if not token authenticated
         """
-        if getattr(handler, '_token_authenticated', False):
+        if getattr(handler, '_token_authenticated', False) or handler.settings.get(
+            "disable_check_xsrf", False
+        ):
             return
         check_xsrf_cookie(handler)
 
