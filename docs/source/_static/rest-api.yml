@@ -6,7 +6,7 @@ info:
   description: The REST API for JupyterHub
   license:
     name: BSD-3-Clause
-  version: 4.1.2
+  version: 4.1.3
 servers:
   - url: /hub/api
 security:
