@@ -13,7 +13,7 @@ from traitlets.config import Config
 
 from jupyterhub import auth, crypto, orm
 
-from .mocking import MockPAMAuthenticator, MockStructGroup, MockStructPasswd
+from .mocking import MockHub, MockPAMAuthenticator, MockStructGroup, MockStructPasswd
 from .utils import add_user, async_requests, get_page, public_url
 
 
@@ -598,6 +598,7 @@ async def test_auth_managed_groups(
 class MockRolesAuthenticator(auth.Authenticator):
     authenticated_roles = Any()
     refresh_roles = Any()
+    initial_roles = Any()
     manage_roles = True
 
     def authenticate(self, handler, data):
@@ -611,6 +612,62 @@ class MockRolesAuthenticator(auth.Authenticator):
             "name": user.name,
             "roles": self.refresh_roles,
         }
+
+    async def load_managed_roles(self):
+        return self.initial_roles
+
+
+def role_to_dict(role):
+    return {col: getattr(role, col) for col in role.__table__.columns.keys()}
+
+
+@pytest.mark.parametrize(
+    "initial_roles",
+    [
+        pytest.param(
+            [{'name': 'test-role'}],
+            id="should have the same effect as `load_roles` when creating a new role",
+        ),
+        pytest.param(
+            [
+                {
+                    'name': 'server',
+                    'users': ['test-user'],
+                }
+            ],
+            id="should have the same effect as `load_roles` when assigning a role to a user",
+        ),
+        pytest.param(
+            [
+                {
+                    'name': 'server',
+                    'groups': ['test-group'],
+                }
+            ],
+            id="should have the same effect as `load_roles` when assigning a role to a group",
+        ),
+    ],
+)
+async def test_auth_load_managed_roles(app, initial_roles):
+    authenticator = MockRolesAuthenticator(
+        parent=app,
+        initial_roles=initial_roles,
+    )
+
+    # create the roles using `load_roles`
+    hub = MockHub(load_roles=initial_roles)
+    hub.init_db()
+    await hub.init_role_creation()
+    expected_roles = [role_to_dict(role) for role in hub.db.query(orm.Role).all()]
+
+    # create the roles using authenticator's `load_managed_roles`
+    hub = MockHub(load_roles=[], authenticator=authenticator)
+    hub.init_db()
+    await hub.init_role_creation()
+    actual_roles = [role_to_dict(role) for role in hub.db.query(orm.Role).all()]
+
+    # `load_managed_roles` should produce the same set of roles as `load_roles` does
+    assert expected_roles == actual_roles
 
 
 @pytest.mark.parametrize(

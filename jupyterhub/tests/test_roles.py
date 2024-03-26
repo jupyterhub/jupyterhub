@@ -1273,19 +1273,63 @@ async def test_admin_role_membership(in_db, role_users, admin_users, expected_me
     assert role_members == expected_members
 
 
-async def test_manage_roles_disallows_load_roles():
-    roles_to_load = [
-        {
-            'name': 'elephant',
-            'description': 'pacing about',
-            'scopes': ['read:hub'],
-        },
-    ]
+@mark.parametrize(
+    "role_spec",
+    [
+        pytest.param(
+            {
+                'name': 'elephant',
+                'users': ['admin'],
+            },
+            id="should not allow assigning a role to a user",
+        ),
+        pytest.param(
+            {
+                'name': 'elephant',
+                'groups': ['test-group'],
+            },
+            id="should not allow assigning a role to a group",
+        ),
+    ],
+)
+async def test_manage_roles_disallows_role_assignment(role_spec):
+    roles_to_load = [role_spec]
     hub = MockHub(load_roles=roles_to_load)
     hub.init_db()
     hub.authenticator.manage_roles = True
-    with pytest.raises(ValueError, match="offloaded to the authenticator"):
+    with pytest.raises(
+        ValueError,
+        match="`load_roles` can not be used for assigning roles to users nor groups",
+    ):
         await hub.init_role_creation()
+
+
+@mark.parametrize(
+    "role_spec",
+    [
+        pytest.param(
+            {'name': 'elephant', 'description': 'pacing about'},
+            id="should allow creating a new role",
+        ),
+        pytest.param(
+            {
+                'name': 'elephant',
+                'scopes': ['read:hub'],
+            },
+            id="should allow assigning a scope to a new role",
+        ),
+        pytest.param(
+            {'name': 'user', 'scopes': ['read:hub']},
+            id="should allow assigning a scope to a default role",
+        ),
+    ],
+)
+async def test_manage_roles_allows_using_load_roles(role_spec):
+    roles_to_load = [role_spec]
+    hub = MockHub(load_roles=roles_to_load)
+    hub.init_db()
+    hub.authenticator.manage_roles = True
+    await hub.init_role_creation()
 
 
 async def test_manage_roles_loads_default_roles():

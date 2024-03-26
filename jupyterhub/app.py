@@ -2241,8 +2241,20 @@ class JupyterHub(Application):
             self.log.info(f"Defining {len(self.custom_scopes)} custom scopes.")
             scopes.define_custom_scopes(self.custom_scopes)
 
+        roles_to_load = self.load_roles
+
         if self.authenticator.manage_roles and self.load_roles:
-            raise ValueError("Role management has been offloaded to the authenticator")
+            for role_spec in roles_to_load:
+                user_role_assignments = role_spec.get('users', [])
+                group_role_assignments = role_spec.get('groups', [])
+                if user_role_assignments or group_role_assignments:
+                    raise ValueError(
+                        "When authenticator manages roles, `load_roles` can not"
+                        " be used for assigning roles to users nor groups."
+                    )
+
+        if self.authenticator.manage_roles:
+            roles_to_load.extend(await self.authenticator.load_managed_roles())
 
         self.log.debug('Loading roles into database')
         default_roles = roles.get_default_roles()

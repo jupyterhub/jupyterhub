@@ -337,7 +337,11 @@ which is a list of roles that user should be assigned to:
 
 If authenticator-managed groups are enabled,
 all group-management via the API is disabled,
-and roles cannot be specified with `load_roles` traitlet.
+and roles cannot be assigned to groups nor users via `load_roles` traitlet
+(roles can still be created via `load_roles` or assigned to services).
+
+When an authenticator manages roles, the initial roles and role assignments
+can be loaded from role specifications returned by the `Authenticator.load_managed_roles()` method.
 
 ## pre_spawn_start and post_spawn_stop hooks
 
