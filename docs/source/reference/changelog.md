@@ -10,6 +10,23 @@ command line for details.
 
 ## 4.1
 
+### 4.1.3 - 2024-03-26
+
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/4.1.2...4.1.3))
+
+#### Bugs fixed
+
+- respect jupyter-server disable_check_xsrf setting [#4753](https://github.com/jupyterhub/jupyterhub/pull/4753) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+
+#### Contributors to this release
+
+The following people contributed discussions, new ideas, code and documentation contributions, and review.
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/#how-does-this-tool-define-contributions-in-the-reports).
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2024-03-25&to=2024-03-26&type=c))
+
+@consideRatio ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3AconsideRatio+updated%3A2024-03-25..2024-03-26&type=Issues)) | @minrk ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk+updated%3A2024-03-25..2024-03-26&type=Issues))
+
 ### 4.1.2 - 2024-03-25
 
 4.1.2 fixes a regression in 4.1.0 affecting named servers.
