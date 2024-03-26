@@ -808,6 +808,7 @@ class Authenticator(LoggingConfigurable):
         This is called:
          - When a user first authenticates, _after_ all allow and block checks have passed
          - When the hub restarts, for all users in the database (i.e. users previously allowed)
+         - When a user is added to the database, either via configuration or REST API
 
         This method may be a coroutine.
 
