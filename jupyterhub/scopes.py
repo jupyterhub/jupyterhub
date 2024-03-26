@@ -807,13 +807,17 @@ def has_scope(scope, have_scopes, *, post_filter=False, db=None):
         return False
 
 
+class ScopeNotFound(KeyError):
+    pass
+
+
 def _check_scopes_exist(scopes, who_for=None):
     """Check if provided scopes exist
 
     Arguments:
       scopes (list): list of scopes to check
 
-    Raises KeyError if scope does not exist
+    Raises ScopeNotFound if scope does not exist
     """
 
     allowed_scopes = set(scope_definitions.keys())
@@ -829,14 +833,14 @@ def _check_scopes_exist(scopes, who_for=None):
         scopename, _, filter_ = scope.partition('!')
         if scopename not in allowed_scopes:
             if scopename == "all":
-                raise KeyError("Draft scope 'all' is now called 'inherit'")
-            raise KeyError(f"Scope '{scope}' {log_for} does not exist")
+                raise ScopeNotFound("Draft scope 'all' is now called 'inherit'")
+            raise ScopeNotFound(f"Scope '{scope}' {log_for} does not exist")
         if filter_:
             full_filter = f"!{filter_}"
             if full_filter not in exact_filters and not full_filter.startswith(
                 filter_prefixes
             ):
-                raise KeyError(
+                raise ScopeNotFound(
                     f"Scope filter {filter_} '{full_filter}' in scope '{scope}' {log_for} does not exist"
                 )
 

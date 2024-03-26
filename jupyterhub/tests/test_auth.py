@@ -13,7 +13,7 @@ from traitlets.config import Config
 
 from jupyterhub import auth, crypto, orm
 
-from .mocking import MockPAMAuthenticator, MockStructGroup, MockStructPasswd
+from .mocking import MockHub, MockPAMAuthenticator, MockStructGroup, MockStructPasswd
 from .utils import add_user, async_requests, get_page, public_url
 
 
@@ -593,3 +593,175 @@ async def test_auth_managed_groups(
         assert not app.db.dirty
         groups = sorted(g.name for g in user.groups)
         assert groups == expected_refresh_groups
+
+
+class MockRolesAuthenticator(auth.Authenticator):
+    authenticated_roles = Any()
+    refresh_roles = Any()
+    initial_roles = Any()
+    manage_roles = True
+
+    def authenticate(self, handler, data):
+        return {
+            "name": data["username"],
+            "roles": self.authenticated_roles,
+        }
+
+    async def refresh_user(self, user, handler):
+        return {
+            "name": user.name,
+            "roles": self.refresh_roles,
+        }
+
+    async def load_managed_roles(self):
+        return self.initial_roles
+
+
+def role_to_dict(role):
+    return {col: getattr(role, col) for col in role.__table__.columns.keys()}
+
+
+@pytest.mark.parametrize(
+    "initial_roles",
+    [
+        pytest.param(
+            [{'name': 'test-role'}],
+            id="should have the same effect as `load_roles` when creating a new role",
+        ),
+        pytest.param(
+            [
+                {
+                    'name': 'server',
+                    'users': ['test-user'],
+                }
+            ],
+            id="should have the same effect as `load_roles` when assigning a role to a user",
+        ),
+        pytest.param(
+            [
+                {
+                    'name': 'server',
+                    'groups': ['test-group'],
+                }
+            ],
+            id="should have the same effect as `load_roles` when assigning a role to a group",
+        ),
+    ],
+)
+async def test_auth_load_managed_roles(app, initial_roles):
+    authenticator = MockRolesAuthenticator(
+        parent=app,
+        initial_roles=initial_roles,
+    )
+
+    # create the roles using `load_roles`
+    hub = MockHub(load_roles=initial_roles)
+    hub.init_db()
+    await hub.init_role_creation()
+    expected_roles = [role_to_dict(role) for role in hub.db.query(orm.Role).all()]
+
+    # create the roles using authenticator's `load_managed_roles`
+    hub = MockHub(load_roles=[], authenticator=authenticator)
+    hub.init_db()
+    await hub.init_role_creation()
+    actual_roles = [role_to_dict(role) for role in hub.db.query(orm.Role).all()]
+
+    # `load_managed_roles` should produce the same set of roles as `load_roles` does
+    assert expected_roles == actual_roles
+
+
+@pytest.mark.parametrize(
+    "authenticated_roles",
+    [
+        (None),
+        ([{"name": "role-1"}]),
+        ([{"name": "role-2", "description": "test role 2"}]),
+        ([{"name": "role-3", "scopes": ["admin:servers"]}]),
+    ],
+)
+async def test_auth_managed_roles(app, user, role, authenticated_roles):
+    authenticator = MockRolesAuthenticator(
+        parent=app,
+        authenticated_roles=authenticated_roles,
+    )
+    user.roles.append(role)
+    app.db.commit()
+    before_roles = [
+        {
+            'name': r.name,
+            'description': r.description,
+            'scopes': r.scopes,
+            'users': r.users,
+        }
+        for r in user.roles
+    ]
+
+    if authenticated_roles is None:
+        expected_roles = before_roles
+    else:
+        expected_roles = authenticated_roles
+
+    # Check if user gets auth-managed roles
+    with mock.patch.dict(app.tornado_settings, {"authenticator": authenticator}):
+        await app.login_user(user.name)
+        assert not app.db.dirty
+
+        assert len(user.roles) == len(expected_roles)
+
+        for expected_role in expected_roles:
+            role = orm.Role.find(app.db, expected_role['name'])
+            assert role.description == expected_role.get('description', None)
+            assert len(role.scopes) == len(expected_role.get('scopes', []))
+
+
+async def test_auth_manage_roles_strips_user_of_old_roles(app, user, role):
+    authenticator = MockRolesAuthenticator(parent=app, authenticated_roles=[])
+    user.roles.append(role)
+    app.db.commit()
+    assert [role.name for role in user.roles] == ['user', role.name]
+
+    with mock.patch.dict(app.tornado_settings, {"authenticator": authenticator}):
+        await app.login_user(user.name)
+        assert not app.db.dirty
+        assert [role.name for role in user.roles] == []
+
+
+async def test_auth_manage_roles_grants_new_roles(app, user, role):
+    authenticator = MockRolesAuthenticator(
+        parent=app, authenticated_roles=[{'name': 'user'}, role_to_dict(role)]
+    )
+    assert [role.name for role in user.roles] == ['user']
+
+    with mock.patch.dict(app.tornado_settings, {"authenticator": authenticator}):
+        await app.login_user(user.name)
+        assert not app.db.dirty
+        assert [role.name for role in user.roles] == ['user', role.name]
+
+
+@pytest.mark.parametrize(
+    "role_spec,expected",
+    [
+        pytest.param(
+            {'name': 'role-a'},
+            'Test description',
+            id="should keep the original role description",
+        ),
+        pytest.param(
+            {'name': 'role-b', 'description': 'New description'},
+            'New description',
+            id="should update the role description",
+        ),
+    ],
+)
+async def test_auth_manage_roles_description_handling(app, user, role_spec, expected):
+    authenticator = MockRolesAuthenticator(parent=app, authenticated_roles=[role_spec])
+    name = role_spec['name']
+    role = orm.Role(name=name, description='Test description')
+    user.roles.append(role)
+    app.db.commit()
+
+    with mock.patch.dict(app.tornado_settings, {"authenticator": authenticator}):
+        await app.login_user(user.name)
+        assert not app.db.dirty
+        roles = {role.name: role for role in user.roles}
+        assert roles[name].description == expected

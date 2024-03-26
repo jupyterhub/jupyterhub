@@ -301,6 +301,89 @@ class User:
             self.orm_user.groups = []
         self.db.commit()
 
+    def sync_roles(self, auth_roles):
+        """Synchronize roles with database"""
+        auth_roles_by_name = {role['name']: role for role in auth_roles}
+
+        current_user_roles = {r.name for r in self.orm_user.roles}
+        new_user_roles = set(auth_roles_by_name.keys())
+
+        granted_roles = new_user_roles.difference(current_user_roles)
+        stripped_roles = current_user_roles.difference(new_user_roles)
+
+        if granted_roles:
+            self.log.info(f"Granting user {self.name} roles(s): {granted_roles}")
+        if stripped_roles:
+            self.log.info(f"Stripping user {self.name} roles(s): {stripped_roles}")
+
+        existing_granted_roles = {
+            r.name
+            for r in self.db.query(orm.Role).filter(orm.Role.name.in_(granted_roles))
+        }
+        created_roles = existing_granted_roles.difference(granted_roles)
+
+        if created_roles:
+            self.log.info(f"Creating new roles {created_roles} in the database")
+
+        for role_name in new_user_roles:
+            if role_name in created_roles:
+                self.log.info(f"Creating new role {role_name}")
+            else:
+                self.log.debug(f"Updating existing role {role_name}")
+
+            role = auth_roles_by_name[role_name]
+
+            # creates role, or if it exists, update its `description` and `scopes`
+            try:
+                orm_role = roles.create_role(
+                    self.db, role, commit=False, reset_to_defaults=False
+                )
+            except (
+                roles.RoleValueError,
+                roles.InvalidNameError,
+                scopes.ScopeNotFound,
+            ) as e:
+                raise web.HTTPError(409, str(e))
+
+            # Update the groups, services and users for the role
+            groups = []
+            if 'groups' in role.keys():
+                for group_name in role['groups']:
+                    group = orm.Group.find(self.db, group_name)
+                    if group is not None:
+                        groups.append(group)
+                orm_role.groups = groups
+
+            services = []
+            if 'services' in role.keys():
+                for service_name in role['services']:
+                    service = orm.Service.find(self.db, service_name)
+                    if service is not None:
+                        services.append(service)
+                orm_role.services = services
+
+            users = []
+            if 'users' in role.keys():
+                for user_name in role['users']:
+                    user = orm.User.find(self.db, user_name)
+                    if user is not None:
+                        users.append(user)
+                orm_role.users = users
+
+        # assign the granted roles to the current user
+        for role_name in granted_roles:
+            roles.grant_role(
+                self.db, entity=self.orm_user, rolename=role_name, commit=False
+            )
+
+        # strip the user of roles no longer directly granted
+        for role_name in stripped_roles:
+            roles.strip_role(
+                self.db, entity=self.orm_user, rolename=role_name, commit=False
+            )
+
+        self.db.commit()
+
     async def save_auth_state(self, auth_state):
         """Encrypt and store auth_state"""
         if auth_state is None:

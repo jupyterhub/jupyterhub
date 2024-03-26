@@ -661,6 +661,18 @@ class Authenticator(LoggingConfigurable):
                 Raising errors directly allows customizing the message shown to the user.
         """
 
+    async def load_managed_roles(self):
+        """Load roles managed by authenticator.
+
+        Returns a list of predefined role dictionaries to load at startup,
+        following the same format as `JupyterHub.load_roles`
+        """
+        if not self.manage_roles:
+            raise ValueError(
+                'Managed roles can only be loaded when `manage_roles` is True'
+            )
+        return []
+
     def pre_spawn_start(self, user, spawner):
         """Hook called before spawning a user's server
 
@@ -721,7 +733,20 @@ class Authenticator(LoggingConfigurable):
         All group-assignment APIs are disabled if this is True.
         """,
     )
+    manage_roles = Bool(
+        False,
+        config=True,
+        help="""Let authenticator manage roles
 
+        If True, Authenticator.authenticate and/or .refresh_user
+        may return a list of roles in the 'roles' field,
+        which will be added to the database.
+
+        When enabled, all role management will be handled by the
+        authenticator; in particular, assignment of roles via
+        `JupyterHub.load_roles` traitlet will not be possible.
+        """,
+    )
     auto_login = Bool(
         False,
         config=True,
