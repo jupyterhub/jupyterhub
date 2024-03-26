@@ -13,6 +13,7 @@ from tornado.escape import url_escape
 from tornado.httputil import url_concat
 
 from jupyterhub import orm, roles, scopes
+from jupyterhub.tests.test_named_servers import named_servers  # noqa
 from jupyterhub.tests.utils import async_requests, public_host, public_url, ujoin
 from jupyterhub.utils import url_escape_path, url_path_join
 
@@ -1251,6 +1252,7 @@ async def test_start_stop_server_on_admin_page(
         "fresh",
         "invalid",
         "valid-prefix-invalid-root",
+        "valid-prefix-invalid-other-prefix",
     ],
 )
 async def test_login_xsrf_initial_cookies(app, browser, case, username):
@@ -1260,6 +1262,7 @@ async def test_login_xsrf_initial_cookies(app, browser, case, username):
     """
     hub_root = public_host(app)
     hub_url = url_path_join(public_host(app), app.hub.base_url)
+    hub_parent = hub_url.rstrip("/").rsplit("/", 1)[0] + "/"
     login_url = url_path_join(
         hub_url, url_concat("login", {"next": url_path_join(app.base_url, "/hub/home")})
     )
@@ -1269,7 +1272,11 @@ async def test_login_xsrf_initial_cookies(app, browser, case, username):
         await browser.context.add_cookies(
             [{"name": "_xsrf", "value": "invalid-hub-prefix", "url": hub_url}]
         )
-    elif case == "valid-prefix-invalid-root":
+    elif case.startswith("valid-prefix"):
+        if "invalid-root" in case:
+            invalid_url = hub_root
+        else:
+            invalid_url = hub_parent
         await browser.goto(login_url)
         # first visit sets valid xsrf cookie
         cookies = await browser.context.cookies()
@@ -1281,7 +1288,7 @@ async def test_login_xsrf_initial_cookies(app, browser, case, username):
         # currently, this test assumes the observed behavior,
         # which is that the invalid cookie on `/` has _higher_ priority
         await browser.context.add_cookies(
-            [{"name": "_xsrf", "value": "invalid-root", "url": hub_root}]
+            [{"name": "_xsrf", "value": "invalid-root", "url": invalid_url}]
         )
         cookies = await browser.context.cookies()
         assert len(cookies) == 2
@@ -1314,7 +1321,14 @@ def _cookie_dict(cookie_list):
     return cookie_dict
 
 
-async def test_singleuser_xsrf(app, browser, user, create_user_with_scopes, full_spawn):
+async def test_singleuser_xsrf(
+    app,
+    browser,
+    user,
+    create_user_with_scopes,
+    full_spawn,
+    named_servers,  # noqa: F811
+):
     # full login process, checking XSRF handling
     # start two servers
     target_user = user
@@ -1435,33 +1449,61 @@ async def test_singleuser_xsrf(app, browser, user, create_user_with_scopes, full
 
     # check that server page can still connect to its own kernels
     token = target_user.new_api_token(scopes=["access:servers!user"])
-    url = url_path_join(public_url(app, target_user), "/api/kernels")
-    headers = {"Authorization": f"Bearer {token}"}
-    r = await async_requests.post(url, headers=headers)
-    r.raise_for_status()
-    kernel = r.json()
-    kernel_id = kernel["id"]
-    kernel_url = url_path_join(url, kernel_id)
-    kernel_ws_url = "ws" + url_path_join(kernel_url, "channels")[4:]
-    try:
-        result = await browser.evaluate(
-            """
-            async (ws_url) => {
-                ws = new WebSocket(ws_url);
-                finished = await new Promise((resolve, reject) => {
-                    ws.onerror = (err) => {
-                        reject(err);
-                    };
-                    ws.onopen = () => {
-                        resolve("ok");
-                    };
-                });
-                return finished;
-            }
-            """,
-            kernel_ws_url,
-        )
-    finally:
-        r = await async_requests.delete(kernel_url, headers=headers)
+
+    async def test_kernel(kernels_url):
+        headers = {"Authorization": f"Bearer {token}"}
+        r = await async_requests.post(kernels_url, headers=headers)
         r.raise_for_status()
-    assert result == "ok"
+        kernel = r.json()
+        kernel_id = kernel["id"]
+        kernel_url = url_path_join(kernels_url, kernel_id)
+        kernel_ws_url = "ws" + url_path_join(kernel_url, "channels")[4:]
+        try:
+            result = await browser.evaluate(
+                """
+                async (ws_url) => {
+                    ws = new WebSocket(ws_url);
+                    finished = await new Promise((resolve, reject) => {
+                        ws.onerror = (err) => {
+                            reject(err);
+                        };
+                        ws.onopen = () => {
+                            resolve("ok");
+                        };
+                    });
+                    return finished;
+                }
+                """,
+                kernel_ws_url,
+            )
+        finally:
+            r = await async_requests.delete(kernel_url, headers=headers)
+            r.raise_for_status()
+        assert result == "ok"
+
+    kernels_url = url_path_join(public_url(app, target_user), "/api/kernels")
+    await test_kernel(kernels_url)
+
+    # final check: make sure named servers work.
+    # first, visit spawn page to launch server,
+    # will issue cookies, etc.
+    server_name = "named"
+    url = url_path_join(
+        public_host(app),
+        url_path_join(app.base_url, f"hub/spawn/{browser_user.name}/{server_name}"),
+    )
+    await browser.goto(url)
+    await expect(browser).to_have_url(
+        re.compile(rf".*/user/{browser_user.name}/{server_name}/.*")
+    )
+    # from named server URL, make sure we can talk to a kernel
+    token = browser_user.new_api_token(scopes=["access:servers!user"])
+    # named-server URL
+    kernels_url = url_path_join(
+        public_url(app, browser_user), server_name, "api/kernels"
+    )
+    await test_kernel(kernels_url)
+    # go back to user's own page, test again
+    # make sure we didn't break anything
+    await browser.goto(public_url(app, browser_user))
+    await test_kernel(url_path_join(public_url(app, browser_user), "api/kernels"))

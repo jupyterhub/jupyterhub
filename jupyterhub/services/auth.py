@@ -44,6 +44,7 @@ from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 from tornado.httputil import url_concat
 from tornado.log import app_log
 from tornado.web import HTTPError, RequestHandler
+from tornado.websocket import WebSocketHandler
 from traitlets import (
     Any,
     Bool,
@@ -58,7 +59,12 @@ from traitlets import (
 )
 from traitlets.config import SingletonConfigurable
 
-from .._xsrf_utils import _anonymous_xsrf_id, check_xsrf_cookie, get_xsrf_token
+from .._xsrf_utils import (
+    _anonymous_xsrf_id,
+    _set_xsrf_cookie,
+    check_xsrf_cookie,
+    get_xsrf_token,
+)
 from ..scopes import _intersect_expanded_scopes
 from ..utils import _bool_env, get_browser_protocol, url_path_join
 
@@ -856,6 +862,10 @@ class HubAuth(SingletonConfigurable):
         if not hasattr(self, 'set_cookie'):
             # only HubOAuth can persist cookies
             return
+        fetch_mode = handler.request.headers.get("Sec-Fetch-Mode", "navigate")
+        if isinstance(handler, WebSocketHandler) or fetch_mode != "navigate":
+            # don't do this on websockets or non-navigate requests
+            return
         self.log.info(
             "Storing token from url in cookie for %s",
             handler.request.remote_ip,
@@ -907,6 +917,8 @@ class HubOAuth(HubAuth):
 
     def _get_token_cookie(self, handler):
         """Base class doesn't store tokens in cookies"""
+        if hasattr(handler, "_hub_auth_token_cookie"):
+            return handler._hub_auth_token_cookie
 
         fetch_mode = handler.request.headers.get("Sec-Fetch-Mode", "unset")
         if fetch_mode == "websocket" and not self.allow_websocket_cookie_auth:
@@ -975,7 +987,9 @@ class HubOAuth(HubAuth):
 
         Applies JupyterHub check_xsrf_cookie if not token authenticated
         """
-        if getattr(handler, '_token_authenticated', False):
+        if getattr(handler, '_token_authenticated', False) or handler.settings.get(
+            "disable_check_xsrf", False
+        ):
             return
         check_xsrf_cookie(handler)
 
@@ -1018,8 +1032,8 @@ class HubOAuth(HubAuth):
             try:
                 handler.check_xsrf_cookie()
             except HTTPError as e:
-                self.log.error(
-                    f"Not accepting cookie auth on {handler.request.method} {handler.request.path}: {e}"
+                self.log.debug(
+                    f"Not accepting cookie auth on {handler.request.method} {handler.request.path}: {e.log_message}"
                 )
                 # don't proceed with cookie auth unless xsrf is okay
                 # don't raise either, because that makes a mess
@@ -1270,6 +1284,15 @@ class HubOAuth(HubAuth):
             kwargs,
         )
         handler.set_secure_cookie(self.cookie_name, access_token, **kwargs)
+        # set updated xsrf token cookie,
+        # which changes after login
+        handler._hub_auth_token_cookie = access_token
+        _set_xsrf_cookie(
+            handler,
+            handler._xsrf_token_id,
+            cookie_path=self.base_url,
+            authenticated=True,
+        )
 
     def clear_cookie(self, handler):
         """Clear the OAuth cookie
