@@ -249,7 +249,7 @@ class Authenticator(LoggingConfigurable):
            When this is enabled and you wish to remove access for one or more
            users previously allowed, you must make sure that they
            are removed from the jupyterhub database. This can be tricky to do
-           if you stop allowing a group of externally managed users for example.
+           if you stop allowing an externally managed group of users for example.
 
         With this enabled, JupyterHub admin users can visit `/hub/admin` or use
         JupyterHub's REST API to add and remove users to manage who can login.
