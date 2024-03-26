@@ -142,7 +142,7 @@ def _validate_role_name(name):
     return True
 
 
-def create_role(db, role_dict, *, commit=True):
+def create_role(db, role_dict, *, commit=True, reset_to_defaults=True):
     """Adds a new role to database or modifies an existing one
 
     Raises ScopeNotFound if one of the scopes defined for the role does not exist.
@@ -197,7 +197,9 @@ def create_role(db, role_dict, *, commit=True):
 
             new_value = role_dict.get(attr, default_value)
             old_value = getattr(role, attr)
-            if new_value != old_value:
+            if new_value != old_value and (
+                reset_to_defaults or new_value != default_value
+            ):
                 setattr(role, attr, new_value)
                 app_log.info(
                     f'Role attribute {role.name}.{attr} has been changed',

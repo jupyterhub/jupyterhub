@@ -335,7 +335,9 @@ class User:
 
             # creates role, or if it exists, update its `description` and `scopes`
             try:
-                orm_role = roles.create_role(self.db, role, commit=False)
+                orm_role = roles.create_role(
+                    self.db, role, commit=False, reset_to_defaults=False
+                )
             except (
                 roles.RoleValueError,
                 roles.InvalidNameError,
@@ -350,6 +352,7 @@ class User:
                     group = orm.Group.find(self.db, group_name)
                     if group is not None:
                         groups.append(group)
+                orm_role.groups = groups
 
             services = []
             if 'services' in role.keys():
@@ -357,16 +360,15 @@ class User:
                     service = orm.Service.find(self.db, service_name)
                     if service is not None:
                         services.append(service)
+                orm_role.services = services
+
             users = []
             if 'users' in role.keys():
                 for user_name in role['users']:
                     user = orm.User.find(self.db, user_name)
                     if user is not None:
                         users.append(user)
-
-            orm_role.groups = groups
-            orm_role.services = services
-            orm_role.users = users
+                orm_role.users = users
 
         # assign the granted roles to the current user
         for role_name in granted_roles:

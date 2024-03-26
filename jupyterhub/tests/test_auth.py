@@ -712,3 +712,56 @@ async def test_auth_managed_roles(app, user, role, authenticated_roles):
             role = orm.Role.find(app.db, expected_role['name'])
             assert role.description == expected_role.get('description', None)
             assert len(role.scopes) == len(expected_role.get('scopes', []))
+
+
+async def test_auth_manage_roles_strips_user_of_old_roles(app, user, role):
+    authenticator = MockRolesAuthenticator(parent=app, authenticated_roles=[])
+    user.roles.append(role)
+    app.db.commit()
+    assert [role.name for role in user.roles] == ['user', role.name]
+
+    with mock.patch.dict(app.tornado_settings, {"authenticator": authenticator}):
+        await app.login_user(user.name)
+        assert not app.db.dirty
+        assert [role.name for role in user.roles] == []
+
+
+async def test_auth_manage_roles_grants_new_roles(app, user, role):
+    authenticator = MockRolesAuthenticator(
+        parent=app, authenticated_roles=[{'name': 'user'}, role_to_dict(role)]
+    )
+    assert [role.name for role in user.roles] == ['user']
+
+    with mock.patch.dict(app.tornado_settings, {"authenticator": authenticator}):
+        await app.login_user(user.name)
+        assert not app.db.dirty
+        assert [role.name for role in user.roles] == ['user', role.name]
+
+
+@pytest.mark.parametrize(
+    "role_spec,expected",
+    [
+        pytest.param(
+            {'name': 'role-a'},
+            'Test description',
+            id="should keep the original role description",
+        ),
+        pytest.param(
+            {'name': 'role-b', 'description': 'New description'},
+            'New description',
+            id="should update the role description",
+        ),
+    ],
+)
+async def test_auth_manage_roles_description_handling(app, user, role_spec, expected):
+    authenticator = MockRolesAuthenticator(parent=app, authenticated_roles=[role_spec])
+    name = role_spec['name']
+    role = orm.Role(name=name, description='Test description')
+    user.roles.append(role)
+    app.db.commit()
+
+    with mock.patch.dict(app.tornado_settings, {"authenticator": authenticator}):
+        await app.login_user(user.name)
+        assert not app.db.dirty
+        roles = {role.name: role for role in user.roles}
+        assert roles[name].description == expected
