@@ -6,6 +6,18 @@ For detailed changes from the prior release, click on the version number, and
 its link will bring up a GitHub listing of changes. Use `git log` on the
 command line for details.
 
+## Versioning
+
+JupyterHub follows Intended Effort Versioning ([EffVer](https://jacobtomlinson.dev/effver/)) for versioning,
+where the version number is meant to indicate the amount of effort required to upgrade to the new version.
+
+Contributors to major version bumps in JupyterHub include:
+
+- Database schema changes that require migrations and are hard to roll back
+- Increasing the minimum required Python version
+- Large new features
+- Breaking changes likely to affect users
+
 ## [Unreleased]
 
 ## 4.1
