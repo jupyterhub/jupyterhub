@@ -79,6 +79,11 @@ paths:
                       version:
                         type: string
                         description: The version of the currently active Spawner
+                  config:
+                    type: object
+                    description: |
+                      A subset of JupyterHub configuration,
+                      as selected by JupyterHub.api_include_config.
       security:
         - oauth2:
             - read:hub
