@@ -160,7 +160,7 @@ async def test_permission_error_messages(app, user, auth, expected_message):
             params["_xsrf"] = cookies["_xsrf"]
         if auth == "cookie_xsrf_mismatch":
             params["_xsrf"] = "somethingelse"
-
+    headers['Sec-Fetch-Mode'] = 'cors'
     r = await async_requests.get(url, **kwargs)
     assert r.status_code == 403
     response = r.json()
