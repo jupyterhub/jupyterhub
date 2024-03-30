@@ -62,6 +62,7 @@ from traitlets.config import SingletonConfigurable
 
 from .._xsrf_utils import (
     _anonymous_xsrf_id,
+    _needs_check_xsrf,
     _set_xsrf_cookie,
     check_xsrf_cookie,
     get_xsrf_token,
@@ -946,31 +947,11 @@ class HubOAuth(HubAuth):
             kwargs["secure"] = True
         return handler.clear_cookie(cookie_name, **kwargs)
 
-    def _needs_check_xsrf(self, handler):
-        """Does the given cookie-authenticated request need to check xsrf?"""
-        if getattr(handler, "_token_authenticated", False):
-            return False
-
-        fetch_mode = handler.request.headers.get("Sec-Fetch-Mode", "unspecified")
-        if fetch_mode in {"websocket", "no-cors"} or (
-            fetch_mode in {"navigate", "unspecified"}
-            and handler.request.method.lower() in {"get", "head", "options"}
-        ):
-            # no xsrf check needed for regular page views or no-cors
-            # or websockets after allow_websocket_cookie_auth passes
-            if fetch_mode == "unspecified":
-                self.log.warning(
-                    f"Skipping XSRF check for insecure request {handler.request.method} {handler.request.path}"
-                )
-            return False
-        else:
-            return True
-
     async def _get_user_cookie(self, handler):
         # check xsrf if needed
         token = self._get_token_cookie(handler)
         session_id = self.get_session_id(handler)
-        if token and self._needs_check_xsrf(handler):
+        if token and _needs_check_xsrf(handler):
             # call handler.check_xsrf_cookie instead of self.check_xsrf_cookie
             # to allow subclass overrides
             try:

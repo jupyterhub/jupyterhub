@@ -178,10 +178,35 @@ def get_xsrf_token(handler, cookie_path=""):
     return xsrf_token
 
 
+def _needs_check_xsrf(handler):
+    """Does the given cookie-authenticated request need to check xsrf?"""
+
+    if getattr(handler, "_token_authenticated", False):
+        return False
+
+    fetch_mode = handler.request.headers.get("Sec-Fetch-Mode", "unspecified")
+    if fetch_mode in {"websocket", "no-cors"} or (
+        fetch_mode in {"navigate", "unspecified"}
+        and handler.request.method.lower() in {"get", "head", "options"}
+    ):
+        # no xsrf check needed for regular page views or no-cors
+        # or websockets after allow_websocket_cookie_auth passes
+        if fetch_mode == "unspecified":
+            app_log.warning(
+                f"Skipping XSRF check for insecure request {handler.request.method} {handler.request.path}"
+            )
+        return False
+    else:
+        return True
+
+
 def check_xsrf_cookie(handler):
     """Check that xsrf cookie matches xsrf token in request"""
     # overrides tornado's implementation
     # because we changed what a correct value should be in xsrf_token
+    if not _needs_check_xsrf(handler):
+        # don't require XSRF for regular page views
+        return
 
     token = (
         handler.get_argument("_xsrf", None)
