@@ -130,7 +130,8 @@ By default, only the deprecated `admin` role has global `access` permissions.
 ## Add or remove users from the Hub
 
 :::{versionadded} 5.0
-`c.Authenticator.allow_existing_users` is added in 5.0 and enabled by default.
+`c.Authenticator.allow_existing_users` is added in 5.0 and True by default _if_ any `allowed_users` are specified.
+
 Prior to 5.0, this behavior was not optional.
 :::
 

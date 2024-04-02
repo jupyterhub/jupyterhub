@@ -166,7 +166,8 @@ class Authenticator(LoggingConfigurable):
             self.log.warning(
                 "No allow config found, it's possible that nobody can login to your Hub!\n"
                 "You can set `c.Authenticator.allow_all = True` to allow any user who can login to access the Hub,\n"
-                "or e.g. `allowed_users` to a set of users who should have access."
+                "or e.g. `allowed_users` to a set of users who should have access.\n"
+                "You may suppress this warning by setting c.Authenticator.any_allow_config = True."
             )
 
     whitelist = Set(
