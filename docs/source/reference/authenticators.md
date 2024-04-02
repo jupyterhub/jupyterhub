@@ -211,7 +211,7 @@ authorization
 It is perfectly fine in the simplest cases for `Authenticator.authenticate` to be responsible for authentication _and_ authorization,
 in which case `authenticate` may return `None` if the user is not authorized.
 
-However, Authenticators also have have two methods {meth}`~.Authenticator.check_allowed` and {meth}`~.Authenticator.check_blocked_users`, which are called after successful authentication to further check if the user is allowed.
+However, Authenticators also have two methods, {meth}`~.Authenticator.check_allowed` and {meth}`~.Authenticator.check_blocked_users`, which are called after successful authentication to further check if the user is allowed.
 
 If `check_blocked_users()` returns False, authorization stops and the user is not allowed.
 
@@ -227,7 +227,7 @@ which is a change from pre-5.0, where `allow_all` was implicitly True if `allowe
 ### Overriding `check_allowed`
 
 :::{versionchanged} 5.0
-`check_allowed()` is **not called** is `allow_all` is True.
+`check_allowed()` is **not called** if `allow_all` is True.
 :::
 
 :::{versionchanged} 5.0
@@ -242,14 +242,10 @@ The base implementation of {meth}`~.Authenticator.check_allowed` checks:
 - else return False
 
 :::{versionchanged} 5.0
-Prior to 5.0, the check was
+Prior to 5.0, this would also return True if `allowed_users` was empty.
 
-```python
-if (not allowed_users) or username in allowed_users:
-```
-
-but the implicit `not allowed_users` has been replaced by explicit `allow_all`, which is checked _before_ calling `check_allowed`.
-`check_allowed` **is not called** if `allow_all` is True.
+For clarity, this is no longer the case. A new `allow_all` property (default False) has been added which is checked _before_ calling `check_allowed`.
+If `allow_all` is True, this takes priority over `check_allowed`, which will be ignored.
 
 If your Authenticator subclass similarly returns True when no allow config is defined,
 this is fully backward compatible for your users, but means `allow_all = False` has no real effect.
@@ -349,7 +345,7 @@ So the logical expression for a user being authorized should look like:
 
 #### Custom error messages
 
-Any of these authentication and authorization methods may
+Any of these authentication and authorization methods may raise a `web.HTTPError` Exception
 
 ```python
 from tornado import web

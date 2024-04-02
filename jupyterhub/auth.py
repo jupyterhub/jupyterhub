@@ -125,7 +125,7 @@ class Authenticator(LoggingConfigurable):
         False,
         help="""Is there any allow config?
         
-        Used to show a warning if it looks like nobody can access the HUb,
+        Used to show a warning if it looks like nobody can access the Hub,
         which can happen when upgrading to JupyterHub 5,
         now that `allow_all` defaults to False.
         
@@ -199,7 +199,7 @@ class Authenticator(LoggingConfigurable):
         Allow every user who can successfully authenticate to access JupyterHub.
         
         False by default, which means for most Authenticators,
-        _some_ allow-related configuration is required to allow any users to log in.
+        _some_ allow-related configuration is required to allow users to log in.
 
         Authenticator subclasses may override the default with e.g.::
 
