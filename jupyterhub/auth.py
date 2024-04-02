@@ -478,7 +478,7 @@ class Authenticator(LoggingConfigurable):
         return username in self.allowed_users
 
     def check_blocked_users(self, username, authentication=None):
-        """Check if a username is blocked to authenticate based on Authenticator.blocked configuration
+        """Check if a username is blocked to authenticate based on Authenticator.blocked_users configuration
 
         Return True if username is allowed, False otherwise.
         No block list means any username is allowed.
