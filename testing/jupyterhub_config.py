@@ -19,3 +19,10 @@ c.JupyterHub.spawner_class = SimpleLocalProcessSpawner
 
 # only listen on localhost for testing
 c.JupyterHub.bind_url = 'http://127.0.0.1:8000'
+
+c.JupyterHub.tornado_settings = {
+    "no_cache_static": True,
+}
+
+c.JupyterHub.admin_users = {"admin"}
+c.JupyterHub.allow_all = True
