@@ -5,7 +5,7 @@
 <div class="container">
   <h1 class="sr-only">Manage JupyterHub Tokens</h1>
   <div class="row">
-    <form id="request-token-form" class="col-md-offset-3 col-md-6">
+    <form id="request-token-form" class="m-auto col-lg-6">
       <div class="text-center">
         <button type="submit" class="btn btn-lg btn-jupyter">
           Request new API token
@@ -48,16 +48,16 @@
   </div>
 
   <div class="row">
-      <div id="token-area" class="col-md-6 col-md-offset-3" style="display: none;">
-        <div class="panel panel-default">
-          <div class="panel-heading">
+      <div id="token-area" class="col-lg-6 m-auto" style="display: none;">
+        <div class="card">
+          <div class="card-header">
             Your new API Token
           </div>
-          <div class="panel-body">
-            <p class="lead text-center">
+          <div class="card-body">
+            <p class="card-title text-center">
               <span id="token-result"></span>
             </p>
-            <p>
+            <p class="card-text">
               Copy this token. You won't be able to see it again,
               but you can always come back here to get a new one.
             </p>
@@ -86,10 +86,10 @@
       </thead>
       <tbody>
         {% for token in api_tokens %}
-        <tr class="token-row" data-token-id="{{token.api_id}}">
+        <tr class="token-row container" data-token-id="{{token.api_id}}">
           {% block token_row scoped %}
-          <td class="note-col col-sm-4">{{token.note}}</td>
-          <td class="scope-col col-sm-1">
+          <td class="note-col col">{{token.note}}</td>
+          <td class="scope-col col">
             <details>
               <summary>scopes</summary>
                 {% for scope in token.scopes %}
@@ -97,28 +97,28 @@
                 {% endfor %}
             </details>
           </td>
-          <td class="time-col col-sm-3">
+          <td class="time-col col">
             {%- if token.last_activity -%}
             {{ token.last_activity.isoformat() + 'Z' }}
             {%- else -%}
             Never
             {%- endif -%}
           </td>
-          <td class="time-col col-sm-3">
+          <td class="time-col col">
             {%- if token.created -%}
             {{ token.created.isoformat() + 'Z' }}
             {%- else -%}
             N/A
             {%- endif -%}
           </td>
-          <td class="time-col col-sm-3">
+          <td class="time-col col">
             {%- if token.expires_at -%}
             {{ token.expires_at.isoformat() + 'Z' }}
             {%- else -%}
             Never
             {%- endif -%}
           </td>
-          <td class="col-sm-1 text-center">
+          <td class="col text-center">
             <button class="revoke-token-btn btn btn-xs btn-danger">revoke</button>
           </td>
           {% endblock token_row %}

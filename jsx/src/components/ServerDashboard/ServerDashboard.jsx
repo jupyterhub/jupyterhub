@@ -342,7 +342,7 @@ const ServerDashboard = (props) => {
               variant={open ? "secondary" : "primary"}
               size="sm"
             >
-              <span className="caret"></span>
+              <span className="fa fa-caret-down"></span>
             </Button>{" "}
           </span>
           <span data-testid={`user-name-div-${userServerName}`}>
@@ -565,7 +565,7 @@ const ServerDashboard = (props) => {
                   Stop All
                 </Button>
                 {/* spacing between start/stop and Shutdown */}
-                <span style={{ marginLeft: "56px" }}> </span>
+                <span style={{ marginLeft: "30px" }}> </span>
                 {/* Shutdown Jupyterhub */}
                 <Button
                   variant="danger"

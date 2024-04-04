@@ -1,6 +1,5 @@
-@import "./variables.scss";
-
 $logo-height: 28px;
+$grid-float-breakpoint: map-get($grid-breakpoints, "sm");
 
 #jupyterhub-logo {
   @media (max-width: $grid-float-breakpoint) {
@@ -9,7 +8,18 @@ $logo-height: 28px;
   }
   .jpy-logo {
     height: $logo-height;
-    margin-top: ($navbar-height - $logo-height) / 2;
+    margin-top: calc($navbar-brand-height - $logo-height) / 2;
+  }
+}
+
+.navbar-nav {
+  .nav-link {
+    &:hover,
+    &:focus {
+      // no color change
+      color: var(--#{$prefix}navbar-color);
+      background-color: darken($body-tertiary-bg, 10%);
+    }
   }
 }
 
@@ -71,6 +81,7 @@ $logo-height: 28px;
     0 0 8px $jupyter-orange;
   border-color: $jupyter-orange;
   outline-color: $jupyter-orange;
+}
 
 .btn-jupyter {
   @include button-variant(#fff, $jupyter-orange, $jupyter-red);

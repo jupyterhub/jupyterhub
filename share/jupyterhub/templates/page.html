@@ -40,7 +40,7 @@
     {% block scripts %}
     <script src="{{static_url("components/requirejs/require.js") }}" type="text/javascript" charset="utf-8"></script>
     <script src="{{static_url("components/jquery/dist/jquery.min.js") }}" type="text/javascript" charset="utf-8"></script>
-    <script src="{{static_url("components/bootstrap/dist/js/bootstrap.min.js") }}" type="text/javascript" charset="utf-8"></script>
+    <!-- <script src="{{static_url("components/bootstrap/dist/js/bootstrap.min.js") }}" type="text/javascript" charset="utf-8"></script> -->
     {% endblock %}
     <script>
       require.config({
@@ -104,35 +104,30 @@
 </noscript>
 
 {% block nav_bar %}
-  <nav class="navbar navbar-default">
+  <nav class="navbar navbar-expand-lg bg-body-tertiary mb-4">
     <div class="container-fluid">
-      <div class="navbar-header">
         {% block logo %}
-        <span id="jupyterhub-logo" class="pull-left">
+        <span id="jupyterhub-logo" class="navbar-brand">
             <a href="{{logo_url or base_url}}"><img src='{{base_url}}logo' alt='JupyterHub logo' class='jpy-logo' title='Home'/></a>
         </span>
         {% endblock %}
         {% if user %}
-        <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#thenavbar" aria-expanded="false">
-          <span class="sr-only">Toggle navigation</span>
-          <span class="icon-bar"></span>
-          <span class="icon-bar"></span>
-          <span class="icon-bar"></span>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#thenavbar" aria-controls="thenavbar" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
         </button>
         {% endif %}
-      </div>
 
       <div class="collapse navbar-collapse" id="thenavbar">
         {% if user %}
-        <ul class="nav navbar-nav">
+        <ul class="nav navbar-nav me-auto mb-2 mb-lg-0">
           {% block nav_bar_left_items %}
-            <li><a href="{{base_url}}home">Home</a></li>
-            <li><a href="{{base_url}}token">Token</a></li>
+            <li class="nav-item"><a class="nav-link" href="{{base_url}}home">Home</a></li>
+            <li class="nav-item"><a class="nav-link" href="{{base_url}}token">Token</a></li>
             {% if 'admin-ui' in parsed_scopes %}
-            <li><a href="{{base_url}}admin">Admin</a></li>
+            <li class="nav-item"><a class="nav-link" href="{{base_url}}admin">Admin</a></li>
             {% endif %}
             {% if services %}
-            <li class="dropdown">
+            <li class="nav-item dropdown">
               <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Services<span class="caret"></span></a>
               <ul class="dropdown-menu">
               {% for service in services %}
@@ -146,16 +141,16 @@
           {% endblock %}
         </ul>
         {% endif %}
-        <ul class="nav navbar-nav navbar-right">
+        <ul class="nav navbar-nav me-2">
           {% block nav_bar_right_items %}
-            <li>
+            <li class="nav-item">
               {% block login_widget %}
                 <span id="login_widget">
                   {% if user %}
-                    <p class="navbar-text">{{user.name}}</p>
-                    <a id="logout" role="button" class="navbar-btn btn-sm btn btn-default" href="{{logout_url}}"> <i aria-hidden="true" class="fa fa-sign-out"></i> Logout</a>
+                    <span class="navbar-text">{{user.name}}</span>
+                    <a id="logout" role="button" class="btn btn-sm btn-outline-dark" href="{{logout_url}}"> <i aria-hidden="true" class="fa fa-sign-out"></i> Logout</a>
                   {% else %}
-                    <a id="login" role="button" class="btn-sm btn navbar-btn btn-default" href="{{login_url}}">Login</a>
+                    <a id="login" role="button" class="btn btn-sm btn-outline-dark" href="{{login_url}}">Login</a>
                   {% endif %}
                 </span>
               {% endblock %}
