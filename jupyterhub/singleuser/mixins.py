@@ -825,7 +825,7 @@ def patch_base_handler(BaseHandler, log=None):
         # but we also need to ensure BaseHandler *itself* doesn't
         # override the public tornado API methods we have inserted.
         # If they are defined in BaseHandler, explicitly replace them with our methods.
-        for name in ("get_current_user", "get_login_url"):
+        for name in ("get_current_user", "get_login_url", "check_xsrf_cookie"):
             if name in BaseHandler.__dict__:
                 log.debug(
                     f"Overriding {BaseHandler}.{name} with HubAuthenticatedHandler.{name}"
