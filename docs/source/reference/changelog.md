@@ -10,6 +10,23 @@ command line for details.
 
 ## 4.1
 
+### 4.1.5 - 2024-04-04
+
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/4.1.4...4.1.5))
+
+#### Bugs fixed
+
+- singleuser mixin: include check_xsrf_cookie in overrides [#4771](https://github.com/jupyterhub/jupyterhub/pull/4771) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+
+#### Contributors to this release
+
+The following people contributed discussions, new ideas, code and documentation contributions, and review.
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/#how-does-this-tool-define-contributions-in-the-reports).
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2024-03-30&to=2024-04-04&type=c))
+
+@consideRatio ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3AconsideRatio+updated%3A2024-03-30..2024-04-04&type=Issues)) | @manics ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amanics+updated%3A2024-03-30..2024-04-04&type=Issues)) | @minrk ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk+updated%3A2024-03-30..2024-04-04&type=Issues))
+
 ### 4.1.4 - 2024-03-30
 
 ([full changelog](https://github.com/jupyterhub/jupyterhub/compare/4.1.3...4.1.4))
