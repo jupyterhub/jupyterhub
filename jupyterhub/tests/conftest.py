@@ -298,6 +298,8 @@ def role(app):
     app.db.add(role)
     app.db.commit()
     yield role
+    app.db.delete(role)
+    app.db.commit()
 
 
 class MockServiceSpawner(jupyterhub.services.service._ServiceSpawner):
