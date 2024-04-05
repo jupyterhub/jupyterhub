@@ -2241,6 +2241,18 @@ class JupyterHub(Application):
             self.log.info(f"Defining {len(self.custom_scopes)} custom scopes.")
             scopes.define_custom_scopes(self.custom_scopes)
 
+        # remove potentially stale roles from authenticator
+        if self.authenticator.reset_managed_roles_on_startup:
+            deleted = (
+                self.db.query(orm.Role)
+                .filter(orm.Role.managed_by_auth == True)
+                .delete()
+            )
+            if deleted:
+                self.log.info(
+                    f"Deleted {deleted} potentially stale roles previously added by an authenticator"
+                )
+
         roles_to_load = self.load_roles
 
         if self.authenticator.manage_roles and self.load_roles:
@@ -2254,7 +2266,10 @@ class JupyterHub(Application):
                     )
 
         if self.authenticator.manage_roles:
-            roles_to_load.extend(await self.authenticator.load_managed_roles())
+            managed_roles = await self.authenticator.load_managed_roles()
+            for role in managed_roles:
+                role['managed_by_auth'] = True
+            roles_to_load.extend(managed_roles)
 
         self.log.debug('Loading roles into database')
         default_roles = roles.get_default_roles()
@@ -2319,6 +2334,20 @@ class JupyterHub(Application):
         admin_role_objects = ['users', 'services']
         config_admin_users = set(self.authenticator.admin_users)
         db = self.db
+        # remove stale role assignments from authenticator
+        if self.authenticator.reset_managed_roles_on_startup:
+            for kind in kinds:
+                entity_name = kind[:-1]
+                association_class = orm.role_associations[entity_name]
+                deleted = (
+                    db.query(association_class)
+                    .filter(association_class.managed_by_auth == True)
+                    .delete()
+                )
+                if deleted:
+                    self.log.info(
+                        f"Deleted {deleted} stale {entity_name} role assignments previously added by an authenticator"
+                    )
         # load predefined roles from config file
         if config_admin_users:
             for role_spec in self.load_roles:

@@ -747,6 +747,16 @@ class Authenticator(LoggingConfigurable):
         `JupyterHub.load_roles` traitlet will not be possible.
         """,
     )
+    reset_managed_roles_on_startup = Bool(
+        True,
+        config=True,
+        help="""Reset managed roles to result of `load_managed_roles()` on startup.
+
+        If True:
+        - stale managed roles will be removed,
+        - stale assignments to managed roles will be removed.
+        """,
+    )
     auto_login = Bool(
         False,
         config=True,

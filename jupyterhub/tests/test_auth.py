@@ -738,6 +738,34 @@ async def test_auth_manage_roles_grants_new_roles(app, user, role):
         assert [role.name for role in user.roles] == ['user', role.name]
 
 
+async def test_auth_manage_roles_marks_new_role_as_managed(app, user):
+    authenticator = MockRolesAuthenticator(
+        parent=app, authenticated_roles=[{'name': 'new-role'}]
+    )
+
+    with mock.patch.dict(app.tornado_settings, {"authenticator": authenticator}):
+        await app.login_user(user.name)
+        assert not app.db.dirty
+        assert user.roles[0].managed_by_auth
+
+
+async def test_auth_manage_roles_marks_new_assignment_as_managed(app, user, role):
+    authenticator = MockRolesAuthenticator(
+        parent=app, authenticated_roles=[role_to_dict(role)]
+    )
+
+    with mock.patch.dict(app.tornado_settings, {"authenticator": authenticator}):
+        await app.login_user(user.name)
+        assert not app.db.dirty
+        UserRoleMap = orm.role_associations['user']
+        association = (
+            app.db.query(UserRoleMap)
+            .filter((UserRoleMap.role_id == role.id) & (UserRoleMap.user_id == user.id))
+            .one()
+        )
+        assert association.managed_by_auth
+
+
 @pytest.mark.parametrize(
     "role_spec,expected",
     [

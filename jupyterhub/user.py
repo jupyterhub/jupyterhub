@@ -332,6 +332,7 @@ class User:
                 self.log.debug(f"Updating existing role {role_name}")
 
             role = auth_roles_by_name[role_name]
+            role['managed_by_auth'] = True
 
             # creates role, or if it exists, update its `description` and `scopes`
             try:
@@ -373,7 +374,11 @@ class User:
         # assign the granted roles to the current user
         for role_name in granted_roles:
             roles.grant_role(
-                self.db, entity=self.orm_user, rolename=role_name, commit=False
+                self.db,
+                entity=self.orm_user,
+                rolename=role_name,
+                commit=False,
+                managed=True,
             )
 
         # strip the user of roles no longer directly granted

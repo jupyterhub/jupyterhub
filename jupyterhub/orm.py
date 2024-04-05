@@ -163,19 +163,19 @@ class Server(Base):
 # lots of things have roles
 # mapping tables are the same for all of them
 
-_role_map_tables = []
+role_associations = {}
 
-for has_role in (
+for entity in (
     'user',
     'group',
     'service',
 ):
-    role_map = Table(
-        f'{has_role}_role_map',
+    table = Table(
+        f'{entity}_role_map',
         Base.metadata,
         Column(
-            f'{has_role}_id',
-            ForeignKey(f'{has_role}s.id', ondelete='CASCADE'),
+            f'{entity}_id',
+            ForeignKey(f'{entity}s.id', ondelete='CASCADE'),
             primary_key=True,
         ),
         Column(
@@ -183,8 +183,12 @@ for has_role in (
             ForeignKey('roles.id', ondelete='CASCADE'),
             primary_key=True,
         ),
+        Column('managed_by_auth', Boolean, default=False),
     )
-    _role_map_tables.append(role_map)
+
+    role_associations[entity] = type(
+        entity.title() + 'RoleMap', (Base,), {'__table__': table}
+    )
 
 
 class Role(Base):
@@ -195,11 +199,14 @@ class Role(Base):
     name = Column(Unicode(255), unique=True)
     description = Column(Unicode(1023))
     scopes = Column(JSONList, default=[])
+
     users = relationship('User', secondary='user_role_map', back_populates='roles')
     services = relationship(
         'Service', secondary='service_role_map', back_populates='roles'
     )
     groups = relationship('Group', secondary='group_role_map', back_populates='roles')
+
+    managed_by_auth = Column(Boolean, default=False)
 
     def __repr__(self):
         return f"<{self.__class__.__name__} {self.name} ({self.description}) - scopes: {self.scopes}>"
@@ -232,6 +239,7 @@ class Group(Base):
     roles = relationship(
         'Role', secondary='group_role_map', back_populates='groups', lazy="selectin"
     )
+
     shared_with_me = relationship(
         "Share",
         back_populates="group",

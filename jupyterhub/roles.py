@@ -185,7 +185,13 @@ def create_role(db, role_dict, *, commit=True, reset_to_defaults=True):
         app_log.warning('Role %s will have no scopes', name)
 
     if role is None:
-        role = orm.Role(name=name, description=description, scopes=scopes)
+        managed_by_auth = role_dict.get('managed_by_auth', False)
+        role = orm.Role(
+            name=name,
+            description=description,
+            scopes=scopes,
+            managed_by_auth=managed_by_auth,
+        )
         db.add(role)
         if role_dict not in default_roles:
             app_log.info('Role %s added to database', name)
@@ -234,7 +240,9 @@ def _existing_only(func):
     """Decorator for checking if roles exist"""
 
     @wraps(func)
-    def _check_existence(db, entity, role=None, *, commit=True, rolename=None):
+    def _check_existence(
+        db, entity, role=None, *, managed=False, commit=True, rolename=None
+    ):
         if isinstance(role, str):
             rolename = role
         if rolename is not None:
@@ -243,13 +251,13 @@ def _existing_only(func):
         if role is None:
             raise ValueError(f"Role {rolename} does not exist")
 
-        return func(db, entity, role, commit=commit)
+        return func(db, entity, role, commit=commit, managed=managed)
 
     return _check_existence
 
 
 @_existing_only
-def grant_role(db, entity, role, commit=True):
+def grant_role(db, entity, role, managed=False, commit=True):
     """Adds a role for users, services, groups or tokens"""
     if isinstance(entity, orm.APIToken):
         entity_repr = entity
@@ -257,7 +265,19 @@ def grant_role(db, entity, role, commit=True):
         entity_repr = entity.name
 
     if role not in entity.roles:
+        enitity_name = type(entity).__name__.lower()
         entity.roles.append(role)
+        if managed:
+            association_class = orm.role_associations[enitity_name]
+            association = (
+                db.query(association_class)
+                .filter(
+                    (getattr(association_class, f'{enitity_name}_id') == entity.id)
+                    & (association_class.role_id == role.id)
+                )
+                .one()
+            )
+            association.managed_by_auth = True
         app_log.info(
             'Adding role %s for %s: %s',
             role.name,
@@ -269,7 +289,7 @@ def grant_role(db, entity, role, commit=True):
 
 
 @_existing_only
-def strip_role(db, entity, role, commit=True):
+def strip_role(db, entity, role, managed=False, commit=True):
     """Removes a role for users, services, groups or tokens"""
     if isinstance(entity, orm.APIToken):
         entity_repr = entity
