@@ -2256,14 +2256,18 @@ class JupyterHub(Application):
         roles_to_load = self.load_roles
 
         if self.authenticator.manage_roles and self.load_roles:
+            offending_roles = []
             for role_spec in roles_to_load:
                 user_role_assignments = role_spec.get('users', [])
                 group_role_assignments = role_spec.get('groups', [])
                 if user_role_assignments or group_role_assignments:
-                    raise ValueError(
-                        "When authenticator manages roles, `load_roles` can not"
-                        " be used for assigning roles to users nor groups."
-                    )
+                    offending_roles.append(role_spec)
+            if offending_roles:
+                raise ValueError(
+                    "When authenticator manages roles, `load_roles` can not"
+                    " be used for assigning roles to users nor groups."
+                    f" Offending roles: {offending_roles}"
+                )
 
         if self.authenticator.manage_roles:
             managed_roles = await self.authenticator.load_managed_roles()
