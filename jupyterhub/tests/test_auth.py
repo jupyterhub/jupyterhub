@@ -666,6 +666,10 @@ async def test_auth_load_managed_roles(app, initial_roles):
     await hub.init_role_creation()
     actual_roles = [role_to_dict(role) for role in hub.db.query(orm.Role).all()]
 
+    # remove `managed_by_auth` from comparison as this is expected to differ
+    for role in [*actual_roles, *expected_roles]:
+        role.pop('managed_by_auth')
+
     # `load_managed_roles` should produce the same set of roles as `load_roles` does
     assert expected_roles == actual_roles
 
