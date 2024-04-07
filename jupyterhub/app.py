@@ -2342,7 +2342,7 @@ class JupyterHub(Application):
         if self.authenticator.reset_managed_roles_on_startup:
             for kind in kinds:
                 entity_name = kind[:-1]
-                association_class = orm.role_associations[entity_name]
+                association_class = orm._role_associations[entity_name]
                 deleted = (
                     db.query(association_class)
                     .filter(association_class.managed_by_auth == True)

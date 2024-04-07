@@ -268,7 +268,7 @@ def grant_role(db, entity, role, managed=False, commit=True):
         enitity_name = type(entity).__name__.lower()
         entity.roles.append(role)
         if managed:
-            association_class = orm.role_associations[enitity_name]
+            association_class = orm._role_associations[enitity_name]
             association = (
                 db.query(association_class)
                 .filter(

@@ -761,7 +761,7 @@ async def test_auth_manage_roles_marks_new_assignment_as_managed(app, user, role
     with mock.patch.dict(app.tornado_settings, {"authenticator": authenticator}):
         await app.login_user(user.name)
         assert not app.db.dirty
-        UserRoleMap = orm.role_associations['user']
+        UserRoleMap = orm._role_associations['user']
         association = (
             app.db.query(UserRoleMap)
             .filter((UserRoleMap.role_id == role.id) & (UserRoleMap.user_id == user.id))

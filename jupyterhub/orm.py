@@ -163,7 +163,7 @@ class Server(Base):
 # lots of things have roles
 # mapping tables are the same for all of them
 
-role_associations = {}
+_role_associations = {}
 
 for entity in (
     'user',
@@ -186,7 +186,7 @@ for entity in (
         Column('managed_by_auth', Boolean, default=False),
     )
 
-    role_associations[entity] = type(
+    _role_associations[entity] = type(
         entity.title() + 'RoleMap', (Base,), {'__table__': table}
     )
 
