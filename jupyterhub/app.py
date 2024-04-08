@@ -2241,18 +2241,6 @@ class JupyterHub(Application):
             self.log.info(f"Defining {len(self.custom_scopes)} custom scopes.")
             scopes.define_custom_scopes(self.custom_scopes)
 
-        # remove potentially stale roles from authenticator
-        if self.authenticator.reset_managed_roles_on_startup:
-            deleted = (
-                self.db.query(orm.Role)
-                .filter(orm.Role.managed_by_auth == True)
-                .delete()
-            )
-            if deleted:
-                self.log.info(
-                    f"Deleted {deleted} potentially stale roles previously added by an authenticator"
-                )
-
         roles_to_load = self.load_roles[:]
 
         if self.authenticator.manage_roles and self.load_roles:
@@ -2313,7 +2301,6 @@ class JupyterHub(Application):
         # make sure we load any default roles not overridden
         init_roles = list(default_roles_dict.values()) + init_roles
 
-        init_role_names = [r['name'] for r in init_roles]
         if (
             self.db.query(orm.Role).first() is None
             and self.db.query(orm.User).first() is not None
@@ -2323,14 +2310,42 @@ class JupyterHub(Application):
             self._rbac_upgrade = True
         else:
             self._rbac_upgrade = False
+
+        init_non_managed_role_names = [
+            r['name'] for r in init_roles if not r.get('managed_by_auth', False)
+        ]
+        init_managed_role_names = [
+            r['name'] for r in init_roles if r.get('managed_by_auth', False)
+        ]
+
+        # delete all roles that were defined by `load_roles()` config but are not longer there
         for role in self.db.query(orm.Role).filter(
-            orm.Role.name.notin_(init_role_names)
+            (orm.Role.managed_by_auth == False)
+            & orm.Role.name.notin_(init_non_managed_role_names)
         ):
             self.log.warning(f"Deleting role {role.name}")
             self.db.delete(role)
-        self.db.commit()
+
+        # delete all roles that were defined by authenticator but are not in `load_managed_roles()`
+        if self.authenticator.reset_managed_roles_on_startup:
+            deleted_stale_roles = (
+                self.db.query(orm.Role)
+                .filter(
+                    (orm.Role.managed_by_auth == True)
+                    & (orm.Role.name.notin_(init_managed_role_names))
+                )
+                .delete()
+            )
+            if deleted_stale_roles:
+                self.log.info(
+                    "Deleted %s stale roles previously added by an authenticator",
+                    deleted_stale_roles,
+                )
+
         for role in init_roles:
-            roles.create_role(self.db, role)
+            roles.create_role(self.db, role, commit=False)
+
+        self.db.commit()
 
     async def init_role_assignment(self):
         # tokens are added separately

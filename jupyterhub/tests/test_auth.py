@@ -680,9 +680,9 @@ async def test_auth_load_managed_roles_preserves_assignments(app, caplog):
     authenticator = MockRolesAuthenticator(
         parent=app,
         initial_roles=[
-            {'name': 'first-role', 'scopes': ['admin:servers'], 'users': ['test-user']},
+            {'name': 'role-a', 'scopes': ['admin:servers'], 'users': ['test-user']},
             {
-                'name': 'second-role',
+                'name': 'role-b',
                 'scopes': ['admin:servers'],
                 'users': ['test-user'],
             },
@@ -699,29 +699,68 @@ async def test_auth_load_managed_roles_preserves_assignments(app, caplog):
     user = orm.User.find(hub.db, 'test-user')
 
     user_role_names = {r.name for r in user.roles}
-    assert 'first-role' in user_role_names
-    assert 'second-role' in user_role_names
+    assert 'role-a' in user_role_names
+    assert 'role-b' in user_role_names
 
     message = (
         "Deleted %s stale %s role assignments previously added by an authenticator"
     )
     assert message not in {record.msg for record in caplog.records}
 
-    # simulate hub restart with only the first role preserved
+    # simulate hub restart with only the first role assignment preserved
     authenticator.initial_roles = authenticator.initial_roles[:1]
 
     await hub.init_role_assignment()
     hub.db.refresh(user)
 
     user_role_names = {r.name for r in user.roles}
-    assert 'first-role' in user_role_names
-    assert 'second-role' not in user_role_names
+    assert 'role-a' in user_role_names
+    assert 'role-b' not in user_role_names
 
     record_map = {record.msg: record for record in caplog.records}
     assert message in record_map
     record = record_map[message]
     # should only delete the second assignment, hence the log should only say "1"
     assert record.getMessage().startswith('Deleted 1 stale user role assignments')
+
+
+async def test_auth_load_managed_roles_preserves_roles(app, caplog):
+    log = logging.getLogger("testlog")
+    caplog.set_level(logging.INFO, logger=log.name)
+    authenticator = MockRolesAuthenticator(
+        parent=app,
+        initial_roles=[
+            {'name': 'role-a', 'scopes': ['admin:servers']},
+            {'name': 'role-b', 'scopes': ['admin:servers']},
+        ],
+    )
+    authenticator.reset_managed_roles_on_startup = True
+
+    hub = MockHub(authenticator=authenticator, log=log)
+    hub.init_db()
+
+    def find_role(name):
+        return hub.db.query(orm.Role).filter(orm.Role.name == name).first()
+
+    # simulate hub startup, it should create both roles
+    await hub.init_role_creation()
+    await hub.init_role_assignment()
+    assert find_role('role-a') and find_role('role-b')
+
+    message = "Deleted %s stale roles previously added by an authenticator"
+    assert message not in {record.msg for record in caplog.records}
+
+    # simulate hub restart with only the first role preserved
+    authenticator.initial_roles = authenticator.initial_roles[:1]
+
+    await hub.init_role_creation()
+    assert find_role('role-a') and not find_role('role-b')
+
+    record_map = {record.msg: record for record in caplog.records}
+    assert message in record_map
+    record = record_map[message]
+    # should only delete the second assignment, hence the log should only say "1"
+    assert record.getMessage().startswith('Deleted 1 stale roles')
 
 
 @pytest.mark.parametrize(

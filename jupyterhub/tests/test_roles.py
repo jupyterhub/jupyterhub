@@ -1160,6 +1160,7 @@ async def test_no_admin_role_change():
     hub.init_db()
     with pytest.raises(ValueError):
         await hub.init_role_creation()
+    hub.db.rollback()
 
 
 @pytest.mark.parametrize(
