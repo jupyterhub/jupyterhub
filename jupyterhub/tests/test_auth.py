@@ -786,11 +786,8 @@ async def test_auth_managed_roles(app, user, role, authenticated_roles):
     ],
 )
 async def test_auth_manage_roles_warns_about_unknown_entities(
-    app, user, role_spec, expected, caplog
+    app, user, role_spec, expected
 ):
-    caplog.set_level(logging.WARNING)
-    caplog.clear()
-
     # Add the current user to test that non-missing entities are not included in the warning
     role_spec['users'] = [*role_spec.get('users', []), user.name]
     # Add a scope to silence "Role will have no scopes" warning
@@ -798,11 +795,16 @@ async def test_auth_manage_roles_warns_about_unknown_entities(
 
     authenticator = MockRolesAuthenticator(parent=app, authenticated_roles=[role_spec])
 
+    logs = []
+
+    def log_mock(template, *args):
+        logs.append(template.format(args))
+
     with mock.patch.dict(app.tornado_settings, {"authenticator": authenticator}):
-        await app.login_user(user.name)
-        assert len(caplog.records) == 1
-        assert expected in caplog.records[0].message
-        caplog.clear()
+        with mock.patch.object(user.log, 'warning', new=log_mock):
+            await app.login_user(user.name)
+            assert len(logs) == 1
+            assert expected in logs[0]
 
 
 async def test_auth_manage_roles_strips_user_of_old_roles(app, user, role):
