@@ -741,7 +741,7 @@ async def test_auth_manage_roles_warns_about_unknown_entities(
     caplog.set_level(logging.WARNING)
     caplog.clear()
 
-    # Add the current user to test that non-missing entities are no include in the warning
+    # Add the current user to test that non-missing entities are no included in the warning
     role_spec['users'] = [*role_spec.get('users', []), user.name]
     # Add a scope to silence "Role will have no scopes" warning
     role_spec['scopes'] = ['admin:servers']
@@ -777,6 +777,69 @@ async def test_auth_manage_roles_grants_new_roles(app, user, role):
         await app.login_user(user.name)
         assert not app.db.dirty
         assert [role.name for role in user.roles] == ['user', role.name]
+
+
+async def test_auth_manage_roles_removes_no_longer_used_roles(app, user):
+    count_roles = (
+        app.db.query(orm.Role).filter(orm.Role.name == 'new-managed-role').count
+    )
+    authenticator = MockRolesAuthenticator(
+        parent=app, authenticated_roles=[{'name': 'new-managed-role'}]
+    )
+    # this role should not exist yet
+    assert count_roles() == 0
+
+    with mock.patch.dict(app.tornado_settings, {"authenticator": authenticator}):
+        await app.login_user(user.name)
+        assert count_roles() == 1
+
+        authenticator.authenticated_roles = []
+
+        await app.login_user(user.name)
+        assert count_roles() == 0
+
+
+async def test_auth_manage_roles_does_not_remove_stripped_roles_if_used(
+    app, user, group
+):
+    find_role = app.db.query(orm.Role).filter(orm.Role.name == 'new-managed-role').first
+    authenticator = MockRolesAuthenticator(
+        parent=app, authenticated_roles=[{'name': 'new-managed-role'}]
+    )
+    # this role should not exist yet
+    assert find_role() is None
+
+    with mock.patch.dict(app.tornado_settings, {"authenticator": authenticator}):
+        await app.login_user(user.name)
+        role = find_role()
+        assert role
+
+        # assign a group to the role
+        role.groups = [group]
+        app.db.commit()
+
+        authenticator.authenticated_roles = []
+
+        await app.login_user(user.name)
+        assert find_role()
+
+
+async def test_auth_manage_roles_does_not_remove_non_managed_roles(app, user, role):
+    count_roles = app.db.query(orm.Role).filter(orm.Role.name == role.name).count
+    authenticator = MockRolesAuthenticator(
+        parent=app, authenticated_roles=[role_to_dict(role)]
+    )
+    # this role is created by the fixture and should already exist
+    assert count_roles() == 1
+
+    with mock.patch.dict(app.tornado_settings, {"authenticator": authenticator}):
+        await app.login_user(user.name)
+
+        authenticator.authenticated_roles = []
+
+        await app.login_user(user.name)
+        # should not delete the role as this role was not created by the authenticator
+        assert count_roles() == 1
 
 
 async def test_auth_manage_roles_marks_new_role_as_managed(app, user):

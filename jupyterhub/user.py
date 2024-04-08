@@ -384,6 +384,20 @@ class User:
             roles.strip_role(
                 self.db, entity=self.orm_user, rolename=role_name, commit=False
             )
+        managed_stripped_roles = (
+            self.db.query(orm.Role)
+            .filter(
+                orm.Role.name.in_(stripped_roles) & (orm.Role.managed_by_auth == True)
+            )
+            .all()
+        )
+        for stripped_role in managed_stripped_roles:
+            if (
+                not stripped_role.users
+                and not stripped_role.services
+                and not stripped_role.groups
+            ):
+                self.db.delete(stripped_role)
 
         self.db.commit()
 
