@@ -1073,6 +1073,7 @@ async def test_duplicate_role_users():
     hub.init_db()
     with pytest.raises(ValueError):
         await hub.init_role_creation()
+    hub.db.rollback()
 
 
 async def test_admin_role_and_flag():
@@ -1302,6 +1303,7 @@ async def test_manage_roles_disallows_role_assignment(role_spec):
         match="`load_roles` can not be used for assigning roles to users nor groups",
     ):
         await hub.init_role_creation()
+    hub.db.rollback()
 
 
 @mark.parametrize(
