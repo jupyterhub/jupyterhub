@@ -674,6 +674,56 @@ async def test_auth_load_managed_roles(app, initial_roles):
     assert expected_roles == actual_roles
 
 
+async def test_auth_load_managed_roles_preserves_assignments(app, caplog):
+    log = logging.getLogger("testlog")
+    caplog.set_level(logging.INFO, logger=log.name)
+    authenticator = MockRolesAuthenticator(
+        parent=app,
+        initial_roles=[
+            {'name': 'first-role', 'scopes': ['admin:servers'], 'users': ['test-user']},
+            {
+                'name': 'second-role',
+                'scopes': ['admin:servers'],
+                'users': ['test-user'],
+            },
+        ],
+    )
+    authenticator.reset_managed_roles_on_startup = True
+
+    hub = MockHub(authenticator=authenticator, log=log)
+    hub.init_db()
+
+    # simulate hub startup, it should assign the roles to the user
+    await hub.init_role_creation()
+    await hub.init_role_assignment()
+    user = orm.User.find(hub.db, 'test-user')
+
+    user_role_names = {r.name for r in user.roles}
+    assert 'first-role' in user_role_names
+    assert 'second-role' in user_role_names
+
+    message = (
+        "Deleted %s stale %s role assignments previously added by an authenticator"
+    )
+    assert message not in {record.msg for record in caplog.records}
+
+    # simulate hub restart with only the first role preserved
+    authenticator.initial_roles = authenticator.initial_roles[:1]
+
+    await hub.init_role_assignment()
+    hub.db.refresh(user)
+
+    user_role_names = {r.name for r in user.roles}
+    assert 'first-role' in user_role_names
+    assert 'second-role' not in user_role_names
+
+    record_map = {record.msg: record for record in caplog.records}
+    assert message in record_map
+    record = record_map[message]
+    # should only delete the second assignment, hence the log should only say "1"
+    assert record.getMessage().startswith('Deleted 1 stale user role assignments')
+
+
 @pytest.mark.parametrize(
     "authenticated_roles",
     [
@@ -741,7 +791,7 @@ async def test_auth_manage_roles_warns_about_unknown_entities(
     caplog.set_level(logging.WARNING)
     caplog.clear()
 
-    # Add the current user to test that non-missing entities are no included in the warning
+    # Add the current user to test that non-missing entities are not included in the warning
     role_spec['users'] = [*role_spec.get('users', []), user.name]
     # Add a scope to silence "Role will have no scopes" warning
     role_spec['scopes'] = ['admin:servers']

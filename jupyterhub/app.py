@@ -2253,7 +2253,7 @@ class JupyterHub(Application):
                     f"Deleted {deleted} potentially stale roles previously added by an authenticator"
                 )
 
-        roles_to_load = self.load_roles
+        roles_to_load = self.load_roles[:]
 
         if self.authenticator.manage_roles and self.load_roles:
             offending_roles = []
@@ -2277,12 +2277,12 @@ class JupyterHub(Application):
 
         self.log.debug('Loading roles into database')
         default_roles = roles.get_default_roles()
-        config_role_names = [r['name'] for r in self.load_roles]
+        config_role_names = [r['name'] for r in roles_to_load]
 
         default_roles_dict = {role["name"]: role for role in default_roles}
         init_roles = []
         roles_with_new_permissions = []
-        for role_spec in self.load_roles:
+        for role_spec in roles_to_load:
             role_name = role_spec['name']
             self.log.debug("Loading role %s", role_name)
             if role_name in default_roles_dict:
@@ -2338,23 +2338,29 @@ class JupyterHub(Application):
         admin_role_objects = ['users', 'services']
         config_admin_users = set(self.authenticator.admin_users)
         db = self.db
-        # remove stale role assignments from authenticator
+        # start by marking all role role assignments from authenticator as stale
+        stale_managed_role_assignment = {}
         if self.authenticator.reset_managed_roles_on_startup:
             for kind in kinds:
                 entity_name = kind[:-1]
                 association_class = orm._role_associations[entity_name]
-                deleted = (
+                stale_managed_role_assignment[kind] = set(
                     db.query(association_class)
                     .filter(association_class.managed_by_auth == True)
-                    .delete()
+                    .all()
                 )
-                if deleted:
-                    self.log.info(
-                        f"Deleted {deleted} stale {entity_name} role assignments previously added by an authenticator"
-                    )
+
+        roles_to_load_assignments_from = self.load_roles[:]
+
+        if self.authenticator.manage_roles:
+            managed_roles = await self.authenticator.load_managed_roles()
+            for role in managed_roles:
+                role['managed_by_auth'] = True
+            roles_to_load_assignments_from.extend(managed_roles)
+
         # load predefined roles from config file
         if config_admin_users:
-            for role_spec in self.load_roles:
+            for role_spec in roles_to_load_assignments_from:
                 if role_spec['name'] == 'admin':
                     self.log.warning(
                         "Configuration specifies both admin_users and users in the admin role specification. "
@@ -2367,7 +2373,8 @@ class JupyterHub(Application):
                     role_spec['users'] |= config_admin_users
         self.log.debug('Loading role assignments from config')
         has_admin_role_spec = {role_bearer: False for role_bearer in admin_role_objects}
-        for role_spec in self.load_roles:
+
+        for role_spec in roles_to_load_assignments_from:
             role = orm.Role.find(db, name=role_spec['name'])
             role_name = role_spec["name"]
             if role_name == 'admin':
@@ -2420,6 +2427,26 @@ class JupyterHub(Application):
                     # explicitly defined list
                     # ensure membership list is exact match (adds and revokes permissions)
                     setattr(role, kind, orm_role_bearers)
+                    # if the role_spec was contributed by the authenticator, mark the newly
+                    # created assignments as managed by authenticator too; also mark the
+                    # assignment as not stale (in case if it was marked as such initially)
+                    if role_spec.get('managed_by_auth', False):
+                        entity_name = kind[:-1]
+                        association_class = orm._role_associations[entity_name]
+                        kind_id = getattr(association_class, f'{entity_name}_id')
+                        associations = (
+                            db.query(association_class)
+                            .filter(
+                                kind_id.in_([bearer.id for bearer in orm_role_bearers])
+                                & (association_class.role_id == role.id)
+                            )
+                            .all()
+                        )
+                        for association in associations:
+                            association.managed_by_auth = True
+                            # this association is not stale
+                            if association in stale_managed_role_assignment[kind]:
+                                stale_managed_role_assignment[kind].remove(association)
                 else:
                     # no defined members
                     # leaving 'users' undefined in overrides of the default 'user' role
@@ -2432,6 +2459,17 @@ class JupyterHub(Application):
                     else:
                         # otherwise, omitting a member category is equivalent to specifying an empty list
                         setattr(role, kind, [])
+
+        if self.authenticator.reset_managed_roles_on_startup:
+            for kind, stale_assignments in stale_managed_role_assignment.items():
+                if stale_assignments:
+                    for assignment in stale_assignments:
+                        self.db.delete(assignment)
+                    self.log.info(
+                        "Deleted %s stale %s role assignments previously added by an authenticator",
+                        len(stale_assignments),
+                        kind[:-1],
+                    )
 
         db.commit()
         if self.authenticator.allowed_users:
