@@ -347,29 +347,27 @@ class User:
                 raise web.HTTPError(409, str(e))
 
             # Update the groups, services and users for the role
-            groups = []
-            if 'groups' in role.keys():
-                for group_name in role['groups']:
-                    group = orm.Group.find(self.db, group_name)
-                    if group is not None:
-                        groups.append(group)
-                orm_role.groups = groups
-
-            services = []
-            if 'services' in role.keys():
-                for service_name in role['services']:
-                    service = orm.Service.find(self.db, service_name)
-                    if service is not None:
-                        services.append(service)
-                orm_role.services = services
-
-            users = []
-            if 'users' in role.keys():
-                for user_name in role['users']:
-                    user = orm.User.find(self.db, user_name)
-                    if user is not None:
-                        users.append(user)
-                orm_role.users = users
+            entity_map = {
+                'groups': orm.Group,
+                'services': orm.Service,
+                'users': orm.User,
+            }
+            for key, Class in entity_map.items():
+                if key in role.keys():
+                    entities = []
+                    not_found_entities = []
+                    for entity_name in role[key]:
+                        entity = Class.find(self.db, entity_name)
+                        if entity is None:
+                            not_found_entities.append(entity_name)
+                        else:
+                            entities.append(entity)
+                    setattr(orm_role, key, entities)
+                    if not_found_entities:
+                        self.log.warning(
+                            f'Could not assign the role {role_name} to {key}:'
+                            f' {not_found_entities} not found in the database.'
+                        )
 
         # assign the granted roles to the current user
         for role_name in granted_roles:

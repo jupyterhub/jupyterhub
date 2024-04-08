@@ -718,6 +718,43 @@ async def test_auth_managed_roles(app, user, role, authenticated_roles):
             assert len(role.scopes) == len(expected_role.get('scopes', []))
 
 
+@pytest.mark.parametrize(
+    "role_spec,expected",
+    [
+        [
+            {"name": "role-with-services", "services": ["missing-service"]},
+            "Could not assign the role role-with-services to services: ['missing-service']",
+        ],
+        [
+            {"name": "role-with-users", "users": ["missing-user"]},
+            "Could not assign the role role-with-users to users: ['missing-user']",
+        ],
+        [
+            {"name": "role-with-groups", "groups": ["missing-group"]},
+            "Could not assign the role role-with-groups to groups: ['missing-group']",
+        ],
+    ],
+)
+async def test_auth_manage_roles_warns_about_unknown_entities(
+    app, user, role_spec, expected, caplog
+):
+    caplog.set_level(logging.WARNING)
+    caplog.clear()
+
+    # Add the current user to test that non-missing entities are no include in the warning
+    role_spec['users'] = [*role_spec.get('users', []), user.name]
+    # Add a scope to silence "Role will have no scopes" warning
+    role_spec['scopes'] = ['admin:servers']
+
+    authenticator = MockRolesAuthenticator(parent=app, authenticated_roles=[role_spec])
+
+    with mock.patch.dict(app.tornado_settings, {"authenticator": authenticator}):
+        await app.login_user(user.name)
+        assert len(caplog.records) == 1
+        assert expected in caplog.records[0].message
+        caplog.clear()
+
+
 async def test_auth_manage_roles_strips_user_of_old_roles(app, user, role):
     authenticator = MockRolesAuthenticator(parent=app, authenticated_roles=[])
     user.roles.append(role)
