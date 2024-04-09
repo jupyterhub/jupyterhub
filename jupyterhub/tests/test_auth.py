@@ -658,13 +658,13 @@ async def test_auth_load_managed_roles(app, initial_roles):
     hub = MockHub(load_roles=initial_roles)
     hub.init_db()
     await hub.init_role_creation()
-    expected_roles = [role_to_dict(role) for role in hub.db.query(orm.Role).all()]
+    expected_roles = [role_to_dict(role) for role in hub.db.query(orm.Role)]
 
     # create the roles using authenticator's `load_managed_roles`
     hub = MockHub(load_roles=[], authenticator=authenticator)
     hub.init_db()
     await hub.init_role_creation()
-    actual_roles = [role_to_dict(role) for role in hub.db.query(orm.Role).all()]
+    actual_roles = [role_to_dict(role) for role in hub.db.query(orm.Role)]
 
     # remove `managed_by_auth` from comparison as this is expected to differ
     for role in [*actual_roles, *expected_roles]:
@@ -672,6 +672,26 @@ async def test_auth_load_managed_roles(app, initial_roles):
 
     # `load_managed_roles` should produce the same set of roles as `load_roles` does
     assert expected_roles == actual_roles
+
+
+async def test_auth_load_managed_roles_handles_new_user(app):
+    authenticator = MockRolesAuthenticator(
+        parent=app,
+        initial_roles=[
+            {
+                'name': 'new-role',
+                'users': ['this-user-does-not-exist'],
+            }
+        ],
+    )
+
+    # create the roles using authenticator's `load_managed_roles`
+    hub = MockHub(load_roles=[], authenticator=authenticator)
+    hub.init_db()
+    await hub.init_role_creation()
+    roles = {role.name: role_to_dict(role) for role in hub.db.query(orm.Role)}
+
+    assert roles['new-role']
 
 
 @pytest.mark.parametrize(
