@@ -2459,11 +2459,23 @@ class JupyterHub(Application):
                             if association in stale_managed_role_assignment[kind]:
                                 stale_managed_role_assignment[kind].remove(association)
                 else:
-                    # no defined members
+                    # no defined members in `load_managed_roles()`
+                    # leaving 'users' undefined should not remove existing managed role assignments
+                    if kind == "users" and role_spec.get('managed_by_auth', False):
+                        entity_name = kind[:-1]
+                        association_class = orm._role_associations[entity_name]
+                        kind_id = getattr(association_class, f'{entity_name}_id')
+                        associations = db.query(association_class).filter(
+                            association_class.role_id == role.id
+                        )
+                        for association in associations:
+                            if association in stale_managed_role_assignment[kind]:
+                                stale_managed_role_assignment[kind].remove(association)
+                    # no defined members in `load_roles()`
                     # leaving 'users' undefined in overrides of the default 'user' role
                     # should not clear membership on startup
                     # since allowed users could be managed by the authenticator
-                    if kind == "users" and role_name == "user":
+                    elif kind == "users" and role_name == "user":
                         # Default user lists can be managed by the Authenticator,
                         # if unspecified in role config
                         pass

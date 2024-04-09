@@ -674,18 +674,29 @@ async def test_auth_load_managed_roles(app, initial_roles):
     assert expected_roles == actual_roles
 
 
-async def test_auth_load_managed_roles_preserves_assignments(app, caplog):
+@pytest.mark.parametrize(
+    "roles_after_restart",
+    [
+        pytest.param(
+            [{'name': 'role-a', 'scopes': ['admin:servers'], 'users': ['test-user']}],
+            id="preserve role assignment if explicitly defined in `load_managed_roles()`",
+        ),
+        pytest.param(
+            [{'name': 'role-a', 'scopes': ['admin:servers']}],
+            id="preserve role assignment if `users` key is absent in `load_managed_roles()` result",
+        ),
+    ],
+)
+async def test_auth_load_managed_roles_preserves_assignments(
+    app, caplog, roles_after_restart
+):
     log = logging.getLogger("testlog")
     caplog.set_level(logging.INFO, logger=log.name)
     authenticator = MockRolesAuthenticator(
         parent=app,
         initial_roles=[
             {'name': 'role-a', 'scopes': ['admin:servers'], 'users': ['test-user']},
-            {
-                'name': 'role-b',
-                'scopes': ['admin:servers'],
-                'users': ['test-user'],
-            },
+            {'name': 'role-b', 'scopes': ['admin:servers'], 'users': ['test-user']},
         ],
     )
     authenticator.reset_managed_roles_on_startup = True
@@ -707,8 +718,8 @@ async def test_auth_load_managed_roles_preserves_assignments(app, caplog):
     )
     assert message not in {record.msg for record in caplog.records}
 
-    # simulate hub restart with only the first role assignment preserved
-    authenticator.initial_roles = authenticator.initial_roles[:1]
+    # simulate hub restart after changing `load_managed_roles()` result
+    authenticator.initial_roles = roles_after_restart
 
     await hub.init_role_assignment()
     hub.db.refresh(user)

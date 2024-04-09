@@ -755,6 +755,17 @@ class Authenticator(LoggingConfigurable):
         If True:
         - stale managed roles will be removed,
         - stale assignments to managed roles will be removed.
+
+        Any role not present in `load_managed_roles()` will be considered 'stale'.
+
+        The 'stale' status for role assignments is also determined from `load_managed_roles()` result.
+        - user role assignments status will depend on whether the `users` key is defined or not:
+          - if a list is defined under the `users` key and the user is not listed,
+            then the user role assignment will be considered 'stale',
+          - if the `users` key is not provided, the user role assignment will be preserved;
+        - service and group role assignments will always be considered 'stale':
+          - if not included in the `services` and `groups` list (respectively),
+          - if the `services` and `groups` keys are not provided (respectively)
         """,
     )
     auto_login = Bool(
