@@ -759,7 +759,7 @@ async def test_auth_load_managed_roles_preserves_roles(app, caplog):
     record_map = {record.msg: record for record in caplog.records}
     assert message in record_map
     record = record_map[message]
-    # should only delete the second assignment, hence the log should only say "1"
+    # should only delete the second role, hence the log should only say "1"
     assert record.getMessage().startswith('Deleted 1 stale roles')
 
 
