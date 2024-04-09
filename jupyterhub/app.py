@@ -2449,13 +2449,9 @@ class JupyterHub(Application):
                         entity_name = kind[:-1]
                         association_class = orm._role_associations[entity_name]
                         kind_id = getattr(association_class, f'{entity_name}_id')
-                        associations = (
-                            db.query(association_class)
-                            .filter(
-                                kind_id.in_([bearer.id for bearer in orm_role_bearers])
-                                & (association_class.role_id == role.id)
-                            )
-                            .all()
+                        associations = db.query(association_class).filter(
+                            kind_id.in_([bearer.id for bearer in orm_role_bearers])
+                            & (association_class.role_id == role.id)
                         )
                         for association in associations:
                             association.managed_by_auth = True
