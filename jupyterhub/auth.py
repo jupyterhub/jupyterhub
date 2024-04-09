@@ -665,11 +665,17 @@ class Authenticator(LoggingConfigurable):
         """Load roles managed by authenticator.
 
         Returns a list of predefined role dictionaries to load at startup,
-        following the same format as `JupyterHub.load_roles`
+        following the same format as `JupyterHub.load_roles`.
         """
         if not self.manage_roles:
             raise ValueError(
                 'Managed roles can only be loaded when `manage_roles` is True'
+            )
+        if self.reset_managed_roles_on_startup:
+            raise NotImplementedError(
+                "When `reset_managed_roles_on_startup` is used, the `load_managed_roles()`"
+                " method must have a non-default implementation, because using the default"
+                " implementation would remove all managed roles and role assignments."
             )
         return []
 
