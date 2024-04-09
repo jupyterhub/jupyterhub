@@ -666,6 +666,8 @@ class Authenticator(LoggingConfigurable):
 
         Returns a list of predefined role dictionaries to load at startup,
         following the same format as `JupyterHub.load_roles`.
+
+        .. versionadded:: 5.0
         """
         if not self.manage_roles:
             raise ValueError(
@@ -751,6 +753,8 @@ class Authenticator(LoggingConfigurable):
         When enabled, all role management will be handled by the
         authenticator; in particular, assignment of roles via
         `JupyterHub.load_roles` traitlet will not be possible.
+
+        .. versionadded:: 5.0
         """,
     )
     reset_managed_roles_on_startup = Bool(
@@ -759,19 +763,23 @@ class Authenticator(LoggingConfigurable):
         help="""Reset managed roles to result of `load_managed_roles()` on startup.
 
         If True:
-        - stale managed roles will be removed,
-        - stale assignments to managed roles will be removed.
+          - stale managed roles will be removed,
+          - stale assignments to managed roles will be removed.
 
         Any role not present in `load_managed_roles()` will be considered 'stale'.
 
-        The 'stale' status for role assignments is also determined from `load_managed_roles()` result.
+        The 'stale' status for role assignments is also determined from `load_managed_roles()` result:
+
         - user role assignments status will depend on whether the `users` key is defined or not:
-          - if a list is defined under the `users` key and the user is not listed,
-            then the user role assignment will be considered 'stale',
-          - if the `users` key is not provided, the user role assignment will be preserved;
-        - service and group role assignments will always be considered 'stale':
-          - if not included in the `services` and `groups` list (respectively),
-          - if the `services` and `groups` keys are not provided (respectively)
+
+          * if a list is defined under the `users` key and the user is not listed, then the user role assignment will be considered 'stale',
+          * if the `users` key is not provided, the user role assignment will be preserved;
+        - service and group role assignments will be considered 'stale':
+
+          * if not included in the `services` and `groups` list,
+          * if the `services` and `groups` keys are not provided.
+
+        .. versionadded:: 5.0
         """,
     )
     auto_login = Bool(
