@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
+import { Button } from "react-bootstrap";
 import PropTypes from "prop-types";
 
 const AddUser = (props) => {
@@ -47,11 +48,11 @@ const AddUser = (props) => {
         )}
         <div className="row">
           <div className="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
-            <div className="panel panel-default">
-              <div className="panel-heading">
+            <div className="card">
+              <div className="card-header">
                 <h4>Add Users</h4>
               </div>
-              <div className="panel-body">
+              <div className="card-body">
                 <form>
                   <div className="form-group">
                     <textarea
@@ -82,10 +83,12 @@ const AddUser = (props) => {
                   </div>
                 </form>
               </div>
-              <div className="panel-footer">
-                <button id="return" className="btn btn-light">
-                  <Link to="/">Back</Link>
-                </button>
+              <div className="card-footer">
+                <Link to="/">
+                  <Button variant="light" id="return">
+                    Back
+                  </Button>
+                </Link>
                 <span> </span>
                 <button
                   id="submit"

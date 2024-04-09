@@ -421,7 +421,7 @@ const ServerDashboard = (props) => {
         <></>
       )}
       <div className="server-dashboard-container">
-        <Row>
+        <Row className="rows-cols-lg-auto g-3 mb-3 align-items-center">
           <Col md={4}>
             <FormControl
               type="text"
@@ -432,27 +432,30 @@ const ServerDashboard = (props) => {
               onChange={handleSearch}
             />
           </Col>
-          <Col md={3}>
-            {/* div.checkbox required for BS3 CSS */}
-            <div className="checkbox">
-              <label title="check to only show running servers, otherwise show all">
-                <Form.Check
-                  inline
-                  type="checkbox"
-                  name="active_servers"
-                  id="active-servers-filter"
-                  checked={state_filter == "active"}
-                  onChange={(event) => {
-                    setStateFilter(event.target.checked ? "active" : null);
-                  }}
-                />
-                {"only active servers"}
-              </label>
-            </div>
+          <Col md={4}>
+            <Form.Check
+              inline
+              title="check to only show running servers, otherwise show all"
+            >
+              <Form.Check.Input
+                type="checkbox"
+                name="active_servers"
+                id="active-servers-filter"
+                checked={state_filter == "active"}
+                onChange={(event) => {
+                  setStateFilter(event.target.checked ? "active" : null);
+                }}
+              />
+              <Form.Check.Label>{"only active servers"}</Form.Check.Label>
+            </Form.Check>
           </Col>
 
-          <Col md="auto" style={{ float: "right", margin: 15 }}>
-            <Link to="/groups">{"> Manage Groups"}</Link>
+          <Col md={{ span: 3, offset: 1 }}>
+            <Link to="/groups">
+              <Button variant="light" className="form-control">
+                {"Manage Groups"}
+              </Button>
+            </Link>
           </Col>
         </Row>
         <table className="table table-bordered table-hover">

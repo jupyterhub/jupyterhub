@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import PropTypes from "prop-types";
+import { Button } from "react-bootstrap";
 import GroupSelect from "../GroupSelect/GroupSelect";
 import DynamicTable from "../DynamicTable/DynamicTable";
 
@@ -103,9 +104,11 @@ const GroupEdit = (props) => {
 
       <div className="row">
         <div className="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
-          <button id="return" className="btn btn-light">
-            <Link to="/groups">Back</Link>
-          </button>
+          <Link to="/groups">
+            <Button variant="light" id="return">
+              Back
+            </Button>
+          </Link>
           <span> </span>
           <button
             id="submit"

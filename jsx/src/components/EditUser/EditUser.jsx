@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import PropTypes from "prop-types";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Button } from "react-bootstrap";
 
 const EditUser = (props) => {
   const limit = useSelector((state) => state.limit),
@@ -61,11 +62,11 @@ const EditUser = (props) => {
         )}
         <div className="row">
           <div className="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
-            <div className="panel panel-default">
-              <div className="panel-heading">
+            <div className="card">
+              <div className="card-header">
                 <h4>Editing user {username}</h4>
               </div>
-              <div className="panel-body">
+              <div className="card-body">
                 <form>
                   <div className="form-group">
                     <textarea
@@ -118,10 +119,10 @@ const EditUser = (props) => {
                   </div>
                 </form>
               </div>
-              <div className="panel-footer">
-                <button className="btn btn-light">
-                  <Link to="/">Back</Link>
-                </button>
+              <div className="card-footer">
+                <Link to="/">
+                  <Button variant="light">Back</Button>
+                </Link>
                 <span> </span>
                 <button
                   id="submit"

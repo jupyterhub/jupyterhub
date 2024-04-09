@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
+import { Button, Card } from "react-bootstrap";
 import PropTypes from "prop-types";
 
 const CreateGroup = (props) => {
@@ -46,11 +47,11 @@ const CreateGroup = (props) => {
         )}
         <div className="row">
           <div className="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
-            <div className="panel panel-default">
-              <div className="panel-heading">
+            <div className="card">
+              <div className="card-header">
                 <h4>Create Group</h4>
               </div>
-              <div className="panel-body">
+              <div className="card-body">
                 <div className="input-group">
                   <input
                     className="group-name-input"
@@ -65,15 +66,17 @@ const CreateGroup = (props) => {
                   ></input>
                 </div>
               </div>
-              <div className="panel-footer">
-                <button id="return" className="btn btn-light">
-                  <Link to="/">Back</Link>
-                </button>
+              <div className="card-footer">
+                <Link to="/groups">
+                  <Button variant="light" id="return">
+                    Back
+                  </Button>
+                </Link>
                 <span> </span>
-                <button
+                <Button
                   id="submit"
                   data-testid="submit"
-                  className="btn btn-primary"
+                  variant="primary"
                   onClick={() => {
                     createGroup(groupName)
                       .then((data) => {
@@ -96,7 +99,7 @@ const CreateGroup = (props) => {
                   }}
                 >
                   Create
-                </button>
+                </Button>
               </div>
             </div>
           </div>

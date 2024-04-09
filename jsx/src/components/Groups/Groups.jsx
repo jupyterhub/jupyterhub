@@ -2,6 +2,7 @@ import React, { useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import PropTypes from "prop-types";
 
+import { Button } from "react-bootstrap";
 import { Link, useNavigate } from "react-router-dom";
 import { usePaginationParams } from "../../util/paginationParams";
 import PaginationFooter from "../PaginationFooter/PaginationFooter";
@@ -44,11 +45,11 @@ const Groups = (props) => {
     <div className="container" data-testid="container">
       <div className="row">
         <div className="col-md-12 col-lg-10 col-lg-offset-1">
-          <div className="panel panel-default">
-            <div className="panel-heading">
+          <div className="card">
+            <div className="card-header">
               <h4>Groups</h4>
             </div>
-            <div className="panel-body">
+            <div className="card-body">
               <ul className="list-group">
                 {groups_data.length > 0 ? (
                   groups_data.map((e, i) => (
@@ -77,18 +78,16 @@ const Groups = (props) => {
                 handleLimit={handleLimit}
               />
             </div>
-            <div className="panel-footer">
-              <button className="btn btn-light adjacent-span-spacing">
-                <Link to="/">Back</Link>
-              </button>
-              <button
-                className="btn btn-primary adjacent-span-spacing"
-                onClick={() => {
-                  navigate("/create-group");
-                }}
-              >
-                New Group
-              </button>
+            <div className="card-footer">
+              <Link to="/">
+                <Button variant="light" id="return">
+                  Back
+                </Button>
+              </Link>
+              <span> </span>
+              <Link to="/create-group">
+                <Button variant="primary">New Group</Button>
+              </Link>
             </div>
           </div>
         </div>
