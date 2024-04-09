@@ -329,6 +329,64 @@ async def open_home_page(app, browser, user):
     await expect(browser).to_have_url(re.compile(".*/hub/home"))
 
 
+async def test_home_nav_collapse(app, browser, user_special_chars):
+    user = user_special_chars.user
+    await open_home_page(app, browser, user)
+    nav = browser.locator(".navbar")
+    navbar_collapse = nav.locator(".navbar-collapse")
+    logo = nav.locator("#jupyterhub-logo")
+    home = nav.get_by_text("Home")
+    logout_name = nav.get_by_text(user.name)
+    logout_btn = nav.get_by_text("Logout")
+    toggler = nav.locator(".navbar-toggler")
+
+    await expect(nav).to_be_visible()
+
+    await browser.set_viewport_size({"width": 640, "height": 480})
+    # links visible, nav items visible, collapse not visible
+    await expect(logo).to_be_visible()
+    await expect(home).to_be_visible()
+    await expect(logout_name).to_be_visible()
+    await expect(logout_btn).to_be_visible()
+    await expect(toggler).not_to_be_visible()
+
+    # below small breakpoint (576px)
+    await browser.set_viewport_size({"width": 500, "height": 480})
+    # logo visible, links and logout not visible, toggler visible
+    await expect(logo).to_be_visible()
+    await expect(home).not_to_be_visible()
+    await expect(logout_name).not_to_be_visible()
+    await expect(logout_btn).not_to_be_visible()
+    await expect(toggler).to_be_visible()
+
+    # click toggler, links should be visible
+    await toggler.click()
+    # wait for expand to finish
+    # expand animates through `collapse -> collapsing -> collapse show`
+    await expect(navbar_collapse).to_have_class(re.compile(r"\bshow\b"))
+    await expect(home).to_be_visible()
+    await expect(logout_name).to_be_visible()
+    await expect(logout_btn).to_be_visible()
+    await expect(toggler).to_be_visible()
+    # wait for expand animation
+    # click toggler again, links should hide
+    # need to wait for expand to complete
+    await toggler.click()
+    await expect(navbar_collapse).not_to_have_class(re.compile(r"\bshow\b"))
+    await expect(home).not_to_be_visible()
+    await expect(logout_name).not_to_be_visible()
+    await expect(logout_btn).not_to_be_visible()
+    await expect(toggler).to_be_visible()
+
+    # resize, should re-show
+    await browser.set_viewport_size({"width": 640, "height": 480})
+    await expect(logo).to_be_visible()
+    await expect(home).to_be_visible()
+    await expect(logout_name).to_be_visible()
+    await expect(logout_btn).to_be_visible()
+    await expect(toggler).not_to_be_visible()
+
+
 async def test_start_button_server_not_started(app, browser, user_special_chars):
     """verify that when server is not started one button is available,
     after starting 2 buttons are available"""

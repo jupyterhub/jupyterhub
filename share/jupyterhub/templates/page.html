@@ -38,9 +38,9 @@
     <link rel="icon" href="{{ static_url("favicon.ico") }}" type="image/x-icon">
     {% endblock %}
     {% block scripts %}
+    <script src="{{static_url("components/bootstrap/dist/js/bootstrap.bundle.min.js") }}" type="text/javascript" charset="utf-8"></script>
     <script src="{{static_url("components/requirejs/require.js") }}" type="text/javascript" charset="utf-8"></script>
     <script src="{{static_url("components/jquery/dist/jquery.min.js") }}" type="text/javascript" charset="utf-8"></script>
-    <!-- <script src="{{static_url("components/bootstrap/dist/js/bootstrap.min.js") }}" type="text/javascript" charset="utf-8"></script> -->
     {% endblock %}
     <script>
       require.config({
@@ -51,7 +51,7 @@
           paths: {
             components: '../components',
             jquery: '../components/jquery/dist/jquery.min',
-            bootstrap: '../components/bootstrap/dist/js/bootstrap.min',
+            // bootstrap: '../components/bootstrap/dist/js/bootstrap.bundle.min',
             moment: "../components/moment/moment",
           },
           // shim: {
@@ -104,7 +104,7 @@
 </noscript>
 
 {% block nav_bar %}
-  <nav class="navbar navbar-expand-lg bg-body-tertiary mb-4">
+  <nav class="navbar navbar-expand-sm bg-body-tertiary mb-4">
     <div class="container-fluid">
         {% block logo %}
         <span id="jupyterhub-logo" class="navbar-brand">
@@ -119,7 +119,7 @@
 
       <div class="collapse navbar-collapse" id="thenavbar">
         {% if user %}
-        <ul class="nav navbar-nav me-auto mb-2 mb-lg-0">
+        <ul class="navbar-nav me-auto mb-0">
           {% block nav_bar_left_items %}
             <li class="nav-item"><a class="nav-link" href="{{base_url}}home">Home</a></li>
             <li class="nav-item"><a class="nav-link" href="{{base_url}}token">Token</a></li>
