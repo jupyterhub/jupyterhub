@@ -10,7 +10,7 @@
   },
   "scripts": {
     "postinstall": "python3 ./bower-lite",
-    "css": "sass -I share/jupyterhub/static/components --source-map share/jupyterhub/static/scss/style.scss:share/jupyterhub/static/css/style.css"
+    "css": "sass --style compressed -I share/jupyterhub/static/components --source-map share/jupyterhub/static/scss/style.scss:share/jupyterhub/static/css/style.min.css"
   },
   "devDependencies": {
     "sass": "^1.74.1"
