@@ -657,7 +657,7 @@ class ProxyErrorHandler(BaseHandler):
         try:
             html = await self.render_template('%s.html' % status_code, **ns)
         except TemplateNotFound:
-            self.log.debug("No template for %d", status_code)
+            self.log.debug("Using default error template for %d", status_code)
             html = await self.render_template('error.html', **ns)
 
         self.write(html)

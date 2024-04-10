@@ -1510,7 +1510,7 @@ class BaseHandler(RequestHandler):
         try:
             html = self.render_template('%s.html' % status_code, sync=True, **ns)
         except TemplateNotFound:
-            self.log.debug("No template for %d", status_code)
+            self.log.debug("Using default error template for %d", status_code)
             try:
                 html = self.render_template('error.html', sync=True, **ns)
             except Exception:
