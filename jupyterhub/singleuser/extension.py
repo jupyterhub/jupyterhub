@@ -51,6 +51,7 @@ from jupyterhub.utils import (
     url_path_join,
 )
 
+from ._decorator import allow_unauthenticated
 from ._disable_user_config import _disable_user_config
 
 SINGLEUSER_TEMPLATES_DIR = str(Path(__file__).parent.resolve().joinpath("templates"))
@@ -68,6 +69,7 @@ def _exclude_home(path_list):
 
 
 class JupyterHubLogoutHandler(LogoutHandler):
+    @allow_unauthenticated
     def get(self):
         hub_auth = self.identity_provider.hub_auth
         # clear token stored in single-user cookie (set by hub_auth)
@@ -94,6 +96,10 @@ class JupyterHubOAuthCallbackHandler(HubOAuthCallbackHandler):
 
     def initialize(self, hub_auth):
         self.hub_auth = hub_auth
+
+    @allow_unauthenticated
+    async def get(self):
+        return await super().get()
 
 
 class JupyterHubIdentityProvider(IdentityProvider):
