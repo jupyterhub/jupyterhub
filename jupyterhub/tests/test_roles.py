@@ -1332,6 +1332,7 @@ async def test_manage_roles_allows_using_load_roles(role_spec):
     hub = MockHub(load_roles=roles_to_load)
     hub.init_db()
     hub.authenticator.manage_roles = True
+    hub.authenticator.reset_managed_roles_on_startup = False
     await hub.init_role_creation()
 
 
@@ -1339,9 +1340,14 @@ async def test_manage_roles_loads_default_roles():
     hub = MockHub()
     hub.init_db()
     hub.authenticator.manage_roles = True
+    hub.authenticator.reset_managed_roles_on_startup = False
     await hub.init_role_creation()
     admin_role = orm.Role.find(hub.db, 'admin')
     assert admin_role
+
+
+async def empty_load_managed_roles():
+    return []
 
 
 async def test_reset_managed_roles_clears_assignments(app):
@@ -1363,6 +1369,8 @@ async def test_reset_managed_roles_clears_assignments(app):
     # on next startup the roles assignments managed by authenticator should be removed
     hub.authenticator.manage_roles = True
     hub.authenticator.reset_managed_roles_on_startup = True
+    hub.authenticator.load_managed_roles = empty_load_managed_roles
+
     await hub.init_role_creation()
     assert len(user.roles) == 0
 
@@ -1381,6 +1389,7 @@ async def test_reset_managed_roles_clears_managed_roles(app):
 
     hub.authenticator.manage_roles = True
     hub.authenticator.reset_managed_roles_on_startup = True
+    hub.authenticator.load_managed_roles = empty_load_managed_roles
 
     # on next startup the managed roles created by authenticator should be removed
     await hub.init_role_creation()
