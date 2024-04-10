@@ -86,7 +86,8 @@ def upgrade():
             db = Session(bind=c)
 
             for token in db.query(orm.APIToken).options(
-                selectinload(orm.APIToken.roles), raiseload("*")
+                selectinload(orm.APIToken.roles).defer(orm.Role.managed_by_auth),
+                raiseload("*"),
             ):
                 token.scopes = list(roles.roles_to_scopes(token.roles))
             db.commit()
@@ -123,7 +124,11 @@ def upgrade():
 
             # oauth clients have allowed_roles, evaluate to allowed_scopes
             db = Session(bind=c)
-            for oauth_client in db.query(orm.OAuthClient):
+            for oauth_client in db.query(orm.OAuthClient).options(
+                selectinload(orm.OAuthClient.allowed_roles).defer(
+                    orm.Role.managed_by_auth
+                )
+            ):
                 allowed_scopes = set(roles.roles_to_scopes(oauth_client.allowed_roles))
                 allowed_scopes.update(access_scopes(oauth_client, db))
                 oauth_client.allowed_scopes = sorted(allowed_scopes)
