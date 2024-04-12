@@ -758,7 +758,7 @@ class Authenticator(LoggingConfigurable):
         """,
     )
     reset_managed_roles_on_startup = Bool(
-        True,
+        False,
         config=True,
         help="""Reset managed roles to result of `load_managed_roles()` on startup.
 

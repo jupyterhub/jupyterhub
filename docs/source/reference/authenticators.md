@@ -345,7 +345,7 @@ can be loaded from role specifications returned by the {meth}`.Authenticator.loa
 
 The authenticator-manged roles and role assignment will be deleted after restart if:
 
-- {attr}`.Authenticator.reset_managed_roles_on_startup` is set to `True` (default), and
+- {attr}`.Authenticator.reset_managed_roles_on_startup` is set to `True`, and
 - the roles and role assignments are not included in the initial set of roles returned by the {meth}`.Authenticator.load_managed_roles()` method.
 
 ## pre_spawn_start and post_spawn_stop hooks
