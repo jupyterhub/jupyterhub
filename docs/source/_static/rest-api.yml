@@ -574,7 +574,7 @@ paths:
       description: |
         Creates a new token owned by the user.
         Permissions can be limited by specifying a list of `scopes` in the JSON request body
-        (starting in JupyerHub 3.0; previously, permissions could be specified as `roles`,
+        (starting in JupyterHub 3.0; previously, permissions could be specified as `roles`,
         which is deprecated in 3.0).
       parameters:
         - $ref: "#/components/parameters/userName"
@@ -1176,7 +1176,7 @@ paths:
                         example: abc123
                       accept_url:
                         type: string
-                        description: The URL for acepting the code
+                        description: The URL for accepting the code
                         example: /hub/accept-share?code=abc123
       security:
         - oauth2:
@@ -1521,7 +1521,7 @@ paths:
           description: Shutdown successful
           content: {}
         400:
-          description: Unexpeced value for proxy or servers
+          description: Unexpected value for proxy or servers
           content: {}
       security:
         - oauth2:
@@ -1956,7 +1956,7 @@ components:
           type: array
           description:
             List of scopes this token has been assigned. New in JupyterHub
-            3. In JupyterHub 2.x, tokens were assigned 'roles' insead of scopes.
+            3. In JupyterHub 2.x, tokens were assigned 'roles' instead of scopes.
           items:
             type: string
         note:
