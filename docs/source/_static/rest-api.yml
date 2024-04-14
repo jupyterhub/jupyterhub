@@ -553,9 +553,12 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Token"
+                type: object
+                properties:
+                  api_tokens:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Token"
         401:
           description: Authentication/Authorization error
           content: {}
@@ -614,7 +617,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Token"
+                $ref: "#/components/schemas/NewToken"
         400:
           description: Body must be a JSON dict or empty
           content: {}
@@ -639,7 +642,7 @@ paths:
             type: string
       responses:
         200:
-          description: The info for the new token
+          description: The info for the token
           content:
             application/json:
               schema:
@@ -1930,12 +1933,7 @@ components:
 
     Token:
       type: object
-      properties:
-        token:
-          type: string
-          description:
-            The token itself. Only present in responses to requests for
-            a new token.
+      properties: &components-schemas-token-properties
         id:
           type: string
           description:
@@ -1989,6 +1987,18 @@ components:
             Only used for tokens set during oauth flows.
 
             Added in 2.0.
+
+    NewToken:
+      type: object
+      properties:
+        <<:
+          - *components-schemas-token-properties
+          - token:
+            type: string
+            description:
+              The token itself. Only present in responses to requests for
+              a new token.
+
   securitySchemes:
     token:
       type: http
