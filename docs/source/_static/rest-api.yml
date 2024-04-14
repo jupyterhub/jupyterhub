@@ -1992,13 +1992,11 @@ components:
       type: object
       properties:
         <<:
-          - *components-schemas-token-properties
-          - token:
-            type: string
-            description:
-              The token itself. Only present in responses to requests for
-              a new token.
-
+          [
+            *components-schemas-token-properties,
+            { token: null, type: string, description: The
+                token itself. Only present in responses to requests for a new token. },
+          ]
   securitySchemes:
     token:
       type: http
