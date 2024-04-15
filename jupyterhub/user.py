@@ -526,6 +526,9 @@ class User:
             _deprecated_db_session=self.db,
             oauth_client_id=client_id,
             cookie_options=self.settings.get('cookie_options', {}),
+            cookie_host_prefix_enabled=self.settings.get(
+                "cookie_host_prefix_enabled", False
+            ),
             trusted_alt_names=trusted_alt_names,
             user_options=orm_spawner.user_options or {},
         )

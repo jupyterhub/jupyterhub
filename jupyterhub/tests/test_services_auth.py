@@ -86,17 +86,9 @@ async def test_hubauth_token(app, mockservice_url, create_user_with_scopes):
     sub_reply = {key: reply.get(key, 'missing') for key in ['name', 'admin']}
     assert sub_reply == {'name': u.name, 'admin': False}
 
-    # token in ?token parameter
+    # token in ?token parameter is not allowed by default
     r = await async_requests.get(
-        public_url(app, mockservice_url) + '/whoami/?token=%s' % token
-    )
-    r.raise_for_status()
-    reply = r.json()
-    sub_reply = {key: reply.get(key, 'missing') for key in ['name', 'admin']}
-    assert sub_reply == {'name': u.name, 'admin': False}
-
-    r = await async_requests.get(
-        public_url(app, mockservice_url) + '/whoami/?token=no-such-token',
+        public_url(app, mockservice_url) + '/whoami/?token=%s' % token,
         allow_redirects=False,
     )
     assert r.status_code == 302
@@ -180,21 +172,9 @@ async def test_hubauth_service_token(request, app, mockservice_url, scopes, allo
     else:
         assert r.status_code == 403
 
-    # token in ?token parameter
+    # token in ?token parameter is not allowed by default
     r = await async_requests.get(
-        public_url(app, mockservice_url) + 'whoami/?token=%s' % token
-    )
-    if allowed:
-        r.raise_for_status()
-        assert r.status_code == 200
-        reply = r.json()
-        assert service_model.items() <= reply.items()
-        assert not r.cookies
-    else:
-        assert r.status_code == 403
-
-    r = await async_requests.get(
-        public_url(app, mockservice_url) + 'whoami/?token=no-such-token',
+        public_url(app, mockservice_url) + 'whoami/?token=%s' % token,
         allow_redirects=False,
     )
     assert r.status_code == 302
@@ -385,20 +365,14 @@ async def test_oauth_service_roles(
 
     # token-authenticated request to HubOAuth
     token = app.users[name].new_api_token()
-    # token in ?token parameter
-    r = await async_requests.get(url_concat(url, {'token': token}))
+    s.headers["Authorization"] = f"Bearer {token}"
+    r = await async_requests.get(url, headers=s.headers)
     r.raise_for_status()
     reply = r.json()
     assert reply['name'] == name
 
-    # verify that ?token= requests set a cookie
-    assert len(r.cookies) != 0
-    # ensure cookie works in future requests
-    r = await async_requests.get(url, cookies=r.cookies, allow_redirects=False)
-    r.raise_for_status()
-    assert r.url == url
-    reply = r.json()
-    assert reply['name'] == name
+    # tokens in headers don't set cookies
+    assert len(r.cookies) == 0
 
 
 @pytest.mark.parametrize(
@@ -578,9 +552,8 @@ async def test_oauth_cookie_collision(
     else:
         raise ValueError(f"finish_first should be 1 or 2, not {finish_first!r}")
     # submit the oauth form to complete authorization
-    r = await s.post(
-        oauth.url, data={'scopes': ['identify'], "_xsrf": s.cookies["_xsrf"]}
-    )
+    hub_xsrf = s.cookies.get("_xsrf", path=app.hub.base_url)
+    r = await s.post(oauth.url, data={'scopes': ['identify'], "_xsrf": hub_xsrf})
     r.raise_for_status()
     assert r.url == expected_url
     # after finishing, state cookies are all cleared
@@ -596,9 +569,7 @@ async def test_oauth_cookie_collision(
     assert service_cookie
 
     # finish other oauth
-    r = await s.post(
-        second_oauth.url, data={'scopes': ['identify'], "_xsrf": s.cookies["_xsrf"]}
-    )
+    r = await s.post(second_oauth.url, data={'scopes': ['identify'], "_xsrf": hub_xsrf})
     r.raise_for_status()
 
     # second oauth doesn't complete,
@@ -664,7 +635,7 @@ async def test_oauth_logout(app, mockservice_url, create_user_with_scopes):
     r = await s.get(public_url(app, path='hub/logout'))
     r.raise_for_status()
     # verify that all cookies other than the service cookie are cleared
-    assert sorted(s.cookies.keys()) == ["_xsrf", service_cookie_name]
+    assert sorted(set(s.cookies.keys())) == ["_xsrf", service_cookie_name]
     # verify that clearing session id invalidates service cookie
     # i.e. redirect back to login page
     r = await s.get(url)

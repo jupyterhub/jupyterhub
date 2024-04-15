@@ -3,12 +3,13 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import logging
+from itertools import chain
 from unittest import mock
 from urllib.parse import urlparse
 
 import pytest
 from requests import HTTPError
-from traitlets import Any
+from traitlets import Any, Tuple
 from traitlets.config import Config
 
 from jupyterhub import auth, crypto, orm
@@ -18,7 +19,7 @@ from .utils import add_user, async_requests, get_page, public_url
 
 
 async def test_pam_auth():
-    authenticator = MockPAMAuthenticator()
+    authenticator = MockPAMAuthenticator(allow_all=True)
     authorized = await authenticator.get_authenticated_user(
         None, {'username': 'match', 'password': 'match'}
     )
@@ -37,7 +38,7 @@ async def test_pam_auth():
 
 
 async def test_pam_auth_account_check_disabled():
-    authenticator = MockPAMAuthenticator(check_account=False)
+    authenticator = MockPAMAuthenticator(allow_all=True, check_account=False)
     authorized = await authenticator.get_authenticated_user(
         None, {'username': 'allowedmatch', 'password': 'allowedmatch'}
     )
@@ -82,7 +83,9 @@ async def test_pam_auth_admin_groups():
         return user_group_map[name]
 
     authenticator = MockPAMAuthenticator(
-        admin_groups={'jh_admins', 'wheel'}, admin_users={'override_admin'}
+        admin_groups={'jh_admins', 'wheel'},
+        admin_users={'override_admin'},
+        allow_all=True,
     )
 
     # Check admin_group applies as expected
@@ -141,7 +144,10 @@ async def test_pam_auth_admin_groups():
 
 
 async def test_pam_auth_allowed():
-    authenticator = MockPAMAuthenticator(allowed_users={'wash', 'kaylee'})
+    authenticator = MockPAMAuthenticator(
+        allowed_users={'wash', 'kaylee'}, allow_all=False
+    )
+
     authorized = await authenticator.get_authenticated_user(
         None, {'username': 'kaylee', 'password': 'kaylee'}
     )
@@ -162,7 +168,7 @@ async def test_pam_auth_allowed_groups():
     def getgrnam(name):
         return MockStructGroup('grp', ['kaylee'])
 
-    authenticator = MockPAMAuthenticator(allowed_groups={'group'})
+    authenticator = MockPAMAuthenticator(allowed_groups={'group'}, allow_all=False)
 
     with mock.patch.object(authenticator, '_getgrnam', getgrnam):
         authorized = await authenticator.get_authenticated_user(
@@ -179,14 +185,14 @@ async def test_pam_auth_allowed_groups():
 
 async def test_pam_auth_blocked():
     # Null case compared to next case
-    authenticator = MockPAMAuthenticator()
+    authenticator = MockPAMAuthenticator(allow_all=True)
     authorized = await authenticator.get_authenticated_user(
         None, {'username': 'wash', 'password': 'wash'}
     )
     assert authorized['name'] == 'wash'
 
-    # Blacklist basics
-    authenticator = MockPAMAuthenticator(blocked_users={'wash'})
+    # Blocklist basics
+    authenticator = MockPAMAuthenticator(blocked_users={'wash'}, allow_all=True)
     authorized = await authenticator.get_authenticated_user(
         None, {'username': 'wash', 'password': 'wash'}
     )
@@ -194,7 +200,9 @@ async def test_pam_auth_blocked():
 
     # User in both allowed and blocked: default deny.  Make error someday?
     authenticator = MockPAMAuthenticator(
-        blocked_users={'wash'}, allowed_users={'wash', 'kaylee'}
+        blocked_users={'wash'},
+        allowed_users={'wash', 'kaylee'},
+        allow_all=True,
     )
     authorized = await authenticator.get_authenticated_user(
         None, {'username': 'wash', 'password': 'wash'}
@@ -203,7 +211,8 @@ async def test_pam_auth_blocked():
 
     # User not in blocked set can log in
     authenticator = MockPAMAuthenticator(
-        blocked_users={'wash'}, allowed_users={'wash', 'kaylee'}
+        blocked_users={'wash'},
+        allowed_users={'wash', 'kaylee'},
     )
     authorized = await authenticator.get_authenticated_user(
         None, {'username': 'kaylee', 'password': 'kaylee'}
@@ -221,7 +230,8 @@ async def test_pam_auth_blocked():
 
     # User in neither list
     authenticator = MockPAMAuthenticator(
-        blocked_users={'mal'}, allowed_users={'wash', 'kaylee'}
+        blocked_users={'mal'},
+        allowed_users={'wash', 'kaylee'},
     )
     authorized = await authenticator.get_authenticated_user(
         None, {'username': 'simon', 'password': 'simon'}
@@ -257,7 +267,9 @@ async def test_deprecated_signatures():
 
 
 async def test_pam_auth_no_such_group():
-    authenticator = MockPAMAuthenticator(allowed_groups={'nosuchcrazygroup'})
+    authenticator = MockPAMAuthenticator(
+        allowed_groups={'nosuchcrazygroup'},
+    )
     authorized = await authenticator.get_authenticated_user(
         None, {'username': 'kaylee', 'password': 'kaylee'}
     )
@@ -405,7 +417,7 @@ async def test_auth_state_disabled(app, auth_state_unavailable):
 
 
 async def test_normalize_names():
-    a = MockPAMAuthenticator()
+    a = MockPAMAuthenticator(allow_all=True)
     authorized = await a.get_authenticated_user(
         None, {'username': 'ZOE', 'password': 'ZOE'}
     )
@@ -428,7 +440,7 @@ async def test_normalize_names():
 
 
 async def test_username_map():
-    a = MockPAMAuthenticator(username_map={'wash': 'alpha'})
+    a = MockPAMAuthenticator(username_map={'wash': 'alpha'}, allow_all=True)
     authorized = await a.get_authenticated_user(
         None, {'username': 'WASH', 'password': 'WASH'}
     )
@@ -458,7 +470,7 @@ async def test_post_auth_hook():
         authentication['testkey'] = 'testvalue'
         return authentication
 
-    a = MockPAMAuthenticator(post_auth_hook=test_auth_hook)
+    a = MockPAMAuthenticator(allow_all=True, post_auth_hook=test_auth_hook)
 
     authorized = await a.get_authenticated_user(
         None, {'username': 'test_user', 'password': 'test_user'}
@@ -566,6 +578,7 @@ async def test_auth_managed_groups(
         parent=app,
         authenticated_groups=authenticated_groups,
         refresh_groups=refresh_groups,
+        allow_all=True,
     )
 
     user.groups.append(group)
@@ -1019,3 +1032,193 @@ async def test_auth_manage_roles_description_handling(app, user, role_spec, expe
         assert not app.db.dirty
         roles = {role.name: role for role in user.roles}
         assert roles[name].description == expected
+
+
+@pytest.mark.parametrize(
+    "allowed_users,  allow_existing_users",
+    [
+        ('specified', True),
+        ('', False),
+    ],
+)
+async def test_allow_defaults(app, user, allowed_users, allow_existing_users):
+    if allowed_users:
+        allowed_users = set(allowed_users.split(','))
+    else:
+        allowed_users = set()
+    authenticator = auth.Authenticator(allowed_users=allowed_users)
+    authenticator.authenticate = lambda handler, data: data["username"]
+    assert authenticator.allow_all is False
+    assert authenticator.allow_existing_users == allow_existing_users
+
+    # user was already in the database
+    # this happens during hub startup
+    authenticator.add_user(user)
+    if allowed_users:
+        assert user.name in authenticator.allowed_users
+    else:
+        authenticator.allowed_users == set()
+
+    specified_allowed = await authenticator.get_authenticated_user(
+        None, {"username": "specified"}
+    )
+    if "specified" in allowed_users:
+        assert specified_allowed is not None
+    else:
+        assert specified_allowed is None
+
+    existing_allowed = await authenticator.get_authenticated_user(
+        None, {"username": user.name}
+    )
+    if allow_existing_users:
+        assert existing_allowed is not None
+    else:
+        assert existing_allowed is None
+
+
+@pytest.mark.parametrize("allow_all", [None, True, False])
+@pytest.mark.parametrize("allow_existing_users", [None, True, False])
+@pytest.mark.parametrize("allowed_users", ["existing", ""])
+def test_allow_existing_users(
+    app, user, allowed_users, allow_all, allow_existing_users
+):
+    if allowed_users:
+        allowed_users = set(allowed_users.split(','))
+    else:
+        allowed_users = set()
+    authenticator = auth.Authenticator(
+        allowed_users=allowed_users,
+    )
+    if allow_all is None:
+        # default allow_all
+        allow_all = authenticator.allow_all
+    else:
+        authenticator.allow_all = allow_all
+    if allow_existing_users is None:
+        # default allow_all
+        allow_existing_users = authenticator.allow_existing_users
+    else:
+        authenticator.allow_existing_users = allow_existing_users
+
+    # first, nobody in the database
+    assert authenticator.check_allowed("newuser") == allow_all
+
+    # user was already in the database
+    # this happens during hub startup
+    authenticator.add_user(user)
+    if allow_existing_users or allow_all:
+        assert authenticator.check_allowed(user.name)
+    else:
+        assert not authenticator.check_allowed(user.name)
+    for username in allowed_users:
+        assert authenticator.check_allowed(username)
+
+    assert authenticator.check_allowed("newuser") == allow_all
+
+
+@pytest.mark.parametrize("allow_all", [True, False])
+@pytest.mark.parametrize("allow_existing_users", [True, False])
+def test_allow_existing_users_first_time(user, allow_all, allow_existing_users):
+    # make sure that calling add_user doesn't change results
+    authenticator = auth.Authenticator(
+        allow_all=allow_all,
+        allow_existing_users=allow_existing_users,
+    )
+    allowed_before_one = authenticator.check_allowed(user.name)
+    allowed_before_two = authenticator.check_allowed("newuser")
+    # add_user is called after successful login
+    # it shouldn't change results (e.g. by switching .allowed_users from empty to non-empty)
+    if allowed_before_one:
+        authenticator.add_user(user)
+    assert authenticator.check_allowed(user.name) == allowed_before_one
+    assert authenticator.check_allowed("newuser") == allowed_before_two
+
+
+class AllowAllIgnoringAuthenticator(auth.Authenticator):
+    """Test authenticator with custom check_allowed
+
+    not updated for allow_all, allow_existing_users
+
+    Make sure new config doesn't break backward-compatibility
+    or grant unintended access for Authenticators written before JupyterHub 5.
+    """
+
+    allowed_letters = Tuple(config=True, help="Initial letters to allow")
+
+    def authenticate(self, handler, data):
+        return {"name": data["username"]}
+
+    def check_allowed(self, username, auth=None):
+        if not self.allowed_users and not self.allowed_letters:
+            # this subclass doesn't know about the JupyterHub 5 allow_all config
+            # no allow config, allow all!
+            return True
+        if self.allowed_users and username in self.allowed_users:
+            return True
+        if self.allowed_letters and username.startswith(self.allowed_letters):
+            return True
+        return False
+
+
+# allow_all is not recognized by Authenticator subclass
+# make sure it doesn't make anything more permissive, at least
+@pytest.mark.parametrize("allow_all", [True, False])
+@pytest.mark.parametrize(
+    "allowed_users, allowed_letters, allow_existing_users, allowed, not_allowed",
+    [
+        ("", "", None, "anyone,should-be,allowed,existing", ""),
+        ("", "a,b", None, "alice,bebe", "existing,other"),
+        ("", "a,b", False, "alice,bebe", "existing,other"),
+        ("", "a,b", True, "alice,bebe,existing", "other"),
+        ("specified", "a,b", None, "specified,alice,bebe,existing", "other"),
+        ("specified", "a,b", False, "specified,alice,bebe", "existing,other"),
+        ("specified", "a,b", True, "specified,alice,bebe,existing", "other"),
+    ],
+)
+async def test_authenticator_without_allow_all(
+    app,
+    allowed_users,
+    allowed_letters,
+    allow_existing_users,
+    allowed,
+    not_allowed,
+    allow_all,
+):
+    kwargs = {}
+    if allow_all is not None:
+        kwargs["allow_all"] = allow_all
+    if allow_existing_users is not None:
+        kwargs["allow_existing_users"] = allow_existing_users
+    if allowed_users:
+        kwargs["allowed_users"] = set(allowed_users.split(','))
+    if allowed_letters:
+        kwargs["allowed_letters"] = tuple(allowed_letters.split(','))
+
+    authenticator = AllowAllIgnoringAuthenticator(**kwargs)
+
+    # load one user from db
+    existing_user = add_user(app.db, app, name="existing")
+    authenticator.add_user(existing_user)
+
+    if allowed:
+        allowed = allowed.split(",")
+    if not_allowed:
+        not_allowed = not_allowed.split(",")
+
+    expected_allowed = sorted(allowed)
+    expected_not_allowed = sorted(not_allowed)
+    to_check = list(chain(expected_allowed, expected_not_allowed))
+    if allow_all:
+        expected_allowed = to_check
+        expected_not_allowed = []
+
+    are_allowed = []
+    are_not_allowed = []
+    for username in to_check:
+        if await authenticator.get_authenticated_user(None, {"username": username}):
+            are_allowed.append(username)
+        else:
+            are_not_allowed.append(username)
+
+    assert are_allowed == expected_allowed
+    assert are_not_allowed == expected_not_allowed

@@ -402,6 +402,25 @@ class JupyterHub(Application):
         Useful for daemonizing JupyterHub.
         """,
     ).tag(config=True)
+
+    cookie_host_prefix_enabled = Bool(
+        False,
+        help="""Enable `__Host-` prefix on authentication cookies.
+        
+        The `__Host-` prefix on JupyterHub cookies provides further
+        protection against cookie tossing when untrusted servers
+        may control subdomains of your jupyterhub deployment.
+        
+        _However_, it also requires that cookies be set on the path `/`,
+        which means they are shared by all JupyterHub components,
+        so a compromised server component will have access to _all_ JupyterHub-related
+        cookies of the visiting browser.
+        It is recommended to only combine `__Host-` cookies with per-user domains.
+
+        .. versionadded:: 4.1
+        """,
+    ).tag(config=True)
+
     cookie_max_age_days = Float(
         14,
         help="""Number of days for a login cookie to be valid.
@@ -2034,6 +2053,8 @@ class JupyterHub(Application):
             hub_args['port'] = self.hub_port
 
         self.hub = Hub(**hub_args)
+        if self.cookie_host_prefix_enabled:
+            self.hub.cookie_name = "__Host-" + self.hub.cookie_name
 
         if not self.subdomain_host:
             api_prefix = url_path_join(self.hub.base_url, "api/")
@@ -2077,6 +2098,9 @@ class JupyterHub(Application):
                     "auth_state is enabled, but encryption is not available: %s" % e
                 )
 
+        # give the authenticator a chance to check its own config
+        self.authenticator.check_allow_config()
+
         if self.admin_users and not self.authenticator.admin_users:
             self.log.warning(
                 "\nJupyterHub.admin_users is deprecated since version 0.7.2."
@@ -2104,9 +2128,9 @@ class JupyterHub(Application):
                 new_users.append(user)
             else:
                 user.admin = True
+
         # the admin_users config variable will never be used after this point.
         # only the database values will be referenced.
-
         allowed_users = [
             self.authenticator.normalize_username(name)
             for name in self.authenticator.allowed_users
@@ -2116,10 +2140,10 @@ class JupyterHub(Application):
             if not self.authenticator.validate_username(username):
                 raise ValueError("username %r is not valid" % username)
 
-        if not allowed_users:
-            self.log.info(
-                "Not using allowed_users. Any authenticated user will be allowed."
-            )
+        if self.authenticator.allowed_users and self.authenticator.admin_users:
+            # make sure admin users are in the allowed_users set, if defined,
+            # otherwise they won't be able to login
+            self.authenticator.allowed_users |= self.authenticator.admin_users
 
         # add allowed users to the db
         for name in allowed_users:
@@ -3161,6 +3185,7 @@ class JupyterHub(Application):
             default_url=self.default_url,
             public_url=urlparse(self.public_url) if self.public_url else "",
             cookie_secret=self.cookie_secret,
+            cookie_host_prefix_enabled=self.cookie_host_prefix_enabled,
             cookie_max_age_days=self.cookie_max_age_days,
             redirect_to_server=self.redirect_to_server,
             login_url=login_url,

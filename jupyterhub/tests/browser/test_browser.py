@@ -1,6 +1,8 @@
 """Tests for the Playwright Python"""
 
+import asyncio
 import json
+import pprint
 import re
 from unittest import mock
 from urllib.parse import parse_qs, urlparse
@@ -11,7 +13,8 @@ from tornado.escape import url_escape
 from tornado.httputil import url_concat
 
 from jupyterhub import orm, roles, scopes
-from jupyterhub.tests.utils import public_host, public_url, ujoin
+from jupyterhub.tests.test_named_servers import named_servers  # noqa
+from jupyterhub.tests.utils import async_requests, public_host, public_url, ujoin
 from jupyterhub.utils import url_escape_path, url_path_join
 
 pytestmark = pytest.mark.browser
@@ -44,7 +47,7 @@ async def test_submit_login_form(app, browser, user_special_chars):
     login_url = url_path_join(public_host(app), app.hub.base_url, "login")
     await browser.goto(login_url)
     await login(browser, user.name, password=user.name)
-    expected_url = ujoin(public_url(app), f"/user/{user_special_chars.urlname}/")
+    expected_url = public_url(app, user)
     await expect(browser).to_have_url(expected_url)
 
 
@@ -56,7 +59,7 @@ async def test_submit_login_form(app, browser, user_special_chars):
             # will encode given parameters for an unauthenticated URL in the next url
             # the next parameter will contain the app base URL (replaces BASE_URL in tests)
             'spawn',
-            [('param', 'value')],
+            {'param': 'value'},
             '/hub/login?next={{BASE_URL}}hub%2Fspawn%3Fparam%3Dvalue',
             '/hub/login?next={{BASE_URL}}hub%2Fspawn%3Fparam%3Dvalue',
         ),
@@ -64,15 +67,15 @@ async def test_submit_login_form(app, browser, user_special_chars):
             # login?param=fromlogin&next=encoded(/hub/spawn?param=value)
             # will drop parameters given to the login page, passing only the next url
             'login',
-            [('param', 'fromlogin'), ('next', '/hub/spawn?param=value')],
-            '/hub/login?param=fromlogin&next=%2Fhub%2Fspawn%3Fparam%3Dvalue',
-            '/hub/login?next=%2Fhub%2Fspawn%3Fparam%3Dvalue',
+            {'param': 'fromlogin', 'next': '/hub/spawn?param=value'},
+            '/hub/login?param=fromlogin&next={{BASE_URL}}hub%2Fspawn%3Fparam%3Dvalue',
+            '/hub/login?next={{BASE_URL}}hub%2Fspawn%3Fparam%3Dvalue',
         ),
         (
             # login?param=value&anotherparam=anothervalue
             # will drop parameters given to the login page, and use an empty next url
             'login',
-            [('param', 'value'), ('anotherparam', 'anothervalue')],
+            {'param': 'value', 'anotherparam': 'anothervalue'},
             '/hub/login?param=value&anotherparam=anothervalue',
             '/hub/login?next=',
         ),
@@ -80,7 +83,7 @@ async def test_submit_login_form(app, browser, user_special_chars):
             # login
             # simplest case, accessing the login URL, gives an empty next url
             'login',
-            [],
+            {},
             '/hub/login',
             '/hub/login?next=',
         ),
@@ -98,6 +101,8 @@ async def test_open_url_login(
     user = user_special_chars.user
     login_url = url_path_join(public_host(app), app.hub.base_url, url)
     await browser.goto(login_url)
+    if params.get("next"):
+        params["next"] = url_path_join(app.base_url, params["next"])
     url_new = url_path_join(public_host(app), app.hub.base_url, url_concat(url, params))
     print(url_new)
     await browser.goto(url_new)
@@ -853,12 +858,15 @@ async def test_oauth_page(
     oauth_client.allowed_scopes = sorted(roles.roles_to_scopes([service_role]))
     app.db.commit()
     # open the service url in the browser
-    service_url = url_path_join(public_url(app, service) + 'owhoami/?arg=x')
+    service_url = url_path_join(public_url(app, service), 'owhoami/?arg=x')
     await browser.goto(service_url)
 
-    expected_redirect_url = url_path_join(
-        app.base_url + f"services/{service.name}/oauth_callback"
-    )
+    if app.subdomain_host:
+        expected_redirect_url = url_path_join(
+            public_url(app, service), "oauth_callback"
+        )
+    else:
+        expected_redirect_url = url_path_join(service.prefix, "oauth_callback")
     expected_client_id = f"service-{service.name}"
 
     # decode the URL
@@ -1236,3 +1244,266 @@ async def test_start_stop_server_on_admin_page(
     await expect(browser.get_by_role("button", name="Spawn Page")).to_have_count(
         len(users_list)
     )
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        "fresh",
+        "invalid",
+        "valid-prefix-invalid-root",
+        "valid-prefix-invalid-other-prefix",
+    ],
+)
+async def test_login_xsrf_initial_cookies(app, browser, case, username):
+    """Test that login works with various initial states for xsrf tokens
+
+    Page will be reloaded with correct values
+    """
+    hub_root = public_host(app)
+    hub_url = url_path_join(public_host(app), app.hub.base_url)
+    hub_parent = hub_url.rstrip("/").rsplit("/", 1)[0] + "/"
+    login_url = url_path_join(
+        hub_url, url_concat("login", {"next": url_path_join(app.base_url, "/hub/home")})
+    )
+    # start with all cookies cleared
+    await browser.context.clear_cookies()
+    if case == "invalid":
+        await browser.context.add_cookies(
+            [{"name": "_xsrf", "value": "invalid-hub-prefix", "url": hub_url}]
+        )
+    elif case.startswith("valid-prefix"):
+        if "invalid-root" in case:
+            invalid_url = hub_root
+        else:
+            invalid_url = hub_parent
+        await browser.goto(login_url)
+        # first visit sets valid xsrf cookie
+        cookies = await browser.context.cookies()
+        assert len(cookies) == 1
+        # second visit is also made with invalid xsrf on `/`
+        # handling of this behavior is undefined in HTTP itself!
+        # _either_ the invalid cookie on / is ignored
+        # _or_ both will be cleared
+        # currently, this test assumes the observed behavior,
+        # which is that the invalid cookie on `/` has _higher_ priority
+        await browser.context.add_cookies(
+            [{"name": "_xsrf", "value": "invalid-root", "url": invalid_url}]
+        )
+        cookies = await browser.context.cookies()
+        assert len(cookies) == 2
+
+    # after visiting page, cookies get re-established
+    await browser.goto(login_url)
+    cookies = await browser.context.cookies()
+    print(cookies)
+    cookie = cookies[0]
+    assert cookie['name'] == '_xsrf'
+    assert cookie["path"] == app.hub.base_url
+
+    # next page visit, cookies don't change
+    await browser.goto(login_url)
+    cookies_2 = await browser.context.cookies()
+    assert cookies == cookies_2
+    # login is successful
+    await login(browser, username, username)
+
+
+def _cookie_dict(cookie_list):
+    """Convert list of cookies to dict of the form
+
+    { 'path': {'key': {cookie} } }
+    """
+    cookie_dict = {}
+    for cookie in cookie_list:
+        path_cookies = cookie_dict.setdefault(cookie['path'], {})
+        path_cookies[cookie['name']] = cookie
+    return cookie_dict
+
+
+async def test_singleuser_xsrf(
+    app,
+    browser,
+    user,
+    create_user_with_scopes,
+    full_spawn,
+    named_servers,  # noqa: F811
+):
+    # full login process, checking XSRF handling
+    # start two servers
+    target_user = user
+    target_start = asyncio.ensure_future(target_user.spawn())
+
+    browser_user = create_user_with_scopes("self", "access:servers")
+    # login browser_user
+    login_url = url_path_join(public_host(app), app.hub.base_url, "login")
+    await browser.goto(login_url)
+    await login(browser, browser_user.name, browser_user.name)
+    # end up at single-user
+    await expect(browser).to_have_url(re.compile(rf".*/user/{browser_user.name}/.*"))
+    # wait for target user to start, too
+    await target_start
+    await app.proxy.add_user(target_user)
+
+    # visit target user, sets credentials for second server
+    await browser.goto(public_url(app, target_user))
+    await expect(browser).to_have_url(re.compile(r".*/oauth2/authorize"))
+    auth_button = browser.locator('//input[@type="submit"]')
+    await expect(auth_button).to_be_enabled()
+    await auth_button.click()
+    await expect(browser).to_have_url(re.compile(rf".*/user/{target_user.name}/.*"))
+
+    # at this point, we are on a page served by target_user,
+    # logged in as browser_user
+    # basic check that xsrf isolation works
+    cookies = await browser.context.cookies()
+    cookie_dict = _cookie_dict(cookies)
+    pprint.pprint(cookie_dict)
+
+    # we should have xsrf tokens for both singleuser servers and the hub
+    target_prefix = target_user.prefix
+    user_prefix = browser_user.prefix
+    hub_prefix = app.hub.base_url
+    assert target_prefix in cookie_dict
+    assert user_prefix in cookie_dict
+    assert hub_prefix in cookie_dict
+    target_xsrf = cookie_dict[target_prefix].get("_xsrf", {}).get("value")
+    assert target_xsrf
+    user_xsrf = cookie_dict[user_prefix].get("_xsrf", {}).get("value")
+    assert user_xsrf
+    hub_xsrf = cookie_dict[hub_prefix].get("_xsrf", {}).get("value")
+    assert hub_xsrf
+    assert hub_xsrf != target_xsrf
+    assert hub_xsrf != user_xsrf
+    assert target_xsrf != user_xsrf
+
+    # we are on a page served by target_user
+    # check that we can't access
+
+    async def fetch_user_page(path, params=None):
+        url = url_path_join(public_url(app, browser_user), path)
+        if params:
+            url = url_concat(url, params)
+        status = await browser.evaluate(
+            """
+            async (user_url) => {
+              try {
+                response = await fetch(user_url);
+              } catch (e) {
+                return 'error';
+              }
+              return response.status;
+            }
+            """,
+            url,
+        )
+        return status
+
+    if app.subdomain_host:
+        expected_status = 'error'
+    else:
+        expected_status = 403
+    status = await fetch_user_page("/api/contents")
+    assert status == expected_status
+    status = await fetch_user_page("/api/contents", params={"_xsrf": target_xsrf})
+    assert status == expected_status
+
+    if not app.subdomain_host:
+        expected_status = 200
+    status = await fetch_user_page("/api/contents", params={"_xsrf": user_xsrf})
+    assert status == expected_status
+
+    # check that we can't iframe the other user's page
+    async def iframe(src):
+        return await browser.evaluate(
+            """
+            async (src) => {
+                const frame = document.createElement("iframe");
+                frame.src = src;
+                return new Promise((resolve, reject) => {
+                    frame.addEventListener("load", (event) => {
+                        if (frame.contentDocument) {
+                            resolve("got document!");
+                        } else {
+                            resolve("blocked")
+                        }
+                    });
+                    setTimeout(() => {
+                        // some browsers (firefox) never fire load event
+                        // despite spec appasrently stating it must always do so,
+                        // even for rejected frames
+                        resolve("timeout")
+                    }, 3000)
+
+                    document.body.appendChild(frame);
+                });
+            }
+            """,
+            src,
+        )
+
+    hub_iframe = await iframe(url_path_join(public_url(app), "hub/admin"))
+    assert hub_iframe in {"timeout", "blocked"}
+    user_iframe = await iframe(public_url(app, browser_user))
+    assert user_iframe in {"timeout", "blocked"}
+
+    # check that server page can still connect to its own kernels
+    token = target_user.new_api_token(scopes=["access:servers!user"])
+
+    async def test_kernel(kernels_url):
+        headers = {"Authorization": f"Bearer {token}"}
+        r = await async_requests.post(kernels_url, headers=headers)
+        r.raise_for_status()
+        kernel = r.json()
+        kernel_id = kernel["id"]
+        kernel_url = url_path_join(kernels_url, kernel_id)
+        kernel_ws_url = "ws" + url_path_join(kernel_url, "channels")[4:]
+        try:
+            result = await browser.evaluate(
+                """
+                async (ws_url) => {
+                    ws = new WebSocket(ws_url);
+                    finished = await new Promise((resolve, reject) => {
+                        ws.onerror = (err) => {
+                            reject(err);
+                        };
+                        ws.onopen = () => {
+                            resolve("ok");
+                        };
+                    });
+                    return finished;
+                }
+                """,
+                kernel_ws_url,
+            )
+        finally:
+            r = await async_requests.delete(kernel_url, headers=headers)
+            r.raise_for_status()
+        assert result == "ok"
+
+    kernels_url = url_path_join(public_url(app, target_user), "/api/kernels")
+    await test_kernel(kernels_url)
+
+    # final check: make sure named servers work.
+    # first, visit spawn page to launch server,
+    # will issue cookies, etc.
+    server_name = "named"
+    url = url_path_join(
+        public_host(app),
+        url_path_join(app.base_url, f"hub/spawn/{browser_user.name}/{server_name}"),
+    )
+    await browser.goto(url)
+    await expect(browser).to_have_url(
+        re.compile(rf".*/user/{browser_user.name}/{server_name}/.*")
+    )
+    # from named server URL, make sure we can talk to a kernel
+    token = browser_user.new_api_token(scopes=["access:servers!user"])
+    # named-server URL
+    kernels_url = url_path_join(
+        public_url(app, browser_user), server_name, "api/kernels"
+    )
+    await test_kernel(kernels_url)
+    # go back to user's own page, test again
+    # make sure we didn't break anything
+    await browser.goto(public_url(app, browser_user))
+    await test_kernel(url_path_join(public_url(app, browser_user), "api/kernels"))

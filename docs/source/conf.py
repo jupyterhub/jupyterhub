@@ -70,6 +70,8 @@ myst_enable_extensions = [
 myst_substitutions = {
     # date example: Dev 07, 2022
     "date": datetime.date.today().strftime("%b %d, %Y").title(),
+    "node_min": "12",
+    "python_min": "3.8",
     "version": jupyterhub.__version__,
 }
 
@@ -289,6 +291,8 @@ linkcheck_ignore = [
     "https://github.com/jupyterhub/jupyterhub/compare/",  # too many comparisons in changelog
     r"https?://(localhost|127.0.0.1).*",  # ignore localhost references in auto-links
     r"https://linux.die.net/.*",  # linux.die.net seems to block requests from CI with 403 sometimes
+    # don't check links to unpublished advisories
+    r"https://github.com/jupyterhub/jupyterhub/security/advisories/.*",
 ]
 linkcheck_anchors_ignore = [
     "/#!",

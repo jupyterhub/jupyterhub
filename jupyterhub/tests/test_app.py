@@ -475,6 +475,7 @@ async def test_user_creation(tmpdir, request):
     ]
 
     cfg = Config()
+    cfg.Authenticator.allow_all = False
     cfg.Authenticator.allowed_users = allowed_users
     cfg.JupyterHub.load_groups = groups
     cfg.JupyterHub.load_roles = roles

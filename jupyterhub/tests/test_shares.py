@@ -159,7 +159,9 @@ def expand_scopes(scope_str, user, group=None, share_with=None):
     return scopes
 
 
-@pytest.mark.parametrize("share_with", ["user", "group"])
+@pytest.mark.parametrize(
+    "share_with", ["user", pytest.param("group", id="share_with=group")]
+)
 def test_create_share(app, user, share_user, group, share_with):
     db = app.db
     spawner = user.spawner.orm_spawner
@@ -427,7 +429,7 @@ def test_share_code_expires(app, user, share_user):
     "kind",
     [
         ("user"),
-        ("group"),
+        (pytest.param("group", id="kind=group")),
     ],
 )
 async def test_shares_api_user_group_doesnt_exist(
