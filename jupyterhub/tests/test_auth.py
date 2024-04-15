@@ -609,22 +609,20 @@ async def test_auth_managed_groups(
 
 
 @pytest.mark.parametrize(
-    "allowed_users, allow_all, allow_existing_users",
+    "allowed_users,  allow_existing_users",
     [
-        ('specified', False, True),
-        ('', False, False),
+        ('specified', True),
+        ('', False),
     ],
 )
-async def test_allow_defaults(
-    app, user, allowed_users, allow_all, allow_existing_users
-):
+async def test_allow_defaults(app, user, allowed_users, allow_existing_users):
     if allowed_users:
         allowed_users = set(allowed_users.split(','))
     else:
         allowed_users = set()
     authenticator = auth.Authenticator(allowed_users=allowed_users)
     authenticator.authenticate = lambda handler, data: data["username"]
-    assert authenticator.allow_all == allow_all
+    assert authenticator.allow_all is False
     assert authenticator.allow_existing_users == allow_existing_users
 
     # user was already in the database
