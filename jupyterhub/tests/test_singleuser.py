@@ -2,6 +2,7 @@
 
 import os
 import sys
+import warnings
 from contextlib import nullcontext
 from pathlib import Path
 from pprint import pprint
@@ -289,6 +290,57 @@ async def test_notebook_dir(
         assert 'subfile.txt' in root_contents
     else:
         raise ValueError(f"No contents check for {notebook_dir=}")
+
+
+@pytest.mark.parametrize("extension", [True, False])
+@pytest.mark.skipif(IS_JUPYVERSE, reason="jupyverse has no auth configuration")
+async def test_forbid_unauthenticated_access(
+    request, app, tmp_path, user, full_spawn, extension
+):
+    try:
+        from jupyter_server.auth.decorator import allow_unauthenticated  # noqa
+    except ImportError:
+        pytest.skip("needs jupyter-server 2.13")
+
+    from jupyter_server.utils import JupyterServerAuthWarning
+
+    # login, start the server
+    cookies = await app.login_user('nandy')
+    s = AsyncSession()
+    s.cookies = cookies
+    user = app.users['nandy']
+    # stop spawner, if running:
+    if user.running:
+        await user.stop()
+    # start with new config:
+    user.spawner.default_url = "/jupyterhub-test-info"
+
+    if extension:
+        user.spawner.environment["JUPYTERHUB_SINGLEUSER_EXTENSION"] = "1"
+    else:
+        user.spawner.environment["JUPYTERHUB_SINGLEUSER_EXTENSION"] = "0"
+
+    # make sure it's resolved to start
+    tmp_path = tmp_path.resolve()
+    real_home_dir = tmp_path / "realhome"
+    real_home_dir.mkdir()
+    # make symlink to test resolution
+    home_dir = tmp_path / "home"
+    home_dir.symlink_to(real_home_dir)
+    # home_dir is defined on SimpleSpawner
+    user.spawner.home_dir = str(home_dir)
+    jupyter_config_dir = home_dir / ".jupyter"
+    jupyter_config_dir.mkdir()
+    # verify config paths
+    with (jupyter_config_dir / "jupyter_server_config.py").open("w") as f:
+        f.write("c.ServerApp.allow_unauthenticated_access = False")
+
+    # If there are core endpoints (added by jupyterhub) without decorators,
+    # spawn will error out. If there are extension endpoints without decorators
+    # these will be logged as warnings.
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", JupyterServerAuthWarning)
+        await user.spawn()
 
 
 @pytest.mark.skipif(IS_JUPYVERSE, reason="jupyverse has no --help-all")

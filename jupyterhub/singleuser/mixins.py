@@ -52,6 +52,7 @@ from ..utils import (
     make_ssl_context,
     url_path_join,
 )
+from ._decorator import allow_unauthenticated
 from ._disable_user_config import _disable_user_config, _exclude_home
 
 # Authenticate requests with the Hub
@@ -132,6 +133,7 @@ class JupyterHubLoginHandlerMixin:
 
 
 class JupyterHubLogoutHandlerMixin:
+    @allow_unauthenticated
     def get(self):
         self.settings['hub_auth'].clear_cookie(self)
         self.redirect(
@@ -146,6 +148,10 @@ class OAuthCallbackHandlerMixin(HubOAuthCallbackHandler):
     @property
     def hub_auth(self):
         return self.settings['hub_auth']
+
+    @allow_unauthenticated
+    async def get(self):
+        return await super().get()
 
 
 # register new hub related command-line aliases
@@ -827,7 +833,7 @@ def patch_base_handler(BaseHandler, log=None):
         # but we also need to ensure BaseHandler *itself* doesn't
         # override the public tornado API methods we have inserted.
         # If they are defined in BaseHandler, explicitly replace them with our methods.
-        for name in ("get_current_user", "get_login_url"):
+        for name in ("get_current_user", "get_login_url", "check_xsrf_cookie"):
             if name in BaseHandler.__dict__:
                 log.debug(
                     f"Overriding {BaseHandler}.{name} with HubAuthenticatedHandler.{name}"

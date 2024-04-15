@@ -6,11 +6,6 @@
   <h1 class="sr-only">Manage JupyterHub Tokens</h1>
   <div class="row">
     <form id="request-token-form" class="m-auto col-lg-6">
-      <div class="text-center">
-        <button type="submit" class="btn btn-lg btn-jupyter">
-          Request new API token
-        </button>
-      </div>
       <div class="form-group">
         <label for="token-note">Note</label>
         <input
@@ -43,6 +38,11 @@
           If none are specified, the token will have permission to do everything you can do.
           See the <a href="https://jupyterhub.readthedocs.io/en/stable/rbac/scopes.html#available-scopes">JupyterHub documentation for a list of available scopes</a>.
         </small>
+      </div>
+      <div class="text-center">
+        <button type="submit" class="btn btn-lg btn-jupyter">
+          Request new API token
+        </button>
       </div>
     </form>
   </div>

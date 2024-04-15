@@ -213,7 +213,9 @@ async def test_spawn_handler_access(app):
     r.raise_for_status()
 
 
-@pytest.mark.parametrize("has_access", ["all", "user", "group", False])
+@pytest.mark.parametrize(
+    "has_access", ["all", "user", (pytest.param("group", id="in-group")), False]
+)
 async def test_spawn_other_user(
     app, user, username, group, create_temp_role, has_access
 ):
@@ -300,7 +302,9 @@ async def test_spawn_page_falsy_callable(app):
     assert history[1] == ujoin(public_url(app), "hub/spawn-pending/erik")
 
 
-@pytest.mark.parametrize("has_access", ["all", "user", "group", False])
+@pytest.mark.parametrize(
+    "has_access", ["all", "user", (pytest.param("group", id="in-group")), False]
+)
 async def test_spawn_page_access(
     app, has_access, group, username, user, create_temp_role
 ):
@@ -403,7 +407,9 @@ async def test_spawn_form(app):
         }
 
 
-@pytest.mark.parametrize("has_access", ["all", "user", "group", False])
+@pytest.mark.parametrize(
+    "has_access", ["all", "user", (pytest.param("group", id="in-group")), False]
+)
 async def test_spawn_form_other_user(
     app, username, user, group, create_temp_role, has_access
 ):
@@ -624,7 +630,9 @@ async def test_user_redirect_hook(app, username):
     assert redirected_url.path == ujoin(app.base_url, 'user', username, 'terminals/1')
 
 
-@pytest.mark.parametrize("has_access", ["all", "user", "group", False])
+@pytest.mark.parametrize(
+    "has_access", ["all", "user", (pytest.param("group", id="in-group")), False]
+)
 async def test_other_user_url(app, username, user, group, create_temp_role, has_access):
     """Test accessing /user/someonelse/ URLs when the server is not running
 
