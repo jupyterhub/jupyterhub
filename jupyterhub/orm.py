@@ -183,7 +183,7 @@ for entity in (
             ForeignKey('roles.id', ondelete='CASCADE'),
             primary_key=True,
         ),
-        Column('managed_by_auth', Boolean, default=False),
+        Column('managed_by_auth', Boolean, default=False, nullable=False),
     )
 
     _role_associations[entity] = type(
@@ -206,7 +206,7 @@ class Role(Base):
     )
     groups = relationship('Group', secondary='group_role_map', back_populates='roles')
 
-    managed_by_auth = Column(Boolean, default=False)
+    managed_by_auth = Column(Boolean, default=False, nullable=False)
 
     def __repr__(self):
         return f"<{self.__class__.__name__} {self.name} ({self.description}) - scopes: {self.scopes}>"
