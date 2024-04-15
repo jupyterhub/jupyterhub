@@ -67,10 +67,10 @@ a more detailed discussion.
 
    This should return a version number greater than or equal to 5.0.
 
-3. Install `configurable-http-proxy` (required to run and test the default JupyterHub configuration) and `yarn` (required to build some components):
+3. Install `configurable-http-proxy` (required to run and test the default JupyterHub configuration):
 
    ```bash
-   npm install -g configurable-http-proxy yarn
+   npm install -g configurable-http-proxy
    ```
 
    If you get an error that says `Error: EACCES: permission denied`, you might need to prefix the command with `sudo`.
@@ -78,7 +78,7 @@ a more detailed discussion.
    If you do not have access to sudo, you may instead run the following commands:
 
    ```bash
-   npm install configurable-http-proxy yarn
+   npm install configurable-http-proxy
    export PATH=$PATH:$(pwd)/node_modules/.bin
    ```
 
@@ -87,7 +87,7 @@ a more detailed discussion.
    If you are using conda you can instead run:
 
    ```bash
-   conda install configurable-http-proxy yarn
+   conda install configurable-http-proxy
    ```
 
 4. Install an editable version of JupyterHub and its requirements for
@@ -123,6 +123,14 @@ configuration:
 jupyterhub -f testing/jupyterhub_config.py
 ```
 
+The test configuration enables a few things to make testing easier:
+
+- use 'dummy' authentication and 'simple' spawner
+- named servers are enabled
+- listen only on localhost
+- 'admin' is an admin user, if you want to test the admin page
+- disable caching of static files
+
 The default JupyterHub [authenticator](PAMAuthenticator)
 & [spawner](LocalProcessSpawner)
 require your system to have user accounts for each user you want to log in to
@@ -138,6 +146,29 @@ authenticators & spawners, we recommend using both DummyAuthenticator &
 SimpleLocalProcessSpawner. If you are working on just authenticator-related
 parts, use only SimpleLocalProcessSpawner. Similarly, if you are working on
 just spawner-related parts, use only DummyAuthenticator.
+
+## Building frontend components
+
+The testing configuration file also disables caching of static files,
+which allows you to edit and rebuild these files without restarting JupyterHub.
+
+If you are working on the admin react page, which is in the `jsx` directory, you can run:
+
+```bash
+cd jsx
+npm install
+npm run build:watch
+```
+
+to continuously rebuild the admin page, requiring only a refresh of the page.
+
+If you are working on the frontend SCSS files, you can run the same `build:watch` command
+in the _top level_ directory of the repo:
+
+```bash
+npm install
+npm run build:watch
+```
 
 ## Troubleshooting
 
