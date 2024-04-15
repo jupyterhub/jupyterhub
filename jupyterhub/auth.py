@@ -121,6 +121,55 @@ class Authenticator(LoggingConfigurable):
         """
     ).tag(config=True)
 
+    any_allow_config = Bool(
+        False,
+        help="""Is there any allow config?
+        
+        Used to show a warning if it looks like nobody can access the Hub,
+        which can happen when upgrading to JupyterHub 5,
+        now that `allow_all` defaults to False.
+        
+        Deployments can set this explicitly to True to suppress
+        the "No allow config found" warning.
+        
+        Will be True if any config tagged with `.tag(allow_config=True)`
+        or starts with `allow` is truthy.
+        
+        .. versionadded:: 5.0
+        """,
+    ).tag(config=True)
+
+    @default("any_allow_config")
+    def _default_any_allowed(self):
+        for trait_name, trait in self.traits(config=True).items():
+            if trait.metadata.get("allow_config", False) or trait_name.startswith(
+                "allow"
+            ):
+                # this is only used for a helpful warning, so not the biggest deal if it's imperfect
+                if getattr(self, trait_name):
+                    return True
+        return False
+
+    def check_allow_config(self):
+        """Log a warning if no allow config can be found.
+
+        Could get a false positive if _only_ unrecognized allow config is used.
+        Authenticators can apply `.tag(allow_config=True)` to label this config
+        to make sure it is found.
+
+        Subclasses can override to perform additonal checks and warn about likely
+        authenticator configuration problems.
+
+        .. versionadded:: 5.0
+        """
+        if not self.any_allow_config:
+            self.log.warning(
+                "No allow config found, it's possible that nobody can login to your Hub!\n"
+                "You can set `c.Authenticator.allow_all = True` to allow any user who can login to access the Hub,\n"
+                "or e.g. `allowed_users` to a set of users who should have access.\n"
+                "You may suppress this warning by setting c.Authenticator.any_allow_config = True."
+            )
+
     whitelist = Set(
         help="Deprecated, use `Authenticator.allowed_users`",
         config=True,
@@ -132,7 +181,7 @@ class Authenticator(LoggingConfigurable):
 
         Use this to limit which authenticated users may login.
         Default behavior: only users in this set are allowed.
-        
+
         If empty, does not perform any restriction,
         in which case any authenticated user is allowed.
 
@@ -143,6 +192,83 @@ class Authenticator(LoggingConfigurable):
             `Authenticator.whitelist` renamed to `allowed_users`
         """
     ).tag(config=True)
+
+    allow_all = Bool(
+        False,
+        config=True,
+        help="""
+        Allow every user who can successfully authenticate to access JupyterHub.
+        
+        False by default, which means for most Authenticators,
+        _some_ allow-related configuration is required to allow users to log in.
+
+        Authenticator subclasses may override the default with e.g.::
+
+            @default("allow_all")
+            def _default_allow_all(self):
+                # if _any_ auth config (depends on the Authenticator)
+                if self.allowed_users or self.allowed_groups or self.allow_existing_users:
+                    return False
+                else:
+                    return True
+
+        .. versionadded:: 5.0
+        
+        .. versionchanged:: 5.0
+            Prior to 5.0, `allow_all` wasn't defined on its own,
+            and was instead implicitly True when no allow config was provided,
+            i.e. `allowed_users` unspecified or empty on the base Authenticator class.
+            
+            To preserve pre-5.0 behavior,
+            set `allow_all = True` if you have no other allow configuration.
+        """,
+    ).tag(allow_config=True)
+
+    allow_existing_users = Bool(
+        # dynamic default computed from allowed_users
+        config=True,
+        help="""
+        Allow existing users to login.
+
+        Defaults to True if `allowed_users` is set for historical reasons, and
+        False otherwise.
+
+        With this enabled, all users present in the JupyterHub database are allowed to login.
+        This has the effect of any user who has _previously_ been allowed to login
+        via any means will continue to be allowed until the user is deleted via the /hub/admin page
+        or REST API.
+
+        .. warning::
+
+           Before enabling this you should review the existing users in the
+           JupyterHub admin panel at `/hub/admin`. You may find users existing
+           there because they have previously been declared in config such as
+           `allowed_users` or allowed to sign in.
+
+        .. warning::
+
+           When this is enabled and you wish to remove access for one or more
+           users previously allowed, you must make sure that they
+           are removed from the jupyterhub database. This can be tricky to do
+           if you stop allowing an externally managed group of users for example.
+
+        With this enabled, JupyterHub admin users can visit `/hub/admin` or use
+        JupyterHub's REST API to add and remove users to manage who can login.
+
+        .. versionadded:: 5.0
+        """,
+    ).tag(allow_config=True)
+
+    @default("allow_existing_users")
+    def _allow_existing_users_default(self):
+        """
+        Computes the default value of allow_existing_users based on if
+        allowed_users to align with original behavior not introduce a breaking
+        change.
+        """
+        if self.allowed_users:
+            return True
+        return False
 
     blocked_users = Set(
         help="""
@@ -472,8 +598,7 @@ class Authenticator(LoggingConfigurable):
             web.HTTPError(403):
                 Raising HTTPErrors directly allows customizing the message shown to the user.
         """
-        if not self.allowed_users:
-            # No allowed set means any name is allowed
+        if self.allow_all:
             return True
         return username in self.allowed_users
 
@@ -525,8 +650,9 @@ class Authenticator(LoggingConfigurable):
         The various stages can be overridden separately:
          - `authenticate` turns formdata into a username
          - `normalize_username` normalizes the username
-         - `check_allowed` checks against the allowed usernames
          - `check_blocked_users` check against the blocked usernames
+         - `allow_all` is checked
+         - `check_allowed` checks against the allowed usernames
          - `is_admin` check if a user is an admin
 
         .. versionchanged:: 0.8
@@ -560,7 +686,11 @@ class Authenticator(LoggingConfigurable):
             self.log.warning("User %r blocked. Stop authentication", username)
             return
 
-        allowed_pass = await maybe_future(self.check_allowed(username, authenticated))
+        allowed_pass = self.allow_all
+        if not allowed_pass:
+            allowed_pass = await maybe_future(
+                self.check_allowed(username, authenticated)
+            )
 
         if allowed_pass:
             if authenticated['admin'] is None:
@@ -677,25 +807,31 @@ class Authenticator(LoggingConfigurable):
         """Hook called when a user is added to JupyterHub
 
         This is called:
-         - When a user first authenticates
-         - When the hub restarts, for all users.
+         - When a user first authenticates, _after_ all allow and block checks have passed
+         - When the hub restarts, for all users in the database (i.e. users previously allowed)
+         - When a user is added to the database, either via configuration or REST API
 
         This method may be a coroutine.
 
-        By default, this just adds the user to the allowed_users set.
+        By default, this adds the user to the allowed_users set if
+        allow_existing_users is true.
 
-        Subclasses may do more extensive things, such as adding actual unix users,
+        Subclasses may do more extensive things, such as creating actual system users,
         but they should call super to ensure the allowed_users set is updated.
 
         Note that this should be idempotent, since it is called whenever the hub restarts
         for all users.
+
+        .. versionchanged:: 5.0
+           Now adds users to the allowed_users set if allow_all is False and allow_existing_users is True,
+           instead of if allowed_users is not empty.
 
         Args:
             user (User): The User wrapper object
         """
         if not self.validate_username(user.name):
             raise ValueError("Invalid username: %s" % user.name)
-        if self.allowed_users:
+        if self.allow_existing_users and not self.allow_all:
             self.allowed_users.add(user.name)
 
     def delete_user(self, user):
@@ -902,23 +1038,16 @@ class LocalAuthenticator(Authenticator):
         help="""
         Allow login from all users in these UNIX groups.
 
-        If set, allowed username set is ignored.
+        .. versionchanged:: 5.0
+            `allowed_groups` may be specified together with allowed_users,
+            to grant access by group OR name.
         """
-    ).tag(config=True)
-
-    @observe('allowed_groups')
-    def _allowed_groups_changed(self, change):
-        """Log a warning if mutually exclusive user and group allowed sets are specified."""
-        if self.allowed_users:
-            self.log.warning(
-                "Ignoring Authenticator.allowed_users set because Authenticator.allowed_groups supplied!"
-            )
+    ).tag(config=True, allow_config=True)
 
     def check_allowed(self, username, authentication=None):
-        if self.allowed_groups:
-            return self.check_allowed_groups(username, authentication)
-        else:
-            return super().check_allowed(username, authentication)
+        if self.check_allowed_groups(username, authentication):
+            return True
+        return super().check_allowed(username, authentication)
 
     def check_allowed_groups(self, username, authentication=None):
         """
@@ -1248,7 +1377,19 @@ class DummyAuthenticator(Authenticator):
     if it logs in with that password.
 
     .. versionadded:: 1.0
+
+    .. versionadded:: 5.0
+        `allow_all` defaults to True,
+        preserving default behavior.
     """
+
+    @default("allow_all")
+    def _allow_all_default(self):
+        if self.allowed_users:
+            return False
+        else:
+            # allow all by default
+            return True
 
     password = Unicode(
         config=True,
@@ -1258,6 +1399,12 @@ class DummyAuthenticator(Authenticator):
         This allows users with any username to log in with the same static password.
         """,
     )
+
+    def check_allow_config(self):
+        super().check_allow_config()
+        self.log.warning(
+            f"Using testing authenticator {self.__class__.__name__}! This is not meant for production!"
+        )
 
     async def authenticate(self, handler, data):
         """Checks against a global password if it's been set. If not, allow any user/pass combo"""
