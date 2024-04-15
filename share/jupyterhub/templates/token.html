@@ -7,7 +7,7 @@
   <div class="row">
     <form id="request-token-form" class="m-auto col-lg-6">
       <div class="form-group">
-        <label for="token-note">Note</label>
+        <label for="token-note" class="form-label">Note</label>
         <input
           id="token-note"
           class="form-control"
@@ -16,10 +16,10 @@
           This note will help you keep track of what your tokens are for.
         </small>
         <br/>
-        <label for="token-expiration-seconds">Token expires in</label>
+        <label for="token-expiration-seconds" class="form-label">Token expires in</label>
         {% block expiration_options %}
         <select id="token-expiration-seconds"
-                class="form-control">
+                class="form-select">
           <!-- unit used for each value is `seconds` -->
           <option value="3600">1 Hour</option>
           <option value="86400">1 Day</option>
@@ -31,7 +31,7 @@
           You can configure when your token will expire.
         </small>
         <br/>
-        <label for="token-scopes">Permissions</label>
+        <label for="token-scopes" class="form-label">Permissions</label>
         <input id="token-scopes" class="form-control" placeholder="list of scopes for the token to have, separated by space">
         <small id="note-token-scopes" class="form-text text-muted">
           You can limit the permissions of the token so it can only do what you want it to.
@@ -39,7 +39,7 @@
           See the <a href="https://jupyterhub.readthedocs.io/en/stable/rbac/scopes.html#available-scopes">JupyterHub documentation for a list of available scopes</a>.
         </small>
       </div>
-      <div class="text-center">
+      <div class="text-center m-4">
         <button type="submit" class="btn btn-lg btn-jupyter">
           Request new API token
         </button>

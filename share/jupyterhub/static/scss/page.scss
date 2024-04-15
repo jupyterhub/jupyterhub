@@ -84,5 +84,10 @@ $grid-float-breakpoint: map-get($grid-breakpoints, "sm");
 }
 
 .btn-jupyter {
-  @include button-variant(#fff, $jupyter-orange, $jupyter-red);
+  @include button-variant(
+    $background: $jupyter-orange,
+    $border: $jupyter-red,
+    $color: #fff,
+    $hover-color: #fff
+  );
 }
