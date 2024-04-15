@@ -2,10 +2,11 @@ import React, { useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import PropTypes from "prop-types";
 
-import { Button } from "react-bootstrap";
+import { Button, Card } from "react-bootstrap";
 import { Link, useNavigate } from "react-router-dom";
 import { usePaginationParams } from "../../util/paginationParams";
 import PaginationFooter from "../PaginationFooter/PaginationFooter";
+import { MainContainer } from "../../util/layout";
 
 const Groups = (props) => {
   const groups_data = useSelector((state) => state.groups_data);
@@ -42,57 +43,53 @@ const Groups = (props) => {
   }
 
   return (
-    <div className="container" data-testid="container">
-      <div className="row">
-        <div className="col-md-12 col-lg-10 col-lg-offset-1">
-          <div className="card">
-            <div className="card-header">
-              <h4>Groups</h4>
-            </div>
-            <div className="card-body">
-              <ul className="list-group">
-                {groups_data.length > 0 ? (
-                  groups_data.map((e, i) => (
-                    <li className="list-group-item" key={"group-item" + i}>
-                      <span className="badge badge-pill badge-success">
-                        {e.users.length + " users"}
-                      </span>
-                      <Link to="/group-edit" state={{ group_data: e }}>
-                        {e.name}
-                      </Link>
-                    </li>
-                  ))
-                ) : (
-                  <div>
-                    <h4>no groups created...</h4>
-                  </div>
-                )}
-              </ul>
-              <PaginationFooter
-                offset={offset}
-                limit={limit}
-                visible={groups_data.length}
-                total={total}
-                next={() => setOffset(offset + limit)}
-                prev={() => setOffset(offset - limit)}
-                handleLimit={handleLimit}
-              />
-            </div>
-            <div className="card-footer">
-              <Link to="/">
-                <Button variant="light" id="return">
-                  Back
-                </Button>
-              </Link>
-              <span> </span>
-              <Link to="/create-group">
-                <Button variant="primary">New Group</Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <MainContainer>
+      <Card>
+        <Card.Header>
+          <h4>Groups</h4>
+        </Card.Header>
+        <Card.Body>
+          <ul className="list-group">
+            {groups_data.length > 0 ? (
+              groups_data.map((e, i) => (
+                <li className="list-group-item" key={"group-item" + i}>
+                  <span className="badge rounded-pill bg-success mx-2">
+                    {e.users.length + " users"}
+                  </span>
+                  <Link to="/group-edit" state={{ group_data: e }}>
+                    {e.name}
+                  </Link>
+                </li>
+              ))
+            ) : (
+              <div>
+                <h4>no groups created...</h4>
+              </div>
+            )}
+          </ul>
+          <PaginationFooter
+            offset={offset}
+            limit={limit}
+            visible={groups_data.length}
+            total={total}
+            next={() => setOffset(offset + limit)}
+            prev={() => setOffset(offset - limit)}
+            handleLimit={handleLimit}
+          />
+        </Card.Body>
+        <Card.Footer>
+          <Link to="/">
+            <Button variant="light" id="return">
+              Back
+            </Button>
+          </Link>
+          <span> </span>
+          <Link to="/create-group">
+            <Button variant="primary">New Group</Button>
+          </Link>
+        </Card.Footer>
+      </Card>
+    </MainContainer>
   );
 };
 

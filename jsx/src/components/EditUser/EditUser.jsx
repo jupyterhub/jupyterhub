@@ -2,7 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import PropTypes from "prop-types";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Button } from "react-bootstrap";
+import { Button, Card } from "react-bootstrap";
+import { MainContainer } from "../../util/layout";
 
 const EditUser = (props) => {
   const limit = useSelector((state) => state.limit),
@@ -40,129 +41,103 @@ const EditUser = (props) => {
     [admin, setAdmin] = useState(has_admin);
 
   return (
-    <>
-      <div className="container" data-testid="container">
-        {errorAlert != null ? (
-          <div className="row">
-            <div className="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
-              <div className="alert alert-danger">
-                {errorAlert}
-                <button
-                  type="button"
-                  className="close"
-                  onClick={() => setErrorAlert(null)}
-                >
-                  <span>&times;</span>
-                </button>
-              </div>
+    <MainContainer errorAlert={errorAlert} setErrorAlert={setErrorAlert}>
+      <Card>
+        <Card.Header>
+          <h1>Editing user {username}</h1>
+        </Card.Header>
+        <Card.Body>
+          <form>
+            <div className="form-group">
+              <textarea
+                className="form-control"
+                data-testid="edit-username-input"
+                id="exampleFormControlTextarea1"
+                rows="3"
+                placeholder="updated username"
+                onBlur={(e) => {
+                  setUpdatedUsername(e.target.value);
+                }}
+              ></textarea>
+              <br></br>
+              <input
+                className="form-check-input"
+                checked={admin}
+                type="checkbox"
+                id="admin-check"
+                onChange={() => setAdmin(!admin)}
+              />
+              <span> </span>
+              <label className="form-check-label">Admin</label>
             </div>
-          </div>
-        ) : (
-          <></>
-        )}
-        <div className="row">
-          <div className="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
-            <div className="card">
-              <div className="card-header">
-                <h4>Editing user {username}</h4>
-              </div>
-              <div className="card-body">
-                <form>
-                  <div className="form-group">
-                    <textarea
-                      className="form-control"
-                      data-testid="edit-username-input"
-                      id="exampleFormControlTextarea1"
-                      rows="3"
-                      placeholder="updated username"
-                      onBlur={(e) => {
-                        setUpdatedUsername(e.target.value);
-                      }}
-                    ></textarea>
-                    <br></br>
-                    <input
-                      className="form-check-input"
-                      checked={admin}
-                      type="checkbox"
-                      id="admin-check"
-                      onChange={() => setAdmin(!admin)}
-                    />
-                    <span> </span>
-                    <label className="form-check-label">Admin</label>
-                    <br></br>
-                    <button
-                      id="delete-user"
-                      data-testid="delete-user"
-                      className="btn btn-danger btn-sm"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        deleteUser(username)
-                          .then((data) => {
-                            data.status < 300
-                              ? updateUsers(0, limit)
-                                  .then((data) => dispatchPageChange(data, 0))
-                                  .then(() => navigate("/"))
-                                  .catch(() =>
-                                    setErrorAlert(
-                                      `Could not update users list.`,
-                                    ),
-                                  )
-                              : setErrorAlert(`Failed to edit user.`);
-                          })
-                          .catch(() => {
-                            setErrorAlert(`Failed to edit user.`);
-                          });
-                      }}
-                    >
-                      Delete user
-                    </button>
-                  </div>
-                </form>
-              </div>
-              <div className="card-footer">
-                <Link to="/">
-                  <Button variant="light">Back</Button>
-                </Link>
-                <span> </span>
-                <button
-                  id="submit"
-                  data-testid="submit"
-                  className="btn btn-primary"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    if (updatedUsername == "" && admin == has_admin) {
-                      noChangeEvent();
-                      return;
-                    } else {
-                      editUser(
-                        username,
-                        updatedUsername != "" ? updatedUsername : username,
-                        admin,
-                      )
-                        .then((data) => {
-                          data.status < 300
-                            ? updateUsers(0, limit)
-                                .then((data) => dispatchPageChange(data, 0))
-                                .then(() => navigate("/"))
-                                .catch(() =>
-                                  setErrorAlert(`Could not update users list.`),
-                                )
-                            : setErrorAlert(`Failed to edit user.`);
-                        })
-                        .catch(() => {
-                          setErrorAlert(`Failed to edit user.`);
-                        });
-                    }
-                  }}
-                >
-                  Apply
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
+          </form>
+        </Card.Body>
+        <Card.Footer>
+          <Link to="/">
+            <Button variant="light">Back</Button>
+          </Link>
+          <span> </span>
+          <Button
+            id="submit"
+            data-testid="submit"
+            variant="primary"
+            onClick={(e) => {
+              e.preventDefault();
+              if (updatedUsername == "" && admin == has_admin) {
+                noChangeEvent();
+                return;
+              } else {
+                editUser(
+                  username,
+                  updatedUsername != "" ? updatedUsername : username,
+                  admin,
+                )
+                  .then((data) => {
+                    data.status < 300
+                      ? updateUsers(0, limit)
+                          .then((data) => dispatchPageChange(data, 0))
+                          .then(() => navigate("/"))
+                          .catch(() =>
+                            setErrorAlert(`Could not update users list.`),
+                          )
+                      : setErrorAlert(`Failed to edit user.`);
+                  })
+                  .catch(() => {
+                    setErrorAlert(`Failed to edit user.`);
+                  });
+              }
+            }}
+          >
+            Apply
+          </Button>
+          <Button
+            id="delete-user"
+            data-testid="delete-user"
+            variant="danger"
+            className="float-end"
+            onClick={(e) => {
+              e.preventDefault();
+              deleteUser(username)
+                .then((data) => {
+                  data.status < 300
+                    ? updateUsers(0, limit)
+                        .then((data) => dispatchPageChange(data, 0))
+                        .then(() => navigate("/"))
+                        .catch(() =>
+                          setErrorAlert(`Could not update users list.`),
+                        )
+                    : setErrorAlert(`Failed to edit user.`);
+                })
+                .catch(() => {
+                  setErrorAlert(`Failed to edit user.`);
+                });
+            }}
+          >
+            Delete user
+          </Button>
+        </Card.Footer>
+      </Card>
+    </MainContainer>
   );
 };
 

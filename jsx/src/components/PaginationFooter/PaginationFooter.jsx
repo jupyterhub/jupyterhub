@@ -1,6 +1,6 @@
 import React from "react";
 import PropTypes from "prop-types";
-import { FormControl } from "react-bootstrap";
+import { Button, FormControl } from "react-bootstrap";
 
 import "./pagination-footer.css";
 
@@ -13,7 +13,7 @@ const PaginationFooter = (props) => {
         {total ? `of ${total}` : ""}
         <br />
         {offset >= 1 ? (
-          <button className="btn btn-sm btn-light spaced">
+          <Button variant="light" size="sm">
             <span
               className="active-pagination"
               data-testid="paginate-prev"
@@ -21,14 +21,14 @@ const PaginationFooter = (props) => {
             >
               Previous
             </span>
-          </button>
+          </Button>
         ) : (
-          <button className="btn btn-sm btn-light spaced">
+          <Button variant="light" size="sm">
             <span className="inactive-pagination">Previous</span>
-          </button>
+          </Button>
         )}
         {offset + visible < total ? (
-          <button className="btn btn-sm btn-light spaced">
+          <Button variant="light" size="sm">
             <span
               className="active-pagination"
               data-testid="paginate-next"
@@ -36,11 +36,11 @@ const PaginationFooter = (props) => {
             >
               Next
             </span>
-          </button>
+          </Button>
         ) : (
-          <button className="btn btn-sm btn-light spaced">
+          <Button variant="light" size="sm">
             <span className="inactive-pagination">Next</span>
-          </button>
+          </Button>
         )}
         <label>
           Items per page:

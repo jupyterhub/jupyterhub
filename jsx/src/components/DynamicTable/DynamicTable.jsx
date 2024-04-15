@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import "./table-select.css";
 import PropTypes from "prop-types";
+import { Button } from "react-bootstrap";
 
 const DynamicTable = (props) => {
   var [message, setMessage] = useState(""),
@@ -94,8 +95,8 @@ const DynamicTable = (props) => {
           />
         </td>
         <td>
-          <button
-            className="form-control btn btn-default"
+          <Button
+            variant="danger"
             onClick={() => {
               propvalues.splice(i, 1);
               propkeys.splice(i, 1);
@@ -110,7 +111,7 @@ const DynamicTable = (props) => {
             }}
           >
             Delete
-          </button>
+          </Button>
         </td>
       </tr>
     );
@@ -150,15 +151,13 @@ const DynamicTable = (props) => {
               />
             </td>
             <td>
-              <button
+              <Button
                 id="add-item"
                 data-testid="add-item"
-                className="form-control btn btn-default"
-                type="button"
                 onClick={() => handleAddItem()}
               >
                 Add Item
-              </button>
+              </Button>
             </td>
           </tr>
         </tbody>
