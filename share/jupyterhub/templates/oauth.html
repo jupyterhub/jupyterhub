@@ -6,13 +6,12 @@
 {% block main %}
 <div class="container">
   <div class="row justify-content-center">
-    <div class="col-md-6">
+    <div class="col-md-8">
     <h1 class="text-center">Authorize access</h1>
-
-    <h2>
+    
+    <p class="lead">
         An application is requesting authorization to access data associated with your JupyterHub account
-    </h2>
-
+    </p>
     <p>
         {{ oauth_client.description }} (oauth URL: {{ oauth_client.redirect_uri }})
         would like permission to identify you.
@@ -21,10 +20,14 @@
         your behalf.
         {% endif %}
     </p>
-
-    <h3>This will grant the application permission to:</h3>
-    <div>
-        <form method="POST" action="">
+    
+    <form method="POST" action="">
+      <div class="card">
+        <div class="card-header">
+          <p class="h5">This will grant the application permission to:
+          </p>
+        </div>
+        <div class="card-body">
             <input type="hidden" name="_xsrf" value="{{ xsrf }}"/>
             {# these are the 'real' inputs to the form -#}
             {% for scope in allowed_scopes %}
@@ -42,14 +45,16 @@
             {% if scope_info['filter'] %}
             Applies to {{ scope_info['filter'] }}.
             {% endif %}
-          </span>
+                    </span>
                 </label>
             </div>
             {% endfor %}
-            <input type="submit" value="Authorize" class="form-control btn-jupyter"/>
-        </form>
-    </div>
-    </div>
+        </div>
+        <div class="card-footer">
+          <button type="submit" class="form-control btn btn-jupyter mt-2">Authorize</button>
+        </div>
+      </div>
+    </form>
   </div>
 </div>
 
