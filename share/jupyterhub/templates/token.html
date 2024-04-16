@@ -4,8 +4,8 @@
 
 <div class="container">
   <h1 class="sr-only">Manage JupyterHub Tokens</h1>
-  <div class="row">
-    <form id="request-token-form" class="m-auto col-lg-6">
+  <div class="row justify-content-center">
+    <form id="request-token-form" class="col-lg-6">
       <div class="form-group">
         <label for="token-note" class="form-label">Note</label>
         <input
@@ -47,8 +47,8 @@
     </form>
   </div>
 
-  <div class="row">
-      <div id="token-area" class="col-lg-6 m-auto" style="display: none;">
+  <div class="row justify-content-center">
+      <div id="token-area" class="col-lg-6" style="display: none;">
         <div class="card">
           <div class="card-header">
             Your new API Token
@@ -68,6 +68,7 @@
 
   {% if api_tokens %}
   <div class="row" id="api-tokens-section">
+  <div class="col">
     <h2>API Tokens</h2>
     <p>
       These are tokens with access to the JupyterHub API.
@@ -126,6 +127,7 @@
         {% endfor %}
       </tbody>
     </table>
+  </div>
   </div>
   {% endif %}
 
