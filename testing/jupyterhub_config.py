@@ -25,5 +25,5 @@ c.JupyterHub.allow_named_servers = True
 c.JupyterHub.default_url = "/hub/home"
 
 # make sure admin UI is available and any user can login
-c.JupyterHub.admin_users = {"admin"}
-c.JupyterHub.allow_all = True
+c.Authenticator.admin_users = {"admin"}
+c.Authenticator.allow_all = True
