@@ -677,6 +677,8 @@ async def test_request_token_permissions(
         error_message = await error_dialog.locator(".modal-body").inner_text()
         assert "API request failed (400)" in error_message
         assert expected_error in error_message
+        await error_dialog.locator("button[aria-label='Close']").click()
+        await expect(error_dialog).not_to_be_visible()
         return
 
     await browser.reload(wait_until="load")

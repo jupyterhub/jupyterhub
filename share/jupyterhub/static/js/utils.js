@@ -118,7 +118,8 @@ define(["jquery"], function ($) {
     var msg = log_ajax_error(jqXHR, status, error);
     var dialog = $("#error-dialog");
     dialog.find(".ajax-error").text(msg);
-    dialog.modal();
+    var modal = new bootstrap.Modal(dialog[0]);
+    modal.show();
   };
 
   var utils = {
