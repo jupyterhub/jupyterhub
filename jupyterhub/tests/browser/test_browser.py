@@ -471,7 +471,7 @@ async def test_token_request_form_and_panel(app, browser, user_special_chars):
     """verify elements of the request token form"""
 
     await open_token_page(app, browser, user_special_chars.user)
-    request_btn = browser.locator('//div[@class="text-center"]').get_by_role("button")
+    request_btn = browser.locator('//button[@type="submit"]')
     expected_btn_name = 'Request new API token'
     # check if the request token button is enabled
     # check the buttons name
@@ -513,7 +513,7 @@ async def test_token_request_form_and_panel(app, browser, user_special_chars):
     expected_panel_token_heading = "Your new API Token"
     token_area = browser.locator('#token-area')
     await expect(token_area).to_be_visible()
-    token_area_heading = token_area.locator('//div[@class="panel-heading"]')
+    token_area_heading = token_area.locator('div.card-header')
     await expect(token_area_heading).to_have_text(expected_panel_token_heading)
     token_result = browser.locator('#token-result')
     await expect(token_result).not_to_be_empty()
@@ -730,9 +730,7 @@ async def test_revoke_token(app, browser, token_type, user_special_chars):
     await browser.wait_for_load_state("load")
     await expect(browser).to_have_url(re.compile(".*/hub/token"))
     if token_type == "both" or token_type == "request_by_user":
-        request_btn = browser.locator('//div[@class="text-center"]').get_by_role(
-            "button"
-        )
+        request_btn = browser.locator('//button[@type="submit"]')
         await request_btn.click()
         # wait for token response to show up on the page
         await browser.wait_for_load_state("load")
