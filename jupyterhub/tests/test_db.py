@@ -92,3 +92,10 @@ async def test_upgrade(tmpdir, hub_version):
     for token in query:
         assert token.scopes, f"Upgraded token {token} has no scopes"
         _check_scopes_exist(token.scopes)
+
+    # make sure migrated roles are not managed or null
+    for role in db.query(orm.Role):
+        assert role.managed_by_auth is False
+    for assignment_table in orm._role_associations.values():
+        for assignment in db.query(assignment_table):
+            assert assignment.managed_by_auth is False

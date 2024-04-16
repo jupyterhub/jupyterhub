@@ -942,7 +942,11 @@ class BaseHandler(RequestHandler):
             group_names = authenticated["groups"]
             if group_names is not None:
                 user.sync_groups(group_names)
-
+        # apply authenticator-managed roles
+        if self.authenticator.manage_roles:
+            auth_roles = authenticated.get("roles")
+            if auth_roles is not None:
+                user.sync_roles(auth_roles)
         # always set auth_state and commit,
         # because there could be key-rotation or clearing of previous values
         # going on.

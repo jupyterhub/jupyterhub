@@ -301,6 +301,106 @@ class User:
             self.orm_user.groups = []
         self.db.commit()
 
+    def sync_roles(self, auth_roles):
+        """Synchronize roles with database"""
+        auth_roles_by_name = {role['name']: role for role in auth_roles}
+
+        current_user_roles = {r.name for r in self.orm_user.roles}
+        new_user_roles = set(auth_roles_by_name.keys())
+
+        granted_roles = new_user_roles.difference(current_user_roles)
+        stripped_roles = current_user_roles.difference(new_user_roles)
+
+        if granted_roles:
+            self.log.info(f"Granting user {self.name} roles(s): {granted_roles}")
+        if stripped_roles:
+            self.log.info(f"Stripping user {self.name} roles(s): {stripped_roles}")
+
+        existing_granted_roles = {
+            r.name
+            for r in self.db.query(orm.Role).filter(orm.Role.name.in_(granted_roles))
+        }
+        created_roles = existing_granted_roles.difference(granted_roles)
+
+        if created_roles:
+            self.log.info(f"Creating new roles {created_roles} in the database")
+
+        for role_name in new_user_roles:
+            if role_name in created_roles:
+                self.log.info(f"Creating new role {role_name}")
+            else:
+                self.log.debug(f"Updating existing role {role_name}")
+
+            role = auth_roles_by_name[role_name]
+            role['managed_by_auth'] = True
+
+            # creates role, or if it exists, update its `description` and `scopes`
+            try:
+                orm_role = roles.create_role(
+                    self.db, role, commit=False, reset_to_defaults=False
+                )
+            except (
+                roles.RoleValueError,
+                roles.InvalidNameError,
+                scopes.ScopeNotFound,
+            ) as e:
+                raise web.HTTPError(409, str(e))
+
+            # Update the groups, services and users for the role
+            entity_map = {
+                'groups': orm.Group,
+                'services': orm.Service,
+                'users': orm.User,
+            }
+            for key, Class in entity_map.items():
+                if key in role.keys():
+                    entities = []
+                    not_found_entities = []
+                    for entity_name in role[key]:
+                        entity = Class.find(self.db, entity_name)
+                        if entity is None:
+                            not_found_entities.append(entity_name)
+                        else:
+                            entities.append(entity)
+                    setattr(orm_role, key, entities)
+                    if not_found_entities:
+                        self.log.warning(
+                            f'Could not assign the role {role_name} to {key}:'
+                            f' {not_found_entities} not found in the database.'
+                        )
+
+        # assign the granted roles to the current user
+        for role_name in granted_roles:
+            roles.grant_role(
+                self.db,
+                entity=self.orm_user,
+                rolename=role_name,
+                commit=False,
+                managed=True,
+            )
+
+        # strip the user of roles no longer directly granted
+        for role_name in stripped_roles:
+            roles.strip_role(
+                self.db, entity=self.orm_user, rolename=role_name, commit=False
+            )
+        managed_stripped_roles = (
+            self.db.query(orm.Role)
+            .filter(
+                orm.Role.name.in_(stripped_roles) & (orm.Role.managed_by_auth == True)
+            )
+            .all()
+        )
+        for stripped_role in managed_stripped_roles:
+            if (
+                not stripped_role.users
+                and not stripped_role.services
+                and not stripped_role.groups
+            ):
+                self.db.delete(stripped_role)
+
+        self.db.commit()
+
     async def save_auth_state(self, auth_state):
         """Encrypt and store auth_state"""
         if auth_state is None:

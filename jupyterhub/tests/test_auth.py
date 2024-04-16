@@ -14,7 +14,7 @@ from traitlets.config import Config
 
 from jupyterhub import auth, crypto, orm
 
-from .mocking import MockPAMAuthenticator, MockStructGroup, MockStructPasswd
+from .mocking import MockHub, MockPAMAuthenticator, MockStructGroup, MockStructPasswd
 from .utils import add_user, async_requests, get_page, public_url
 
 
@@ -606,6 +606,432 @@ async def test_auth_managed_groups(
         assert not app.db.dirty
         groups = sorted(g.name for g in user.groups)
         assert groups == expected_refresh_groups
+
+
+class MockRolesAuthenticator(auth.Authenticator):
+    authenticated_roles = Any()
+    refresh_roles = Any()
+    initial_roles = Any()
+    manage_roles = True
+
+    def authenticate(self, handler, data):
+        return {
+            "name": data["username"],
+            "roles": self.authenticated_roles,
+        }
+
+    async def refresh_user(self, user, handler):
+        return {
+            "name": user.name,
+            "roles": self.refresh_roles,
+        }
+
+    async def load_managed_roles(self):
+        return self.initial_roles
+
+
+def role_to_dict(role):
+    return {col: getattr(role, col) for col in role.__table__.columns.keys()}
+
+
+@pytest.mark.parametrize(
+    "initial_roles",
+    [
+        pytest.param(
+            [{'name': 'test-role'}],
+            id="should have the same effect as `load_roles` when creating a new role",
+        ),
+        pytest.param(
+            [
+                {
+                    'name': 'server',
+                    'users': ['test-user'],
+                }
+            ],
+            id="should have the same effect as `load_roles` when assigning a role to a user",
+        ),
+        pytest.param(
+            [
+                {
+                    'name': 'server',
+                    'groups': ['test-group'],
+                }
+            ],
+            id="should have the same effect as `load_roles` when assigning a role to a group",
+        ),
+    ],
+)
+async def test_auth_load_managed_roles(app, initial_roles):
+    authenticator = MockRolesAuthenticator(
+        parent=app,
+        initial_roles=initial_roles,
+    )
+
+    # create the roles using `load_roles`
+    hub = MockHub(load_roles=initial_roles)
+    hub.init_db()
+    await hub.init_role_creation()
+    expected_roles = [role_to_dict(role) for role in hub.db.query(orm.Role)]
+
+    # create the roles using authenticator's `load_managed_roles`
+    hub = MockHub(load_roles=[], authenticator=authenticator)
+    hub.init_db()
+    await hub.init_role_creation()
+    actual_roles = [role_to_dict(role) for role in hub.db.query(orm.Role)]
+
+    # remove `managed_by_auth` from comparison as this is expected to differ
+    for role in [*actual_roles, *expected_roles]:
+        role.pop('managed_by_auth')
+
+    # `load_managed_roles` should produce the same set of roles as `load_roles` does
+    assert expected_roles == actual_roles
+
+
+async def test_auth_load_managed_roles_handles_new_user(app):
+    authenticator = MockRolesAuthenticator(
+        parent=app,
+        initial_roles=[
+            {
+                'name': 'new-role',
+                'users': ['this-user-does-not-exist'],
+            }
+        ],
+    )
+
+    # create the roles using authenticator's `load_managed_roles`
+    hub = MockHub(load_roles=[], authenticator=authenticator)
+    hub.init_db()
+    await hub.init_role_creation()
+    roles = {role.name: role_to_dict(role) for role in hub.db.query(orm.Role)}
+
+    assert roles['new-role']
+
+
+@pytest.mark.parametrize(
+    "roles_after_restart",
+    [
+        pytest.param(
+            [{'name': 'role-a', 'scopes': ['admin:servers'], 'users': ['test-user']}],
+            id="preserve role assignment if explicitly defined in `load_managed_roles()`",
+        ),
+        pytest.param(
+            [{'name': 'role-a', 'scopes': ['admin:servers']}],
+            id="preserve role assignment if `users` key is absent in `load_managed_roles()` result",
+        ),
+    ],
+)
+async def test_auth_load_managed_roles_preserves_assignments(
+    app, caplog, roles_after_restart
+):
+    log = logging.getLogger("testlog")
+    caplog.set_level(logging.INFO, logger=log.name)
+    authenticator = MockRolesAuthenticator(
+        parent=app,
+        initial_roles=[
+            {'name': 'role-a', 'scopes': ['admin:servers'], 'users': ['test-user']},
+            {'name': 'role-b', 'scopes': ['admin:servers'], 'users': ['test-user']},
+        ],
+    )
+    authenticator.reset_managed_roles_on_startup = True
+
+    hub = MockHub(authenticator=authenticator, log=log)
+    hub.init_db()
+
+    # simulate hub startup, it should assign the roles to the user
+    await hub.init_role_creation()
+    await hub.init_role_assignment()
+    user = orm.User.find(hub.db, 'test-user')
+
+    user_role_names = {r.name for r in user.roles}
+    assert 'role-a' in user_role_names
+    assert 'role-b' in user_role_names
+
+    message = (
+        "Deleted %s stale %s role assignments previously added by an authenticator"
+    )
+    assert message not in {record.msg for record in caplog.records}
+
+    # simulate hub restart after changing `load_managed_roles()` result
+    authenticator.initial_roles = roles_after_restart
+
+    await hub.init_role_assignment()
+    hub.db.refresh(user)
+
+    user_role_names = {r.name for r in user.roles}
+    assert 'role-a' in user_role_names
+    assert 'role-b' not in user_role_names
+
+    record_map = {record.msg: record for record in caplog.records}
+    assert message in record_map
+    record = record_map[message]
+    # should only delete the second assignment, hence the log should only say "1"
+    assert record.getMessage().startswith('Deleted 1 stale user role assignments')
+
+
+async def test_auth_load_managed_roles_preserves_roles(app, caplog):
+    log = logging.getLogger("testlog")
+    caplog.set_level(logging.INFO, logger=log.name)
+    authenticator = MockRolesAuthenticator(
+        parent=app,
+        initial_roles=[
+            {'name': 'role-a', 'scopes': ['admin:servers']},
+            {'name': 'role-b', 'scopes': ['admin:servers']},
+        ],
+    )
+    authenticator.reset_managed_roles_on_startup = True
+
+    hub = MockHub(authenticator=authenticator, log=log)
+    hub.init_db()
+
+    def find_role(name):
+        return hub.db.query(orm.Role).filter(orm.Role.name == name).first()
+
+    # simulate hub startup, it should create both roles
+    await hub.init_role_creation()
+    await hub.init_role_assignment()
+    assert find_role('role-a') and find_role('role-b')
+
+    message = "Deleted %s stale roles previously added by an authenticator"
+    assert message not in {record.msg for record in caplog.records}
+
+    # simulate hub restart with only the first role preserved
+    authenticator.initial_roles = authenticator.initial_roles[:1]
+
+    await hub.init_role_creation()
+    assert find_role('role-a') and not find_role('role-b')
+
+    record_map = {record.msg: record for record in caplog.records}
+    assert message in record_map
+    record = record_map[message]
+    # should only delete the second role, hence the log should only say "1"
+    assert record.getMessage().startswith('Deleted 1 stale roles')
+
+
+@pytest.mark.parametrize(
+    "authenticated_roles",
+    [
+        (None),
+        ([{"name": "role-1"}]),
+        ([{"name": "role-2", "description": "test role 2"}]),
+        ([{"name": "role-3", "scopes": ["admin:servers"]}]),
+    ],
+)
+async def test_auth_managed_roles(app, user, role, authenticated_roles):
+    authenticator = MockRolesAuthenticator(
+        parent=app,
+        authenticated_roles=authenticated_roles,
+    )
+    user.roles.append(role)
+    app.db.commit()
+    before_roles = [
+        {
+            'name': r.name,
+            'description': r.description,
+            'scopes': r.scopes,
+            'users': r.users,
+        }
+        for r in user.roles
+    ]
+
+    if authenticated_roles is None:
+        expected_roles = before_roles
+    else:
+        expected_roles = authenticated_roles
+
+    # Check if user gets auth-managed roles
+    with mock.patch.dict(app.tornado_settings, {"authenticator": authenticator}):
+        await app.login_user(user.name)
+        assert not app.db.dirty
+
+        assert len(user.roles) == len(expected_roles)
+
+        for expected_role in expected_roles:
+            role = orm.Role.find(app.db, expected_role['name'])
+            assert role.description == expected_role.get('description', None)
+            assert len(role.scopes) == len(expected_role.get('scopes', []))
+
+
+@pytest.mark.parametrize(
+    "role_spec,expected",
+    [
+        [
+            {"name": "role-with-services", "services": ["missing-service"]},
+            "Could not assign the role role-with-services to services: ['missing-service']",
+        ],
+        [
+            {"name": "role-with-users", "users": ["missing-user"]},
+            "Could not assign the role role-with-users to users: ['missing-user']",
+        ],
+        [
+            {"name": "role-with-groups", "groups": ["missing-group"]},
+            "Could not assign the role role-with-groups to groups: ['missing-group']",
+        ],
+    ],
+)
+async def test_auth_manage_roles_warns_about_unknown_entities(
+    app, user, role_spec, expected
+):
+    # Add the current user to test that non-missing entities are not included in the warning
+    role_spec['users'] = [*role_spec.get('users', []), user.name]
+    # Add a scope to silence "Role will have no scopes" warning
+    role_spec['scopes'] = ['admin:servers']
+
+    authenticator = MockRolesAuthenticator(parent=app, authenticated_roles=[role_spec])
+
+    logs = []
+
+    def log_mock(template, *args):
+        logs.append(template.format(args))
+
+    with mock.patch.dict(app.tornado_settings, {"authenticator": authenticator}):
+        with mock.patch.object(user.log, 'warning', new=log_mock):
+            await app.login_user(user.name)
+            assert len(logs) == 1
+            assert expected in logs[0]
+
+
+async def test_auth_manage_roles_strips_user_of_old_roles(app, user, role):
+    authenticator = MockRolesAuthenticator(parent=app, authenticated_roles=[])
+    user.roles.append(role)
+    app.db.commit()
+    assert [role.name for role in user.roles] == ['user', role.name]
+
+    with mock.patch.dict(app.tornado_settings, {"authenticator": authenticator}):
+        await app.login_user(user.name)
+        assert not app.db.dirty
+        assert [role.name for role in user.roles] == []
+
+
+async def test_auth_manage_roles_grants_new_roles(app, user, role):
+    authenticator = MockRolesAuthenticator(
+        parent=app, authenticated_roles=[{'name': 'user'}, role_to_dict(role)]
+    )
+    assert [role.name for role in user.roles] == ['user']
+
+    with mock.patch.dict(app.tornado_settings, {"authenticator": authenticator}):
+        await app.login_user(user.name)
+        assert not app.db.dirty
+        assert [role.name for role in user.roles] == ['user', role.name]
+
+
+async def test_auth_manage_roles_removes_no_longer_used_roles(app, user):
+    count_roles = (
+        app.db.query(orm.Role).filter(orm.Role.name == 'new-managed-role').count
+    )
+    authenticator = MockRolesAuthenticator(
+        parent=app, authenticated_roles=[{'name': 'new-managed-role'}]
+    )
+    # this role should not exist yet
+    assert count_roles() == 0
+
+    with mock.patch.dict(app.tornado_settings, {"authenticator": authenticator}):
+        await app.login_user(user.name)
+        assert count_roles() == 1
+
+        authenticator.authenticated_roles = []
+
+        await app.login_user(user.name)
+        assert count_roles() == 0
+
+
+async def test_auth_manage_roles_does_not_remove_stripped_roles_if_used(
+    app, user, group
+):
+    find_role = app.db.query(orm.Role).filter(orm.Role.name == 'new-managed-role').first
+    authenticator = MockRolesAuthenticator(
+        parent=app, authenticated_roles=[{'name': 'new-managed-role'}]
+    )
+    # this role should not exist yet
+    assert find_role() is None
+
+    with mock.patch.dict(app.tornado_settings, {"authenticator": authenticator}):
+        await app.login_user(user.name)
+        role = find_role()
+        assert role
+
+        # assign a group to the role
+        role.groups = [group]
+        app.db.commit()
+
+        authenticator.authenticated_roles = []
+
+        await app.login_user(user.name)
+        assert find_role()
+
+
+async def test_auth_manage_roles_does_not_remove_non_managed_roles(app, user, role):
+    count_roles = app.db.query(orm.Role).filter(orm.Role.name == role.name).count
+    authenticator = MockRolesAuthenticator(
+        parent=app, authenticated_roles=[role_to_dict(role)]
+    )
+    # this role is created by the fixture and should already exist
+    assert count_roles() == 1
+
+    with mock.patch.dict(app.tornado_settings, {"authenticator": authenticator}):
+        await app.login_user(user.name)
+
+        authenticator.authenticated_roles = []
+
+        await app.login_user(user.name)
+        # should not delete the role as this role was not created by the authenticator
+        assert count_roles() == 1
+
+
+async def test_auth_manage_roles_marks_new_role_as_managed(app, user):
+    authenticator = MockRolesAuthenticator(
+        parent=app, authenticated_roles=[{'name': 'new-role'}]
+    )
+
+    with mock.patch.dict(app.tornado_settings, {"authenticator": authenticator}):
+        await app.login_user(user.name)
+        assert not app.db.dirty
+        assert user.roles[0].managed_by_auth
+
+
+async def test_auth_manage_roles_marks_new_assignment_as_managed(app, user, role):
+    authenticator = MockRolesAuthenticator(
+        parent=app, authenticated_roles=[role_to_dict(role)]
+    )
+
+    with mock.patch.dict(app.tornado_settings, {"authenticator": authenticator}):
+        await app.login_user(user.name)
+        assert not app.db.dirty
+        UserRoleMap = orm._role_associations['user']
+        association = (
+            app.db.query(UserRoleMap)
+            .filter((UserRoleMap.role_id == role.id) & (UserRoleMap.user_id == user.id))
+            .one()
+        )
+        assert association.managed_by_auth
+
+
+@pytest.mark.parametrize(
+    "role_spec,expected",
+    [
+        pytest.param(
+            {'name': 'role-a'},
+            'Test description',
+            id="should keep the original role description",
+        ),
+        pytest.param(
+            {'name': 'role-b', 'description': 'New description'},
+            'New description',
+            id="should update the role description",
+        ),
+    ],
+)
+async def test_auth_manage_roles_description_handling(app, user, role_spec, expected):
+    authenticator = MockRolesAuthenticator(parent=app, authenticated_roles=[role_spec])
+    name = role_spec['name']
+    role = orm.Role(name=name, description='Test description')
+    user.roles.append(role)
+    app.db.commit()
+
+    with mock.patch.dict(app.tornado_settings, {"authenticator": authenticator}):
+        await app.login_user(user.name)
+        assert not app.db.dirty
+        roles = {role.name: role for role in user.roles}
+        assert roles[name].description == expected
 
 
 @pytest.mark.parametrize(

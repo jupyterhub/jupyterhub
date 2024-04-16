@@ -791,6 +791,26 @@ class Authenticator(LoggingConfigurable):
                 Raising errors directly allows customizing the message shown to the user.
         """
 
+    async def load_managed_roles(self):
+        """Load roles managed by authenticator.
+
+        Returns a list of predefined role dictionaries to load at startup,
+        following the same format as `JupyterHub.load_roles`.
+
+        .. versionadded:: 5.0
+        """
+        if not self.manage_roles:
+            raise ValueError(
+                'Managed roles can only be loaded when `manage_roles` is True'
+            )
+        if self.reset_managed_roles_on_startup:
+            raise NotImplementedError(
+                "When `reset_managed_roles_on_startup` is used, the `load_managed_roles()`"
+                " method must have a non-default implementation, because using the default"
+                " implementation would remove all managed roles and role assignments."
+            )
+        return []
+
     def pre_spawn_start(self, user, spawner):
         """Hook called before spawning a user's server
 
@@ -857,7 +877,47 @@ class Authenticator(LoggingConfigurable):
         All group-assignment APIs are disabled if this is True.
         """,
     )
+    manage_roles = Bool(
+        False,
+        config=True,
+        help="""Let authenticator manage roles
 
+        If True, Authenticator.authenticate and/or .refresh_user
+        may return a list of roles in the 'roles' field,
+        which will be added to the database.
+
+        When enabled, all role management will be handled by the
+        authenticator; in particular, assignment of roles via
+        `JupyterHub.load_roles` traitlet will not be possible.
+
+        .. versionadded:: 5.0
+        """,
+    )
+    reset_managed_roles_on_startup = Bool(
+        False,
+        config=True,
+        help="""Reset managed roles to result of `load_managed_roles()` on startup.
+
+        If True:
+          - stale managed roles will be removed,
+          - stale assignments to managed roles will be removed.
+
+        Any role not present in `load_managed_roles()` will be considered 'stale'.
+
+        The 'stale' status for role assignments is also determined from `load_managed_roles()` result:
+
+        - user role assignments status will depend on whether the `users` key is defined or not:
+
+          * if a list is defined under the `users` key and the user is not listed, then the user role assignment will be considered 'stale',
+          * if the `users` key is not provided, the user role assignment will be preserved;
+        - service and group role assignments will be considered 'stale':
+
+          * if not included in the `services` and `groups` list,
+          * if the `services` and `groups` keys are not provided.
+
+        .. versionadded:: 5.0
+        """,
+    )
     auto_login = Bool(
         False,
         config=True,
