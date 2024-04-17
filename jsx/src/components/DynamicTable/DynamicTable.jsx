@@ -154,6 +154,7 @@ const DynamicTable = (props) => {
               <Button
                 id="add-item"
                 data-testid="add-item"
+                className="text-nowrap"
                 onClick={() => handleAddItem()}
               >
                 Add Item
