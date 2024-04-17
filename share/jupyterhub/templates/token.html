@@ -12,7 +12,7 @@
           id="token-note"
           class="form-control"
           placeholder="note to identify your new token">
-        <small id="note-note" class="form-text text-muted">
+        <small id="note-note" class="form-text">
           This note will help you keep track of what your tokens are for.
         </small>
         <br/>
@@ -27,13 +27,13 @@
           <option value="" selected="selected">Never</option>
         </select>
         {% endblock expiration_options %}
-        <small id="note-expires-at" class="form-text text-muted">
+        <small id="note-expires-at" class="form-text">
           You can configure when your token will expire.
         </small>
         <br/>
         <label for="token-scopes" class="form-label">Permissions</label>
         <input id="token-scopes" class="form-control" placeholder="list of scopes for the token to have, separated by space">
-        <small id="note-token-scopes" class="form-text text-muted">
+        <small id="note-token-scopes" class="form-text">
           You can limit the permissions of the token so it can only do what you want it to.
           If none are specified, the token will have permission to do everything you can do.
           See the <a href="https://jupyterhub.readthedocs.io/en/stable/rbac/scopes.html#available-scopes">JupyterHub documentation for a list of available scopes</a>.
