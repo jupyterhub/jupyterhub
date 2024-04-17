@@ -521,7 +521,7 @@ async def test_token_request_form_and_panel(app, browser, user_special_chars):
     # verify that "Your new API Token" panel is hidden after refresh the page
     await browser.reload(wait_until="load")
     await expect(token_area).to_be_hidden()
-    api_token_table_area = browser.locator('//div[@class="row"]').nth(2)
+    api_token_table_area = browser.locator("div#api-tokens-section")
     await expect(api_token_table_area.get_by_role("table")).to_be_visible()
     expected_table_name = "API Tokens"
     await expect(api_token_table_area.get_by_role("heading")).to_have_text(
@@ -574,7 +574,7 @@ async def test_request_token_expiration(
         # reload the page
         await browser.reload(wait_until="load")
     # API Tokens table: verify that elements are displayed
-    api_token_table_area = browser.locator("div#api-tokens-section").nth(0)
+    api_token_table_area = browser.locator("div#api-tokens-section")
     await expect(api_token_table_area.get_by_role("table")).to_be_visible()
     await expect(api_token_table_area.locator("tr.token-row")).to_have_count(1)
 
@@ -684,7 +684,7 @@ async def test_request_token_permissions(
     await browser.reload(wait_until="load")
 
     # API Tokens table: verify that elements are displayed
-    api_token_table_area = browser.locator("div#api-tokens-section").nth(0)
+    api_token_table_area = browser.locator("div#api-tokens-section")
     await expect(api_token_table_area.get_by_role("table")).to_be_visible()
     await expect(api_token_table_area.locator("tr.token-row")).to_have_count(1)
 
