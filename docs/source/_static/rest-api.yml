@@ -1933,7 +1933,7 @@ components:
 
     Token:
       type: object
-      properties: &components-schemas-token-properties
+      properties:
         id:
           type: string
           description:
@@ -1991,12 +1991,65 @@ components:
     NewToken:
       type: object
       properties:
-        <<:
-          [
-            *components-schemas-token-properties,
-            { token: null, type: string, description: The
-                token itself. Only present in responses to requests for a new token. },
-          ]
+        token:
+          type: string
+          description:
+            The token itself. Only present in responses to requests for
+            a new token.
+        id:
+          type: string
+          description:
+            The id of the API token. Used for modifying or deleting the
+            token.
+        user:
+          type: string
+          description: The user that owns a token (undefined if owned by a service)
+        service:
+          type: string
+          description: The service that owns the token (undefined of owned by a user)
+        roles:
+          type: array
+          description:
+            Deprecated in JupyterHub 3, always an empty list. Tokens have
+            'scopes' starting from JupyterHub 3.
+          items:
+            type: string
+        scopes:
+          type: array
+          description:
+            List of scopes this token has been assigned. New in JupyterHub
+            3. In JupyterHub 2.x, tokens were assigned 'roles' instead of scopes.
+          items:
+            type: string
+        note:
+          type: string
+          description:
+            A note about the token, typically describing what it was created
+            for.
+        created:
+          type: string
+          description: Timestamp when this token was created
+          format: date-time
+        expires_at:
+          type: string
+          description: Timestamp when this token expires. Null if there is no expiry.
+          format: date-time
+        last_activity:
+          type: string
+          description: |
+            Timestamp of last-seen activity using this token.
+            Can be null if token has never been used.
+          format: date-time
+        session_id:
+          type:
+            - string
+            - "null"
+          description: |
+            The session id associated with the token, if any.
+            Only used for tokens set during oauth flows.
+
+            Added in 2.0.
+
   securitySchemes:
     token:
       type: http
