@@ -164,6 +164,7 @@ const ServerDashboard = (props) => {
     return (
       <Button
         size="xs"
+        variant={variant}
         className={extraClass}
         disabled={isDisabled || server.pending}
         onClick={() => {
