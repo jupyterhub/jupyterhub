@@ -937,9 +937,9 @@ async def test_oauth_page(
 
     # login user
     await login(browser, user.name, password=str(user.name))
-    auth_btn = browser.locator('//input[@type="submit"]')
+    auth_btn = browser.locator('//button[@type="submit"]')
     await expect(auth_btn).to_be_enabled()
-    text_permission = browser.get_by_role("paragraph")
+    text_permission = browser.get_by_role("paragraph").nth(1)
     await expect(text_permission).to_contain_text(f"JupyterHub service {service.name}")
     await expect(text_permission).to_contain_text(f"oauth URL: {expected_redirect_url}")
 
@@ -1406,7 +1406,7 @@ async def test_singleuser_xsrf(
     # visit target user, sets credentials for second server
     await browser.goto(public_url(app, target_user))
     await expect(browser).to_have_url(re.compile(r".*/oauth2/authorize"))
-    auth_button = browser.locator('//input[@type="submit"]')
+    auth_button = browser.locator('//button[@type="submit"]')
     await expect(auth_button).to_be_enabled()
     await auth_button.click()
     await expect(browser).to_have_url(re.compile(rf".*/user/{target_user.name}/.*"))
