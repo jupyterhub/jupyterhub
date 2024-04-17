@@ -19,6 +19,7 @@ c.JupyterHub.bind_url = 'http://127.0.0.1:8000'
 # don't cache static files
 c.JupyterHub.tornado_settings = {
     "no_cache_static": True,
+    "slow_spawn_timeout": 0,
 }
 
 c.JupyterHub.allow_named_servers = True
