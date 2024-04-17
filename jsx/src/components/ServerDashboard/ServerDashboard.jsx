@@ -318,7 +318,7 @@ const ServerDashboard = (props) => {
       }, {});
     return (
       <ReactObjectTableViewer
-        className="table-striped table-bordered"
+        className="table table-striped table-bordered"
         style={{
           padding: "3px 6px",
           margin: "auto",

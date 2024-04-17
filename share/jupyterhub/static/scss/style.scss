@@ -39,6 +39,9 @@
 // 7. Optionally include utilities API last to generate classes based on the Sass map in `_utilities.scss`
 // @import "../components/bootstrap/scss/utilities/api";
 
+// CSS variables must be loaded _after_ bootstrap to override
+@import "./cssvariables";
+
 // redefine .btn-xs, removed in bootstrap 4
 .btn-xs {
   // $padding-y, $padding-x, $font-size, $border-radius
