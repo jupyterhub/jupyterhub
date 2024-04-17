@@ -7,11 +7,10 @@
 <div class="row justify-content-center">
 <div class="col-md-6">
   <h1 class="text-center">Accept sharing invitation</h1>
-
-  <h2>
+  <p class="lead">
     You ({{ user.name }}) have been invited to access {{ owner.name }}'s server
-    {%- if spawner.name %} ({{ spawner.name }}){%- endif %} at <a href="{{ spawner_url | safe }}">{{ spawner_url }}</a>.
-  </h2>
+    {%- if spawner.name %} ({{ spawner.name }}){%- endif %} at <a href="{{ spawner_url | safe }}">{{ spawner_url }}</a>
+  </p>
 
   {% if not spawner_ready %}
   <p class="alert alert-danger">
@@ -21,18 +20,18 @@
   </p>
   {% endif %}
 
-  <p>
+  <form method="POST" action="">
+  <div class="card">
+    <div class="card-header">
     By accepting the invitation, you will be granted the following permissions,
     restricted to this particular server:
-  </p>
-
-  <div>
-    <form method="POST" action="">
+    </div>
+    <div class="card-body">
       {# these are the 'real' inputs to the form -#}
       <input type="hidden" name="_xsrf" value="{{ xsrf }}" />
       <input type="hidden" name="code" value="{{ code }}" />
       {% for scope_info in scope_descriptions -%}
-      <div class="checkbox input-group">
+      <div class="form-check input-group">
         <label>
           <span>
             {{ scope_info['description'] }}
@@ -42,12 +41,15 @@
         </label>
       </div>
       {% endfor -%}
-      <p>
+    </div>
+    <div class="card-footer">
+      <button type="submit" class="form-control btn btn-jupyter" >Accept invitation</button>
+      <p class="small">
         After accepting the invitation, you will be redirected to <a href="{{ next_url | safe }}">{{ next_url }}</a>.
       </p>
-      <button type="submit" class="form-control btn btn-jupyter" >Accept invitation</button>
-    </form>
+    </div>
   </div>
+  </form>
 </div></div></div>
 
 {% endblock %}
