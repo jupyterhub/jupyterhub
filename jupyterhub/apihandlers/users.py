@@ -63,10 +63,13 @@ class SelfAPIHandler(APIHandler):
 
         # add session_id associated with token
         # added in 2.0
+        # token_id added in 5.0
         token = self.get_token()
         if token:
+            model["token_id"] = token.api_id
             model["session_id"] = token.session_id
         else:
+            model["token_id"] = None
             model["session_id"] = None
 
         # add scopes to identify model,

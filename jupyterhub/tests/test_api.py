@@ -600,6 +600,7 @@ async def test_get_self(app):
     r.raise_for_status()
     model = r.json()
     assert model['name'] == u.name
+    assert model["token_id"] == oauth_token.api_id
 
     # invalid auth gets 403
     r = await api_request(

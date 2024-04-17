@@ -1774,6 +1774,16 @@ components:
               example:
                 - "read:users"
                 - "access:servers!user=name"
+            token_id:
+              type:
+                - string
+                - "null"
+              description: |
+                The id of the token authorizing the request, if any.
+                This id can be used to revoke the token via the API.
+                Null if the request is not authorized with a token.
+
+                Added in 5.0.
     Group:
       type: object
       properties:
