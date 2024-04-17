@@ -5,7 +5,7 @@
 
 .navbar {
   /* higher contrast nav links by default */
-  --bs-navbar-color: rgba(black, 0.9);
+  --bs-navbar-color: rgba(black, 0.95);
 }
 
 .navbar-nav {
