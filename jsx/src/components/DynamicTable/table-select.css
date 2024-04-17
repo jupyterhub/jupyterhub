@@ -1,14 +1,12 @@
 @import url(../../style/root.css);
 
 .properties-table {
-  width: 95%;
   position: relative;
   padding: 5px;
   overflow-x: scroll;
 }
 
 .properties-table-keyvalues {
-  width: 95%;
   position: relative;
   padding: 5px;
   overflow-x: scroll;
