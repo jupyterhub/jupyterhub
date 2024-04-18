@@ -553,9 +553,12 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Token"
+                type: object
+                properties:
+                  api_tokens:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Token"
         401:
           description: Authentication/Authorization error
           content: {}
@@ -571,7 +574,7 @@ paths:
       description: |
         Creates a new token owned by the user.
         Permissions can be limited by specifying a list of `scopes` in the JSON request body
-        (starting in JupyerHub 3.0; previously, permissions could be specified as `roles`,
+        (starting in JupyterHub 3.0; previously, permissions could be specified as `roles`,
         which is deprecated in 3.0).
       parameters:
         - $ref: "#/components/parameters/userName"
@@ -614,7 +617,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Token"
+                $ref: "#/components/schemas/NewToken"
         400:
           description: Body must be a JSON dict or empty
           content: {}
@@ -639,7 +642,7 @@ paths:
             type: string
       responses:
         200:
-          description: The info for the new token
+          description: The info for the token
           content:
             application/json:
               schema:
@@ -1173,7 +1176,7 @@ paths:
                         example: abc123
                       accept_url:
                         type: string
-                        description: The URL for acepting the code
+                        description: The URL for accepting the code
                         example: /hub/accept-share?code=abc123
       security:
         - oauth2:
@@ -1518,7 +1521,7 @@ paths:
           description: Shutdown successful
           content: {}
         400:
-          description: Unexpeced value for proxy or servers
+          description: Unexpected value for proxy or servers
           content: {}
       security:
         - oauth2:
@@ -1941,11 +1944,6 @@ components:
     Token:
       type: object
       properties:
-        token:
-          type: string
-          description:
-            The token itself. Only present in responses to requests for
-            a new token.
         id:
           type: string
           description:
@@ -1968,7 +1966,7 @@ components:
           type: array
           description:
             List of scopes this token has been assigned. New in JupyterHub
-            3. In JupyterHub 2.x, tokens were assigned 'roles' insead of scopes.
+            3. In JupyterHub 2.x, tokens were assigned 'roles' instead of scopes.
           items:
             type: string
         note:
@@ -1999,6 +1997,69 @@ components:
             Only used for tokens set during oauth flows.
 
             Added in 2.0.
+
+    NewToken:
+      type: object
+      properties:
+        token:
+          type: string
+          description:
+            The token itself. Only present in responses to requests for
+            a new token.
+        id:
+          type: string
+          description:
+            The id of the API token. Used for modifying or deleting the
+            token.
+        user:
+          type: string
+          description: The user that owns a token (undefined if owned by a service)
+        service:
+          type: string
+          description: The service that owns the token (undefined of owned by a user)
+        roles:
+          type: array
+          description:
+            Deprecated in JupyterHub 3, always an empty list. Tokens have
+            'scopes' starting from JupyterHub 3.
+          items:
+            type: string
+        scopes:
+          type: array
+          description:
+            List of scopes this token has been assigned. New in JupyterHub
+            3. In JupyterHub 2.x, tokens were assigned 'roles' instead of scopes.
+          items:
+            type: string
+        note:
+          type: string
+          description:
+            A note about the token, typically describing what it was created
+            for.
+        created:
+          type: string
+          description: Timestamp when this token was created
+          format: date-time
+        expires_at:
+          type: string
+          description: Timestamp when this token expires. Null if there is no expiry.
+          format: date-time
+        last_activity:
+          type: string
+          description: |
+            Timestamp of last-seen activity using this token.
+            Can be null if token has never been used.
+          format: date-time
+        session_id:
+          type:
+            - string
+            - "null"
+          description: |
+            The session id associated with the token, if any.
+            Only used for tokens set during oauth flows.
+
+            Added in 2.0.
+
   securitySchemes:
     token:
       type: http
