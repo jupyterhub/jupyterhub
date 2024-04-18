@@ -5,15 +5,14 @@
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
-        <h1 class="modal-title" id="{{key}}-label">{{title}}</h1>
+        <h2 class="modal-title" id="{{key}}-label">{{title}}</h1>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
         {{ caller() }}
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-        <button type="button" class="btn {{btn_class}}" data-dismiss="modal" data-dismiss="modal">{{btn_label}}</button>
+        <button type="button" class="btn {{btn_class}}" data-bs-dismiss="modal" data-dismiss="modal">{{btn_label}}</button>
       </div>
     </div>
   </div>
@@ -38,9 +37,9 @@
     <link rel="icon" href="{{ static_url("favicon.ico") }}" type="image/x-icon">
     {% endblock %}
     {% block scripts %}
+    <script src="{{static_url("components/bootstrap/dist/js/bootstrap.bundle.min.js") }}" type="text/javascript" charset="utf-8"></script>
     <script src="{{static_url("components/requirejs/require.js") }}" type="text/javascript" charset="utf-8"></script>
     <script src="{{static_url("components/jquery/dist/jquery.min.js") }}" type="text/javascript" charset="utf-8"></script>
-    <script src="{{static_url("components/bootstrap/dist/js/bootstrap.min.js") }}" type="text/javascript" charset="utf-8"></script>
     {% endblock %}
     <script>
       require.config({
@@ -51,15 +50,8 @@
           paths: {
             components: '../components',
             jquery: '../components/jquery/dist/jquery.min',
-            bootstrap: '../components/bootstrap/dist/js/bootstrap.min',
             moment: "../components/moment/moment",
           },
-          shim: {
-            bootstrap: {
-              deps: ["jquery"],
-              exports: "bootstrap"
-            },
-          }
       });
     </script>
 
@@ -104,36 +96,31 @@
 </noscript>
 
 {% block nav_bar %}
-  <nav class="navbar navbar-default">
+  <nav class="navbar navbar-expand-sm bg-body-tertiary mb-4">
     <div class="container-fluid">
-      <div class="navbar-header">
         {% block logo %}
-        <span id="jupyterhub-logo" class="pull-left">
+        <span id="jupyterhub-logo" class="navbar-brand">
             <a href="{{logo_url or base_url}}"><img src='{{base_url}}logo' alt='JupyterHub logo' class='jpy-logo' title='Home'/></a>
         </span>
         {% endblock %}
         {% if user %}
-        <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#thenavbar" aria-expanded="false">
-          <span class="sr-only">Toggle navigation</span>
-          <span class="icon-bar"></span>
-          <span class="icon-bar"></span>
-          <span class="icon-bar"></span>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#thenavbar" aria-controls="thenavbar" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
         </button>
         {% endif %}
-      </div>
 
       <div class="collapse navbar-collapse" id="thenavbar">
         {% if user %}
-        <ul class="nav navbar-nav">
+        <ul class="navbar-nav me-auto mb-0">
           {% block nav_bar_left_items %}
-            <li><a href="{{base_url}}home">Home</a></li>
-            <li><a href="{{base_url}}token">Token</a></li>
+            <li class="nav-item"><a class="nav-link" href="{{base_url}}home">Home</a></li>
+            <li class="nav-item"><a class="nav-link" href="{{base_url}}token">Token</a></li>
             {% if 'admin-ui' in parsed_scopes %}
-            <li><a href="{{base_url}}admin">Admin</a></li>
+            <li class="nav-item"><a class="nav-link" href="{{base_url}}admin">Admin</a></li>
             {% endif %}
             {% if services %}
-            <li class="dropdown">
-              <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Services<span class="caret"></span></a>
+            <li class="nav-item dropdown">
+              <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button" aria-expanded="false">Services</a>
               <ul class="dropdown-menu">
               {% for service in services %}
               {% block service scoped %}
@@ -146,16 +133,16 @@
           {% endblock %}
         </ul>
         {% endif %}
-        <ul class="nav navbar-nav navbar-right">
+        <ul class="nav navbar-nav me-2">
           {% block nav_bar_right_items %}
-            <li>
+            <li class="nav-item">
               {% block login_widget %}
                 <span id="login_widget">
                   {% if user %}
-                    <p class="navbar-text">{{user.name}}</p>
-                    <a id="logout" role="button" class="navbar-btn btn-sm btn btn-default" href="{{logout_url}}"> <i aria-hidden="true" class="fa fa-sign-out"></i> Logout</a>
+                    <span class="navbar-text">{{user.name}}</span>
+                    <a id="logout" role="button" class="btn btn-sm btn-outline-dark" href="{{logout_url}}"> <i aria-hidden="true" class="fa fa-sign-out"></i> Logout</a>
                   {% else %}
-                    <a id="login" role="button" class="btn-sm btn navbar-btn btn-default" href="{{login_url}}">Login</a>
+                    <a id="login" role="button" class="btn btn-sm btn-outline-dark" href="{{login_url}}">Login</a>
                   {% endif %}
                 </span>
               {% endblock %}
@@ -187,7 +174,7 @@
 {% endblock %}
 
 {% call modal('Error', btn_label='OK') %}
-  <div class="ajax-error">
+  <div class="ajax-error alert-danger">
     The error
   </div>
 {% endcall %}

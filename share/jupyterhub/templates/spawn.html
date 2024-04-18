@@ -11,12 +11,13 @@
     <h1>Server Options</h1>
   </div>
   {% endblock %}
-  <div class="row col-sm-offset-2 col-sm-8">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
     {% if for_user and user.name != for_user.name -%}
       <p>Spawning server for {{ for_user.name }}</p>
     {% endif -%}
     {% if error_message -%}
-      <p class="spawn-error-msg text-danger">
+      <p class="spawn-error-msg alert alert-danger">
         Error: {{error_message}}
       </p>
     {% endif %}
@@ -24,7 +25,7 @@
       {{spawner_options_form | safe}}
       <br>
       <div class="feedback-container">
-        <input type="submit" value="Start" class="btn btn-jupyter form-control">
+        <button type="submit" class="btn btn-jupyter form-control">Start</button>
         <div class="feedback-widget hidden">
           <i class="fa fa-spinner"></i>
         </div>

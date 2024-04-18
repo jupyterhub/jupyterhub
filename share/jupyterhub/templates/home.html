@@ -44,10 +44,10 @@
     <tbody>
       <tr class="home-server-row add-server-row">
         <td colspan="4">
-          <input class="new-server-name" placeholder="Name your server">
-          <a role="button" class="new-server-btn" class="add-server btn btn-xs btn-primary">
+          <input class="new-server-name" aria-label="server name" placeholder="name-your-server">
+          <button role="button" type="button" class="new-server-btn btn btn-xs btn-primary">
             Add New Server
-          </a>
+          </button>
         </td>
       </tr>
       {% for spawner in named_spawners %}
@@ -76,7 +76,7 @@
           >
             start
           </a>
-          <a role="button" class="delete-server btn btn-xs btn-danger{% if spawner.active %} hidden{% endif %}" id="delete-{{ spawner.name }}">delete</a>
+          <button role="button" class="delete-server btn btn-xs btn-danger{% if spawner.active %} hidden{% endif %}" id="delete-{{ spawner.name }}">delete</button>
         </td>
       </tr>
       {% endfor %}

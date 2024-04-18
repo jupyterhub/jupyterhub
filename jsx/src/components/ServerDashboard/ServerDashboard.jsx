@@ -2,6 +2,7 @@ import React, { useEffect, useState, Fragment } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { debounce } from "lodash";
 import PropTypes from "prop-types";
+import ErrorAlert from "../../util/error";
 
 import {
   Button,
@@ -151,11 +152,20 @@ const ServerDashboard = (props) => {
     setNameFilter(event.target.value);
   }, 300);
 
-  const ServerButton = ({ server, user, action, name, extraClass }) => {
+  const ServerButton = ({
+    server,
+    user,
+    action,
+    name,
+    variant,
+    extraClass,
+  }) => {
     var [isDisabled, setIsDisabled] = useState(false);
     return (
-      <button
-        className={`btn btn-xs ${extraClass}`}
+      <Button
+        size="xs"
+        variant={variant}
+        className={extraClass}
         disabled={isDisabled || server.pending}
         onClick={() => {
           setIsDisabled(true);
@@ -183,7 +193,7 @@ const ServerDashboard = (props) => {
         }}
       >
         {name}
-      </button>
+      </Button>
     );
   };
 
@@ -196,7 +206,8 @@ const ServerDashboard = (props) => {
       user,
       action: stopServer,
       name: "Stop Server",
-      extraClass: "btn-danger stop-button",
+      variant: "danger",
+      extraClass: "stop-button",
     });
   };
   const DeleteServerButton = ({ server, user }) => {
@@ -212,7 +223,8 @@ const ServerDashboard = (props) => {
       user,
       action: deleteServer,
       name: "Delete Server",
-      extraClass: "btn-danger stop-button",
+      variant: "danger",
+      extraClass: "stop-button",
     });
   };
 
@@ -225,7 +237,8 @@ const ServerDashboard = (props) => {
       user,
       action: startServer,
       name: server.pending ? "Server is pending" : "Start Server",
-      extraClass: "btn-success start-button",
+      variant: "success",
+      extraClass: "start-button",
     });
   };
 
@@ -239,7 +252,9 @@ const ServerDashboard = (props) => {
           server.name ? "/" + server.name : ""
         }`}
       >
-        <button className="btn btn-light btn-xs">Spawn Page</button>
+        <Button variant="light" size="xs">
+          Spawn Page
+        </Button>
       </a>
     );
   };
@@ -250,15 +265,18 @@ const ServerDashboard = (props) => {
     }
     return (
       <a href={server.url || ""}>
-        <button className="btn btn-primary btn-xs">Access Server</button>
+        <Button variant="primary" size="xs">
+          Access Server
+        </Button>
       </a>
     );
   };
 
   const EditUserButton = ({ user }) => {
     return (
-      <button
-        className="btn btn-light btn-xs"
+      <Button
+        size="xs"
+        variant="light"
         onClick={() =>
           navigate("/edit-user", {
             state: {
@@ -269,7 +287,7 @@ const ServerDashboard = (props) => {
         }
       >
         Edit User
-      </button>
+      </Button>
     );
   };
 
@@ -300,7 +318,7 @@ const ServerDashboard = (props) => {
       }, {});
     return (
       <ReactObjectTableViewer
-        className="table-striped table-bordered"
+        className="table table-striped table-bordered"
         style={{
           padding: "3px 6px",
           margin: "auto",
@@ -342,7 +360,7 @@ const ServerDashboard = (props) => {
               variant={open ? "secondary" : "primary"}
               size="sm"
             >
-              <span className="caret"></span>
+              <span className="fa fa-caret-down"></span>
             </Button>{" "}
           </span>
           <span data-testid={`user-name-div-${userServerName}`}>
@@ -402,26 +420,9 @@ const ServerDashboard = (props) => {
 
   return (
     <div className="container" data-testid="container">
-      {errorAlert != null ? (
-        <div className="row">
-          <div className="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
-            <div className="alert alert-danger">
-              {errorAlert}
-              <button
-                type="button"
-                className="close"
-                onClick={() => setErrorAlert(null)}
-              >
-                <span>&times;</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <></>
-      )}
+      <ErrorAlert errorAlert={errorAlert} setErrorAlert={setErrorAlert} />
       <div className="server-dashboard-container">
-        <Row>
+        <Row className="rows-cols-lg-auto g-3 mb-3 align-items-center">
           <Col md={4}>
             <FormControl
               type="text"
@@ -432,27 +433,32 @@ const ServerDashboard = (props) => {
               onChange={handleSearch}
             />
           </Col>
-          <Col md={3}>
-            {/* div.checkbox required for BS3 CSS */}
-            <div className="checkbox">
-              <label title="check to only show running servers, otherwise show all">
-                <Form.Check
-                  inline
-                  type="checkbox"
-                  name="active_servers"
-                  id="active-servers-filter"
-                  checked={state_filter == "active"}
-                  onChange={(event) => {
-                    setStateFilter(event.target.checked ? "active" : null);
-                  }}
-                />
+          <Col md={4}>
+            <Form.Check
+              inline
+              title="check to only show running servers, otherwise show all"
+            >
+              <Form.Check.Input
+                type="checkbox"
+                name="active_servers"
+                id="active-servers-filter"
+                checked={state_filter == "active"}
+                onChange={(event) => {
+                  setStateFilter(event.target.checked ? "active" : null);
+                }}
+              />
+              <Form.Check.Label for="active-servers-filter">
                 {"only active servers"}
-              </label>
-            </div>
+              </Form.Check.Label>
+            </Form.Check>
           </Col>
 
-          <Col md="auto" style={{ float: "right", margin: 15 }}>
-            <Link to="/groups">{"> Manage Groups"}</Link>
+          <Col md={{ span: 3, offset: 1 }}>
+            <Link to="/groups">
+              <Button variant="light" className="form-control">
+                {"Manage Groups"}
+              </Button>
+            </Link>
           </Col>
         </Row>
         <table className="table table-bordered table-hover">
@@ -565,7 +571,7 @@ const ServerDashboard = (props) => {
                   Stop All
                 </Button>
                 {/* spacing between start/stop and Shutdown */}
-                <span style={{ marginLeft: "56px" }}> </span>
+                <span style={{ marginLeft: "30px" }}> </span>
                 {/* Shutdown Jupyterhub */}
                 <Button
                   variant="danger"

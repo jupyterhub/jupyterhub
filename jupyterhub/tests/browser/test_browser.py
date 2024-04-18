@@ -329,6 +329,64 @@ async def open_home_page(app, browser, user):
     await expect(browser).to_have_url(re.compile(".*/hub/home"))
 
 
+async def test_home_nav_collapse(app, browser, user_special_chars):
+    user = user_special_chars.user
+    await open_home_page(app, browser, user)
+    nav = browser.locator(".navbar")
+    navbar_collapse = nav.locator(".navbar-collapse")
+    logo = nav.locator("#jupyterhub-logo")
+    home = nav.get_by_text("Home")
+    logout_name = nav.get_by_text(user.name)
+    logout_btn = nav.get_by_text("Logout")
+    toggler = nav.locator(".navbar-toggler")
+
+    await expect(nav).to_be_visible()
+
+    await browser.set_viewport_size({"width": 640, "height": 480})
+    # links visible, nav items visible, collapse not visible
+    await expect(logo).to_be_visible()
+    await expect(home).to_be_visible()
+    await expect(logout_name).to_be_visible()
+    await expect(logout_btn).to_be_visible()
+    await expect(toggler).not_to_be_visible()
+
+    # below small breakpoint (576px)
+    await browser.set_viewport_size({"width": 500, "height": 480})
+    # logo visible, links and logout not visible, toggler visible
+    await expect(logo).to_be_visible()
+    await expect(home).not_to_be_visible()
+    await expect(logout_name).not_to_be_visible()
+    await expect(logout_btn).not_to_be_visible()
+    await expect(toggler).to_be_visible()
+
+    # click toggler, links should be visible
+    await toggler.click()
+    # wait for expand to finish
+    # expand animates through `collapse -> collapsing -> collapse show`
+    await expect(navbar_collapse).to_have_class(re.compile(r"\bshow\b"))
+    await expect(home).to_be_visible()
+    await expect(logout_name).to_be_visible()
+    await expect(logout_btn).to_be_visible()
+    await expect(toggler).to_be_visible()
+    # wait for expand animation
+    # click toggler again, links should hide
+    # need to wait for expand to complete
+    await toggler.click()
+    await expect(navbar_collapse).not_to_have_class(re.compile(r"\bshow\b"))
+    await expect(home).not_to_be_visible()
+    await expect(logout_name).not_to_be_visible()
+    await expect(logout_btn).not_to_be_visible()
+    await expect(toggler).to_be_visible()
+
+    # resize, should re-show
+    await browser.set_viewport_size({"width": 640, "height": 480})
+    await expect(logo).to_be_visible()
+    await expect(home).to_be_visible()
+    await expect(logout_name).to_be_visible()
+    await expect(logout_btn).to_be_visible()
+    await expect(toggler).not_to_be_visible()
+
+
 async def test_start_button_server_not_started(app, browser, user_special_chars):
     """verify that when server is not started one button is available,
     after starting 2 buttons are available"""
@@ -413,7 +471,7 @@ async def test_token_request_form_and_panel(app, browser, user_special_chars):
     """verify elements of the request token form"""
 
     await open_token_page(app, browser, user_special_chars.user)
-    request_btn = browser.locator('//div[@class="text-center"]').get_by_role("button")
+    request_btn = browser.locator('//button[@type="submit"]')
     expected_btn_name = 'Request new API token'
     # check if the request token button is enabled
     # check the buttons name
@@ -455,7 +513,7 @@ async def test_token_request_form_and_panel(app, browser, user_special_chars):
     expected_panel_token_heading = "Your new API Token"
     token_area = browser.locator('#token-area')
     await expect(token_area).to_be_visible()
-    token_area_heading = token_area.locator('//div[@class="panel-heading"]')
+    token_area_heading = token_area.locator('div.card-header')
     await expect(token_area_heading).to_have_text(expected_panel_token_heading)
     token_result = browser.locator('#token-result')
     await expect(token_result).not_to_be_empty()
@@ -463,7 +521,7 @@ async def test_token_request_form_and_panel(app, browser, user_special_chars):
     # verify that "Your new API Token" panel is hidden after refresh the page
     await browser.reload(wait_until="load")
     await expect(token_area).to_be_hidden()
-    api_token_table_area = browser.locator('//div[@class="row"]').nth(2)
+    api_token_table_area = browser.locator("div#api-tokens-section")
     await expect(api_token_table_area.get_by_role("table")).to_be_visible()
     expected_table_name = "API Tokens"
     await expect(api_token_table_area.get_by_role("heading")).to_have_text(
@@ -516,7 +574,7 @@ async def test_request_token_expiration(
         # reload the page
         await browser.reload(wait_until="load")
     # API Tokens table: verify that elements are displayed
-    api_token_table_area = browser.locator("div#api-tokens-section").nth(0)
+    api_token_table_area = browser.locator("div#api-tokens-section")
     await expect(api_token_table_area.get_by_role("table")).to_be_visible()
     await expect(api_token_table_area.locator("tr.token-row")).to_have_count(1)
 
@@ -619,12 +677,14 @@ async def test_request_token_permissions(
         error_message = await error_dialog.locator(".modal-body").inner_text()
         assert "API request failed (400)" in error_message
         assert expected_error in error_message
+        await error_dialog.locator("button[aria-label='Close']").click()
+        await expect(error_dialog).not_to_be_visible()
         return
 
     await browser.reload(wait_until="load")
 
     # API Tokens table: verify that elements are displayed
-    api_token_table_area = browser.locator("div#api-tokens-section").nth(0)
+    api_token_table_area = browser.locator("div#api-tokens-section")
     await expect(api_token_table_area.get_by_role("table")).to_be_visible()
     await expect(api_token_table_area.locator("tr.token-row")).to_have_count(1)
 
@@ -670,9 +730,7 @@ async def test_revoke_token(app, browser, token_type, user_special_chars):
     await browser.wait_for_load_state("load")
     await expect(browser).to_have_url(re.compile(".*/hub/token"))
     if token_type == "both" or token_type == "request_by_user":
-        request_btn = browser.locator('//div[@class="text-center"]').get_by_role(
-            "button"
-        )
+        request_btn = browser.locator('//button[@type="submit"]')
         await request_btn.click()
         # wait for token response to show up on the page
         await browser.wait_for_load_state("load")
@@ -879,9 +937,9 @@ async def test_oauth_page(
 
     # login user
     await login(browser, user.name, password=str(user.name))
-    auth_btn = browser.locator('//input[@type="submit"]')
+    auth_btn = browser.locator('//button[@type="submit"]')
     await expect(auth_btn).to_be_enabled()
-    text_permission = browser.get_by_role("paragraph")
+    text_permission = browser.get_by_role("paragraph").nth(1)
     await expect(text_permission).to_contain_text(f"JupyterHub service {service.name}")
     await expect(text_permission).to_contain_text(f"oauth URL: {expected_redirect_url}")
 
@@ -1348,7 +1406,7 @@ async def test_singleuser_xsrf(
     # visit target user, sets credentials for second server
     await browser.goto(public_url(app, target_user))
     await expect(browser).to_have_url(re.compile(r".*/oauth2/authorize"))
-    auth_button = browser.locator('//input[@type="submit"]')
+    auth_button = browser.locator('//button[@type="submit"]')
     await expect(auth_button).to_be_enabled()
     await auth_button.click()
     await expect(browser).to_have_url(re.compile(rf".*/user/{target_user.name}/.*"))

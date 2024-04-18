@@ -1328,7 +1328,7 @@ async def test_services_nav_links(
     r = await get_page("home", app, cookies=cookies)
     assert r.status_code == 200
     page = BeautifulSoup(r.text)
-    nav = page.find("ul", class_="nav")
+    nav = page.find("ul", class_="navbar-nav")
     # find service links
     nav_urls = [a["href"] for a in nav.find_all("a")]
     if present:
