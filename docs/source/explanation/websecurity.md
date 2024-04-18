@@ -70,6 +70,8 @@ JupyterHub does not enable any sharing by default.
 The several approaches to mitigating security issues with configuration
 options provided by JupyterHub include:
 
+(subdomains)=
+
 ### Enable user subdomains
 
 JupyterHub provides the ability to run single-user servers on their own
