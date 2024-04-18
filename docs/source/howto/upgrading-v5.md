@@ -31,8 +31,9 @@ c.JupyterHub.subdomain_host = "https://myjupyterhub.example.org"
 
 If you were using subdomains before
 
-JupyterHub 5 allows complete customization of the subdomain scheme and changes the default subdomain scheme.
-via the new {attr}`.JupyterHub.subdomain_hook`.
+JupyterHub 5 allows complete customization of the subdomain scheme via the new {attr}`.JupyterHub.subdomain_hook`,
+and changes the default subdomain scheme.
+.
 
 You can provide a completely custom subdomain scheme, or select one of two default implementations by name: `idna` or `legacy`. `idna` is the default.
 
@@ -53,7 +54,7 @@ The key differences of the new `idna` scheme:
 - It should always produce valid domains, regardless of username (not true for the legacy scheme when using characters that might need escaping or usernames that are long)
 - each Service gets its own subdomain on `service--` rather than sharing `services.`
 
-A table of example of user and services, and their domains with the old and new scheme.
+A table of examples of user and services, and their domains with the old and new scheme.
 
 In the examples below, we'll assume the configuration enabling subdomains:
 
