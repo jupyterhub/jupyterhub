@@ -48,7 +48,7 @@ async def test_share_code_flow_full(app, browser, full_spawn, create_user_with_s
     # back to accept-share page
     await expect(browser).to_have_url(re.compile(r".*/accept-share"))
 
-    header_text = await browser.locator("//h2").first.text_content()
+    header_text = await browser.locator("p.lead").first.text_content()
     assert f"access {user.name}'s server" in header_text
     assert f"You ({share_user.name})" in header_text
     # TODO verify form
