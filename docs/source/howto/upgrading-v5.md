@@ -29,7 +29,7 @@ To enable subdomains, set:
 c.JupyterHub.subdomain_host = "https://myjupyterhub.example.org"
 ```
 
-If you were using subdomains before
+If you were using subdomains before, some user servers and all services will be on different hosts in the default configuration.
 
 JupyterHub 5 allows complete customization of the subdomain scheme via the new {attr}`.JupyterHub.subdomain_hook`,
 and changes the default subdomain scheme.
@@ -54,9 +54,7 @@ The key differences of the new `idna` scheme:
 - It should always produce valid domains, regardless of username (not true for the legacy scheme when using characters that might need escaping or usernames that are long)
 - each Service gets its own subdomain on `service--` rather than sharing `services.`
 
-A table of examples of user and services, and their domains with the old and new scheme.
-
-In the examples below, we'll assume the configuration enabling subdomains:
+Below is a table of examples of users and services with their domains with the old and new scheme, assuming the configuration:
 
 ```python
 c.JupyterHub.subdomain_host = "https://jupyter.example.org"
@@ -95,18 +93,18 @@ Prior to JupyterHub 5, JupyterHub Authenticators had the _implicit_ default beha
 This behavior was considered a too-permissive default in Authenticators that source large user pools like OAuthenticator, which would accept e.g. all users with a Google account by default.
 As a result, OAuthenticator 16 introduced two configuration options:
 
-1. `Authenticator.allow_all` (default: False)
-2. `Authenticator.allow_existing_users` (default: True if allowed_users is non-empty, False otherwise)
+1. `OAuthenticator.allow_all` (default: False)
+2. `OAuthenticator.allow_existing_users` (default: True if allowed_users is non-empty, False otherwise)
 
 JupyterHub 5 adopts these options for all Authenticators,
-essentially having the effect that _some_ allow configuration is required for anyone to be able to login.
+having the effect that _some_ allow configuration is required for anyone to be able to login.
 If you want to preserve the pre-5.0 behavior with no `allow` configuration, set:
 
 ```python
 c.Authenticator.allow_all = True
 ```
 
-`allow_existing_users` defaults are meant to be backward-compatible, but you can now _explicitly_ allow or disallow based on presence in the database by setting `Authenticator.allow_existing_users`.
+`allow_existing_users` defaults are meant to be backward-compatible, but you can now _explicitly_ allow or not based on presence in the database by setting `Authenticator.allow_existing_users` to True or False.
 
 :::{seealso}
 
