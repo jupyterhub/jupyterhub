@@ -2,43 +2,39 @@
 {% if announcement_spawn is string %}
   {% set announcement = announcement_spawn %}
 {% endif %}
-
 {% block main %}
-
-<div class="container">
-  {% block heading %}
-  <div class="row text-center">
-    <h1>Server Options</h1>
-  </div>
-  {% endblock %}
-  <div class="row justify-content-center">
-    <div class="col-md-8">
-    {% if for_user and user.name != for_user.name -%}
-      <p>Spawning server for {{ for_user.name }}</p>
-    {% endif -%}
-    {% if error_message -%}
-      <p class="spawn-error-msg alert alert-danger">
-        Error: {{error_message}}
-      </p>
-    {% endif %}
-    <form enctype="multipart/form-data" id="spawn_form" action="{{ url | safe }}" method="post" role="form">
-      {{spawner_options_form | safe}}
-      <br>
-      <div class="feedback-container">
-        <button type="submit" class="btn btn-jupyter form-control">Start</button>
-        <div class="feedback-widget hidden">
-          <i class="fa fa-spinner"></i>
-        </div>
+  <div class="container">
+    {% block heading %}
+      <div class="row text-center">
+        <h1>Server Options</h1>
       </div>
-    </form>
-  </div>
-</div>
-
-{% endblock %}
-
-{% block script %}
-{{ super() }}
-<script>
+    {% endblock %}
+    <div class="row justify-content-center">
+      <div class="col-md-8">
+        {% if for_user and user.name != for_user.name -%}
+          <p>Spawning server for {{ for_user.name }}</p>
+        {% endif -%}
+        {% if error_message -%}<p class="spawn-error-msg alert alert-danger">Error: {{ error_message }}</p>{% endif %}
+        <form enctype="multipart/form-data"
+              id="spawn_form"
+              action="{{ url | safe }}"
+              method="post"
+              role="form">
+          {{ spawner_options_form | safe }}
+          <br>
+          <div class="feedback-container">
+            <button type="submit" class="btn btn-jupyter form-control">Start</button>
+            <div class="feedback-widget hidden">
+              <i class="fa fa-spinner"></i>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  {% endblock %}
+  {% block script %}
+    {{ super() }}
+    <script>
 // setup onSubmit feedback
 $('form').submit((e) => {
   var form = $(e.target);
@@ -46,5 +42,5 @@ $('form').submit((e) => {
   form.find('.feedback-container>*').toggleClass('hidden');
   form.find('.feedback-widget>*').toggleClass('fa-pulse');
 });
-</script>
-{% endblock %}
+    </script>
+  {% endblock %}

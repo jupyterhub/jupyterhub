@@ -7,30 +7,23 @@ It makes the following modifications:
 - update logo url to jupyterhub
 - remove `?redirects` url param that may be added by jupyterhub
 #}
-
 {% extends "templates/page.html" %}
-
 {% block header_buttons %}
-{{ super() }}
-<span>
-  <a
-    href="{{hub_control_panel_url}}"
-    id="jupyterhub-control-panel-link"
-    class="btn btn-default btn-sm navbar-btn pull-right"
-    style="margin-right: 4px; margin-left: 2px"
-  >
-    Control Panel
-  </a>
-</span>
+  {{ super() }}
+  <span>
+    <a href="{{ hub_control_panel_url }}"
+       id="jupyterhub-control-panel-link"
+       class="btn btn-default btn-sm navbar-btn pull-right"
+       style="margin-right: 4px;
+              margin-left: 2px">Control Panel</a>
+  </span>
 {% endblock %}
-
 {% block logo %}
-<img src="{{logo_url}}" alt="Jupyter Notebook" />
+  <img src="{{ logo_url }}" alt="Jupyter Notebook" />
 {% endblock logo %}
-
 {% block script %}
-{{ super() }}
-<script type="text/javascript">
+  {{ super() }}
+  <script type="text/javascript">
   function _remove_redirects_param() {
     // remove ?redirects= param from URL so that
     // successful page loads don't increment the redirect loop counter
@@ -57,5 +50,5 @@ It makes the following modifications:
     }
   }
   _remove_redirects_param();
-</script>
+  </script>
 {% endblock script %}

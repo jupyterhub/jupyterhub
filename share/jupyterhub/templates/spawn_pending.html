@@ -1,37 +1,39 @@
 {% extends "page.html" %}
-
 {% block main %}
-
-<div class="container">
-  <div class="row">
-    <div class="text-center">
-      {% block message %}
-      <p>Your server is starting up.</p>
-      <p>You will be redirected automatically when it's ready for you.</p>
-      {% endblock %}
-      <div class="progress">
-        <div id="progress-bar" class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%;">
-          <span class="sr-only"><span id="sr-progress">0%</span> Complete</span>
+  <div class="container">
+    <div class="row">
+      <div class="text-center">
+        {% block message %}
+          <p>Your server is starting up.</p>
+          <p>You will be redirected automatically when it's ready for you.</p>
+        {% endblock %}
+        <div class="progress">
+          <div id="progress-bar"
+               class="progress-bar"
+               role="progressbar"
+               aria-valuenow="0"
+               aria-valuemin="0"
+               aria-valuemax="100"
+               style="width: 0%">
+            <span class="sr-only"><span id="sr-progress">0%</span> Complete</span>
+          </div>
         </div>
+        <p id="progress-message"></p>
       </div>
-      <p id="progress-message"></p>
+    </div>
+    <div class="row justify-content-center">
+      <div class="col-md-8">
+        <details id="progress-details">
+          <summary>Event log</summary>
+          <div id="progress-log"></div>
+        </details>
+      </div>
     </div>
   </div>
-  <div class="row justify-content-center">
-    <div class="col-md-8">
-      <details id="progress-details">
-        <summary>Event log</summary>
-        <div id="progress-log"></div>
-      </details>
-    </div>
-  </div>
-</div>
-
 {% endblock %}
-
 {% block script %}
-{{ super() }}
-<script type="text/javascript">
+  {{ super() }}
+  <script type="text/javascript">
 require(["jquery"], function ($) {
   $("#refresh").click(function () {
     window.location.reload();
@@ -90,5 +92,5 @@ require(["jquery"], function ($) {
   // signal that page has finished loading (mostly for tests)
   window._jupyterhub_page_loaded = true;
 });
-</script>
+  </script>
 {% endblock %}
