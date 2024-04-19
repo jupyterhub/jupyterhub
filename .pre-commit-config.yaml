@@ -33,6 +33,18 @@ repos:
     rev: v4.0.0-alpha.8
     hooks:
       - id: prettier
+        exclude: .*/templates/.*
+
+  # autoformat HTML templates
+  - repo: https://github.com/djlint/djLint
+    rev: v1.34.1
+    hooks:
+      - id: djlint-reformat-jinja
+        files: ".*templates/.*.html"
+        types_or: ["html"]
+      - id: djlint-jinja
+        files: ".*templates/.*.html"
+        types_or: ["html"]
 
   # Autoformat and linting, misc. details
   - repo: https://github.com/pre-commit/pre-commit-hooks

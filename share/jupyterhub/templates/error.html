@@ -1,40 +1,20 @@
 {% extends "page.html" %}
-
 {% block login_widget %}
-{% endblock %}
-
+{% endblock login_widget %}
 {% block main %}
-
-<div class="error">
-  {% block h1_error %}
-  <h1>
-    {{status_code}} : {{status_message}}
-  </h1>
-  {% endblock h1_error %}
-  {% block error_detail %}
-  {% if message %}
-  <p>
-    {{message}}
-  </p>
-  {% endif %}
-  {% if message_html %}
-  <p>
-    {{message_html | safe}}
-  </p>
-  {% endif %}
-  {% if extra_error_html %}
-  <p>
-    {{extra_error_html | safe}}
-  </p>
-  {% endif %}
-  {% endblock error_detail %}
-</div>
-
-{% endblock %}
-
+  <div class="error">
+    {% block h1_error %}
+      <h1>{{ status_code }} : {{ status_message }}</h1>
+    {% endblock h1_error %}
+    {% block error_detail %}
+      {% if message %}<p>{{ message }}</p>{% endif %}
+      {% if message_html %}<p>{{ message_html | safe }}</p>{% endif %}
+      {% if extra_error_html %}<p>{{ extra_error_html | safe }}</p>{% endif %}
+    {% endblock error_detail %}
+  </div>
+{% endblock main %}
 {% block script %}
-  {{super()}}
-
+  {{ super() }}
   <script type="text/javascript">
     function _remove_redirects_from_url() {
       if (window.location.search.length <= 1) {
@@ -50,9 +30,9 @@
             new_search = '?' + search_parameters.join('&');
           }
           var new_url = window.location.origin +
-                        window.location.pathname +
-                        new_search +
-                        window.location.hash;
+            window.location.pathname +
+            new_search +
+            window.location.hash;
           window.history.replaceState({}, "", new_url);
           return;
         }
@@ -61,4 +41,4 @@
 
     _remove_redirects_from_url();
   </script>
-{% endblock %}
+{% endblock script %}
