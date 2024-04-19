@@ -124,6 +124,18 @@ select = [
 # https://djlint.com/docs/configuration/
 [tool.djlint]
 indent = 2
+# ignore often-incorrect lint
+# H006: image height/width attributes
+# ignore style lint that formatter doesn't catch
+# H008: double-quotes
+# H029: form method case
+ignore = "H006,H008,H021,H029"
+use_gitignore = true
+
+format_js = true
+
+[tool.djlint.js]
+indent_size = 2
 
 # tbump is used to simplify and standardize the release process when updating
 # the version, making a git commit and tag, and pushing changes.

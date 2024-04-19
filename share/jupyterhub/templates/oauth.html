@@ -1,5 +1,6 @@
 {% extends "page.html" %}
-{% block login_widget %}{% endblock %}
+{% block login_widget %}
+{% endblock login_widget %}
 {% block main %}
   <div class="container">
     <div class="row justify-content-center">
@@ -14,7 +15,7 @@
             your behalf.
           {% endif %}
         </p>
-        <form method="POST" action="">
+        <form method="post" action="">
           <div class="card">
             <div class="card-header">
               <p class="h5">This will grant the application permission to:</p>
@@ -26,22 +27,26 @@
               {% for scope_info in scope_descriptions %}
                 <div class="checkbox input-group">
                   <label>
-                    <input type="checkbox" name="raw-scopes" checked="true" title="This authorization is required"
-                      disabled="disabled"
-                      {# disabled because it's required #} />
-                      <span>
-                        {{ scope_info['description'] }}
-                        {% if scope_info['filter'] %}Applies to {{ scope_info['filter'] }}.{% endif %}
-                      </span>
-                    </label>
-                  </div>
-                {% endfor %}
-              </div>
-              <div class="card-footer">
-                <button type="submit" class="form-control btn btn-jupyter mt-2">Authorize</button>
-              </div>
+                    {# disabled because it's required #}
+                    <input type="checkbox"
+                           name="raw-scopes"
+                           checked="true"
+                           title="This authorization is required"
+                           disabled="disabled" />
+                    <span>
+                      {{ scope_info['description'] }}
+                      {% if scope_info['filter'] %}Applies to {{ scope_info['filter'] }}.{% endif %}
+                    </span>
+                  </label>
+                </div>
+              {% endfor %}
             </div>
-          </form>
-        </div>
+            <div class="card-footer">
+              <button type="submit" class="form-control btn btn-jupyter mt-2">Authorize</button>
+            </div>
+          </div>
+        </form>
       </div>
-    {% endblock %}
+    </div>
+  </div>
+{% endblock main %}

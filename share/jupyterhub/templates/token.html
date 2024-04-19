@@ -166,16 +166,19 @@
                   </td>
                   <td class="col-sm-1 text-center">
                     <button class="revoke-token-btn btn btn-xs btn-danger">revoke</button>
-                  {% endblock client_row %}
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      {% endif %}
-    </div>
-  {% endblock main %}
-  {% block script %}
-    {{ super() }}
-    <script type="text/javascript">require(["token"]);</script>
-  {% endblock script %}
+                  </td>
+                {% endblock client_row %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+  </div>
+{% endblock main %}
+{% block script %}
+  {{ super() }}
+  <script type="text/javascript">
+    require(["token"]);
+  </script>
+{% endblock script %}

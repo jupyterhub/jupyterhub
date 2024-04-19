@@ -1,5 +1,6 @@
 {% extends "page.html" %}
-{% block login_widget %}{% endblock %}
+{% block login_widget %}
+{% endblock login_widget %}
 {% block main %}
   <div class="error">
     {% block h1_error %}
@@ -11,7 +12,7 @@
       {% if extra_error_html %}<p>{{ extra_error_html | safe }}</p>{% endif %}
     {% endblock error_detail %}
   </div>
-{% endblock %}
+{% endblock main %}
 {% block script %}
   {{ super() }}
   <script type="text/javascript">
@@ -29,9 +30,9 @@
             new_search = '?' + search_parameters.join('&');
           }
           var new_url = window.location.origin +
-                        window.location.pathname +
-                        new_search +
-                        window.location.hash;
+            window.location.pathname +
+            new_search +
+            window.location.hash;
           window.history.replaceState({}, "", new_url);
           return;
         }
@@ -40,4 +41,4 @@
 
     _remove_redirects_from_url();
   </script>
-{% endblock %}
+{% endblock script %}

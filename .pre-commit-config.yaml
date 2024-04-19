@@ -42,6 +42,9 @@ repos:
       - id: djlint-reformat-jinja
         files: ".*templates/.*.html"
         types_or: ["html"]
+      - id: djlint-jinja
+        files: ".*templates/.*.html"
+        types_or: ["html"]
 
   # Autoformat and linting, misc. details
   - repo: https://github.com/pre-commit/pre-commit-hooks

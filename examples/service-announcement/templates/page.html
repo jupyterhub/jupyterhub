@@ -1,10 +1,12 @@
 {% extends "templates/page.html" %}
-{% block announcement %}<div class="container text-center announcement"></div>{% endblock %}
+{% block announcement %}
+  <div class="container text-center announcement"></div>
+{% endblock announcement %}
 {% block script %}
   {{ super() }}
   <script>
-  $.get("/services/announcement/", function (data) {
-    $(".announcement").html(data["announcement"]);
-  });
+    $.get("/services/announcement/", function(data) {
+      $(".announcement").html(data["announcement"]);
+    });
   </script>
-{% endblock %}
+{% endblock script %}

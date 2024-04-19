@@ -2,7 +2,8 @@
 {% if announcement_login is string %}
   {% set announcement = announcement_login %}
 {% endif %}
-{% block login_widget %}{% endblock %}
+{% block login_widget %}
+{% endblock login_widget %}
 {% block main %}
   {% block login %}
     <div id="login-main" class="container">
@@ -86,21 +87,21 @@
       {% endblock login_container %}
     </div>
   {% endblock login %}
-{% endblock %}
+{% endblock main %}
 {% block script %}
   {{ super() }}
   <script>
-if (window.location.protocol === "http:") {
-  // unhide http warning
-  var warning = document.getElementById('insecure-login-warning');
-  warning.className = warning.className.replace(/\bhidden\b/, '');
-}
-// setup onSubmit feedback
-$('form').submit((e) => {
-  var form = $(e.target);
-  form.find('.feedback-container>input').attr('disabled', true);
-  form.find('.feedback-container>*').toggleClass('hidden');
-  form.find('.feedback-widget>*').toggleClass('fa-pulse');
-});
+    if (window.location.protocol === "http:") {
+      // unhide http warning
+      var warning = document.getElementById('insecure-login-warning');
+      warning.className = warning.className.replace(/\bhidden\b/, '');
+    }
+    // setup onSubmit feedback
+    $('form').submit((e) => {
+      var form = $(e.target);
+      form.find('.feedback-container>input').attr('disabled', true);
+      form.find('.feedback-container>*').toggleClass('hidden');
+      form.find('.feedback-widget>*').toggleClass('fa-pulse');
+    });
   </script>
-{% endblock %}
+{% endblock script %}

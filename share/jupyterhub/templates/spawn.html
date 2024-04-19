@@ -8,7 +8,7 @@
       <div class="row text-center">
         <h1>Server Options</h1>
       </div>
-    {% endblock %}
+    {% endblock heading %}
     <div class="row justify-content-center">
       <div class="col-md-8">
         {% if for_user and user.name != for_user.name -%}
@@ -31,16 +31,17 @@
         </form>
       </div>
     </div>
-  {% endblock %}
-  {% block script %}
-    {{ super() }}
-    <script>
-// setup onSubmit feedback
-$('form').submit((e) => {
-  var form = $(e.target);
-  form.find('.feedback-container>input').attr('disabled', true);
-  form.find('.feedback-container>*').toggleClass('hidden');
-  form.find('.feedback-widget>*').toggleClass('fa-pulse');
-});
-    </script>
-  {% endblock %}
+  </div>
+{% endblock main %}
+{% block script %}
+  {{ super() }}
+  <script>
+    // setup onSubmit feedback
+    $('form').submit((e) => {
+      var form = $(e.target);
+      form.find('.feedback-container>input').attr('disabled', true);
+      form.find('.feedback-container>*').toggleClass('hidden');
+      form.find('.feedback-widget>*').toggleClass('fa-pulse');
+    });
+  </script>
+{% endblock script %}

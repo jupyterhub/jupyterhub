@@ -1,5 +1,6 @@
 {% extends "page.html" %}
-{% block login_widget %}{% endblock %}
+{% block login_widget %}
+{% endblock login_widget %}
 {% block main %}
   <div class="container">
     <div class="row justify-content-center">
@@ -16,7 +17,7 @@
             to start the server before you can access it.
           </p>
         {% endif %}
-        <form method="POST" action="">
+        <form method="post" action="">
           <div class="card">
             <div class="card-header">
               By accepting the invitation, you will be granted the following permissions,
@@ -48,4 +49,4 @@
       </div>
     </div>
   </div>
-{% endblock %}
+{% endblock main %}

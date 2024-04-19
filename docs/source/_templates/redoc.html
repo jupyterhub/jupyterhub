@@ -19,14 +19,18 @@
 {%- block content %}
   <redoc id="redoc-spec"></redoc>
   <script>
-  if (location.protocol === "file:") {
-    document.body.innerText = "Rendered API specification doesn't work with file: protocol. Use sphinx-autobuild to do local builds of the docs, served over HTTP."
-  } else {
-    Redoc.init(
-      "{{ pathto('_static/rest-api.yml', 1) }}",
-      {{ meta.redoc_options | default({}) }},
-      document.getElementById("redoc-spec"),
-    );
-  }
+    if (location.protocol === "file:") {
+      document.body.innerText = "Rendered API specification doesn't work with file: protocol. Use sphinx-autobuild to do local builds of the docs, served over HTTP."
+    } else {
+      Redoc.init(
+        "{{ pathto('_static/rest-api.yml', 1) }}", {
+          {
+            meta.redoc_options |
+              default ({})
+          }
+        },
+        document.getElementById("redoc-spec"),
+      );
+    }
   </script>
 {%- endblock content %}

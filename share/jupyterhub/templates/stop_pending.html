@@ -14,17 +14,17 @@
       </div>
     </div>
   </div>
-{% endblock %}
+{% endblock main %}
 {% block script %}
   {{ super() }}
   <script type="text/javascript">
-require(["jquery"], function ($) {
-  $("#refresh").click(function () {
-    window.location.reload();
-  });
-  setTimeout(function () {
-    window.location.reload();
-  }, 5000);
-});
+    require(["jquery"], function($) {
+      $("#refresh").click(function() {
+        window.location.reload();
+      });
+      setTimeout(function() {
+        window.location.reload();
+      }, 5000);
+    });
   </script>
-{% endblock %}
+{% endblock script %}
