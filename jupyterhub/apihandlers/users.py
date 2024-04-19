@@ -10,7 +10,7 @@ from datetime import timedelta, timezone
 from async_generator import aclosing
 from dateutil.parser import parse as parse_date
 from sqlalchemy import func, or_
-from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy.orm import joinedload, raiseload, selectinload  # noqa
 from tornado import web
 from tornado.iostream import StreamClosedError
 
@@ -122,8 +122,7 @@ class UserListAPIHandler(APIHandler):
         post_filter = None
 
         # starting query
-        # fetch users and groups, which will be used for filters
-        query = self.db.query(orm.User).outerjoin(orm.Group, orm.User.groups)
+        query = self.db.query(orm.User)
 
         if state_filter in {"active", "ready"}:
             # only get users with active servers
@@ -137,6 +136,8 @@ class UserListAPIHandler(APIHandler):
                 .join(orm.Spawner, orm.User._orm_spawners)
                 # this implicitly gets Users with *any* active server
                 .filter(orm.Spawner.server != None)
+                # group-by ensures the count is correct
+                .group_by(orm.User.id)
             )
             if state_filter == "ready":
                 # have to post-process query results because active vs ready
@@ -156,17 +157,16 @@ class UserListAPIHandler(APIHandler):
             )
         elif state_filter:
             raise web.HTTPError(400, "Unrecognized state filter: %r" % state_filter)
-        else:
-            # no filter, return all users
-            query = query.outerjoin(orm.Spawner, orm.User._orm_spawners).outerjoin(
-                orm.Server, orm.Spawner.server
-            )
 
         # apply eager load options
         query = query.options(
             selectinload(orm.User.roles),
             selectinload(orm.User.groups),
-            joinedload(orm.User._orm_spawners),
+            joinedload(orm.User._orm_spawners).joinedload(orm.Spawner.user),
+            # raiseload here helps us make sure we've loaded everything in one query
+            # but since we share a single db session, we can't do this for real
+            # but it's useful in testing
+            # raiseload("*"),
         )
 
         sub_scope = self.parsed_scopes['list:users']
@@ -217,6 +217,8 @@ class UserListAPIHandler(APIHandler):
             data = user_list
 
         self.write(json.dumps(data))
+        # if testing with raiselaod above, need expire_all to avoid affecting other operations
+        # self.db.expire_all()
 
     @needs_scope('admin:users')
     async def post(self):
