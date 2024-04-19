@@ -91,14 +91,15 @@ Check it out in [the sharing docs](sharing-tutorial).
 
 Prior to JupyterHub 5, JupyterHub Authenticators had the _implicit_ default behavior to allow any user who successfully authenticates to login **if no users are explicitly allowed** (i.e. `allowed_users` is empty on the base class).
 This behavior was considered a too-permissive default in Authenticators that source large user pools like OAuthenticator, which would accept e.g. all users with a Google account by default.
-As a result, OAuthenticator 16 introduced two configuration options:
+As a result, OAuthenticator 16 introduced two configuration options: `allow_all` and `allow_existing_users`.
 
-1. `OAuthenticator.allow_all` (default: False)
-2. `OAuthenticator.allow_existing_users` (default: True if allowed_users is non-empty, False otherwise)
+JupyterHub 5 adopts these options for all Authenticators:
 
-JupyterHub 5 adopts these options for all Authenticators,
+1. `Authenticator.allow_all` (default: False)
+2. `Authenticator.allow_existing_users` (default: True if allowed_users is non-empty, False otherwise)
+
 having the effect that _some_ allow configuration is required for anyone to be able to login.
-If you want to preserve the pre-5.0 behavior with no `allow` configuration, set:
+If you want to preserve the pre-5.0 behavior with no explicit `allow` configuration, set:
 
 ```python
 c.Authenticator.allow_all = True

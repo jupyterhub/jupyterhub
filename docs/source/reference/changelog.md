@@ -34,8 +34,8 @@ Changes that are likely to require effort to upgrade:
 - New JupyterHub.subdomain_hook and default subdomain scheme
   is more reliable and should work for all usernames.
 - JupyterHub now requires Python 3.8
-- New `Authenticator.allow_all` and `allow_existing_users` configuration options
-  (the default for `allow_all` is False now, where it was True).
+- New `Authenticator.allow_all` and `allow_existing_users` configuration options.
+  Implicitly allowing all authenticated users when no explicit `allow` config is provided is no longer the default.
 - bootstrap is upgraded to 5.3, which may require upgrading if you
 
 ([full changelog](https://github.com/jupyterhub/jupyterhub/compare/4.0.2...5.0.0))
