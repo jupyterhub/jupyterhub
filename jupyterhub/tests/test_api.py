@@ -345,6 +345,8 @@ async def test_get_users_pagination(
         name = new_username()
         usernames.append(name)
         user = add_user(db, app, name=name)
+        # add some users to groups
+        # make sure group membership doesn't affect pagination count
         if i % 2:
             user.groups = groups
     db.commit()

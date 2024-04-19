@@ -137,7 +137,7 @@ class UserListAPIHandler(APIHandler):
                 # this implicitly gets Users with *any* active server
                 .filter(orm.Spawner.server != None)
                 # group-by ensures the count is correct
-                .group_by(orm.Spawner.user_id)
+                .group_by(orm.User.id)
             )
             if state_filter == "ready":
                 # have to post-process query results because active vs ready
