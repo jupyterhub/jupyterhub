@@ -333,14 +333,23 @@ async def test_get_users_pagination(
     # populate users
     usernames = []
 
+    groups = []
+    for i in range(3):
+        group = orm.Group(name=f"pagination-{i}")
+        db.add(group)
+    db.commit()
     existing_users = db.query(orm.User).order_by(orm.User.id.asc())
     usernames.extend(u.name for u in existing_users)
 
     for i in range(n - existing_users.count()):
         name = new_username()
         usernames.append(name)
-        add_user(db, app, name=name)
-    print(f"{db.query(orm.User).count()} total users")
+        user = add_user(db, app, name=name)
+        if i % 2:
+            user.groups = groups
+    db.commit()
+
+    total_users = db.query(orm.User).count()
 
     url = 'users'
     params = {}
@@ -372,6 +381,7 @@ async def test_get_users_pagination(
             )
             assert "include_stopped_servers" in next_query
         users = response["items"]
+        assert pagination["total"] == total_users
     else:
         users = response
     assert len(users) == expected_count
@@ -400,6 +410,7 @@ async def test_get_users_state_filter(app, state):
     has_two_inactive = add_user(db, app=app, name='has_two_inactive')
     # has_zero: no Spawners registered at all
     has_zero = add_user(db, app=app, name='has_zero')
+    total_users = db.query(orm.User).count()
 
     test_usernames = {
         "has_one_active",
@@ -442,14 +453,26 @@ async def test_get_users_state_filter(app, state):
     add_spawner(has_one_active, active=True, ready=False)
     add_spawner(has_one_active, "inactive", active=False)
 
-    r = await api_request(app, f'users?state={state}')
+    r = await api_request(
+        app, f'users?state={state}', headers={"Accept": PAGINATION_MEDIA_TYPE}
+    )
     if state == "invalid":
         assert r.status_code == 400
         return
     assert r.status_code == 200
 
-    usernames = sorted(u["name"] for u in r.json() if u["name"] in test_usernames)
+    response = r.json()
+    users = response["items"]
+    page = response["_pagination"]
+
+    usernames = sorted(u["name"] for u in users if u["name"] in test_usernames)
     assert usernames == expected
+    if state == "ready":
+        # "ready" can't actually get a correct count because it has post-filtering applied
+        # but it has an upper bound
+        assert page["total"] >= len(users)
+    else:
+        assert page["total"] == len(users)
 
 
 @mark.user
