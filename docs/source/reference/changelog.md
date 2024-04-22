@@ -20,6 +20,171 @@ Contributors to major version bumps in JupyterHub include:
 
 ## [Unreleased]
 
+## 5.0
+
+### 5.0.0 (beta) - 2024
+
+:::{note}
+JupyterHub 5 is available for testing as a prerelease:
+
+```
+pip install --upgrade --pre jupyterhub
+```
+
+:::
+
+5.0.0 is a major release of JupyterHub.
+It has lots of cool new features.
+
+For information about upgrading, see [upgrading to 5.0 documentation](upgrading-v5).
+
+Changes that are likely to require effort to upgrade:
+
+- New JupyterHub.subdomain_hook and default subdomain scheme
+  is more reliable and should work for all usernames.
+- JupyterHub now requires Python 3.8
+- New `Authenticator.allow_all` and `allow_existing_users` configuration options.
+  Implicitly allowing all authenticated users when no explicit `allow` config is provided is no longer the default.
+- bootstrap is upgraded to 5.3, which may require upgrading if you have custom page templates or use `Spawner.options_form`
+
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/4.0.2...5.0.0b1))
+
+#### API and Breaking Changes
+
+- update bootstrap to v5 [#4774](https://github.com/jupyterhub/jupyterhub/pull/4774) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio), [@manics](https://github.com/manics))
+- explicitly require groups in auth model when Authenticator.manage_groups is enabled [#4645](https://github.com/jupyterhub/jupyterhub/pull/4645) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- add JupyterHub.subdomain_hook [#4471](https://github.com/jupyterhub/jupyterhub/pull/4471) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio), [@akhmerov](https://github.com/akhmerov))
+
+#### New features added
+
+- add token_id to `/api/user` [#4790](https://github.com/jupyterhub/jupyterhub/pull/4790) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- Add authenticator-managed roles (`manage_roles`) [#4748](https://github.com/jupyterhub/jupyterhub/pull/4748) ([@krassowski](https://github.com/krassowski), [@minrk](https://github.com/minrk))
+- server-side sorting of admin page [#4722](https://github.com/jupyterhub/jupyterhub/pull/4722) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- Implement sort order in GET /users [#4721](https://github.com/jupyterhub/jupyterhub/pull/4721) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio), [@manics](https://github.com/manics))
+- admin: persist page view parameters in url [#4720](https://github.com/jupyterhub/jupyterhub/pull/4720) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- allow callable values in c.JupyterHub.template_vars [#4717](https://github.com/jupyterhub/jupyterhub/pull/4717) ([@kreuzert](https://github.com/kreuzert), [@minrk](https://github.com/minrk))
+- Add Authenticator config `allow_all` and `allow_existing_users` [#4701](https://github.com/jupyterhub/jupyterhub/pull/4701) ([@consideRatio](https://github.com/consideRatio), [@minrk](https://github.com/minrk), [@manics](https://github.com/manics))
+- add Spawner.poll_jitter [#4648](https://github.com/jupyterhub/jupyterhub/pull/4648) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics), [@rcthomas](https://github.com/rcthomas))
+- add event_loop_interval_seconds metric [#4615](https://github.com/jupyterhub/jupyterhub/pull/4615) ([@minrk](https://github.com/minrk), [@yuvipanda](https://github.com/yuvipanda))
+- user-initiated sharing [#4594](https://github.com/jupyterhub/jupyterhub/pull/4594) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio), [@sgaist](https://github.com/sgaist), [@manics](https://github.com/manics), [@krassowski](https://github.com/krassowski))
+- Improve requests for tokens with scopes [#4578](https://github.com/jupyterhub/jupyterhub/pull/4578) ([@minrk](https://github.com/minrk))
+- Add `JUPYTERHUB_METRICS_PREFIX` environment variable to customize metrics prefix [#4525](https://github.com/jupyterhub/jupyterhub/pull/4525) ([@danilopeixoto](https://github.com/danilopeixoto), [@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio), [@nreith](https://github.com/nreith), [@manics](https://github.com/manics))
+- Support Jupyverse as a single-user server [#4520](https://github.com/jupyterhub/jupyterhub/pull/4520) ([@davidbrochart](https://github.com/davidbrochart), [@minrk](https://github.com/minrk))
+- add JupyterHub.public_url config [#4479](https://github.com/jupyterhub/jupyterhub/pull/4479) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio), [@manics](https://github.com/manics), [@yuvipanda](https://github.com/yuvipanda))
+- add JupyterHub.subdomain_hook [#4471](https://github.com/jupyterhub/jupyterhub/pull/4471) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio), [@akhmerov](https://github.com/akhmerov))
+
+#### Enhancements made
+
+- Token UI: move button to after form fields [#4783](https://github.com/jupyterhub/jupyterhub/pull/4783) ([@manics](https://github.com/manics), [@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- Support forbidding unauthenticated access (`allow_unauthenticated_access = False`) [#4779](https://github.com/jupyterhub/jupyterhub/pull/4779) ([@krassowski](https://github.com/krassowski), [@minrk](https://github.com/minrk))
+- Compare major hub and singleuser versions only [#4658](https://github.com/jupyterhub/jupyterhub/pull/4658) ([@manics](https://github.com/manics), [@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- Log token deletions via API [#4644](https://github.com/jupyterhub/jupyterhub/pull/4644) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics))
+- add warning when an oauth client is used after its secret is deleted [#4643](https://github.com/jupyterhub/jupyterhub/pull/4643) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- Include LDAP groups in local spawner gids [#4628](https://github.com/jupyterhub/jupyterhub/pull/4628) ([@uellue](https://github.com/uellue), [@minrk](https://github.com/minrk))
+- move service oauth state from cookies to memory [#4608](https://github.com/jupyterhub/jupyterhub/pull/4608) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio), [@sgaist](https://github.com/sgaist), [@yuvipanda](https://github.com/yuvipanda))
+- only show links to services users have access to [#4585](https://github.com/jupyterhub/jupyterhub/pull/4585) ([@marcwit](https://github.com/marcwit), [@minrk](https://github.com/minrk))
+- service auth: Don't log user model on auth by default [#4572](https://github.com/jupyterhub/jupyterhub/pull/4572) ([@diocas](https://github.com/diocas), [@minrk](https://github.com/minrk))
+- only set 'domain' field on session-id cookie [#4563](https://github.com/jupyterhub/jupyterhub/pull/4563) ([@minrk](https://github.com/minrk))
+- Improve debugging when waiting for servers [#4561](https://github.com/jupyterhub/jupyterhub/pull/4561) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- Improve query performance with eager loading [#4494](https://github.com/jupyterhub/jupyterhub/pull/4494) ([@minrk](https://github.com/minrk), [@ryanlovett](https://github.com/ryanlovett))
+
+#### Bugs fixed
+
+- Fix counts on list users queries [#4794](https://github.com/jupyterhub/jupyterhub/pull/4794) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- set login cookie if user changed [#4739](https://github.com/jupyterhub/jupyterhub/pull/4739) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- Catch ValueError while waiting for server to be reachable [#4733](https://github.com/jupyterhub/jupyterhub/pull/4733) ([@kreuzert](https://github.com/kreuzert), [@minrk](https://github.com/minrk))
+- resolve paths in disable_user_config [#4713](https://github.com/jupyterhub/jupyterhub/pull/4713) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio), [@lumberbot-app](https://github.com/lumberbot-app))
+- Unescape jinja username [#4679](https://github.com/jupyterhub/jupyterhub/pull/4679) ([@manics](https://github.com/manics), [@minrk](https://github.com/minrk), [@lumberbot-app](https://github.com/lumberbot-app))
+- Improve validation, docs for token.expires_in [#4677](https://github.com/jupyterhub/jupyterhub/pull/4677) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio), [@manics](https://github.com/manics))
+- avoid attempting to patch removed IPythonHandler with notebook v7 [#4651](https://github.com/jupyterhub/jupyterhub/pull/4651) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics))
+- simplify, avoid errors in parsing accept headers [#4632](https://github.com/jupyterhub/jupyterhub/pull/4632) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics), [@lumberbot-app](https://github.com/lumberbot-app))
+- avoid setting unused oauth state cookies on API requests [#4630](https://github.com/jupyterhub/jupyterhub/pull/4630) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio), [@mbiette](https://github.com/mbiette), [@lumberbot-app](https://github.com/lumberbot-app))
+- fix package_data in docker images [#4596](https://github.com/jupyterhub/jupyterhub/pull/4596) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio), [@lumberbot-app](https://github.com/lumberbot-app))
+- fix mutation of frozenset in scope intersection [#4570](https://github.com/jupyterhub/jupyterhub/pull/4570) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- Use {base_url}/api for checking hub version [#4567](https://github.com/jupyterhub/jupyterhub/pull/4567) ([@jabbera](https://github.com/jabbera), [@minrk](https://github.com/minrk))
+- Use `user.stop` to cleanup spawners that stopped while Hub was down [#4562](https://github.com/jupyterhub/jupyterhub/pull/4562) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- singleuser extension: persist token from ?token=... url in cookie [#4560](https://github.com/jupyterhub/jupyterhub/pull/4560) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio), [@kzgrzendek](https://github.com/kzgrzendek))
+- fail if external oauth service lacks required oauth_redirect_uri [#4555](https://github.com/jupyterhub/jupyterhub/pull/4555) ([@minrk](https://github.com/minrk), [@yuvipanda](https://github.com/yuvipanda), [@consideRatio](https://github.com/consideRatio), [@lumberbot-app](https://github.com/lumberbot-app))
+- Fix include_stopped_servers in paginated next_url [#4542](https://github.com/jupyterhub/jupyterhub/pull/4542) ([@jabbera](https://github.com/jabbera), [@minrk](https://github.com/minrk))
+
+#### Maintenance and upkeep improvements
+
+- increase docker build timeout to 30 minutes [#4795](https://github.com/jupyterhub/jupyterhub/pull/4795) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- adopt djlint linter/autoformatter for jinja templates [#4793](https://github.com/jupyterhub/jupyterhub/pull/4793) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- test: avoid producing '[group]' string in output [#4782](https://github.com/jupyterhub/jupyterhub/pull/4782) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio), [@krassowski](https://github.com/krassowski))
+- clarify error template debug log [#4781](https://github.com/jupyterhub/jupyterhub/pull/4781) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- forward-port changes for 4.1.1 [#4747](https://github.com/jupyterhub/jupyterhub/pull/4747) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- run browser tests in subdomain [#4738](https://github.com/jupyterhub/jupyterhub/pull/4738) ([@minrk](https://github.com/minrk))
+- avoid duplicate jupyterhub installation for docs [#4737](https://github.com/jupyterhub/jupyterhub/pull/4737) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics))
+- switch to ruff for lint, format [#4724](https://github.com/jupyterhub/jupyterhub/pull/4724) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio), [@manics](https://github.com/manics))
+- admin: update navigation for react-router v6 [#4723](https://github.com/jupyterhub/jupyterhub/pull/4723) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- Update `black.target_version` in `pyproject.toml` [#4712](https://github.com/jupyterhub/jupyterhub/pull/4712) ([@Ph0tonic](https://github.com/Ph0tonic), [@consideRatio](https://github.com/consideRatio))
+- bump pythons, base images on CI [#4704](https://github.com/jupyterhub/jupyterhub/pull/4704) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- test Python 3.12 [#4703](https://github.com/jupyterhub/jupyterhub/pull/4703) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- enable log capture in pytest, compatibility with pytest 8 [#4684](https://github.com/jupyterhub/jupyterhub/pull/4684) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- don't run check_allowed until after check_blocked_users resolves [#4683](https://github.com/jupyterhub/jupyterhub/pull/4683) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- avoid deprecated datetime.utcnow [#4665](https://github.com/jupyterhub/jupyterhub/pull/4665) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- temporarily pin pytest-asyncio [#4663](https://github.com/jupyterhub/jupyterhub/pull/4663) ([@minrk](https://github.com/minrk))
+- Use jupyterhub repository_owner in registry-overviews [#4642](https://github.com/jupyterhub/jupyterhub/pull/4642) ([@mathbunnyru](https://github.com/mathbunnyru), [@minrk](https://github.com/minrk))
+- Publish to Docker Hub alongside Quay.io [#4641](https://github.com/jupyterhub/jupyterhub/pull/4641) ([@consideRatio](https://github.com/consideRatio), [@minrk](https://github.com/minrk))
+- Add workflow to update registry overviews [#4634](https://github.com/jupyterhub/jupyterhub/pull/4634) ([@mathbunnyru](https://github.com/mathbunnyru), [@minrk](https://github.com/minrk))
+- Set env.REGISTRY to be quay.io correctly [#4625](https://github.com/jupyterhub/jupyterhub/pull/4625) ([@yuvipanda](https://github.com/yuvipanda), [@manics](https://github.com/manics))
+- FIx: typo in auth.py [#4619](https://github.com/jupyterhub/jupyterhub/pull/4619) ([@varundhand](https://github.com/varundhand), [@consideRatio](https://github.com/consideRatio))
+- browser test: wait for token request to finish before reloading [#4618](https://github.com/jupyterhub/jupyterhub/pull/4618) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- try to improve reliability of test_external_proxy [#4617](https://github.com/jupyterhub/jupyterhub/pull/4617) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio), [@lumberbot-app](https://github.com/lumberbot-app))
+- test: ensure test server is added to proxy before talking to it [#4616](https://github.com/jupyterhub/jupyterhub/pull/4616) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio), [@lumberbot-app](https://github.com/lumberbot-app))
+- Move from dockerhub to quay.io [#4612](https://github.com/jupyterhub/jupyterhub/pull/4612) ([@yuvipanda](https://github.com/yuvipanda), [@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio), [@manics](https://github.com/manics), [@mathbunnyru](https://github.com/mathbunnyru))
+- jsx: trade yarn for npm [#4598](https://github.com/jupyterhub/jupyterhub/pull/4598) ([@minrk](https://github.com/minrk), [@yuvipanda](https://github.com/yuvipanda), [@consideRatio](https://github.com/consideRatio))
+- update nodesource installation in docker [#4597](https://github.com/jupyterhub/jupyterhub/pull/4597) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- skip linkcheck for linux.die.net [#4586](https://github.com/jupyterhub/jupyterhub/pull/4586) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- move oldest-dependencies to requirements.old [#4583](https://github.com/jupyterhub/jupyterhub/pull/4583) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics))
+- TST: apply lower-bound pins during install, rather than later [#4571](https://github.com/jupyterhub/jupyterhub/pull/4571) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- undeprecate JupyterHub.ip/port/base_url [#4564](https://github.com/jupyterhub/jupyterhub/pull/4564) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics), [@consideRatio](https://github.com/consideRatio), [@yuvipanda](https://github.com/yuvipanda))
+- Fix typo in comment in spawner.py [#4546](https://github.com/jupyterhub/jupyterhub/pull/4546) ([@umka1332](https://github.com/umka1332), [@consideRatio](https://github.com/consideRatio))
+
+#### Documentation improvements
+
+- doc: list/get token response is different from post [#4784](https://github.com/jupyterhub/jupyterhub/pull/4784) ([@manics](https://github.com/manics), [@minrk](https://github.com/minrk))
+- Fix typo in docstring about Authenticator.blocked_users [#4769](https://github.com/jupyterhub/jupyterhub/pull/4769) ([@consideRatio](https://github.com/consideRatio), [@minrk](https://github.com/minrk))
+- Officially adopt EffVer [#4743](https://github.com/jupyterhub/jupyterhub/pull/4743) ([@minrk](https://github.com/minrk), [@GeorgianaElena](https://github.com/GeorgianaElena), [@consideRatio](https://github.com/consideRatio), [@yuvipanda](https://github.com/yuvipanda), [@jacobtomlinson](https://github.com/jacobtomlinson))
+- Consistently use minimum Python version in docs [#4741](https://github.com/jupyterhub/jupyterhub/pull/4741) ([@manics](https://github.com/manics), [@minrk](https://github.com/minrk))
+- Bump required Python version in contributing setup to 3.8 [#4736](https://github.com/jupyterhub/jupyterhub/pull/4736) ([@krassowski](https://github.com/krassowski), [@minrk](https://github.com/minrk))
+- services.md: idle-culler does not need admin [#4729](https://github.com/jupyterhub/jupyterhub/pull/4729) ([@manics](https://github.com/manics), [@minrk](https://github.com/minrk))
+- Fix typo in the `rest-api.yml` [#4725](https://github.com/jupyterhub/jupyterhub/pull/4725) ([@aktech](https://github.com/aktech), [@minrk](https://github.com/minrk))
+- remove broken link to old wiki [#4708](https://github.com/jupyterhub/jupyterhub/pull/4708) ([@rizz-sd](https://github.com/rizz-sd), [@minrk](https://github.com/minrk))
+- Update allowed_users docstring [#4706](https://github.com/jupyterhub/jupyterhub/pull/4706) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- Use redoc for REST API [#4700](https://github.com/jupyterhub/jupyterhub/pull/4700) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics))
+- clarify some points where users can disable security for their own servers [#4699](https://github.com/jupyterhub/jupyterhub/pull/4699) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- Note that you can throw a 403 from authenticator methods [#4682](https://github.com/jupyterhub/jupyterhub/pull/4682) ([@yuvipanda](https://github.com/yuvipanda), [@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio), [@manics](https://github.com/manics))
+- pre_spawn_hook doc: make example generic to all spawners [#4678](https://github.com/jupyterhub/jupyterhub/pull/4678) ([@manics](https://github.com/manics), [@yuvipanda](https://github.com/yuvipanda), [@consideRatio](https://github.com/consideRatio))
+- Add appropriate scope in examples/service-whoami-flask [#4676](https://github.com/jupyterhub/jupyterhub/pull/4676) ([@rschroll](https://github.com/rschroll), [@minrk](https://github.com/minrk))
+- use $http_host in nginx proxy header [#4671](https://github.com/jupyterhub/jupyterhub/pull/4671) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics))
+- docs: Remove non-actionable step from developer setup [#4662](https://github.com/jupyterhub/jupyterhub/pull/4662) ([@yuvipanda](https://github.com/yuvipanda), [@minrk](https://github.com/minrk))
+- ETHZ added to references in documentation [#4638](https://github.com/jupyterhub/jupyterhub/pull/4638) ([@BenGig](https://github.com/BenGig), [@minrk](https://github.com/minrk))
+- Authenticator reference doc: update authenticate return [#4633](https://github.com/jupyterhub/jupyterhub/pull/4633) ([@manics](https://github.com/manics), [@minrk](https://github.com/minrk))
+- doc: Add the include_stopped_server field to the /users/name interface [#4627](https://github.com/jupyterhub/jupyterhub/pull/4627) ([@eeeeeeeason](https://github.com/eeeeeeeason), [@minrk](https://github.com/minrk))
+- Remove links to okpy from docs [#4603](https://github.com/jupyterhub/jupyterhub/pull/4603) ([@yuvipanda](https://github.com/yuvipanda), [@consideRatio](https://github.com/consideRatio))
+- Change `db_url` schema in docs from `postgres` to `postgresql` [#4602](https://github.com/jupyterhub/jupyterhub/pull/4602) ([@johncf](https://github.com/johncf), [@yuvipanda](https://github.com/yuvipanda))
+- add sirepo to gallery [#4568](https://github.com/jupyterhub/jupyterhub/pull/4568) ([@LexiJess](https://github.com/LexiJess), [@minrk](https://github.com/minrk))
+- undeprecate JupyterHub.ip/port/base_url [#4564](https://github.com/jupyterhub/jupyterhub/pull/4564) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics), [@consideRatio](https://github.com/consideRatio), [@yuvipanda](https://github.com/yuvipanda))
+- Remove broken link to BIDS video [#4558](https://github.com/jupyterhub/jupyterhub/pull/4558) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio), [@manics](https://github.com/manics))
+- add some more service credential docs [#4556](https://github.com/jupyterhub/jupyterhub/pull/4556) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- Small fixes to services docs [#4552](https://github.com/jupyterhub/jupyterhub/pull/4552) ([@consideRatio](https://github.com/consideRatio), [@yuvipanda](https://github.com/yuvipanda), [@minrk](https://github.com/minrk))
+- Fix external-oauth example jupyterhub_config.py [#4550](https://github.com/jupyterhub/jupyterhub/pull/4550) ([@yuvipanda](https://github.com/yuvipanda), [@minrk](https://github.com/minrk))
+- Document `oauth_client_id` must start with service- [#4549](https://github.com/jupyterhub/jupyterhub/pull/4549) ([@yuvipanda](https://github.com/yuvipanda), [@consideRatio](https://github.com/consideRatio))
+- Mention NomadSpawner [#4536](https://github.com/jupyterhub/jupyterhub/pull/4536) ([@mxab](https://github.com/mxab), [@minrk](https://github.com/minrk))
+- Rename parameter for post_auth_hook to be clearer [#4511](https://github.com/jupyterhub/jupyterhub/pull/4511) ([@yuvipanda](https://github.com/yuvipanda), [@minrk](https://github.com/minrk))
+- Documentation for RTC for JupyterLab >= 4.0 [#4508](https://github.com/jupyterhub/jupyterhub/pull/4508) ([@lrlunin](https://github.com/lrlunin), [@minrk](https://github.com/minrk))
+
+#### Contributors to this release
+
+The following people contributed discussions, new ideas, code and documentation contributions, and review.
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/#how-does-this-tool-define-contributions-in-the-reports).
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2023-08-10&to=2024-04-19&type=c))
+
+@Achele ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3AAchele+updated%3A2023-08-10..2024-04-19&type=Issues)) | @akashthedeveloper ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aakashthedeveloper+updated%3A2023-08-10..2024-04-19&type=Issues)) | @akhmerov ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aakhmerov+updated%3A2023-08-10..2024-04-19&type=Issues)) | @aktech ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aaktech+updated%3A2023-08-10..2024-04-19&type=Issues)) | @balajialg ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Abalajialg+updated%3A2023-08-10..2024-04-19&type=Issues)) | @BenGig ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3ABenGig+updated%3A2023-08-10..2024-04-19&type=Issues)) | @BhavyaT-135 ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3ABhavyaT-135+updated%3A2023-08-10..2024-04-19&type=Issues)) | @bl-aire ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Abl-aire+updated%3A2023-08-10..2024-04-19&type=Issues)) | @blink1073 ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ablink1073+updated%3A2023-08-10..2024-04-19&type=Issues)) | @cccs-nik ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Acccs-nik+updated%3A2023-08-10..2024-04-19&type=Issues)) | @consideRatio ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3AconsideRatio+updated%3A2023-08-10..2024-04-19&type=Issues)) | @danilopeixoto ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Adanilopeixoto+updated%3A2023-08-10..2024-04-19&type=Issues)) | @davidbrochart ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Adavidbrochart+updated%3A2023-08-10..2024-04-19&type=Issues)) | @diocas ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Adiocas+updated%3A2023-08-10..2024-04-19&type=Issues)) | @echarles ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aecharles+updated%3A2023-08-10..2024-04-19&type=Issues)) | @eeeeeeeason ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aeeeeeeeason+updated%3A2023-08-10..2024-04-19&type=Issues)) | @fcollonval ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Afcollonval+updated%3A2023-08-10..2024-04-19&type=Issues)) | @GeorgianaElena ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3AGeorgianaElena+updated%3A2023-08-10..2024-04-19&type=Issues)) | @I-Am-D-B ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3AI-Am-D-B+updated%3A2023-08-10..2024-04-19&type=Issues)) | @jabbera ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ajabbera+updated%3A2023-08-10..2024-04-19&type=Issues)) | @jacobtomlinson ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ajacobtomlinson+updated%3A2023-08-10..2024-04-19&type=Issues)) | @jakirkham ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ajakirkham+updated%3A2023-08-10..2024-04-19&type=Issues)) | @johncf ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ajohncf+updated%3A2023-08-10..2024-04-19&type=Issues)) | @jrdnbradford ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ajrdnbradford+updated%3A2023-08-10..2024-04-19&type=Issues)) | @krassowski ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Akrassowski+updated%3A2023-08-10..2024-04-19&type=Issues)) | @kreuzert ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Akreuzert+updated%3A2023-08-10..2024-04-19&type=Issues)) | @ktaletsk ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aktaletsk+updated%3A2023-08-10..2024-04-19&type=Issues)) | @kzgrzendek ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Akzgrzendek+updated%3A2023-08-10..2024-04-19&type=Issues)) | @LexiJess ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3ALexiJess+updated%3A2023-08-10..2024-04-19&type=Issues)) | @lrlunin ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Alrlunin+updated%3A2023-08-10..2024-04-19&type=Issues)) | @lumberbot-app ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Alumberbot-app+updated%3A2023-08-10..2024-04-19&type=Issues)) | @mahendrapaipuri ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amahendrapaipuri+updated%3A2023-08-10..2024-04-19&type=Issues)) | @manics ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amanics+updated%3A2023-08-10..2024-04-19&type=Issues)) | @marcwit ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amarcwit+updated%3A2023-08-10..2024-04-19&type=Issues)) | @mathbunnyru ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amathbunnyru+updated%3A2023-08-10..2024-04-19&type=Issues)) | @mbiette ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ambiette+updated%3A2023-08-10..2024-04-19&type=Issues)) | @minrk ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk+updated%3A2023-08-10..2024-04-19&type=Issues)) | @mxab ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amxab+updated%3A2023-08-10..2024-04-19&type=Issues)) | @nreith ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Anreith+updated%3A2023-08-10..2024-04-19&type=Issues)) | @Ph0tonic ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3APh0tonic+updated%3A2023-08-10..2024-04-19&type=Issues)) | @rcthomas ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Arcthomas+updated%3A2023-08-10..2024-04-19&type=Issues)) | @rizz-sd ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Arizz-sd+updated%3A2023-08-10..2024-04-19&type=Issues)) | @rschroll ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Arschroll+updated%3A2023-08-10..2024-04-19&type=Issues)) | @ryanlovett ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aryanlovett+updated%3A2023-08-10..2024-04-19&type=Issues)) | @sgaist ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Asgaist+updated%3A2023-08-10..2024-04-19&type=Issues)) | @shubham0473 ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ashubham0473+updated%3A2023-08-10..2024-04-19&type=Issues)) | @Temidayo32 ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3ATemidayo32+updated%3A2023-08-10..2024-04-19&type=Issues)) | @uellue ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Auellue+updated%3A2023-08-10..2024-04-19&type=Issues)) | @umka1332 ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aumka1332+updated%3A2023-08-10..2024-04-19&type=Issues)) | @varundhand ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Avarundhand+updated%3A2023-08-10..2024-04-19&type=Issues)) | @willingc ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Awillingc+updated%3A2023-08-10..2024-04-19&type=Issues)) | @yuvipanda ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ayuvipanda+updated%3A2023-08-10..2024-04-19&type=Issues))
+
 ## 4.1
 
 ### 4.1.5 - 2024-04-04

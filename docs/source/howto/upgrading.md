@@ -14,6 +14,14 @@ JupyterHub is painless, quick and with minimal user interruption.
 
 The steps are discussed in detail, so if you get stuck at any step you can always refer to this guide.
 
+For specific version migrations:
+
+```{toctree}
+:maxdepth: 1
+
+./upgrading-v5
+```
+
 ## Read the Changelog
 
 The [changelog](changelog) contains information on what has
