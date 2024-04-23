@@ -42,6 +42,7 @@ repos:
       - id: djlint-reformat-jinja
         files: ".*templates/.*.html"
         types_or: ["html"]
+        exclude: redoc.html
       - id: djlint-jinja
         files: ".*templates/.*.html"
         types_or: ["html"]
