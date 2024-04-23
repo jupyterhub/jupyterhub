@@ -91,11 +91,7 @@ async def test_hubauth_token(app, mockservice_url, create_user_with_scopes):
         public_url(app, mockservice_url) + '/whoami/?token=%s' % token,
         allow_redirects=False,
     )
-    assert r.status_code == 302
-    assert 'Location' in r.headers
-    location = r.headers['Location']
-    path = urlparse(location).path
-    assert path.endswith('/hub/login')
+    assert r.status_code == 403
 
 
 @pytest.mark.parametrize(
@@ -177,11 +173,7 @@ async def test_hubauth_service_token(request, app, mockservice_url, scopes, allo
         public_url(app, mockservice_url) + 'whoami/?token=%s' % token,
         allow_redirects=False,
     )
-    assert r.status_code == 302
-    assert 'Location' in r.headers
-    location = r.headers['Location']
-    path = urlparse(location).path
-    assert path.endswith('/hub/login')
+    assert r.status_code == 403
 
 
 @pytest.mark.parametrize(
