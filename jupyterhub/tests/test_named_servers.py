@@ -69,6 +69,12 @@ async def test_default_server(app, named_servers):
     r.raise_for_status()
 
     user_model = normalize_user(r.json())
+    full_progress_url = None
+    if app.public_url:
+        full_progress_url = url_path_join(
+            app.public_url,
+            f'hub/api/users/{username}/server/progress',
+        )
     assert user_model == fill_user(
         {
             'name': username,
@@ -88,6 +94,8 @@ async def test_default_server(app, named_servers):
                     'progress_url': f'PREFIX/hub/api/users/{username}/server/progress',
                     'state': {'pid': 0},
                     'user_options': {},
+                    'full_url': user.public_url() or None,
+                    'full_progress_url': full_progress_url,
                 }
             },
         }
@@ -157,6 +165,14 @@ async def test_create_named_server(
     assert db_server_names == {"", servername}
 
     user_model = normalize_user(r.json())
+
+    full_progress_url = None
+    if app.public_url:
+        full_progress_url = url_path_join(
+            app.public_url,
+            f'hub/api/users/{username}/servers/{escapedname}/progress',
+        )
+
     assert user_model == fill_user(
         {
             'name': username,
@@ -175,6 +191,8 @@ async def test_create_named_server(
                     'progress_url': f'PREFIX/hub/api/users/{username}/servers/{escapedname}/progress',
                     'state': {'pid': 0},
                     'user_options': {},
+                    'full_url': user.public_url(name) or None,
+                    'full_progress_url': full_progress_url,
                 }
                 for name in [servername]
             },

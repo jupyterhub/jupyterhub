@@ -1714,12 +1714,31 @@ components:
         url:
           type: string
           description: |
-            The URL where the server can be accessed
+            The URL path where the server can be accessed
             (typically /user/:name/:server.name/).
+            Will be a full URL if subdomains are configured.
         progress_url:
           type: string
           description: |
-            The URL for an event-stream to retrieve events during a spawn.
+            The URL path for an event-stream to retrieve events during a spawn.
+        full_url:
+          type:
+            - string
+            - "null"
+          description: |
+            The full URL of the server (`https://hub.example.org/user/:name/:servername`).
+            `null` unless JupyterHub.public_url or subdomains are configured.
+
+            Added in 5.0.
+        full_progress_url:
+          type:
+            - string
+            - "null"
+          description: |
+            The full URL for the progress events (`https://hub.example.org/hub/api/users/:name/servers/:servername/progress`).
+            `null` unless JupyterHub.public_url is configured.
+
+            Added in 5.0.
         started:
           type: string
           description: UTC timestamp when the server was last started.
