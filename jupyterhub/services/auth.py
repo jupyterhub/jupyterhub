@@ -250,7 +250,6 @@ class HubAuth(SingletonConfigurable):
       fetched from JUPYTERHUB_API_URL by default.
     - cookie_cache_max_age: the number of seconds responses
       from the Hub should be cached.
-    - login_url (the *public* ``/hub/login`` URL of the Hub).
     """
 
     hub_host = Unicode(
@@ -331,16 +330,17 @@ class HubAuth(SingletonConfigurable):
         return url_path_join(os.getenv('JUPYTERHUB_BASE_URL') or '/', 'hub') + '/'
 
     login_url = Unicode(
-        '/hub/login',
-        help="""The login URL to use
-
-        Typically /hub/login
+        '',
+        help="""The login URL to use, if any.
+        
+        The base HubAuth class doesn't support login via URL,
+        and will raise 403 on `@web.authenticated` requests without a valid token.
+        
+        An empty string here raises 403 errors instead of redirecting.
+        
+        HubOAuth will redirect to /hub/api/oauth2/authorize.
         """,
     ).tag(config=True)
-
-    @default('login_url')
-    def _default_login_url(self):
-        return self.hub_host + url_path_join(self.hub_prefix, 'login')
 
     keyfile = Unicode(
         os.getenv('JUPYTERHUB_SSL_KEYFILE', ''),
@@ -1385,6 +1385,12 @@ class HubAuthenticated:
         if self._hub_login_url is not None:
             # cached value, don't call this more than once per handler
             return self._hub_login_url
+
+        if not self.hub_auth.login_url:
+            # HubOAuth is required for login via redirect,
+            # base class can only raise to avoid redirect loops
+            raise HTTPError(403)
+
         # temporary override at setting level,
         # to allow any subclass overrides of get_login_url to preserve their effect
         # for example, APIHandler raises 403 to prevent redirects
