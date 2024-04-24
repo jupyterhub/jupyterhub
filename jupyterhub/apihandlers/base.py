@@ -202,7 +202,24 @@ class APIHandler(BaseHandler):
             'url': url_path_join(user.url, url_escape_path(spawner.name), '/'),
             'user_options': spawner.user_options,
             'progress_url': user.progress_url(spawner.name),
+            'full_url': None,
+            'full_progress_url': None,
         }
+        # fill out full_url fields
+        public_url = self.settings.get("public_url")
+        if public_url:
+            model["full_progress_url"] = urlunparse(
+                public_url._replace(path=model["progress_url"])
+            )
+            if user.host:
+                # url already has a domain
+                model["full_url"] = model["url"]
+            else:
+                model["full_url"] = urlunparse(public_url._replace(path=model["url"]))
+        elif user.host:
+            # url already has a domain
+            model["full_url"] = model["url"]
+
         scope_filter = self.get_scope_filter('admin:server_state')
         if scope_filter(spawner, kind='server'):
             model['state'] = state
