@@ -207,18 +207,16 @@ class APIHandler(BaseHandler):
         }
         # fill out full_url fields
         public_url = self.settings.get("public_url")
+        if urlparse(model["url"]).netloc:
+            # if using subdomains, this is already a full URL
+            model["full_url"] = model["url"]
         if public_url:
             model["full_progress_url"] = urlunparse(
                 public_url._replace(path=model["progress_url"])
             )
-            if user.host:
-                # url already has a domain
-                model["full_url"] = model["url"]
-            else:
+            if not model["full_url"]:
+                # set if not defined already by subdomain
                 model["full_url"] = urlunparse(public_url._replace(path=model["url"]))
-        elif user.host:
-            # url already has a domain
-            model["full_url"] = model["url"]
 
         scope_filter = self.get_scope_filter('admin:server_state')
         if scope_filter(spawner, kind='server'):
