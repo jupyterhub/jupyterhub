@@ -18,7 +18,11 @@ from tempfile import mkdtemp
 from textwrap import dedent
 from urllib.parse import urlparse
 
-from async_generator import aclosing
+if sys.version_info >= (3, 10):
+    from contextlib import aclosing
+else:
+    from async_generator import aclosing
+
 from sqlalchemy import inspect
 from tornado.ioloop import PeriodicCallback
 from traitlets import (

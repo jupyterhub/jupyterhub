@@ -5,9 +5,14 @@
 import asyncio
 import inspect
 import json
+import sys
 from datetime import timedelta, timezone
 
-from async_generator import aclosing
+if sys.version_info >= (3, 10):
+    from contextlib import aclosing
+else:
+    from async_generator import aclosing
+
 from dateutil.parser import parse as parse_date
 from sqlalchemy import func, or_
 from sqlalchemy.orm import joinedload, raiseload, selectinload  # noqa

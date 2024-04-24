@@ -27,8 +27,12 @@ from hmac import compare_digest
 from operator import itemgetter
 from urllib.parse import quote
 
+if sys.version_info >= (3, 10):
+    from contextlib import aclosing
+else:
+    from async_generator import aclosing
+
 import idna
-from async_generator import aclosing
 from sqlalchemy.exc import SQLAlchemyError
 from tornado import gen, ioloop, web
 from tornado.httpclient import AsyncHTTPClient, HTTPError
