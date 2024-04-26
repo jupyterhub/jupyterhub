@@ -3,9 +3,8 @@
 import os
 import sys
 from binascii import hexlify
+from contextlib import asynccontextmanager
 from subprocess import Popen
-
-from async_generator import asynccontextmanager
 
 from ..utils import (
     exponential_backoff,
