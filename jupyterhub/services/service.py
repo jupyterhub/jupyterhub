@@ -167,6 +167,12 @@ class Service(LoggingConfigurable):
     - url: str (None)
         The URL where the service is/should be.
         If specified, the service will be added to the proxy at /services/:name
+    - oauth_redirect_url: str ('/services/:name/oauth_redirect')
+        The URI for the oauth redirect.
+
+        Not usually needed, but must be set for external services that are not accessed through the proxy,
+        or any service which have a redirect URI different from the default of `/services/:name/oauth_redirect`.
+
     - oauth_no_confirm: bool(False)
         Whether this service should be allowed to complete oauth
         with logged-in users without prompting for confirmation.
@@ -335,7 +341,9 @@ class Service(LoggingConfigurable):
     oauth_redirect_uri = Unicode(
         help="""OAuth redirect URI for this service.
 
-        You shouldn't generally need to change this.
+        Must be set for external services that are not accessed through the proxy,
+        or any service which have a redirect URI different from the default.
+
         Default: `/services/:name/oauth_callback`
         """
     ).tag(input=True, in_db=False)
