@@ -32,6 +32,20 @@ async def login(browser, username, password=None):
     await browser.get_by_role("button", name="Sign in").click()
 
 
+async def login_home(browser, app, username):
+    """Visit login page, login, go home
+
+    A good way to start a session
+    """
+    login_url = url_concat(
+        url_path_join(public_url(app), "hub/login"),
+        {"next": ujoin(app.hub.base_url, "home")},
+    )
+    await browser.goto(login_url)
+    async with browser.expect_navigation(url=re.compile(".*/hub/home")):
+        await login(browser, username)
+
+
 async def test_open_login_page(app, browser):
     login_url = url_path_join(public_host(app), app.hub.base_url, "login")
     await browser.goto(login_url)
@@ -1365,6 +1379,17 @@ async def test_login_xsrf_initial_cookies(app, browser, case, username):
     assert cookies == cookies_2
     # login is successful
     await login(browser, username, username)
+
+
+async def test_prefix_redirect_not_running(browser, app, user):
+    # tests PrefixRedirectHandler for stopped servers
+    await login_home(browser, app, user.name)
+    # visit user url (includes subdomain, if enabled)
+    url = public_url(app, user, "/tree/")
+    await browser.goto(url)
+    # make sure we end up on the Hub (domain included)
+    expected_url = url_path_join(public_url(app), f"hub/user/{user.name}/tree/")
+    await expect(browser).to_have_url(expected_url)
 
 
 def _cookie_dict(cookie_list):
