@@ -1115,13 +1115,16 @@ class LocalAuthenticator(Authenticator):
         """
         if not self.allowed_groups:
             return False
+        user_group_gids = set(
+            self._getgrouplist(username, self._getpwnam(username).pw_gid)
+        )
         for grnam in self.allowed_groups:
             try:
                 group = self._getgrnam(grnam)
             except KeyError:
                 self.log.error('No such group: [%s]' % grnam)
                 continue
-            if username in group.gr_mem:
+            if group.gr_gid in user_group_gids:
                 return True
         return False
 

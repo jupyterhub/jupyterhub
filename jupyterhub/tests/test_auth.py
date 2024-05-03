@@ -165,21 +165,35 @@ async def test_pam_auth_allowed():
 
 
 async def test_pam_auth_allowed_groups():
-    def getgrnam(name):
-        return MockStructGroup('grp', ['kaylee'])
+    class TestAuthenticator(MockPAMAuthenticator):
+        @staticmethod
+        def _getpwnam(name):
+            return MockStructPasswd(name=name)
 
-    authenticator = MockPAMAuthenticator(allowed_groups={'group'}, allow_all=False)
+        @staticmethod
+        def _getgrnam(name):
+            if name == "group":
+                return MockStructGroup('grp', ['kaylee'], gid=1234)
+            else:
+                return None
 
-    with mock.patch.object(authenticator, '_getgrnam', getgrnam):
-        authorized = await authenticator.get_authenticated_user(
-            None, {'username': 'kaylee', 'password': 'kaylee'}
-        )
+        @staticmethod
+        def _getgrouplist(username, gid):
+            gids = [gid]
+            if username == "kaylee":
+                gids.append(1234)
+            return gids
+
+    authenticator = TestAuthenticator(allowed_groups={'group'}, allow_all=False)
+
+    authorized = await authenticator.get_authenticated_user(
+        None, {'username': 'kaylee', 'password': 'kaylee'}
+    )
     assert authorized['name'] == 'kaylee'
 
-    with mock.patch.object(authenticator, '_getgrnam', getgrnam):
-        authorized = await authenticator.get_authenticated_user(
-            None, {'username': 'mal', 'password': 'mal'}
-        )
+    authorized = await authenticator.get_authenticated_user(
+        None, {'username': 'mal', 'password': 'mal'}
+    )
     assert authorized is None
 
 
@@ -270,6 +284,7 @@ async def test_pam_auth_no_such_group():
     authenticator = MockPAMAuthenticator(
         allowed_groups={'nosuchcrazygroup'},
     )
+    authenticator._getpwnam = MockStructPasswd
     authorized = await authenticator.get_authenticated_user(
         None, {'username': 'kaylee', 'password': 'kaylee'}
     )
