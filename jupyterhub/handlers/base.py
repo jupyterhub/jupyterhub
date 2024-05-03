@@ -1537,6 +1537,16 @@ class PrefixRedirectHandler(BaseHandler):
     """Redirect anything outside a prefix inside.
 
     Redirects /foo to /prefix/foo, etc.
+
+    Redirect specifies hub domain when public_url or subdomains are enabled.
+
+    Mainly handles requests for non-running servers, e.g. to
+
+    /user/tree/ -> /hub/user/tree/
+
+    UserUrlHandler will handle the request after redirect.
+    Don't do anything but redirect here because cookies, etc. won't be available to this request,
+    due to not being on the hub's path or possibly domain.
     """
 
     def get(self):
@@ -1554,7 +1564,19 @@ class PrefixRedirectHandler(BaseHandler):
             # default / -> /hub/ redirect
             # avoiding extra hop through /hub
             path = '/'
-        self.redirect(url_path_join(self.hub.base_url, path), permanent=False)
+
+        redirect_url = redirect_path = url_path_join(self.hub.base_url, path)
+
+        # when using subdomains,
+        # make sure we redirect `user.domain/user/foo` -> `hub.domain/hub/user/foo/...`
+        # so that the Hub handles it properly with cookies and all
+        public_url = self.settings.get("public_url")
+        subdomain_host = self.settings.get("subdomain_host")
+        if public_url:
+            redirect_url = urlunparse(public_url._replace(path=redirect_path))
+        elif subdomain_host:
+            redirect_url = url_path_join(subdomain_host, redirect_path)
+        self.redirect(redirect_url, permanent=False)
 
 
 class UserUrlHandler(BaseHandler):
