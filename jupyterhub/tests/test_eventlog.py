@@ -22,7 +22,7 @@ from traitlets.config import Config
 # { ( '<schema id>', <version> ) : { <event_data> } }
 valid_events = [
     (
-        'hub.jupyter.org/server-action',
+        'https://schema.jupyter.org/jupyterhub/events/server-action',
         1,
         dict(action='start', username='test-username', servername='test-servername'),
     )
@@ -32,7 +32,11 @@ valid_events = [
 # { ( '<schema id>', <version> ) : { <event_data> } }
 invalid_events = [
     # Missing required keys
-    ('hub.jupyter.org/server-action', 1, dict(action='start'))
+    (
+        'https://schema.jupyter.org/jupyterhub/events/server-action',
+        1,
+        dict(action='start'),
+    )
 ]
 
 
@@ -41,11 +45,11 @@ def eventlog_sink(app):
     """Return eventlog and sink objects"""
     sink = io.StringIO()
     handler = logging.StreamHandler(sink)
-    # Update the EventLog config with handler
+    # Update the EventLogger config with handler
     cfg = Config()
-    cfg.EventLog.handlers = [handler]
+    cfg.EventLogger.handlers = [handler]
 
-    with mock.patch.object(app.config, 'EventLog', cfg.EventLog):
+    with mock.patch.object(app.config, 'EventLogger', cfg.EventLogger):
         # recreate the eventlog object with our config
         app.init_eventlog()
         # return the sink from the fixture
@@ -59,7 +63,7 @@ def test_valid_events(eventlog_sink, schema, version, event):
     eventlog, sink = eventlog_sink
     eventlog.allowed_schemas = [schema]
     # Record event
-    eventlog.record_event(schema, version, event)
+    eventlog.emit(schema_id=schema, data=event)
     # Inspect consumed event
     output = sink.getvalue()
     assert output
@@ -75,4 +79,4 @@ def test_invalid_events(eventlog_sink, schema, version, event):
 
     # Make sure an error is thrown when bad events are recorded
     with pytest.raises(jsonschema.ValidationError):
-        recorded_event = eventlog.record_event(schema, version, event)
+        recorded_event = eventlog.emit(schema_id=schema, data=event)
