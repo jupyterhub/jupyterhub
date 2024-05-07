@@ -19,22 +19,20 @@ from traitlets.config import Config
 # and `invalid_events` dictionary below.
 
 # To test valid events, add event item with the form:
-# { ( '<schema id>', <version> ) : { <event_data> } }
+# ( '<schema id>', { <event_data> } )
 valid_events = [
     (
         'https://schema.jupyter.org/jupyterhub/events/server-action',
-        1,
         dict(action='start', username='test-username', servername='test-servername'),
     )
 ]
 
 # To test invalid events, add event item with the form:
-# { ( '<schema id>', <version> ) : { <event_data> } }
+# ( '<schema id>', { <event_data> } )
 invalid_events = [
     # Missing required keys
     (
         'https://schema.jupyter.org/jupyterhub/events/server-action',
-        1,
         dict(action='start'),
     )
 ]
@@ -58,8 +56,8 @@ def eventlog_sink(app):
     app.init_eventlog()
 
 
-@pytest.mark.parametrize('schema, version, event', valid_events)
-def test_valid_events(eventlog_sink, schema, version, event):
+@pytest.mark.parametrize('schema, event', valid_events)
+def test_valid_events(eventlog_sink, schema, event):
     eventlog, sink = eventlog_sink
     eventlog.allowed_schemas = [schema]
     # Record event
@@ -72,8 +70,8 @@ def test_valid_events(eventlog_sink, schema, version, event):
     assert data is not None
 
 
-@pytest.mark.parametrize('schema, version, event', invalid_events)
-def test_invalid_events(eventlog_sink, schema, version, event):
+@pytest.mark.parametrize('schema, event', invalid_events)
+def test_invalid_events(eventlog_sink, schema, event):
     eventlog, sink = eventlog_sink
     eventlog.allowed_schemas = [schema]
 
