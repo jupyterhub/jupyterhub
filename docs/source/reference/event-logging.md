@@ -6,22 +6,17 @@ JupyterHub can be configured to record structured events from a running server u
 
 Event logging is handled by its `EventLogger` object. This leverages Python's standing [logging] library to emit, filter, and collect event data.
 
-To begin recording events, you'll need to set two configurations:
+To begin recording events, you'll need to set at least one configuration option:
 
-> 1. `handlers`: tells the EventLogger _where_ to route your events. This trait is a list of Python logging handlers that route events to the event log file.
-> 2. `allows_schemas`: tells the EventLogger _which_ events should be recorded. No events are emitted by default; all recorded events must be listed here.
+> `EventLogger.handlers`: tells the EventLogger _where_ to route your events. This trait is a list of Python logging handlers that route events to e.g. an event log file.
 
 Here's a basic example:
 
-```
+```python
 import logging
 
 c.EventLogger.handlers = [
     logging.FileHandler('event.log'),
-]
-
-c.EventLogger.allowed_schemas = [
-    'https://schema.jupyter.org/jupyterhub/events/server-action',
 ]
 ```
 
