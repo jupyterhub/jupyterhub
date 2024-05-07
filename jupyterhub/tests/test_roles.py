@@ -956,7 +956,7 @@ async def test_user_group_roles(app, create_temp_role):
     # jack's API token
     token = user.new_api_token()
 
-    headers = {'Authorization': 'token %s' % token}
+    headers = {'Authorization': f'token {token}'}
     r = await api_request(app, f'users/{user.name}', method='get', headers=headers)
     assert r.status_code == 200
     r.raise_for_status()
@@ -968,7 +968,7 @@ async def test_user_group_roles(app, create_temp_role):
     assert len(reply['roles']) == 1
     assert group_role.name not in reply['roles']
 
-    headers = {'Authorization': 'token %s' % token}
+    headers = {'Authorization': f'token {token}'}
     r = await api_request(app, 'groups', method='get', headers=headers)
     assert r.status_code == 200
     r.raise_for_status()
@@ -978,7 +978,7 @@ async def test_user_group_roles(app, create_temp_role):
     assert len(reply) == 1
     assert reply[0]['name'] == 'A'
 
-    headers = {'Authorization': 'token %s' % token}
+    headers = {'Authorization': f'token {token}'}
     r = await api_request(app, f'users/{user.name}', method='get', headers=headers)
     assert r.status_code == 200
     r.raise_for_status()

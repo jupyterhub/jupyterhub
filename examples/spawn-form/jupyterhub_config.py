@@ -11,7 +11,7 @@ c = get_config()  # noqa
 
 class DemoFormSpawner(LocalProcessSpawner):
     def _options_form_default(self):
-        default_env = "YOURNAME=%s\n" % self.user.name
+        default_env = f"YOURNAME={self.user.name}\n"
         return f"""
         <div class="form-group">
             <label for="args">Extra notebook CLI arguments</label>

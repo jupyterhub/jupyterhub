@@ -341,7 +341,7 @@ class SingleUserNotebookAppMixin(Configurable):
             # If we receive a non-absolute path, make it absolute.
             value = os.path.abspath(value)
         if not os.path.isdir(value):
-            raise TraitError("No such notebook dir: %r" % value)
+            raise TraitError(f"No such notebook dir: {value!r}")
         return value
 
     @default('log_level')

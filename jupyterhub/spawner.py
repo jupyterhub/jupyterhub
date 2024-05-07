@@ -994,7 +994,7 @@ class Spawner(LoggingConfigurable):
         env = {}
         if self.env:
             warnings.warn(
-                "Spawner.env is deprecated, found %s" % self.env, DeprecationWarning
+                f"Spawner.env is deprecated, found {self.env}", DeprecationWarning
             )
             env.update(self.env)
 
@@ -1494,7 +1494,7 @@ def _try_setcwd(path):
             path, _ = os.path.split(path)
         else:
             return
-    print("Couldn't set CWD at all (%s), using temp dir" % exc, file=sys.stderr)
+    print(f"Couldn't set CWD at all ({exc}), using temp dir", file=sys.stderr)
     td = mkdtemp()
     os.chdir(td)
 
@@ -1524,7 +1524,7 @@ def set_user_setuid(username, chdir=True):
         try:
             os.setgroups(gids)
         except Exception as e:
-            print('Failed to set groups %s' % e, file=sys.stderr)
+            print(f'Failed to set groups {e}', file=sys.stderr)
         os.setuid(uid)
 
         # start in the user's home dir

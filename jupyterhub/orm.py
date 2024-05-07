@@ -1113,7 +1113,7 @@ class APIToken(Hashed, Base):
         elif kind == 'service':
             prefix_match = prefix_match.filter(cls.service_id != None)
         elif kind is not None:
-            raise ValueError("kind must be 'user', 'service', or None, not %r" % kind)
+            raise ValueError(f"kind must be 'user', 'service', or None, not {kind!r}")
         for orm_token in prefix_match:
             if orm_token.match(token):
                 if not orm_token.client_id:

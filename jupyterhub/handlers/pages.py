@@ -236,12 +236,12 @@ class SpawnHandler(BaseHandler):
         if for_user != user.name:
             user = self.find_user(for_user)
             if user is None:
-                raise web.HTTPError(404, "No such user: %s" % for_user)
+                raise web.HTTPError(404, f"No such user: {for_user}")
 
         spawner = user.get_spawner(server_name, replace_failed=True)
 
         if spawner.ready:
-            raise web.HTTPError(400, "%s is already running" % (spawner._log_name))
+            raise web.HTTPError(400, f"{spawner._log_name} is already running")
         elif spawner.pending:
             raise web.HTTPError(
                 400, f"{spawner._log_name} is pending {spawner.pending}"
@@ -251,7 +251,7 @@ class SpawnHandler(BaseHandler):
         for key, byte_list in self.request.body_arguments.items():
             form_options[key] = [bs.decode('utf8') for bs in byte_list]
         for key, byte_list in self.request.files.items():
-            form_options["%s_file" % key] = byte_list
+            form_options[f"{key}_file"] = byte_list
         try:
             self.log.debug(
                 "Triggering spawn with supplied form options for %s", spawner._log_name
@@ -345,7 +345,7 @@ class SpawnPendingHandler(BaseHandler):
         if for_user != current_user.name:
             user = self.find_user(for_user)
             if user is None:
-                raise web.HTTPError(404, "No such user: %s" % for_user)
+                raise web.HTTPError(404, f"No such user: {for_user}")
 
         if server_name and server_name not in user.spawners:
             raise web.HTTPError(404, f"{user.name} has no such server {server_name}")
@@ -642,7 +642,7 @@ class ProxyErrorHandler(BaseHandler):
             message_html = ' '.join(
                 [
                     "Your server appears to be down.",
-                    "Try restarting it <a href='%s'>from the hub</a>" % hub_home,
+                    f"Try restarting it <a href='{hub_home}'>from the hub</a>",
                 ]
             )
         ns = dict(
@@ -655,7 +655,7 @@ class ProxyErrorHandler(BaseHandler):
         self.set_header('Content-Type', 'text/html')
         # render the template
         try:
-            html = await self.render_template('%s.html' % status_code, **ns)
+            html = await self.render_template(f'{status_code}.html', **ns)
         except TemplateNotFound:
             self.log.debug("Using default error template for %d", status_code)
             html = await self.render_template('error.html', **ns)

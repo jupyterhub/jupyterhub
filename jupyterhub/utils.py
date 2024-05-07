@@ -504,7 +504,7 @@ def print_ps_info(file=sys.stderr):
     if cpu >= 10:
         cpu_s = "%i" % cpu
     else:
-        cpu_s = "%.1f" % cpu
+        cpu_s = f"{cpu:.1f}"
 
     # format memory (only resident set)
     rss = p.memory_info().rss
@@ -562,7 +562,7 @@ def print_stacks(file=sys.stderr):
 
     print("Active threads: %i" % threading.active_count(), file=file)
     for thread in threading.enumerate():
-        print("Thread %s:" % thread.name, end='', file=file)
+        print(f"Thread {thread.name}:", end='', file=file)
         frame = sys._current_frames()[thread.ident]
         stack = traceback.extract_stack(frame)
         if thread is threading.current_thread():

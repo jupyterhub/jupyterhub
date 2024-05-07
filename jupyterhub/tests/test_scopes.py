@@ -289,7 +289,7 @@ async def test_exceeding_user_permissions(
     orm_api_token = orm.APIToken.find(app.db, token=api_token)
     # store scopes user does not have
     orm_api_token.scopes = list(orm_api_token.scopes) + ['list:users', 'read:users']
-    headers = {'Authorization': 'token %s' % api_token}
+    headers = {'Authorization': f'token {api_token}'}
     r = await api_request(app, 'users', headers=headers)
     assert r.status_code == 200
     keys = {key for user in r.json() for key in user.keys()}
@@ -307,7 +307,7 @@ async def test_user_service_separation(app, mockservice_url, create_temp_role):
     roles.update_roles(app.db, mockservice_url.orm, roles=['reader_role'])
     user.roles.remove(orm.Role.find(app.db, name='user'))
     api_token = user.new_api_token()
-    headers = {'Authorization': 'token %s' % api_token}
+    headers = {'Authorization': f'token {api_token}'}
     r = await api_request(app, 'users', headers=headers)
     assert r.status_code == 200
     keys = {key for user in r.json() for key in user.keys()}
@@ -551,7 +551,7 @@ async def test_server_state_access(
             )
         service = create_service_with_scopes("read:users:name!user=bianca", *scopes)
         api_token = service.new_api_token()
-        headers = {'Authorization': 'token %s' % api_token}
+        headers = {'Authorization': f'token {api_token}'}
 
         # can I get the user model?
         r = await api_request(app, 'users', user.name, headers=headers)

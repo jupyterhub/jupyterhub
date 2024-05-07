@@ -161,7 +161,7 @@ class UserListAPIHandler(APIHandler):
                 .having(func.count(orm.Server.id) == 0)
             )
         elif state_filter:
-            raise web.HTTPError(400, "Unrecognized state filter: %r" % state_filter)
+            raise web.HTTPError(400, f"Unrecognized state filter: {state_filter!r}")
 
         # apply eager load options
         query = query.options(
@@ -246,15 +246,15 @@ class UserListAPIHandler(APIHandler):
                 continue
             user = self.find_user(name)
             if user is not None:
-                self.log.warning("User %s already exists" % name)
+                self.log.warning(f"User {name} already exists")
             else:
                 to_create.append(name)
 
         if invalid_names:
             if len(invalid_names) == 1:
-                msg = "Invalid username: %s" % invalid_names[0]
+                msg = f"Invalid username: {invalid_names[0]}"
             else:
-                msg = "Invalid usernames: %s" % ', '.join(invalid_names)
+                msg = "Invalid usernames: {}".format(', '.join(invalid_names))
             raise web.HTTPError(400, msg)
 
         if not to_create:
@@ -270,7 +270,7 @@ class UserListAPIHandler(APIHandler):
             try:
                 await maybe_future(self.authenticator.add_user(user))
             except Exception as e:
-                self.log.error("Failed to create user: %s" % name, exc_info=True)
+                self.log.error(f"Failed to create user: {name}", exc_info=True)
                 self.users.delete(user)
                 raise web.HTTPError(400, f"Failed to create user {name}: {e}")
             else:
@@ -307,7 +307,7 @@ class UserAPIHandler(APIHandler):
         data = self.get_json_body()
         user = self.find_user(user_name)
         if user is not None:
-            raise web.HTTPError(409, "User %s already exists" % user_name)
+            raise web.HTTPError(409, f"User {user_name} already exists")
 
         user = self.user_from_username(user_name)
         if data:
@@ -320,10 +320,10 @@ class UserAPIHandler(APIHandler):
         try:
             await maybe_future(self.authenticator.add_user(user))
         except Exception:
-            self.log.error("Failed to create user: %s" % user_name, exc_info=True)
+            self.log.error(f"Failed to create user: {user_name}", exc_info=True)
             # remove from registry
             self.users.delete(user)
-            raise web.HTTPError(400, "Failed to create user: %s" % user_name)
+            raise web.HTTPError(400, f"Failed to create user: {user_name}")
 
         self.write(json.dumps(self.user_model(user)))
         self.set_status(201)
@@ -338,15 +338,14 @@ class UserAPIHandler(APIHandler):
         if user.spawner._stop_pending:
             raise web.HTTPError(
                 400,
-                "%s's server is in the process of stopping, please wait." % user_name,
+                f"{user_name}'s server is in the process of stopping, please wait.",
             )
         if user.running:
             await self.stop_single_user(user)
             if user.spawner._stop_pending:
                 raise web.HTTPError(
                     400,
-                    "%s's server is in the process of stopping, please wait."
-                    % user_name,
+                    f"{user_name}'s server is in the process of stopping, please wait.",
                 )
 
         await maybe_future(self.authenticator.delete_user(user))
@@ -370,7 +369,9 @@ class UserAPIHandler(APIHandler):
             if self.find_user(data['name']):
                 raise web.HTTPError(
                     400,
-                    "User %s already exists, username must be unique" % data['name'],
+                    "User {} already exists, username must be unique".format(
+                        data['name']
+                    ),
                 )
         for key, value in data.items():
             if key == 'auth_state':
@@ -402,7 +403,7 @@ class UserTokenListAPIHandler(APIHandler):
         """Get tokens for a given user"""
         user = self.find_user(user_name)
         if not user:
-            raise web.HTTPError(404, "No such user: %s" % user_name)
+            raise web.HTTPError(404, f"No such user: {user_name}")
 
         now = utcnow(with_tz=False)
         api_tokens = []
@@ -624,7 +625,7 @@ class UserServerAPIHandler(APIHandler):
             finally:
                 spawner._spawn_pending = False
             if state is None:
-                raise web.HTTPError(400, "%s is already running" % spawner._log_name)
+                raise web.HTTPError(400, f"{spawner._log_name} is already running")
 
         options = self.get_json_body()
         await self.spawn_single_user(user, server_name, options=options)

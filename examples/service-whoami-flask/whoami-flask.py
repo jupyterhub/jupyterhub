@@ -38,7 +38,7 @@ def authenticated(f):
         else:
             # redirect to login url on failed auth
             state = auth.generate_state(next_url=request.path)
-            response = make_response(redirect(auth.login_url + '&state=%s' % state))
+            response = make_response(redirect(auth.login_url + f'&state={state}'))
             response.set_cookie(auth.state_cookie_name, state)
             return response
 

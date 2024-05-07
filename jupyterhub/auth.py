@@ -332,7 +332,7 @@ class Authenticator(LoggingConfigurable):
         if short_names:
             sorted_names = sorted(short_names)
             single = ''.join(sorted_names)
-            string_set_typo = "set('%s')" % single
+            string_set_typo = f"set('{single}')"
             self.log.warning(
                 "Allowed set contains single-character names: %s; did you mean set([%r]) instead of %s?",
                 sorted_names[:8],
@@ -663,7 +663,7 @@ class Authenticator(LoggingConfigurable):
             return
         if isinstance(authenticated, dict):
             if 'name' not in authenticated:
-                raise ValueError("user missing a name: %r" % authenticated)
+                raise ValueError(f"user missing a name: {authenticated!r}")
         else:
             authenticated = {'name': authenticated}
         authenticated.setdefault('auth_state', None)
@@ -850,7 +850,7 @@ class Authenticator(LoggingConfigurable):
             user (User): The User wrapper object
         """
         if not self.validate_username(user.name):
-            raise ValueError("Invalid username: %s" % user.name)
+            raise ValueError(f"Invalid username: {user.name}")
         if self.allow_existing_users and not self.allow_all:
             self.allowed_users.add(user.name)
 
@@ -1122,7 +1122,7 @@ class LocalAuthenticator(Authenticator):
             try:
                 group = self._getgrnam(grnam)
             except KeyError:
-                self.log.error('No such group: [%s]' % grnam)
+                self.log.error(f'No such group: [{grnam}]')
                 continue
             if group.gr_gid in user_group_gids:
                 return True
@@ -1193,7 +1193,7 @@ class LocalAuthenticator(Authenticator):
             uid = self.uids[name]
             cmd += ['--uid', '%d' % uid]
         except KeyError:
-            self.log.debug("No UID for user %s" % name)
+            self.log.debug(f"No UID for user {name}")
         cmd += [name]
         self.log.info("Creating user: %s", ' '.join(map(shlex.quote, cmd)))
         p = Popen(cmd, stdout=PIPE, stderr=STDOUT)

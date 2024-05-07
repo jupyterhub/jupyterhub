@@ -157,7 +157,7 @@ class CSS(BaseCommand):
         try:
             check_call(args, cwd=here, shell=shell)
         except OSError as e:
-            print("Failed to build css: %s" % e, file=sys.stderr)
+            print(f"Failed to build css: {e}", file=sys.stderr)
             print("You can install js dependencies with `npm install`", file=sys.stderr)
             raise
         # update data-files in case this created new files

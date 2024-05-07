@@ -613,11 +613,8 @@ class HubAuth(SingletonConfigurable):
             r = await AsyncHTTPClient().fetch(req, raise_error=False)
         except Exception as e:
             app_log.error("Error connecting to %s: %s", self.api_url, e)
-            msg = "Failed to connect to Hub API at %r." % self.api_url
-            msg += (
-                "  Is the Hub accessible at this URL (from host: %s)?"
-                % socket.gethostname()
-            )
+            msg = f"Failed to connect to Hub API at {self.api_url!r}."
+            msg += f"  Is the Hub accessible at this URL (from host: {socket.gethostname()})?"
             if '127.0.0.1' in self.api_url:
                 msg += (
                     "  Make sure to set c.JupyterHub.hub_ip to an IP accessible to"
@@ -1045,7 +1042,7 @@ class HubOAuth(HubAuth):
     @validate('oauth_client_id', 'api_token')
     def _ensure_not_empty(self, proposal):
         if not proposal.value:
-            raise ValueError("%s cannot be empty." % proposal.trait.name)
+            raise ValueError(f"{proposal.trait.name} cannot be empty.")
         return proposal.value
 
     oauth_redirect_uri = Unicode(
@@ -1561,7 +1558,7 @@ class HubOAuthCallbackHandler(HubOAuthenticated, RequestHandler):
         error = self.get_argument("error", False)
         if error:
             msg = self.get_argument("error_description", error)
-            raise HTTPError(400, "Error in oauth: %s" % msg)
+            raise HTTPError(400, f"Error in oauth: {msg}")
 
         code = self.get_argument("code", False)
         if not code:

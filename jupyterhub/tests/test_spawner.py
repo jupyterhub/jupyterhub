@@ -221,8 +221,8 @@ def test_string_formatting(db):
     name = s.user.name
     assert s.notebook_dir == 'user/{username}/'
     assert s.default_url == '/base/{username}'
-    assert s.format_string(s.notebook_dir) == 'user/%s/' % name
-    assert s.format_string(s.default_url) == '/base/%s' % name
+    assert s.format_string(s.notebook_dir) == f'user/{name}/'
+    assert s.format_string(s.default_url) == f'/base/{name}'
 
 
 async def test_popen_kwargs(db):
@@ -496,7 +496,7 @@ async def test_hub_connect_url(db):
     assert env["JUPYTERHUB_API_URL"] == "https://example.com/api"
     assert (
         env["JUPYTERHUB_ACTIVITY_URL"]
-        == "https://example.com/api/users/%s/activity" % name
+        == f"https://example.com/api/users/{name}/activity"
     )
 
 
