@@ -514,7 +514,7 @@ For example, using flask:
 :language: python
 ```
 
-We recommend looking at the [`HubOAuth`][huboauth] class implementation for reference,
+We recommend looking at the {class}`.HubOAuth` class implementation for reference,
 and taking note of the following process:
 
 1. retrieve the token from the request.
