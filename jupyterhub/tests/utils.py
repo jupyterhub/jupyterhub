@@ -149,7 +149,7 @@ def auth_header(db, name):
     if user is None:
         raise KeyError(f"No such user: {name}")
     token = user.new_api_token()
-    return {'Authorization': 'token %s' % token}
+    return {'Authorization': f'token {token}'}
 
 
 @check_db_locks
@@ -198,7 +198,7 @@ async def api_request(
 def get_page(path, app, hub=True, **kw):
     if "://" in path:
         raise ValueError(
-            "Not a hub page path: %r. Did you mean async_requests.get?" % path
+            f"Not a hub page path: {path!r}. Did you mean async_requests.get?"
         )
     if hub:
         prefix = app.hub.base_url

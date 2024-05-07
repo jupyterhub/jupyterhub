@@ -213,7 +213,7 @@ class NewToken(Application):
         ThreadPoolExecutor(1).submit(init_roles_and_users).result()
         user = orm.User.find(hub.db, self.name)
         if user is None:
-            print("No such user: %s" % self.name, file=sys.stderr)
+            print(f"No such user: {self.name}", file=sys.stderr)
             self.exit(1)
         token = user.new_api_token(note="command-line generated")
         print(token)
@@ -1475,7 +1475,7 @@ class JupyterHub(Application):
         new = change['new']
         if '://' not in new:
             # assume sqlite, if given as a plain filename
-            self.db_url = 'sqlite:///%s' % new
+            self.db_url = f'sqlite:///{new}'
 
     db_kwargs = Dict(
         help="""Include any kwargs to pass to the database connection.
@@ -1778,10 +1778,10 @@ class JupyterHub(Application):
             [
                 # add trailing / to ``/user|services/:name`
                 (
-                    r"%s(user|services)/([^/]+)" % self.base_url,
+                    rf"{self.base_url}(user|services)/([^/]+)",
                     handlers.AddSlashHandler,
                 ),
-                (r"(?!%s).*" % self.hub_prefix, handlers.PrefixRedirectHandler),
+                (rf"(?!{self.hub_prefix}).*", handlers.PrefixRedirectHandler),
                 (r'(.*)', handlers.Template404),
             ]
         )
@@ -1910,7 +1910,7 @@ class JupyterHub(Application):
             default_alt_names = ["IP:127.0.0.1", "DNS:localhost"]
             if self.subdomain_host:
                 default_alt_names.append(
-                    "DNS:%s" % urlparse(self.subdomain_host).hostname
+                    f"DNS:{urlparse(self.subdomain_host).hostname}"
                 )
             # The signed certs used by hub-internal components
             try:
@@ -2095,7 +2095,7 @@ class JupyterHub(Application):
                 ck.check_available()
             except Exception as e:
                 self.exit(
-                    "auth_state is enabled, but encryption is not available: %s" % e
+                    f"auth_state is enabled, but encryption is not available: {e}"
                 )
 
         # give the authenticator a chance to check its own config
@@ -2114,7 +2114,7 @@ class JupyterHub(Application):
         self.authenticator.admin_users = set(admin_users)  # force normalization
         for username in admin_users:
             if not self.authenticator.validate_username(username):
-                raise ValueError("username %r is not valid" % username)
+                raise ValueError(f"username {username!r} is not valid")
 
         new_users = []
 
@@ -2138,7 +2138,7 @@ class JupyterHub(Application):
         self.authenticator.allowed_users = set(allowed_users)  # force normalization
         for username in allowed_users:
             if not self.authenticator.validate_username(username):
-                raise ValueError("username %r is not valid" % username)
+                raise ValueError(f"username {username!r} is not valid")
 
         if self.authenticator.allowed_users and self.authenticator.admin_users:
             # make sure admin users are in the allowed_users set, if defined,
@@ -2206,7 +2206,7 @@ class JupyterHub(Application):
         user = orm.User.find(self.db, name=username)
         if user is None:
             if not self.authenticator.validate_username(username):
-                raise ValueError("Username %r is not valid" % username)
+                raise ValueError(f"Username {username!r} is not valid")
             self.log.info(f"Creating user {username} found in {hint}")
             user = orm.User(name=username)
             self.db.add(user)
@@ -2317,9 +2317,7 @@ class JupyterHub(Application):
             old_role = orm.Role.find(self.db, name=role_name)
             if old_role:
                 if not set(role_spec.get('scopes', [])).issubset(old_role.scopes):
-                    self.log.warning(
-                        "Role %s has obtained extra permissions" % role_name
-                    )
+                    self.log.warning(f"Role {role_name} has obtained extra permissions")
                     roles_with_new_permissions.append(role_name)
 
         # make sure we load any default roles not overridden
@@ -2583,14 +2581,14 @@ class JupyterHub(Application):
         elif kind == 'service':
             Class = orm.Service
         else:
-            raise ValueError("kind must be user or service, not %r" % kind)
+            raise ValueError(f"kind must be user or service, not {kind!r}")
 
         db = self.db
         for token, name in token_dict.items():
             if kind == 'user':
                 name = self.authenticator.normalize_username(name)
                 if not self.authenticator.validate_username(name):
-                    raise ValueError("Token user name %r is not valid" % name)
+                    raise ValueError(f"Token user name {name!r} is not valid")
             if kind == 'service':
                 if not any(service_name == name for service_name in self._service_map):
                     self.log.warning(
@@ -2790,7 +2788,7 @@ class JupyterHub(Application):
         for key, value in spec.items():
             trait = traits.get(key)
             if trait is None:
-                raise AttributeError("No such service field: %s" % key)
+                raise AttributeError(f"No such service field: {key}")
             setattr(service, key, value)
             # also set the value on the orm object
             # unless it's marked as not in the db
@@ -2863,7 +2861,7 @@ class JupyterHub(Application):
                 client_id=service.oauth_client_id,
                 client_secret=service.api_token,
                 redirect_uri=service.oauth_redirect_uri,
-                description="JupyterHub service %s" % service.name,
+                description=f"JupyterHub service {service.name}",
             )
             service.orm.oauth_client = oauth_client
             # add access-scopes, derived from OAuthClient itself
@@ -3456,7 +3454,7 @@ class JupyterHub(Application):
             answer = ''
 
             def ask():
-                prompt = "Overwrite %s with default config? [y/N]" % self.config_file
+                prompt = f"Overwrite {self.config_file} with default config? [y/N]"
                 try:
                     return input(prompt).lower() or 'n'
                 except KeyboardInterrupt:
@@ -3473,7 +3471,7 @@ class JupyterHub(Application):
         config_text = self.generate_config_file()
         if isinstance(config_text, bytes):
             config_text = config_text.decode('utf8')
-        print("Writing default config to: %s" % self.config_file)
+        print(f"Writing default config to: {self.config_file}")
         with open(self.config_file, mode='w') as f:
             f.write(config_text)
 

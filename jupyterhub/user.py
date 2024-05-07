@@ -125,7 +125,7 @@ class UserDict(dict):
         elif isinstance(key, str):
             orm_user = self.db.query(orm.User).filter(orm.User.name == key).first()
             if orm_user is None:
-                raise KeyError("No such user: %s" % key)
+                raise KeyError(f"No such user: {key}")
             else:
                 key = orm_user.id
         if isinstance(key, orm.User):
@@ -142,7 +142,7 @@ class UserDict(dict):
             if id not in self:
                 orm_user = self.db.query(orm.User).filter(orm.User.id == id).first()
                 if orm_user is None:
-                    raise KeyError("No such user: %s" % id)
+                    raise KeyError(f"No such user: {id}")
                 user = self.add(orm_user)
             else:
                 user = super().__getitem__(id)
@@ -505,7 +505,7 @@ class User:
 
         # use fully quoted name for client_id because it will be used in cookie-name
         # self.escaped_name may contain @ which is legal in URLs but not cookie keys
-        client_id = 'jupyterhub-user-%s' % quote(self.name)
+        client_id = f'jupyterhub-user-{quote(self.name)}'
         if server_name:
             client_id = f'{client_id}-{quote(server_name)}'
 
@@ -790,7 +790,7 @@ class User:
 
         orm_server = orm.Server(base_url=base_url)
         db.add(orm_server)
-        note = "Server at %s" % base_url
+        note = f"Server at {base_url}"
         db.commit()
 
         spawner = self.get_spawner(server_name, replace_failed=True)
@@ -962,7 +962,7 @@ class User:
                         )
                         self.db.delete(found)
                         self.db.commit()
-                        raise ValueError("Invalid token for %s!" % self.name)
+                        raise ValueError(f"Invalid token for {self.name}!")
                 else:
                     # Spawner.api_token has changed, but isn't in the db.
                     # What happened? Maybe something unclean in a resumed container.
@@ -975,7 +975,7 @@ class User:
                     self.new_api_token(
                         spawner.api_token,
                         generated=False,
-                        note="retrieved from spawner %s" % server_name,
+                        note=f"retrieved from spawner {server_name}",
                         scopes=resolved_scopes,
                     )
                 # update OAuth client secret with updated API token

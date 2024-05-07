@@ -83,7 +83,7 @@ async def app(request, io_loop, ssl_tmpdir):
         try:
             mocked_app.stop()
         except Exception as e:
-            print("Error stopping Hub: %s" % e, file=sys.stderr)
+            print(f"Error stopping Hub: {e}", file=sys.stderr)
 
     request.addfinalizer(fin)
     await mocked_app.initialize([])

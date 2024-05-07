@@ -1512,7 +1512,7 @@ class BaseHandler(RequestHandler):
         # so we run it sync here, instead of making a sync version of render_template
 
         try:
-            html = self.render_template('%s.html' % status_code, sync=True, **ns)
+            html = self.render_template(f'{status_code}.html', sync=True, **ns)
         except TemplateNotFound:
             self.log.debug("Using default error template for %d", status_code)
             try:

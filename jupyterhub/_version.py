@@ -70,6 +70,4 @@ def _check_version(hub_version, singleuser_version, log):
                 singleuser_version,
             )
     else:
-        log.debug(
-            "jupyterhub and jupyterhub-singleuser both on version %s" % hub_version
-        )
+        log.debug(f"jupyterhub and jupyterhub-singleuser both on version {hub_version}")

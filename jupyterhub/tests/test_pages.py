@@ -120,7 +120,7 @@ async def test_admin_version(app):
 @pytest.mark.parametrize('sort', ['running', 'last_activity', 'admin', 'name'])
 async def test_admin_sort(app, sort):
     cookies = await app.login_user('admin')
-    r = await get_page('admin?sort=%s' % sort, app, cookies=cookies)
+    r = await get_page(f'admin?sort={sort}', app, cookies=cookies)
     r.raise_for_status()
     assert r.status_code == 200
 
@@ -170,7 +170,7 @@ async def test_spawn_redirect(app, last_failed):
     r.raise_for_status()
     print(urlparse(r.url))
     path = urlparse(r.url).path
-    assert path == ujoin(app.base_url, '/user/%s/' % name)
+    assert path == ujoin(app.base_url, f'/user/{name}/')
 
     # stop server to ensure /user/name is handled by the Hub
     r = await api_request(
@@ -181,7 +181,7 @@ async def test_spawn_redirect(app, last_failed):
     # test handing of trailing slash on `/user/name`
     r = await get_page('user/' + name, app, hub=False, cookies=cookies)
     path = urlparse(r.url).path
-    assert path == ujoin(app.base_url, 'hub/user/%s/' % name)
+    assert path == ujoin(app.base_url, f'hub/user/{name}/')
     assert r.status_code == 424
 
 
@@ -586,7 +586,7 @@ async def test_user_redirect(app, username):
         await asyncio.sleep(0.1)
         r = await async_requests.get(r.url, cookies=cookies)
         path = urlparse(r.url).path
-    assert path == ujoin(app.base_url, '/user/%s/notebooks/test.ipynb' % name)
+    assert path == ujoin(app.base_url, f'/user/{name}/notebooks/test.ipynb')
 
 
 async def test_user_redirect_hook(app, username):
@@ -1240,7 +1240,7 @@ async def test_token_page(app):
     r.raise_for_status()
     body = extract_body(r)
     assert "API Tokens" in body, body
-    assert "Server at %s" % user.base_url in body, body
+    assert f"Server at {user.base_url}" in body, body
     assert "Authorized Applications" in body, body
 
 
@@ -1299,7 +1299,7 @@ async def test_pre_spawn_start_exc_options_form(app):
         r.raise_for_status()
         assert FormSpawner.options_form in r.text
         # spawning the user server should throw the pre_spawn_start error
-        with pytest.raises(Exception, match="%s" % exc):
+        with pytest.raises(Exception, match=str(exc)):
             await user.spawn()
 
 

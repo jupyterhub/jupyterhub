@@ -221,11 +221,11 @@ class Proxy(LoggingConfigurable):
         host_route = not routespec.startswith('/')
         if host_route and not self.host_routing:
             raise ValueError(
-                "Cannot add host-based route %r, not using host-routing" % routespec
+                f"Cannot add host-based route {routespec!r}, not using host-routing"
             )
         if self.host_routing and not host_route:
             raise ValueError(
-                "Cannot add route without host %r, using host-routing" % routespec
+                f"Cannot add route without host {routespec!r}, using host-routing"
             )
         # add trailing slash
         if not routespec.endswith('/'):
@@ -613,8 +613,8 @@ class ConfigurableHTTPProxy(Proxy):
         # check for required token if proxy is external
         if not self.auth_token and not self.should_start:
             raise ValueError(
-                "%s.auth_token or CONFIGPROXY_AUTH_TOKEN env is required"
-                " if Proxy.should_start is False" % self.__class__.__name__
+                f"{self.__class__.__name__}.auth_token or CONFIGPROXY_AUTH_TOKEN env is required"
+                " if Proxy.should_start is False"
             )
 
     def _check_previous_process(self):
@@ -758,11 +758,11 @@ class ConfigurableHTTPProxy(Proxy):
             )
         except FileNotFoundError as e:
             self.log.error(
-                "Failed to find proxy %r\n"
+                f"Failed to find proxy {self.command!r}\n"
                 "The proxy can be installed with `npm install -g configurable-http-proxy`."
                 "To install `npm`, install nodejs which includes `npm`."
                 "If you see an `EACCES` error or permissions error, refer to the `npm` "
-                "documentation on How To Prevent Permissions Errors." % self.command
+                "documentation on How To Prevent Permissions Errors."
             )
             raise
 

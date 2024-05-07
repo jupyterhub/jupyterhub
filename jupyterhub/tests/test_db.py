@@ -57,7 +57,7 @@ async def test_upgrade(tmpdir, hub_version):
 
     # use persistent temp env directory
     # to reuse across multiple runs
-    env_dir = os.path.join(tempfile.gettempdir(), 'test-hub-upgrade-%s' % hub_version)
+    env_dir = os.path.join(tempfile.gettempdir(), f'test-hub-upgrade-{hub_version}')
 
     generate_old_db(env_dir, hub_version, db_url)
 
