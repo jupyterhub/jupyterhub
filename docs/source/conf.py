@@ -289,6 +289,7 @@ linkcheck_ignore = [
     r"https://github.com/[^/]*$",  # too many github usernames / searches in changelog
     "https://github.com/jupyterhub/jupyterhub/pull/",  # too many PRs in changelog
     "https://github.com/jupyterhub/jupyterhub/compare/",  # too many comparisons in changelog
+    "https://schema.jupyter.org/jupyterhub/.*",  # schemas are not published yet
     r"https?://(localhost|127.0.0.1).*",  # ignore localhost references in auto-links
     r"https://linux.die.net/.*",  # linux.die.net seems to block requests from CI with 403 sometimes
     # don't check links to unpublished advisories

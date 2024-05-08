@@ -21,6 +21,7 @@ from datetime import datetime, timedelta, timezone
 from functools import partial
 from getpass import getuser
 from operator import itemgetter
+from pathlib import Path
 from textwrap import dedent
 from typing import Optional
 from urllib.parse import unquote, urlparse, urlunparse
@@ -29,7 +30,7 @@ import tornado.httpserver
 import tornado.options
 from dateutil.parser import parse as parse_date
 from jinja2 import ChoiceLoader, Environment, FileSystemLoader, PrefixLoader
-from jupyter_telemetry.eventlog import EventLog
+from jupyter_events.logger import EventLogger
 from sqlalchemy.exc import OperationalError, SQLAlchemyError
 from sqlalchemy.orm import joinedload
 from tornado import gen, web
@@ -3249,13 +3250,10 @@ class JupyterHub(Application):
 
     def init_eventlog(self):
         """Set up the event logging system."""
-        self.eventlog = EventLog(parent=self)
+        self.eventlog = EventLogger(parent=self)
 
-        for dirname, _, files in os.walk(os.path.join(here, 'event-schemas')):
-            for file in files:
-                if not file.endswith('.yaml'):
-                    continue
-                self.eventlog.register_schema_file(os.path.join(dirname, file))
+        for schema in (Path(here) / "event-schemas").glob("**/*.yaml"):
+            self.eventlog.register_event_schema(schema)
 
     def write_pid_file(self):
         pid = os.getpid()
