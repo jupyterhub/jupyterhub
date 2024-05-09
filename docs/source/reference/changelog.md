@@ -22,7 +22,7 @@ Contributors to major version bumps in JupyterHub include:
 
 ## 5.0
 
-### 5.0.0 (beta) - 2024
+### 5.0.0 (beta 2) - 2024
 
 :::{note}
 JupyterHub 5 is available for testing as a prerelease:
