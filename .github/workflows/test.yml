@@ -159,6 +159,10 @@ jobs:
         with:
           python-version: "${{ matrix.python }}"
           cache: pip
+          cache-dependency-path: |
+            pyproject.toml
+            requirements.txt
+            ci/oldest-dependencies/requirements.old
 
       - name: Install Python dependencies
         run: |
