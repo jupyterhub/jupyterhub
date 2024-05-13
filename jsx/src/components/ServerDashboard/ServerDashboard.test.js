@@ -608,7 +608,7 @@ test("Search for user calls updateUsers with name filter", async () => {
   // expect(mockUpdateUsers).toBeCalledWith(0, 100, "ab");
 });
 
-test("Interacting with PaginationFooter causes state update and refresh via useEffect call", async () => {
+test("Interacting with PaginationFooter requests page update", async () => {
   await act(async () => {
     render(serverDashboardJsx());
   });
@@ -625,14 +625,10 @@ test("Interacting with PaginationFooter causes state update and refresh via useE
     jest.runAllTimers();
   });
 
-  expect(searchParams.get("offset")).toEqual("2");
-  expect(searchParams.get("limit")).toEqual("2");
-
-  // FIXME: should call updateUsers, does in reality.
-  // tests don't reflect reality due to mocked state/useSelector
-  // unclear how to fix this.
-  // expect(callbackSpy.mock.calls).toHaveLength(2);
-  // expect(callbackSpy).toHaveBeenCalledWith(2, 2, "");
+  expect(mockUpdateUsers).toBeCalledWith({
+    ...defaultUpdateUsersParams,
+    offset: 2,
+  });
 });
 
 test("Server delete button exists for named servers", async () => {
