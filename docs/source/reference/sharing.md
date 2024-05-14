@@ -264,7 +264,7 @@ Share codes are much like shares, except:
 To create a share code:
 
 ```{parsed-literal}
-[POST /api/share-code/:username/:servername](rest-api-post-share-code)
+[POST /api/share-codes/:username/:servername](rest-api-post-share-code)
 ```
 
 where the body should include the scopes to be granted and expiration.
