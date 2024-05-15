@@ -155,7 +155,7 @@ const ServerDashboard = (props) => {
 
   useEffect(() => {
     loadPageData();
-  }, [offset, limit, name_filter, sort, state_filter]);
+  }, [limit, name_filter, sort, state_filter]);
 
   if (!user_data || !user_page) {
     return <div data-testid="no-show"></div>;

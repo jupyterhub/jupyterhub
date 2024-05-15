@@ -14,8 +14,7 @@ const Groups = (props) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const { setOffset, offset, handleLimit, limit, setPagination } =
-    usePaginationParams();
+  const { offset, handleLimit, limit, setPagination } = usePaginationParams();
 
   const total = groups_page ? groups_page.total : undefined;
 
@@ -32,11 +31,22 @@ const Groups = (props) => {
     });
   };
 
+  // single callback to reload the page
+  // uses current state, or params can be specified if state
+  // should be updated _after_ load, e.g. offset
+  const loadPageData = (params) => {
+    params = params || {};
+    return updateGroups(
+      params.offset === undefined ? offset : params.offset,
+      params.limit === undefined ? limit : params.limit,
+    )
+      .then((data) => dispatchPageUpdate(data.items, data._pagination))
+      .catch((err) => setErrorAlert("Failed to update group list."));
+  };
+
   useEffect(() => {
-    updateGroups(offset, limit).then((data) =>
-      dispatchPageUpdate(data.items, data._pagination),
-    );
-  }, [offset, limit]);
+    loadPageData();
+  }, [limit]);
 
   if (!groups_data || !groups_page) {
     return <div data-testid="no-show"></div>;
@@ -72,8 +82,10 @@ const Groups = (props) => {
             limit={limit}
             visible={groups_data.length}
             total={total}
-            next={() => setOffset(offset + limit)}
-            prev={() => setOffset(offset - limit)}
+            next={() => loadPageData({ offset: offset + limit })}
+            prev={() =>
+              loadPageData({ offset: limit > offset ? 0 : offset - limit })
+            }
             handleLimit={handleLimit}
           />
         </Card.Body>
