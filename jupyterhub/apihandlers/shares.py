@@ -81,7 +81,7 @@ class _ShareAPIHandler(APIHandler):
         """Truncated server model for use in shares
 
         - Adds "user" field (just name for now)
-        - Limits fields to "name", "url", "ready"
+        - Limits fields to "name", "url", "full_url", "ready"
           from standard server model
         """
         user = self.users[spawner.user.id]
