@@ -286,6 +286,7 @@ The response contains the code itself:
 {
   "code": "abc1234....",
   "accept_url": "/hub/accept-share?code=abc1234",
+  "full_accept_url": "https://hub.example.org/hub/accept-share?code=abc1234",
   "id": "sc_1234",
   "scopes": [...],
   ...

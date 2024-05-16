@@ -1176,8 +1176,16 @@ paths:
                         example: abc123
                       accept_url:
                         type: string
-                        description: The URL for accepting the code
+                        description: The URL path for accepting the code
                         example: /hub/accept-share?code=abc123
+                      full_accept_url:
+                        type:
+                          - string
+                          - "null"
+                        description: |
+                          The full URL for accepting the code,
+                          if JupyterHub.public_url configuration is defined.
+                        example: https://hub.example.org/hub/accept-share?code=abc123
       security:
         - oauth2:
             - shares
@@ -1877,7 +1885,14 @@ components:
           description: the server name. '' for the default server.
         url:
           type: string
-          description: the server's URL
+          description: the server's URL (path only when not using subdomains)
+        full_url:
+          type:
+            - string
+            - "null"
+          description: |
+            The full URL of the server (`https://hub.example.org/user/:name/:servername`).
+            `null` unless JupyterHub.public_url or subdomains are configured.
         ready:
           type: boolean
           description: whether the server is ready
