@@ -112,8 +112,8 @@ test("Renders nothing if required data is not available", async () => {
   expect(noShow).toBeVisible();
 });
 
-test("Interacting with PaginationFooter causes state update and refresh via useEffect call", async () => {
-  let upgradeGroupsSpy = mockAsync();
+test("Interacting with PaginationFooter causes page refresh", async () => {
+  let updateGroupsSpy = mockAsync();
   let setSearchParamsSpy = mockAsync();
   let searchParams = new URLSearchParams({ limit: "2" });
   useSearchParams.mockImplementation(() => [
@@ -125,11 +125,11 @@ test("Interacting with PaginationFooter causes state update and refresh via useE
   ]);
   let _, setSearchParams;
   await act(async () => {
-    render(groupsJsx(upgradeGroupsSpy));
+    render(groupsJsx(updateGroupsSpy));
     [_, setSearchParams] = useSearchParams();
   });
 
-  expect(upgradeGroupsSpy).toBeCalledWith(0, 2);
+  expect(updateGroupsSpy).toBeCalledWith(0, 2);
 
   var lastState =
     mockReducers.mock.results[mockReducers.mock.results.length - 1].value;
@@ -140,9 +140,7 @@ test("Interacting with PaginationFooter causes state update and refresh via useE
   await act(async () => {
     fireEvent.click(next);
   });
-  expect(setSearchParamsSpy).toBeCalledWith("limit=2&offset=2");
-
-  // FIXME: mocked useSelector, state seem to prevent updateGroups from being called
-  // making the test environment not representative
-  // expect(callbackSpy).toHaveBeenCalledWith(2, 2);
+  expect(updateGroupsSpy).toBeCalledWith(2, 2);
+  // mocked updateGroups means callback after load doesn't fire
+  // expect(setSearchParamsSpy).toBeCalledWith("limit=2&offset=2");
 });

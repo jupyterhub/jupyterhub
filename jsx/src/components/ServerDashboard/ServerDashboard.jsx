@@ -41,7 +41,7 @@ const ServerDashboard = (props) => {
   let user_data = useSelector((state) => state.user_data);
   const user_page = useSelector((state) => state.user_page);
 
-  const { setOffset, offset, setLimit, handleLimit, limit, setPagination } =
+  const { offset, setLimit, handleLimit, limit, setPagination } =
     usePaginationParams();
 
   const name_filter = searchParams.get("name_filter") || "";
@@ -123,26 +123,39 @@ const ServerDashboard = (props) => {
       } else {
         params.set("state", new_state_filter);
       }
-      console.log("setting search params", params.toString());
       return params;
     });
   };
 
   // the callback to update the displayed user list
-  const updateUsersWithParams = () =>
-    updateUsers({
-      offset,
+  const updateUsersWithParams = (params) => {
+    if (params) {
+      if (params.offset !== undefined && params.offset < 0) {
+        params.offset = 0;
+      }
+    }
+    return updateUsers({
+      offset: offset,
       limit,
       name_filter,
       sort,
       state: state_filter,
+      ...params,
     });
+  };
 
-  useEffect(() => {
-    updateUsersWithParams()
+  // single callback to reload the page
+  // uses current state, or params can be specified if state
+  // should be updated _after_ load, e.g. offset
+  const loadPageData = (params) => {
+    return updateUsersWithParams(params)
       .then((data) => dispatchPageUpdate(data.items, data._pagination))
       .catch((err) => setErrorAlert("Failed to update user list."));
-  }, [offset, limit, name_filter, sort, state_filter]);
+  };
+
+  useEffect(() => {
+    loadPageData();
+  }, [limit, name_filter, sort, state_filter]);
 
   if (!user_data || !user_page) {
     return <div data-testid="no-show"></div>;
@@ -172,14 +185,7 @@ const ServerDashboard = (props) => {
           action(user.name, server.name)
             .then((res) => {
               if (res.status < 300) {
-                updateUsersWithParams()
-                  .then((data) => {
-                    dispatchPageUpdate(data.items, data._pagination);
-                  })
-                  .catch(() => {
-                    setIsDisabled(false);
-                    setErrorAlert(`Failed to update users list.`);
-                  });
+                loadPageData();
               } else {
                 setErrorAlert(`Failed to ${name.toLowerCase()}.`);
                 setIsDisabled(false);
@@ -519,13 +525,7 @@ const ServerDashboard = (props) => {
                         return res;
                       })
                       .then((res) => {
-                        updateUsersWithParams()
-                          .then((data) => {
-                            dispatchPageUpdate(data.items, data._pagination);
-                          })
-                          .catch(() =>
-                            setErrorAlert(`Failed to update users list.`),
-                          );
+                        loadPageData();
                         return res;
                       })
                       .catch(() => setErrorAlert(`Failed to start servers.`));
@@ -556,13 +556,7 @@ const ServerDashboard = (props) => {
                         return res;
                       })
                       .then((res) => {
-                        updateUsersWithParams()
-                          .then((data) => {
-                            dispatchPageUpdate(data.items, data._pagination);
-                          })
-                          .catch(() =>
-                            setErrorAlert(`Failed to update users list.`),
-                          );
+                        loadPageData();
                         return res;
                       })
                       .catch(() => setErrorAlert(`Failed to stop servers.`));
@@ -590,8 +584,13 @@ const ServerDashboard = (props) => {
           limit={limit}
           visible={user_data.length}
           total={total}
-          next={() => setOffset(offset + limit)}
-          prev={() => setOffset(offset - limit)}
+          // don't trigger via setOffset state change,
+          // which can cause infinite cycles.
+          // offset state will be set upon reply via setPagination
+          next={() => loadPageData({ offset: offset + limit })}
+          prev={() =>
+            loadPageData({ offset: limit > offset ? 0 : offset - limit })
+          }
           handleLimit={handleLimit}
         />
         <br></br>
