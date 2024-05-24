@@ -323,8 +323,7 @@ class Spawner(LoggingConfigurable):
           applied to their server before spawning.
         - *spawner_override* - a dictionary with overrides to apply to the Spawner
           settings. Each value can be either the final value to change or a callable that
-          take the `KubeSpawner` instance as parameter and return the final value. This can
-          be further overridden by 'profile_options'
+          take the `Spawner` instance as parameter and return the final value.
           If the traitlet being overriden is a *dictionary*, the dictionary
           will be *recursively updated*, rather than overriden. If you want to
           remove a key, set its value to `None`
