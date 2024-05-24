@@ -312,8 +312,8 @@ class Spawner(LoggingConfigurable):
         help="""
         Override specific traitlets based on group membership of the user.
 
-        This can be a dict, or a callable that returns a dict. The key of the dict
-        is *only* used for lexicographical sorting, to guarantee a consistent
+        This can be a dict, or a callable that returns a dict. The keys of the dict
+        are *only* used for lexicographical sorting, to guarantee consistent
         ordering of the overrides. If it is a callable, it may be async, and will
         be passed one parameter - the spawner instance. It should return a dictionary.
 
