@@ -1542,7 +1542,9 @@ class Spawner(LoggingConfigurable):
                 # If there is *any* overlap between the groups user is in
                 # and the groups for this override, apply overrides
                 self._apply_overrides(go['spawner_override'])
-                self.log.info(f"Applying group_override {key} for {self.user.name}, modifying config keys: {' '.join(go['spawner_override'].keys())}")
+                self.log.info(
+                    f"Applying group_override {key} for {self.user.name}, modifying config keys: {' '.join(go['spawner_override'].keys())}"
+                )
 
 
 def _try_setcwd(path):
