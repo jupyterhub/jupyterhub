@@ -1517,15 +1517,6 @@ class Spawner(LoggingConfigurable):
         for k, v in spawner_override.items():
             if callable(v):
                 v = v(self)
-                self.log.info(
-                    f".. overriding {self.__class__.__name__} value %s=%s (callable result)",
-                    k,
-                    v,
-                )
-            else:
-                self.log.info(
-                    f".. overriding {self.__class__.__name__} value %s=%s", k, v
-                )
 
             # If v is a dict, *merge* it with existing values, rather than completely
             # resetting it. This allows *adding* things like environment variables rather
@@ -1551,6 +1542,7 @@ class Spawner(LoggingConfigurable):
                 # If there is *any* overlap between the groups user is in
                 # and the groups for this override, apply overrides
                 self._apply_overrides(go['spawner_override'])
+                self.log.info(f"Applying group_override {key} for {self.user.name}, modifying config keys: {' '.join(go['spawner_override'].keys())}")
 
 
 def _try_setcwd(path):
