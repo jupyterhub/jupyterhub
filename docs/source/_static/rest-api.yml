@@ -7,7 +7,7 @@ info:
   license:
     name: BSD-3-Clause
     identifier: BSD-3-Clause
-  version: 5.0.0b2
+  version: 5.0.0
 servers:
   - url: /hub/api
 security:
