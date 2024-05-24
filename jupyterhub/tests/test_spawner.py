@@ -656,6 +656,38 @@ async def test_group_override_lexical_ordering(app):
     assert s.start_timeout == 300
 
 
+async def test_group_override_dict_merging(app):
+    app.load_groups = {
+        "admin": {"users": ["admin"]},
+        "user": {"users": ["admin", "user"]},
+    }
+    await app.init_groups()
+
+    group_overrides = {
+        "01-admin-env-add": {
+            "groups": ["admin"],
+            "spawner_override": {"environment": {"AM_I_ADMIN": "yes"}},
+        },
+        "02-user-env-add": {
+            "groups": ["user"],
+            "spawner_override": {"environment": {"AM_I_USER": "yes"}},
+        },
+    }
+
+    admin_user = find_user(app.db, "admin")
+    s = Spawner(user=admin_user)
+    s.group_overrides = group_overrides
+    await s.apply_group_overrides()
+    assert s.environment["AM_I_ADMIN"] == "yes"
+    assert s.environment["AM_I_USER"] == "yes"
+
+    admin_user = find_user(app.db, "user")
+    s = Spawner(user=admin_user)
+    s.group_overrides = group_overrides
+    await s.apply_group_overrides()
+    assert s.environment["AM_I_USER"] == "yes"
+    assert "AM_I_ADMIN" not in s.environment
+
 async def test_group_override_callable(app):
     app.load_groups = {
         "admin": {"users": ["admin"]},
