@@ -904,8 +904,8 @@ class User:
             db.commit()
             # wait for spawner.start to return
             # run optional preparation work to bootstrap the notebook
-            await maybe_future(spawner.run_pre_spawn_hook())
             await spawner.apply_group_overrides()
+            await maybe_future(spawner.run_pre_spawn_hook())
             if self.settings.get('internal_ssl'):
                 self.log.debug("Creating internal SSL certs for %s", spawner._log_name)
                 hub_paths = await maybe_future(spawner.create_certs())
