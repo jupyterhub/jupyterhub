@@ -688,6 +688,7 @@ async def test_group_override_dict_merging(app):
     assert s.environment["AM_I_USER"] == "yes"
     assert "AM_I_ADMIN" not in s.environment
 
+
 async def test_group_override_callable(app):
     app.load_groups = {
         "admin": {"users": ["admin"]},
