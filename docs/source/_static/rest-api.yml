@@ -2124,8 +2124,7 @@ components:
               and authentication state).
             delete:users: Delete users.
             list:users: List users, including at least their names.
-            read:users:
-              Read user models (excluding including servers, tokens and
+            read:users: Read user models (including servers, tokens and
               authentication state).
             read:users:name: Read names of users.
             read:users:groups: Read users’ group membership.

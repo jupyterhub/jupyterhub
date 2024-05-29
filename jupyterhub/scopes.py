@@ -64,7 +64,7 @@ scope_definitions = {
         'subscopes': ['read:users:name'],
     },
     'read:users': {
-        'description': 'Read user models (excluding including servers, tokens and authentication state).',
+        'description': 'Read user models (including servers, tokens and authentication state).',
         'subscopes': [
             'read:users:name',
             'read:users:groups',
