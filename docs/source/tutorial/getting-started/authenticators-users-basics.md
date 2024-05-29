@@ -93,6 +93,25 @@ A set of initial admin users, `admin_users` can be configured as follows:
 c.Authenticator.admin_users = {'mal', 'zoe'}
 ```
 
+:::{warning}
+`admin_users` config can only be used to _grant_ admin permissions.
+Removing users from this set **does not** remove their admin permissions,
+which must be done via the admin page or API.
+
+Role assignments via `load_roles` are the only way to _revoke_ past permissions from configuration:
+
+```python
+c.JupyterHub.load_roles = [
+    {
+        "name": "admin",
+        "users": ["admin1", "..."],
+    }
+]
+```
+
+or, better yet, [specify your own roles](define-role-target) with only the permissions your admins actually need.
+:::
+
 Users in the admin set are automatically added to the user `allowed_users` set,
 if they are not already present.
 

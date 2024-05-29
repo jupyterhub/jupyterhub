@@ -102,18 +102,37 @@ class Authenticator(LoggingConfigurable):
 
     admin_users = Set(
         help="""
-        Set of users that will have admin rights on this JupyterHub.
+        Set of users that will be granted admin rights on this JupyterHub.
 
-        Note: As of JupyterHub 2.0,
-        full admin rights should not be required,
-        and more precise permissions can be managed via roles.
+        Note:
 
-        Admin users have extra privileges:
-         - Use the admin panel to see list of users logged in
-         - Add / remove users in some authenticators
-         - Restart / halt the hub
-         - Start / stop users' single-user servers
-         - Can access each individual users' single-user server (if configured)
+            As of JupyterHub 2.0,
+            full admin rights should not be required,
+            and more precise permissions can be managed via roles.
+
+        Caution:
+
+            Adding users to `admin_users` can only *grant* admin rights,
+            removing a username from the admin_users set **DOES NOT** remove admin rights previously granted.
+
+            For an authoritative, restricted set of admins,
+            assign explicit membership of the `admin` *role*::
+            
+                c.JupyterHub.load_roles = [
+                    {
+                        "name": "admin",
+                        "users": ["admin1", "..."],
+                    }
+                ]
+
+        Admin users can take every possible action on behalf of all users,
+        for example:
+
+        - Use the admin panel to see list of users logged in
+        - Add / remove users in some authenticators
+        - Restart / halt the hub
+        - Start / stop users' single-user servers
+        - Can access each individual users' single-user server
 
         Admin access should be treated the same way root access is.
 
