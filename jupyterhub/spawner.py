@@ -330,23 +330,23 @@ class Spawner(LoggingConfigurable):
 
         The following example config will:
 
-        1. Add the environment variable "AM_I_USER" to everyone in the "user" group
-        2. Add the environment variable "AM_I_ADMIN" to everyone in the "admin" group.
-           If a user is part of both "user" and "admin", they will get *both* these env
+        1. Add the environment variable "AM_I_GROUP_ALPHA" to everyone in the "group-alpha" group
+        2. Add the environment variable "AM_I_GROUP_BETA" to everyone in the "group-beta" group.
+           If a user is part of both "group-beta" and "group-alpha", they will get *both* these env
            vars, due to the dictionary merging functionality.
-        3. Add a higher memory limit for everyone in the "admin" group.
+        3. Add a higher memory limit for everyone in the "group-beta" group.
 
         c.Spawner.group_overrides = {
-            "01-admin-env-add": {
-                "groups": ["admin"],
-                "spawner_override": {"environment": {"AM_I_ADMIN": "yes"}},
+            "01-group-alpha-env-add": {
+                "groups": ["group-alpha"],
+                "spawner_override": {"environment": {"AM_I_GROUP_ALPHA": "yes"}},
             },
-            "02-user-env-add": {
-                "groups": ["user"],
-                "spawner_override": {"environment": {"AM_I_USER": "yes"}},
+            "02-group-beta-env-add": {
+                "groups": ["group-beta"],
+                "spawner_override": {"environment": {"AM_I_GROUP_BETA": "yes"}},
             },
-            "03-admin-mem-limit": {
-                "groups": ["admin"],
+            "03-group-beta-mem-limit": {
+                "groups": ["group-beta"],
                 "spawner_override": {"mem_limit": "2G"}
             }
         }
