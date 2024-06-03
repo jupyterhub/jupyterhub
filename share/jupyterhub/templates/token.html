@@ -13,13 +13,7 @@
           <br />
           <label for="token-expiration-seconds" class="form-label">Token expires in</label>
           {% block expiration_options %}
-            <select id="token-expiration-seconds" class="form-select">
-              <!-- unit used for each value is `seconds` -->
-              <option value="3600">1 Hour</option>
-              <option value="86400">1 Day</option>
-              <option value="604800">1 Week</option>
-              <option value="" selected="selected">Never</option>
-            </select>
+            <select id="token-expiration-seconds" class="form-select">{{ token_expires_in_options_html | safe }}</select>
           {% endblock expiration_options %}
           <small id="note-expires-at" class="form-text">You can configure when your token will expire.</small>
           <br />

@@ -12,6 +12,7 @@ from unittest import mock
 from urllib.parse import parse_qs, quote, urlparse
 
 import pytest
+from dateutil.parser import parse as parse_date
 from pytest import fixture, mark
 from tornado.httputil import url_concat
 
@@ -1724,6 +1725,46 @@ async def test_get_new_token(app, headers, status, note, expires_in):
     # verify deletion
     r = await api_request(app, 'users/admin/tokens', token_id)
     assert r.status_code == 404
+
+
+@pytest.mark.parametrize(
+    "expires_in_max, expires_in, expected",
+    [
+        (86400, None, 86400),
+        (86400, 86400, 86400),
+        (86400, 86401, 'error'),
+        (3600, 100, 100),
+        (None, None, None),
+        (None, 86400, 86400),
+    ],
+)
+async def test_token_expires_in_max(app, user, expires_in_max, expires_in, expected):
+    options = {
+        "expires_in": expires_in,
+    }
+    # request a new token
+    with mock.patch.dict(
+        app.tornado_settings, {"token_expires_in_max_seconds": expires_in_max}
+    ):
+        r = await api_request(
+            app,
+            f'users/{user.name}/tokens',
+            method='post',
+            data=json.dumps(options),
+        )
+    if expected == 'error':
+        assert r.status_code == 400
+        assert f"must not exceed {expires_in_max}" in r.json()["message"]
+        return
+    else:
+        assert r.status_code == 201
+    token_model = r.json()
+    if expected is None:
+        assert token_model["expires_at"] is None
+    else:
+        expected_expires_at = utcnow() + timedelta(seconds=expected)
+        expires_at = parse_date(token_model["expires_at"])
+        assert abs((expires_at - expected_expires_at).total_seconds()) < 30
 
 
 @mark.parametrize(

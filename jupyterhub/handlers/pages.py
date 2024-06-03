@@ -542,11 +542,50 @@ class TokenPageHandler(BaseHandler):
         oauth_clients = sorted(oauth_clients, key=sort_key, reverse=True)
 
         auth_state = await self.current_user.get_auth_state()
+        expires_in_max = self.settings.get("token_expires_in_max_seconds", 0)
+        options = [
+            (3600, "1 Hour"),
+            (86400, "1 Day"),
+            (7 * 86400, "1 Week"),
+            (30 * 86400, "1 Month"),
+            (365 * 86400, "1 Year"),
+        ]
+        if expires_in_max:
+            # omit items that exceed the limit
+            options = [
+                (seconds, label)
+                for (seconds, label) in options
+                if seconds <= expires_in_max
+            ]
+            if expires_in_max not in (seconds for (seconds, label) in options):
+                # max not exactly in list, add it
+                # this also ensures options_list is never empty
+                max_hours = expires_in_max / 3600
+                max_days = max_hours / 24
+                if max_days < 3:
+                    max_label = f"{max_hours:.0f} hours"
+                else:
+                    # this could be a lot of days, but no need to get fancy
+                    max_label = f"{max_days:.0f} days"
+                options.append(("", f"Max ({max_label})"))
+        else:
+            options.append(("", "Never"))
+
+        options_html_elements = [
+            f'<option value="{value}">{label}</option>' for value, label in options
+        ]
+        # make the last item selected
+        options_html_elements[-1] = options_html_elements[-1].replace(
+            "<option ", '<option selected="selected"'
+        )
+        expires_in_options_html = "\n".join(options_html_elements)
         html = await self.render_template(
             'token.html',
             api_tokens=api_tokens,
             oauth_clients=oauth_clients,
             auth_state=auth_state,
+            token_expires_in_options_html=expires_in_options_html,
+            token_expires_in_max_seconds=expires_in_max,
         )
         self.finish(html)
 

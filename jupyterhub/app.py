@@ -464,6 +464,26 @@ class JupyterHub(Application):
         # convert cookie max age days to seconds
         return int(self.cookie_max_age_days * 24 * 3600)
 
+    token_expires_in_max_seconds = Integer(
+        0,
+        config=True,
+        help="""
+        Set the maximum expiration (in seconds) of tokens created via the API.
+
+        Set to any positive value to disallow creation of tokens with no expiration.
+
+        0 (default) = no limit.
+        
+        Does not affect:
+        
+        - Server API tokens ($JUPYTERHUB_API_TOKEN is tied to lifetime of the server)
+        - Tokens issued during oauth (use `oauth_token_expires_in`)
+        - Tokens created via the API before configuring this limit
+        
+        .. versionadded:: 5.1
+        """,
+    )
+
     redirect_to_server = Bool(
         True, help="Redirect user to server (if running), instead of control panel."
     ).tag(config=True)
@@ -3192,6 +3212,7 @@ class JupyterHub(Application):
             static_path=os.path.join(self.data_files_path, 'static'),
             static_url_prefix=url_path_join(self.hub.base_url, 'static/'),
             static_handler_class=CacheControlStaticFilesHandler,
+            token_expires_in_max_seconds=self.token_expires_in_max_seconds,
             subdomain_hook=self.subdomain_hook,
             template_path=self.template_paths,
             template_vars=self.template_vars,
