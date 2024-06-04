@@ -542,7 +542,7 @@ class TokenPageHandler(BaseHandler):
         oauth_clients = sorted(oauth_clients, key=sort_key, reverse=True)
 
         auth_state = await self.current_user.get_auth_state()
-        expires_in_max = self.settings.get("token_expires_in_max_seconds", 0)
+        expires_in_max = self.settings["token_expires_in_max_seconds"]
         options = [
             (3600, "1 Hour"),
             (86400, "1 Day"),

@@ -495,7 +495,7 @@ class UserTokenListAPIHandler(APIHandler):
                 400,
                 f"token expires_in must be null or integer, not {expires_in!r}",
             )
-        expires_in_max = self.settings.get("token_expires_in_max_seconds", 0)
+        expires_in_max = self.settings["token_expires_in_max_seconds"]
         if expires_in_max:
             # validate expires_in against limit
             if expires_in is None:
