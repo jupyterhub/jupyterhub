@@ -489,10 +489,29 @@ class UserTokenListAPIHandler(APIHandler):
                     400, f"token {key} must be null or a list of strings, not {value!r}"
                 )
 
+        expires_in = body.get('expires_in', None)
+        if not (expires_in is None or isinstance(expires_in, int)):
+            raise web.HTTPError(
+                400,
+                f"token expires_in must be null or integer, not {expires_in!r}",
+            )
+        expires_in_max = self.settings["token_expires_in_max_seconds"]
+        if expires_in_max:
+            # validate expires_in against limit
+            if expires_in is None:
+                # expiration unspecified, use max value
+                # (default before max limit was introduced was 'never', this is closest equivalent)
+                expires_in = expires_in_max
+            elif expires_in > expires_in_max:
+                raise web.HTTPError(
+                    400,
+                    f"token expires_in: {expires_in} must not exceed {expires_in_max}",
+                )
+
         try:
             api_token = user.new_api_token(
                 note=note,
-                expires_in=body.get('expires_in', None),
+                expires_in=expires_in,
                 roles=token_roles,
                 scopes=token_scopes,
             )

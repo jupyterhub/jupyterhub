@@ -481,6 +481,70 @@ async def open_token_page(app, browser, user):
     await expect(browser).to_have_url(re.compile(".*/hub/token"))
 
 
+@pytest.mark.parametrize(
+    "expires_in_max, expected_options",
+    [
+        pytest.param(
+            None,
+            [
+                ('1 Hour', '3600'),
+                ('1 Day', '86400'),
+                ('1 Week', '604800'),
+                ('1 Month', '2592000'),
+                ('1 Year', '31536000'),
+                ('Never', ''),
+            ],
+            id="default",
+        ),
+        pytest.param(
+            86400,
+            [
+                ('1 Hour', '3600'),
+                ('1 Day', '86400'),
+            ],
+            id="1day",
+        ),
+        pytest.param(
+            3600 * 36,
+            [
+                ('1 Hour', '3600'),
+                ('1 Day', '86400'),
+                ('Max (36 hours)', ''),
+            ],
+            id="36hours",
+        ),
+        pytest.param(
+            86400 * 10,
+            [
+                ('1 Hour', '3600'),
+                ('1 Day', '86400'),
+                ('1 Week', '604800'),
+                ('Max (10 days)', ''),
+            ],
+            id="10days",
+        ),
+    ],
+)
+async def test_token_form_expires_in(
+    app, browser, user_special_chars, expires_in_max, expected_options
+):
+    with mock.patch.dict(
+        app.tornado_settings, {"token_expires_in_max_seconds": expires_in_max}
+    ):
+        await open_token_page(app, browser, user_special_chars.user)
+    # check the list of tokens duration
+    dropdown = browser.locator('#token-expiration-seconds')
+    options = await dropdown.locator('option').all()
+    actual_values = [
+        (await option.text_content(), await option.get_attribute('value'))
+        for option in options
+    ]
+    assert actual_values == expected_options
+    # get the value of the 'selected' attribute of the currently selected option
+    selected_value = dropdown.locator('option[selected]')
+    await expect(selected_value).to_have_text(expected_options[-1][0])
+
+
 async def test_token_request_form_and_panel(app, browser, user_special_chars):
     """verify elements of the request token form"""
 
@@ -496,24 +560,6 @@ async def test_token_request_form_and_panel(app, browser, user_special_chars):
     await expect(field_note).to_be_editable()
     await expect(field_note).to_be_enabled()
     await expect(field_note).to_be_empty()
-
-    # check the list of tokens duration
-    dropdown = browser.locator('#token-expiration-seconds')
-    options = await dropdown.locator('option').all()
-    expected_values_in_list = {
-        '1 Hour': '3600',
-        '1 Day': '86400',
-        '1 Week': '604800',
-        'Never': '',
-    }
-    actual_values = {
-        await option.text_content(): await option.get_attribute('value')
-        for option in options
-    }
-    assert actual_values == expected_values_in_list
-    # get the value of the 'selected' attribute of the currently selected option
-    selected_value = dropdown.locator('option[selected]')
-    await expect(selected_value).to_have_text("Never")
 
     # check scopes field
     scopes_input = browser.get_by_label("Permissions")
