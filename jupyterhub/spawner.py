@@ -317,39 +317,43 @@ class Spawner(LoggingConfigurable):
         ordering of the overrides. If it is a callable, it may be async, and will
         be passed one parameter - the spawner instance. It should return a dictionary.
 
-        The value of the dict is a dict, with the following keys:
+        The values of the dict are dicts with the following keys:
 
-        - *groups* - If the user belongs to *any* of these groups, these overrides are
+        - `"groups"` - If the user belongs to *any* of these groups, these overrides are
           applied to their server before spawning.
-        - *spawner_override* - a dictionary with overrides to apply to the Spawner
+        - `"spawner_override"` - a dictionary with overrides to apply to the Spawner
           settings. Each value can be either the final value to change or a callable that
           take the `Spawner` instance as parameter and returns the final value.
           If the traitlet being overriden is a *dictionary*, the dictionary
           will be *recursively updated*, rather than overriden. If you want to
-          remove a key, set its value to `None`
+          remove a key, set its value to `None`.
+          
+        Example:
 
-        The following example config will:
-
-        1. Add the environment variable "AM_I_GROUP_ALPHA" to everyone in the "group-alpha" group
-        2. Add the environment variable "AM_I_GROUP_BETA" to everyone in the "group-beta" group.
-           If a user is part of both "group-beta" and "group-alpha", they will get *both* these env
-           vars, due to the dictionary merging functionality.
-        3. Add a higher memory limit for everyone in the "group-beta" group.
-
-        c.Spawner.group_overrides = {
-            "01-group-alpha-env-add": {
-                "groups": ["group-alpha"],
-                "spawner_override": {"environment": {"AM_I_GROUP_ALPHA": "yes"}},
-            },
-            "02-group-beta-env-add": {
-                "groups": ["group-beta"],
-                "spawner_override": {"environment": {"AM_I_GROUP_BETA": "yes"}},
-            },
-            "03-group-beta-mem-limit": {
-                "groups": ["group-beta"],
-                "spawner_override": {"mem_limit": "2G"}
-            }
-        }
+            The following example config will:
+    
+            1. Add the environment variable "AM_I_GROUP_ALPHA" to everyone in the "group-alpha" group
+            2. Add the environment variable "AM_I_GROUP_BETA" to everyone in the "group-beta" group.
+               If a user is part of both "group-beta" and "group-alpha", they will get *both* these env
+               vars, due to the dictionary merging functionality.
+            3. Add a higher memory limit for everyone in the "group-beta" group.
+            
+            ::
+            
+                c.Spawner.group_overrides = {
+                    "01-group-alpha-env-add": {
+                        "groups": ["group-alpha"],
+                        "spawner_override": {"environment": {"AM_I_GROUP_ALPHA": "yes"}},
+                    },
+                    "02-group-beta-env-add": {
+                        "groups": ["group-beta"],
+                        "spawner_override": {"environment": {"AM_I_GROUP_BETA": "yes"}},
+                    },
+                    "03-group-beta-mem-limit": {
+                        "groups": ["group-beta"],
+                        "spawner_override": {"mem_limit": "2G"}
+                    }
+                }
         """,
         config=True,
     )
