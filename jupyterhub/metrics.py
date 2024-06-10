@@ -22,6 +22,7 @@ them manually here.
     added ``jupyterhub_`` prefix to metric names.
 """
 
+import asyncio
 import os
 import time
 from datetime import timedelta
@@ -236,17 +237,17 @@ EVENT_LOOP_INTERVAL_SECONDS = Histogram(
     'event_loop_interval_seconds',
     'Distribution of measured event loop intervals',
     namespace=metrics_prefix,
-    # Increase resolution to 5ms below 50ms
+    # don't measure below 50ms, our default
+    # Increase resolution to 5ms below 75ms
     # because this is where we are most sensitive.
-    # No need to have buckets below 25, since we only measure every 20ms.
+    # No need to have buckets below 50, since we only measure every 50ms.
     buckets=[
-        # 5ms from 25-50ms
-        25e-3,
-        30e-3,
-        35e-3,
-        40e-3,
-        45e-3,
+        # 5ms from 50-75ms
         50e-3,
+        55e-3,
+        60e-3,
+        65e-3,
+        70e-3,
         # from here, default prometheus buckets
         75e-3,
         0.1,
@@ -323,19 +324,20 @@ class PeriodicMetricsCollector(LoggingConfigurable):
         """,
     )
     event_loop_interval_resolution = Float(
-        0.02,
+        0.05,
         config=True,
         help="""
         Interval (in seconds) on which to measure the event loop interval.
         
-        This is the _sensitivity_ of the event_loop_interval metric.
+        This is the _sensitivity_ of the `event_loop_interval` metric.
         Setting it too low (e.g. below 20ms) can end up slowing down the whole event loop
         by measuring too often,
         while setting it too high (e.g. above a few seconds) may limit its resolution and usefulness.
         The Prometheus Histogram populated by this metric
         doesn't resolve differences below 25ms,
         so setting this below ~20ms won't result in increased resolution of the histogram metric,
-        except for the average value, computed by:
+        except for the average value, computed by::
+
             event_loop_interval_seconds_sum / event_loop_interval_seconds_count
         """,
     )
@@ -346,7 +348,7 @@ class PeriodicMetricsCollector(LoggingConfigurable):
     )
 
     # internal state
-    _last_tick = Float()
+    _tasks = Dict()
     _periodic_callbacks = Dict()
 
     db = Any(help="SQLAlchemy db session to use for performing queries")
@@ -371,18 +373,39 @@ class PeriodicMetricsCollector(LoggingConfigurable):
             self.log.info(f'Found {value} active users in the last {period}')
             ACTIVE_USERS.labels(period=period.value).set(value)
 
-    def _event_loop_tick(self):
-        """Measure a single tick of the event loop
+    async def _measure_event_loop_interval(self):
+        """Measure the event loop responsiveness
 
-        This measures the time since the last tick
+        A single long-running coroutine because PeriodicCallback is too expensive
+        to measure small intervals.
         """
-        now = time.perf_counter()
-        tick_duration = now - self._last_tick
-        self._last_tick = now
-        EVENT_LOOP_INTERVAL_SECONDS.observe(tick_duration)
-        if tick_duration >= self.event_loop_interval_log_threshold:
-            # warn about slow ticks
-            self.log.warning("Event loop was unresponsive for %.2fs!", tick_duration)
+        tick = time.perf_counter
+
+        last_tick = tick()
+        resolution = self.event_loop_interval_resolution
+        lower_bound = 2 * resolution
+        # This loop runs _very_ often, so try to keep it efficient.
+        # Even excess comparisons and assignments have a measurable effect on overall cpu usage.
+        while True:
+            await asyncio.sleep(resolution)
+            now = tick()
+            # measure the _difference_ between the sleep time and the measured time
+            # the event loop blocked for somewhere in the range [delay, delay + resolution]
+            tick_duration = now - last_tick
+            last_tick = now
+            if tick_duration < lower_bound:
+                # don't report numbers less than measurement resolution,
+                # we don't really have that information
+                delay = resolution
+            else:
+                delay = tick_duration - resolution
+                if delay >= self.event_loop_interval_log_threshold:
+                    # warn about slow ticks
+                    self.log.warning(
+                        "Event loop was unresponsive for at least %.2fs!", delay
+                    )
+
+            EVENT_LOOP_INTERVAL_SECONDS.observe(delay)
 
     def start(self):
         """
@@ -400,12 +423,8 @@ class PeriodicMetricsCollector(LoggingConfigurable):
             self.update_active_users()
 
         if self.event_loop_interval_enabled:
-            now = time.perf_counter()
-            self._last_tick = self._last_tick_collect = now
-            self._tick_durations = []
-            self._periodic_callbacks["event_loop_tick"] = PeriodicCallback(
-                self._event_loop_tick,
-                self.event_loop_interval_resolution * 1000,
+            self._tasks["event_loop_tick"] = asyncio.create_task(
+                self._measure_event_loop_interval()
             )
 
         # start callbacks
@@ -418,3 +437,5 @@ class PeriodicMetricsCollector(LoggingConfigurable):
         """
         for pc in self._periodic_callbacks.values():
             pc.stop()
+        for task in self._tasks.values():
+            task.cancel()
