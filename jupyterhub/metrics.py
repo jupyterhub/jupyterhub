@@ -30,7 +30,7 @@ from enum import Enum
 
 from prometheus_client import Gauge, Histogram
 from tornado.ioloop import PeriodicCallback
-from traitlets import Any, Bool, Dict, Float, Integer, default
+from traitlets import Any, Bool, Dict, Float, Integer
 from traitlets.config import LoggingConfigurable
 
 from . import orm
@@ -347,13 +347,6 @@ class PeriodicMetricsCollector(LoggingConfigurable):
         help="""Log when the event loop blocks for at least this many seconds.""",
     )
 
-    @default("event_loop_interval_log_threshold")
-    def _default_log_threshold(self):
-        # default lower bound is 1s,
-        # but don't warn on every tick by default
-        # if measurement interval is longer than that
-        return max(1, 2 * self.event_loop_interval_resolution)
-
     # internal state
     _tasks = Dict()
     _periodic_callbacks = Dict()
@@ -389,17 +382,30 @@ class PeriodicMetricsCollector(LoggingConfigurable):
         tick = time.perf_counter
 
         last_tick = tick()
+        resolution = self.event_loop_interval_resolution
+        lower_bound = 2 * resolution
+        # This loop runs _very_ often, so try to keep it efficient.
+        # Even excess comparisons and assignments have a measurable effect on overall cpu usage.
         while True:
-            await asyncio.sleep(self.event_loop_interval_resolution)
+            await asyncio.sleep(resolution)
             now = tick()
+            # measure the _difference_ between the sleep time and the measured time
+            # the event loop blocked for somewhere in the range [delay, delay + resolution]
             tick_duration = now - last_tick
             last_tick = now
-            EVENT_LOOP_INTERVAL_SECONDS.observe(tick_duration)
-            if tick_duration >= self.event_loop_interval_log_threshold:
-                # warn about slow ticks
-                self.log.warning(
-                    "Event loop was unresponsive for %.2fs!", tick_duration
-                )
+            if tick_duration < lower_bound:
+                # don't report numbers less than measurement resolution,
+                # we don't really have that information
+                delay = resolution
+            else:
+                delay = tick_duration - resolution
+                if delay >= self.event_loop_interval_log_threshold:
+                    # warn about slow ticks
+                    self.log.warning(
+                        "Event loop was unresponsive for at least %.2fs!", delay
+                    )
+
+            EVENT_LOOP_INTERVAL_SECONDS.observe(delay)
 
     def start(self):
         """
