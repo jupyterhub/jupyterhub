@@ -240,8 +240,8 @@ can also automatically add a proxy route to forward web requests to
 that service.
 
 A common example of a service is the [cull idle
-servers](https://jupyterhub.readthedocs.io/en/stable/getting-started/services-basics.html#real-world-example-to-cull-idle-servers)
-script. When started by the hub, it automatically gets admin API
+servers](https://github.com/jupyterhub/jupyterhub-idle-culler)
+service. When started by the hub, it automatically gets admin API
 tokens. It uses the API to list all running servers, compare against
 activity timeouts, and shut down servers exceeding the limits. Even
 though this is an intrinsic part of JupyterHub, it is only loosely
