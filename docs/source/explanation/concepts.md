@@ -312,7 +312,7 @@ spawer decides where those streams are directed, so if you
 notice problems at this phase you need to check your spawner for
 instructions for accessing the single-user logs. For example, the
 LocalProcessSpawner logs are just outputted to the same JupyterHub
-output logs (TODO is this correct?), the SystemdSpawner logs are
+output logs, the SystemdSpawner logs are
 written to the Systemd journal, Docker and Kubernetes logs are written
 to Docker and Kubernetes respectively, and batchspawner output goes to
 the normal output places of batch jobs and is an explicit
