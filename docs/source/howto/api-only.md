@@ -1,4 +1,4 @@
-(api-only)=
+(howto:api-only)=
 
 # Deploying JupyterHub in "API only mode"
 

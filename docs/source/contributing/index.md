@@ -1,3 +1,5 @@
+(contributing)=
+
 # Contributing
 
 We want you to contribute to JupyterHub in ways that are most exciting

@@ -1,4 +1,4 @@
-(hub-database)=
+(explanation:hub-database)=
 
 # The Hub's Database
 

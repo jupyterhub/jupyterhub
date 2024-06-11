@@ -213,7 +213,7 @@ c.JupyterHub.load_roles = [
 ]
 ```
 
-When a service has a configured URL or explicit `oauth_client_id` or `oauth_redirect_uri`, it can operate as an [OAuth client](jupyterhub-oauth).
+When a service has a configured URL or explicit `oauth_client_id` or `oauth_redirect_uri`, it can operate as an [OAuth client](explanation:hub-oauth).
 When a user visits an oauth-authenticated service,
 completion of authentication results in issuing an oauth token.
 

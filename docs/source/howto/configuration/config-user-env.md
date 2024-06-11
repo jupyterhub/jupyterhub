@@ -1,3 +1,5 @@
+(howto:config:user-env)=
+
 # Configuring user environments
 
 To deploy JupyterHub means you are providing Jupyter notebook environments for

@@ -1,4 +1,4 @@
-(singleuser)=
+(explanation:singleuser)=
 
 # The JupyterHub single-user server
 

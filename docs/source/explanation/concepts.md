@@ -1,3 +1,5 @@
+(explanation:concepts)=
+
 # JupyterHub: A conceptual overview
 
 ```{warning}
@@ -201,7 +203,7 @@ running, the notebooks). By default, the hub starts the proxy
 automatically
 and stops the proxy when the hub stops (so that connections get
 interrupted). But when you [configure the proxy to run
-separately](separate-proxy),
+separately](howto:separate-proxy),
 user's connections will continue to work even without the hub.
 
 The default proxy is **ConfigurableHttpProxy** which is simple but

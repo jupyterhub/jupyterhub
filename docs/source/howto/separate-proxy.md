@@ -1,4 +1,4 @@
-(separate-proxy)=
+(howto:separate-proxy)=
 
 # Running proxy separately from the hub
 

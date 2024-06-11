@@ -11,7 +11,7 @@ No other database records are affected.
 ## Upgrade steps
 
 1. All running **servers must be stopped** before proceeding with the upgrade.
-2. To upgrade the Hub, follow the [Upgrading JupyterHub](upgrading-jupyterhub) instructions.
+2. To upgrade the Hub, follow the [Upgrading JupyterHub](howto:upgrading-jupyterhub) instructions.
    ```{attention}
    We advise against defining any new roles in the `jupyterhub.config.py` file right after the upgrade is completed and JupyterHub restarted for the first time. This preserves the 'current' state of the Hub. You can define and assign new roles on any other following startup.
    ```

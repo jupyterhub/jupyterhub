@@ -1,4 +1,4 @@
-(jupyterhub-oauth)=
+(explanation:hub-oauth)=
 
 # JupyterHub and OAuth
 

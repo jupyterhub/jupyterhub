@@ -1,3 +1,5 @@
+(howto:templates)=
+
 # Working with templates and UI
 
 The pages of the JupyterHub application are generated from

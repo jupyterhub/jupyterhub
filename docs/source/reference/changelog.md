@@ -27,7 +27,7 @@ Contributors to major version bumps in JupyterHub include:
 5.0.0 is a major release of JupyterHub.
 It has lots of cool new features.
 
-For information about upgrading, see [upgrading to 5.0 documentation](upgrading-v5).
+For information about upgrading, see [upgrading to 5.0 documentation](howto:upgrading-v5).
 
 Changes that are likely to require effort to upgrade:
 
@@ -298,7 +298,7 @@ especially those with other user content on peer domains to JupyterHub.
 
 As always, JupyterHub deployments are especially encouraged to enable per-user domains if protecting users from each other is a concern.
 
-For more information on securely deploying JupyterHub, see the [web security documentation](web-security).
+For more information on securely deploying JupyterHub, see the [web security documentation](explanation:security).
 
 [CVE-2024-28233]: https://github.com/jupyterhub/jupyterhub/security/advisories/GHSA-7r3h-4ph8-w38g
 
@@ -422,13 +422,13 @@ See [our definition of contributors](https://github-activity.readthedocs.io/en/l
 :::{admonition} Upgrade note
 
 Upgrading from 3.1 to 4.0 should require no additional action beyond running `jupyterhub --upgrade-db` to upgrade the database schema after upgrading the package version.
-It is otherwise a regular jupyterhub [upgrade](upgrading-jupyterhub).
+It is otherwise a regular jupyterhub [upgrade](howto:upgrading-jupyterhub).
 :::
 
 There are three major changes that _should_ be invisible to most users:
 
 1. Groups can now have 'properties', editable via the admin page, which can be used by Spawners for their operations.
-   This requires a db schema upgrade, so remember to [**backup and upgrade your database**](upgrading-jupyterhub)!
+   This requires a db schema upgrade, so remember to [**backup and upgrade your database**](howto:upgrading-jupyterhub)!
 2. Often-problematic header-based checks for cross-site requests have been replaces with more standard use of XSRF tokens.
    Most folks shouldn't notice this change, but if "Blocking Cross Origin API request" has been giving you headaches, this should be much improved.
 3. Improved support for Jupyter Server 2.0 by reimplementing `jupyterhub-singleuser` as a standard _server extension_.
@@ -1136,7 +1136,7 @@ and consider assigning only the necessary roles and scopes.
 [rbac]: ./rbac/index.md
 
 JupyterHub 2.0 requires an update to the database schema,
-so **make sure to [read the upgrade documentation and backup your database](upgrading-jupyterhub)
+so **make sure to [read the upgrade documentation and backup your database](howto:upgrading-jupyterhub)
 before upgrading**.
 
 :::{admonition} stop all servers before upgrading
