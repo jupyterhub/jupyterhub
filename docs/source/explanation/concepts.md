@@ -233,9 +233,8 @@ do configure it, you'll know).
 
 ### Services
 
-JupyterHub has the concept of **services**
-([basics](services),
-[reference](../reference/services)), which are other web services
+JupyterHub has the concept of **services** ([basics](tutorial:services),
+[reference](services-reference)), which are other web services
 started by the hub, but otherwise are not necessarily related to the
 hub itself. They are often used to do things related to Jupyter
 (things that user interacts with, usually not the hub), but could
