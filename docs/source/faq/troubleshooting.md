@@ -167,7 +167,7 @@ When your whole JupyterHub sits behind an organization proxy (_not_ a reverse pr
 
 ### Launching Jupyter Notebooks to run as an externally managed JupyterHub service with the `jupyterhub-singleuser` command returns a `JUPYTERHUB_API_TOKEN` error
 
-{ref}`services` allow processes to interact with JupyterHub's REST API. Example use-cases include:
+{ref}`services-reference` allow processes to interact with JupyterHub's REST API. Example use-cases include:
 
 - **Secure Testing**: provide a canonical Jupyter Notebook for testing production data to reduce the number of entry points into production systems.
 - **Grading Assignments**: provide access to shared Jupyter Notebooks that may be used for management tasks such as grading assignments.
