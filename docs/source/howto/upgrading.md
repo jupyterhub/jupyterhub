@@ -1,4 +1,4 @@
-(upgrading-jupyterhub)=
+(howto:upgrading-jupyterhub)=
 
 # Upgrading JupyterHub
 

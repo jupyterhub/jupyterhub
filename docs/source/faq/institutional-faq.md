@@ -1,3 +1,5 @@
+(faq:institutional)=
+
 # Institutional FAQ
 
 This page contains common questions from users of JupyterHub,
@@ -130,7 +132,7 @@ level for several years, and makes a number of "default" security decisions that
 users.
 
 - For security considerations in the base JupyterHub application,
-  [see the JupyterHub security page](web-security).
+  [see the JupyterHub security page](explanation:security).
 - For security considerations when deploying JupyterHub on Kubernetes, see the
   [JupyterHub on Kubernetes security page](https://z2jh.jupyter.org/en/latest/security.html).
 

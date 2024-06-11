@@ -4,7 +4,7 @@
 
 This document describes how JupyterHub routes requests.
 
-This does not include the [REST API](using-jupyterhub-rest-api) URLs.
+This does not include the [REST API](howto:rest-api) URLs.
 
 In general, all URLs can be prefixed with `c.JupyterHub.base_url` to
 run the whole JupyterHub application on a prefix.
@@ -240,7 +240,7 @@ and the page will show a link back to `/hub/spawn/...`.
 
 On this page, users can manage their JupyterHub API tokens.
 They can revoke access and request new tokens for writing scripts
-against the [JupyterHub REST API](using-jupyterhub-rest-api).
+against the [JupyterHub REST API](howto:rest-api).
 
 ## `/hub/admin`
 

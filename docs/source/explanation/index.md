@@ -1,3 +1,5 @@
+(explanation)=
+
 # Explanation
 
 _Explanation_ documentation provide big-picture descriptions of how JupyterHub works. This section is meant to build your understanding of particular topics.

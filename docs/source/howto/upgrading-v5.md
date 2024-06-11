@@ -1,4 +1,4 @@
-(upgrading-v5)=
+(howto:upgrading-v5)=
 
 # Upgrading to JupyterHub 5
 

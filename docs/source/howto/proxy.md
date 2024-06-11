@@ -1,3 +1,5 @@
+(howto:custom-proxy)=
+
 # Writing a custom Proxy implementation
 
 JupyterHub 0.8 introduced the ability to write a custom implementation of the

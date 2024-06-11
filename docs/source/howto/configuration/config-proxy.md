@@ -1,3 +1,5 @@
+(howto:config:reverse-proxy)=
+
 # Using a reverse proxy
 
 In the following example, we show configuration files for a JupyterHub server

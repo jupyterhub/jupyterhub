@@ -1,4 +1,4 @@
-(troubleshooting)=
+(faq:troubleshooting)=
 
 # Troubleshooting
 

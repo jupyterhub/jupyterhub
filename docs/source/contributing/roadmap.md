@@ -1,3 +1,5 @@
+(contributing:roadmap)=
+
 # The JupyterHub roadmap
 
 This roadmap collects "next steps" for JupyterHub. It is about creating a

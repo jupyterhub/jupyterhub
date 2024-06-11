@@ -1,4 +1,4 @@
-(using-jupyterhub-rest-api)=
+(howto:rest-api)=
 
 # Using JupyterHub's REST API
 

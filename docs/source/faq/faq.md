@@ -1,3 +1,5 @@
+(faq)=
+
 # Frequently asked questions
 
 ## How do I share links to notebooks?

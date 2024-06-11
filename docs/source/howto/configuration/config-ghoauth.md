@@ -1,3 +1,5 @@
+(howto:config:gh-oauth)=
+
 # Configure GitHub OAuth
 
 In this example, we show a configuration file for a fairly standard JupyterHub

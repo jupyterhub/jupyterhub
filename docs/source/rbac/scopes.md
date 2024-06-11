@@ -186,14 +186,14 @@ An **access scope** is used to govern _access_ to a JupyterHub service or a user
 This means making API requests, or visiting via a browser using OAuth.
 Without the appropriate access scope, a user or token should not be permitted to make requests of the service.
 
-When you attempt to access a service or server authenticated with JupyterHub, it will begin the [oauth flow](jupyterhub-oauth) for issuing a token that can be used to access the service.
+When you attempt to access a service or server authenticated with JupyterHub, it will begin the [oauth flow](explanation:hub-oauth) for issuing a token that can be used to access the service.
 If the user does not have the access scope for the relevant service or server, JupyterHub will not permit the oauth process to complete.
 If oauth completes, the token will have at least the access scope for the service.
 For minimal permissions, this is the _only_ scope granted to tokens issued during oauth by default,
 but can be expanded via {attr}`.Spawner.oauth_client_allowed_scopes` or a service's [`oauth_client_allowed_scopes`](service-credentials) configuration.
 
 :::{seealso}
-[Further explanation of OAuth in JupyterHub](jupyterhub-oauth)
+[Further explanation of OAuth in JupyterHub](explanation:hub-oauth)
 :::
 
 If a given service or single-user server can be governed by a single boolean "yes, you can use this service" or "no, you can't," or limiting via other existing scopes, access scopes are enough to manage access to the service.

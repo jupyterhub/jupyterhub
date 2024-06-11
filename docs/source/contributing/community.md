@@ -1,3 +1,5 @@
+(contributing:community)=
+
 # Community communication channels
 
 We use different channels of communication for different purposes. Whichever one you use will depend on what kind of communication you want to engage in.
