@@ -1,3 +1,4 @@
+(services)=
 # External services
 
 When working with JupyterHub, a **Service** is defined as a process

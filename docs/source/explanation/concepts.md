@@ -64,7 +64,7 @@ JupyterHub itself doesn't actually manage your users. It has a
 database of users, but it is usually connected with some other system
 that manages the usernames and passwords. When someone tries to log
 in to JupyteHub, it asks the
-**authenticator**([basics](authenticators-users-basics),
+**authenticator**([basics](authenticators),
 [reference](../reference/authenticators)) if the
 username/password is valid(&). The authenticator returns a username(&),
 which is passed on to the spawner, which has to use it to start that
@@ -113,7 +113,7 @@ services you are using.
 
 ### Spawner
 
-The **spawner** ([basics](spawners-basics),
+The **spawner** ([basics](spawners),
 [reference](../reference/spawners)) is the real core of
 JupyterHub: when someone wants a notebook server, the spawner allocates
 resources and starts the server. The notebook server could run on the
@@ -196,7 +196,7 @@ running, the notebooks). By default, the hub starts the proxy
 automatically
 and stops the proxy when the hub stops (so that connections get
 interrupted). But when you [configure the proxy to run
-separately](../reference/separate-proxy),
+separately](separate-proxy),
 user's connections will continue to work even without the hub.
 
 The default proxy is **ConfigurableHttpProxy** which is simple but
@@ -229,7 +229,7 @@ do configure it, you'll know).
 ### Services
 
 JupyterHub has the concept of **services**
-([basics](services-basics),
+([basics](services),
 [reference](../reference/services)), which are other web services
 started by the hub, but otherwise are not necessarily related to the
 hub itself. They are often used to do things related to Jupyter
