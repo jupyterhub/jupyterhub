@@ -249,15 +249,6 @@ coupled and running as a service provides convenience of
 authentication - it could be just as well run some other way, with a
 manually provided API token.
 
-Another example is _sharing files using hubshare_. Hubshare would work as an external service
-which user notebooks talk to and use Hub authentication, but otherwise
-it isn't directly a matter of the hub. You could equally well share
-files by other extensions to the single-user notebook servers or
-configure the spawners to access shared storage spaces. In order to
-use something such as hubshare, the difficulty is not modifying
-JupyterHub: it is modifying the notebook servers to speak to some
-service, and making that service.
-
 The configuration option `c.JupyterHub.services` is used to start
 services from the hub.
 
