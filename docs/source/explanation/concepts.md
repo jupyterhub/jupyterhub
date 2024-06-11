@@ -1,5 +1,10 @@
 # JupyterHub: A conceptual overview
 
+```{warning}
+This page could is missing cross-links to other parts of
+the documentation. You can help by adding them!
+```
+
 JupyterHub is not what you think it is. Most things you think are
 part of JupyterHub are actually handled by some other component, for
 example the spawner or notebook server itself, and it's not always
