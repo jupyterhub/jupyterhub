@@ -1,13 +1,13 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
+import asyncio
 import json
 import warnings
 from collections import defaultdict
-from datetime import timedelta
 from urllib.parse import quote, urlparse, urlunparse
 
 from sqlalchemy import inspect
-from tornado import gen, web
+from tornado import web
 from tornado.httputil import urlencode
 from tornado.log import app_log
 
@@ -912,9 +912,13 @@ class User:
                 spawner.cert_paths = await maybe_future(spawner.move_certs(hub_paths))
             self.log.debug("Calling Spawner.start for %s", spawner._log_name)
             f = maybe_future(spawner.start())
-            # commit any changes in spawner.start (always commit db changes before yield)
+            # commit any changes in spawner.start (always commit db changes before await)
             db.commit()
-            url = await gen.with_timeout(timedelta(seconds=spawner.start_timeout), f)
+            # gen.with_timeout protects waited-for tasks from cancellation,
+            # whereas wait_for cancels tasks that don't finish within timeout.
+            # we want this task to halt if it doesn't return in the time limit.
+            await asyncio.wait_for(f, timeout=spawner.start_timeout)
+            url = f.result()
             if url:
                 # get ip, port info from return value of start()
                 if isinstance(url, str):
