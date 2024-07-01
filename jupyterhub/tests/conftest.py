@@ -127,9 +127,10 @@ def db():
 @fixture(scope='module')
 def event_loop(request):
     """Same as pytest-asyncio.event_loop, but re-scoped to module-level"""
-    event_loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(event_loop)
-    return event_loop
+    # new_event_loop/set_event_loop doesn't work since pytest-asyncio 0.23
+    loop = asyncio.get_event_loop_policy().get_event_loop()
+    yield loop
+    loop.close()
 
 
 @fixture(scope='module')
