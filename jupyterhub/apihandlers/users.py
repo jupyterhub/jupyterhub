@@ -694,14 +694,22 @@ class UserServerAPIHandler(APIHandler):
                 asyncio.ensure_future(_remove_spawner(spawner._stop_future))
             return
 
-        if spawner.pending:
-            raise web.HTTPError(
-                400,
-                f"{spawner._log_name} is pending {spawner.pending}, please wait",
-            )
-
         stop_future = None
-        if spawner.ready:
+        if spawner.pending:
+            # we are interrupting a pending start
+            # hopefully nothing gets leftover
+            self.log.warning(
+                f"Interrupting spawner {spawner._log_name}, pending {spawner.pending}"
+            )
+            spawn_future = spawner._spawn_future
+            if spawn_future:
+                spawn_future.cancel()
+            # Give cancel a chance to resolve?
+            # not sure what we would wait for here,
+            await asyncio.sleep(1)
+            stop_future = await self.stop_single_user(user, server_name)
+
+        elif spawner.ready:
             # include notify, so that a server that died is noticed immediately
             status = await spawner.poll_and_notify()
             if status is None:
@@ -837,7 +845,9 @@ class SpawnProgressAPIHandler(APIHandler):
             # not pending, no progress to fetch
             # check if spawner has just failed
             f = spawn_future
-            if f and f.done() and f.exception():
+            if f and f.cancelled():
+                failed_event['message'] = "Spawn cancelled"
+            elif f and f.done() and f.exception():
                 exc = f.exception()
                 message = getattr(exc, "jupyterhub_message", str(exc))
                 failed_event['message'] = f"Spawn failed: {message}"
@@ -876,7 +886,9 @@ class SpawnProgressAPIHandler(APIHandler):
         else:
             # what happened? Maybe spawn failed?
             f = spawn_future
-            if f and f.done() and f.exception():
+            if f and f.cancelled():
+                failed_event['message'] = "Spawn cancelled"
+            elif f and f.done() and f.exception():
                 exc = f.exception()
                 message = getattr(exc, "jupyterhub_message", str(exc))
                 failed_event['message'] = f"Spawn failed: {message}"

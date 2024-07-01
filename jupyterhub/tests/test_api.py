@@ -1558,23 +1558,20 @@ async def test_start_stop_race(app, no_patience, slow_spawn):
     r = await api_request(app, 'users', user.name, 'server', method='post')
     assert r.status_code == 202
     assert spawner.pending == 'spawn'
+    spawn_future = spawner._spawn_future
     # additional spawns while spawning shouldn't trigger a new spawn
     with mock.patch.object(spawner, 'start') as m:
         r = await api_request(app, 'users', user.name, 'server', method='post')
     assert r.status_code == 202
     assert m.call_count == 0
 
-    # stop while spawning is not okay
-    r = await api_request(app, 'users', user.name, 'server', method='delete')
-    assert r.status_code == 400
-    while not spawner.ready:
-        await asyncio.sleep(0.1)
-
+    # stop while spawning is okay now
     spawner.delay = 3
-    # stop the spawner
     r = await api_request(app, 'users', user.name, 'server', method='delete')
     assert r.status_code == 202
     assert spawner.pending == 'stop'
+    assert spawn_future.cancelled()
+    assert spawner._spawn_future is None
     # make sure we get past deleting from the proxy
     await asyncio.sleep(1)
     # additional stops while stopping shouldn't trigger a new stop
