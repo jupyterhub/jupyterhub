@@ -149,7 +149,7 @@ jobs:
           branchRegex: ^\w[\w-.]*$
 
       - name: Build and push jupyterhub
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           platforms: linux/amd64,linux/arm64
@@ -172,7 +172,7 @@ jobs:
           branchRegex: ^\w[\w-.]*$
 
       - name: Build and push jupyterhub-onbuild
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           build-args: |
             BASE_IMAGE=${{ fromJson(steps.jupyterhubtags.outputs.tags)[0] }}
@@ -195,7 +195,7 @@ jobs:
           branchRegex: ^\w[\w-.]*$
 
       - name: Build and push jupyterhub-demo
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           build-args: |
             BASE_IMAGE=${{ fromJson(steps.onbuildtags.outputs.tags)[0] }}
@@ -221,7 +221,7 @@ jobs:
           branchRegex: ^\w[\w-.]*$
 
       - name: Build and push jupyterhub/singleuser
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           build-args: |
             JUPYTERHUB_VERSION=${{ github.ref_type == 'tag' && github.ref_name || format('git:{0}', github.sha) }}
