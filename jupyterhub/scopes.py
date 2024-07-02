@@ -109,7 +109,7 @@ scope_definitions = {
         'subscopes': ['groups', 'read:roles:groups', 'delete:groups'],
     },
     'groups': {
-        'description': 'Read and write group information, including adding/removing users to/from groups. Note: adding users to groups is a way of granting permissions to users of the group,and may grant _access_ to users of other groups.',
+        'description': 'Read and write group information, including adding/removing any users to/from groups. Note: adding users to groups may affect permissions.',
         'subscopes': ['read:groups', 'list:groups'],
     },
     'list:groups': {
