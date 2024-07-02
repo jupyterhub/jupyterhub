@@ -20,6 +20,42 @@ Contributors to major version bumps in JupyterHub include:
 
 ## [Unreleased]
 
+## 5.1
+
+### 5.1.0 - 2024-07
+
+JupyterHub 5.1 is a small release adding a few refinements and new features on top of 5.0.
+5.1 has no known changes in compatibility relative to 5.0.
+
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/5.0.0...5.1.0))
+
+#### New features added
+
+- Add token_expires_in_max_seconds configuration [#4831](https://github.com/jupyterhub/jupyterhub/pull/4831) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics), [@rcthomas](https://github.com/rcthomas))
+- Add Spawner.group_overrides to allow overriding spawner config based on user group membership [#4822](https://github.com/jupyterhub/jupyterhub/pull/4822) ([@yuvipanda](https://github.com/yuvipanda), [@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio), [@manics](https://github.com/manics), [@ryanlovett](https://github.com/ryanlovett))
+
+#### Enhancements made
+
+- allow stop while start is pending [#4844](https://github.com/jupyterhub/jupyterhub/pull/4844) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics))
+- reduce cost of event_loop_interval metric [#4835](https://github.com/jupyterhub/jupyterhub/pull/4835) ([@minrk](https://github.com/minrk), [@yuvipanda](https://github.com/yuvipanda))
+
+#### Documentation improvements
+
+- Provide consistent myst references to documentation pages - part 1 [#4837](https://github.com/jupyterhub/jupyterhub/pull/4837) ([@yuvipanda](https://github.com/yuvipanda), [@minrk](https://github.com/minrk))
+- fix formatting of group_overrides docstring [#4836](https://github.com/jupyterhub/jupyterhub/pull/4836) ([@minrk](https://github.com/minrk), [@yuvipanda](https://github.com/yuvipanda))
+- Fix wording for `read:users` scope description [#4829](https://github.com/jupyterhub/jupyterhub/pull/4829) ([@manics](https://github.com/manics), [@consideRatio](https://github.com/consideRatio))
+- further emphasize that admin_users config only grants permission [#4828](https://github.com/jupyterhub/jupyterhub/pull/4828) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics))
+- Jupyter(Hub) conceptual intro [#2726](https://github.com/jupyterhub/jupyterhub/pull/2726) ([@rkdarst](https://github.com/rkdarst), [@yuvipanda](https://github.com/yuvipanda), [@betatim](https://github.com/betatim), [@choldgraf](https://github.com/choldgraf), [@rcthomas](https://github.com/rcthomas), [@consideRatio](https://github.com/consideRatio), [@willingc](https://github.com/willingc), [@manics](https://github.com/manics))
+
+#### Contributors to this release
+
+The following people contributed discussions, new ideas, code and documentation contributions, and review.
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/#how-does-this-tool-define-contributions-in-the-reports).
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2024-05-24&to=2024-07-01&type=c))
+
+@benz0li ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Abenz0li+updated%3A2024-05-24..2024-07-01&type=Issues)) | @betatim ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Abetatim+updated%3A2024-05-24..2024-07-01&type=Issues)) | @choldgraf ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Acholdgraf+updated%3A2024-05-24..2024-07-01&type=Issues)) | @consideRatio ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3AconsideRatio+updated%3A2024-05-24..2024-07-01&type=Issues)) | @Mackenzie-OO7 ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3AMackenzie-OO7+updated%3A2024-05-24..2024-07-01&type=Issues)) | @manics ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amanics+updated%3A2024-05-24..2024-07-01&type=Issues)) | @marto1 ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amarto1+updated%3A2024-05-24..2024-07-01&type=Issues)) | @minrk ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk+updated%3A2024-05-24..2024-07-01&type=Issues)) | @rcthomas ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Arcthomas+updated%3A2024-05-24..2024-07-01&type=Issues)) | @rkdarst ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Arkdarst+updated%3A2024-05-24..2024-07-01&type=Issues)) | @ryanlovett ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aryanlovett+updated%3A2024-05-24..2024-07-01&type=Issues)) | @willingc ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Awillingc+updated%3A2024-05-24..2024-07-01&type=Issues)) | @yuvipanda ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ayuvipanda+updated%3A2024-05-24..2024-07-01&type=Issues))
+
 ## 5.0
 
 ### 5.0.0 - 2024-05-25
