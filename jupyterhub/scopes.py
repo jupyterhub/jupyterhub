@@ -48,7 +48,7 @@ scope_definitions = {
         'doc_description': 'Access the admin page. Permission to take actions via the admin page granted separately.',
     },
     'admin:users': {
-        'description': 'Read, write, create and delete users and their authentication state, not including their servers or tokens.',
+        'description': 'Read, modify, create, and delete users and their authentication state, not including their servers or tokens. This is an extremely privileged scope and should be considered tantamount to superuser.',
         'subscopes': ['admin:auth_state', 'users', 'read:roles:users', 'delete:users'],
     },
     'admin:auth_state': {'description': 'Read a user’s authentication state.'},
@@ -109,7 +109,7 @@ scope_definitions = {
         'subscopes': ['groups', 'read:roles:groups', 'delete:groups'],
     },
     'groups': {
-        'description': 'Read and write group information, including adding/removing users to/from groups.',
+        'description': 'Read and write group information, including adding/removing users to/from groups. Note: adding users to groups is a way of granting permissions to users of the group,and may grant _access_ to users of other groups.',
         'subscopes': ['read:groups', 'list:groups'],
     },
     'list:groups': {

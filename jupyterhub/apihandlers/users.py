@@ -186,6 +186,8 @@ class UserListAPIHandler(APIHandler):
         # admin is set for all users
         # to create admin and non-admin users requires at least two API requests
         admin = data.get('admin', False)
+        if admin and not self.current_user.admin:
+            raise web.HTTPError(403, "Only admins can grant admin permissions")
 
         to_create = []
         invalid_names = []
@@ -259,12 +261,16 @@ class UserAPIHandler(APIHandler):
         if user is not None:
             raise web.HTTPError(409, "User %s already exists" % user_name)
 
-        user = self.user_from_username(user_name)
         if data:
             self._check_user_model(data)
-            if 'admin' in data:
-                user.admin = data['admin']
-                assign_default_roles(self.db, entity=user)
+            if data.get('admin', False) and not self.current_user.admin:
+                raise web.HTTPError(403, "Only admins can grant admin permissions")
+
+        # create the user
+        user = self.user_from_username(user_name)
+        if data and data.get('admin', False):
+            user.admin = data['admin']
+            assign_default_roles(self.db, entity=user)
         self.db.commit()
 
         try:
@@ -322,7 +328,17 @@ class UserAPIHandler(APIHandler):
                     400,
                     "User %s already exists, username must be unique" % data['name'],
                 )
+
+        if not self.current_user.admin:
+            if user.admin:
+                raise web.HTTPError(403, "Only admins can modify other admins")
+            if 'admin' in data and data['admin']:
+                raise web.HTTPError(403, "Only admins can grant admin permissions")
         for key, value in data.items():
+            value_s = "..." if key == "auth_state" else repr(value)
+            self.log.info(
+                f"{self.current_user.name} setting {key}={value_s} for {user.name}"
+            )
             if key == 'auth_state':
                 await user.save_auth_state(value)
             else:
