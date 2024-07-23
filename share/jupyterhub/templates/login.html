@@ -91,7 +91,7 @@
 {% block script %}
   {{ super() }}
   <script>
-    if (window.location.protocol === "http:") {
+    if (!window.isSecureContext) {
       // unhide http warning
       var warning = document.getElementById('insecure-login-warning');
       warning.className = warning.className.replace(/\bhidden\b/, '');
