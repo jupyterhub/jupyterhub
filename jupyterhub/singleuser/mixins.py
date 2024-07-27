@@ -588,7 +588,7 @@ class SingleUserNotebookAppMixin(Configurable):
             self.log.warning("Enabling jupyterhub test extension")
             self.jpserver_extensions["jupyterhub.tests.extension"] = True
 
-    def initialize(self, argv=None):
+    def initialize(self, argv=None, **kwargs):
         if self.disable_user_config:
             _disable_user_config(self)
         # disable trash by default
@@ -605,7 +605,7 @@ class SingleUserNotebookAppMixin(Configurable):
         # jupyter-server calls it too late, notebook doesn't define it yet
         # only called in jupyter-server >= 1.9
         self.init_ioloop()
-        super().initialize(argv)
+        super().initialize(argv, **kwargs)
         self.patch_templates()
 
     def init_ioloop(self):
