@@ -2116,8 +2116,9 @@ components:
               Access the admin page. Permission to take actions via the admin
               page granted separately.
             admin:users:
-              Read, write, create and delete users and their authentication
-              state, not including their servers or tokens.
+              Read, modify, create, and delete users and their authentication
+              state, not including their servers or tokens. This is an extremely privileged
+              scope and should be considered tantamount to superuser.
             admin:auth_state: Read a user’s authentication state.
             users:
               Read and write permissions to user models (excluding servers, tokens
@@ -2148,8 +2149,8 @@ components:
             read:tokens: Read user tokens.
             admin:groups: Read and write group information, create and delete groups.
             groups:
-              Read and write group information, including adding/removing users
-              to/from groups.
+              "Read and write group information, including adding/removing any
+              users to/from groups. Note: adding users to groups may affect permissions."
             list:groups: List groups, including at least their names.
             read:groups: Read group models.
             read:groups:name: Read group names.
