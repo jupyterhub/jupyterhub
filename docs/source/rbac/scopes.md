@@ -182,7 +182,7 @@ Metascopes `self` and `all`, `<resource>`, `<resource>:<subresource>`, `read:<re
 
 ### Considerations when allowing users to grant permissions via the `groups` scope
 
-In general, permissions are fixed by role assignments in configuration (or via [Authenticator-managed roles](#authenticator-roles) in JupyterHub 5) and can only be modified by administrators who can modify the Hub configuration.
+In general, permissions are fixed by role assignments in configuration (or via Authenticator-managed roles in JupyterHub 5) and can only be modified by administrators who can modify the Hub configuration.
 
 There is only one scope that allows users to modify permissions of themselves or others at runtime instead of via configuration:
 the `groups` scope, which allows adding and removing users from one or more groups.
