@@ -229,6 +229,32 @@ access:servers!server
 access:servers!server=username/
 : access to only `username`'s _default_ server.
 
+(granting-scopes)=
+
+### Considerations when allowing users to grant permissions via the `groups` scope
+
+In general, permissions are fixed by role assignments in configuration (or via [Authenticator-managed roles](#authenticator-roles) in JupyterHub 5) and can only be modified by administrators who can modify the Hub configuration.
+
+There is only one scope that allows users to modify permissions of themselves or others at runtime instead of via configuration:
+the `groups` scope, which allows adding and removing users from one or more groups.
+With the `groups` scope, a user can add or remove any users to/from any group.
+With the `groups!group=name` filtered scope, a user can add or remove any users to/from a specific group.
+There are two ways in which adding a user to a group may affect their permissions:
+
+- if the group is assigned one or more roles, adding a user to the group may increase their permissions (this is usually the point!)
+- if the group is the _target_ of a filter on this or another group, such as `access:servers!group=students`, adding a user to the group can grant _other_ users elevated access to that user's resources.
+
+With these in mind, when designing your roles, do not grant users the `groups` scope for any groups which:
+
+- have roles the user should not have authority over, or
+- would grant them access they shouldn't have for _any_ user (e.g. don't grant `teachers` both `access:servers!group=students` and `groups!group=students` which is tantamount to the unrestricted `access:servers` because they control which users the `group=students` filter applies to).
+
+If a group does not have role assignments and the group is not present in any `!group=` filter, there should be no permissions-related consequences for adding users to groups.
+
+:::{note}
+The legacy `admin` property of users, which grants extreme superuser permissions and is generally discouraged in favor of more specific roles and scopes, may be modified only by other users with the `admin` property (e.g. added via `admin_users`).
+:::
+
 (custom-scopes)=
 
 ### Custom scopes
