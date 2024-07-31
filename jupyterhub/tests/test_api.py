@@ -665,16 +665,25 @@ async def test_add_multi_user(app):
 
 @mark.user
 @mark.role
-async def test_add_multi_user_admin(app):
+@mark.parametrize("is_admin", [True, False])
+async def test_add_multi_user_admin(app, create_user_with_scopes, is_admin):
     db = app.db
+    requester = create_user_with_scopes("admin:users")
+    requester.admin = is_admin
+    db.commit()
     names = ['c', 'd']
     r = await api_request(
         app,
         'users',
         method='post',
         data=json.dumps({'usernames': names, 'admin': True}),
+        name=requester.name,
     )
-    assert r.status_code == 201
+    if is_admin:
+        assert r.status_code == 201
+    else:
+        assert r.status_code == 403
+        return
     reply = r.json()
     r_names = [user['name'] for user in reply]
     assert names == r_names
@@ -712,13 +721,26 @@ async def test_add_user_duplicate(app):
 
 @mark.user
 @mark.role
-async def test_add_admin(app):
+@mark.parametrize("is_admin", [True, False])
+async def test_add_admin(app, create_user_with_scopes, is_admin):
     db = app.db
     name = 'newadmin'
+    user = create_user_with_scopes("admin:users")
+    user.admin = is_admin
+    db.commit()
     r = await api_request(
-        app, 'users', name, method='post', data=json.dumps({'admin': True})
+        app,
+        'users',
+        name,
+        method='post',
+        data=json.dumps({'admin': True}),
+        name=user.name,
     )
-    assert r.status_code == 201
+    if is_admin:
+        assert r.status_code == 201
+    else:
+        assert r.status_code == 403
+        return
     user = find_user(db, name)
     assert user is not None
     assert user.name == name
@@ -738,9 +760,14 @@ async def test_delete_user(app):
 
 @mark.user
 @mark.role
-async def test_make_admin(app):
+@mark.parametrize("is_admin", [True, False])
+async def test_user_make_admin(app, create_user_with_scopes, is_admin):
     db = app.db
-    name = 'admin2'
+    requester = create_user_with_scopes('admin:users')
+    requester.admin = is_admin
+    db.commit()
+
+    name = new_username("make_admin")
     r = await api_request(app, 'users', name, method='post')
     assert r.status_code == 201
     user = find_user(db, name)
@@ -751,16 +778,56 @@ async def test_make_admin(app):
     assert orm.Role.find(db, 'admin') not in user.roles
 
     r = await api_request(
-        app, 'users', name, method='patch', data=json.dumps({'admin': True})
+        app,
+        'users',
+        name,
+        method='patch',
+        data=json.dumps({'admin': True}),
+        name=requester.name,
     )
-
-    assert r.status_code == 200
+    if is_admin:
+        assert r.status_code == 200
+    else:
+        assert r.status_code == 403
+        return
     user = find_user(db, name)
     assert user is not None
     assert user.name == name
     assert user.admin
     assert orm.Role.find(db, 'user') in user.roles
     assert orm.Role.find(db, 'admin') in user.roles
+
+
+@mark.user
+@mark.parametrize("requester_is_admin", [True, False])
+@mark.parametrize("user_is_admin", [True, False])
+async def test_user_set_name(
+    app, user, create_user_with_scopes, requester_is_admin, user_is_admin
+):
+    db = app.db
+    requester = create_user_with_scopes('admin:users')
+    requester.admin = requester_is_admin
+    user.admin = user_is_admin
+    db.commit()
+    new_name = new_username()
+
+    r = await api_request(
+        app,
+        'users',
+        user.name,
+        method='patch',
+        data=json.dumps({'name': new_name}),
+        name=requester.name,
+    )
+    if requester_is_admin or not user_is_admin:
+        assert r.status_code == 200
+    else:
+        assert r.status_code == 403
+        return
+    renamed = find_user(db, new_name)
+    assert renamed is not None
+    assert renamed.name == new_name
+    assert renamed.id == user.id
 
 
 @mark.user
