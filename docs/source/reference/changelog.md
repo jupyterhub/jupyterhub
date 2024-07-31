@@ -10,6 +10,17 @@ command line for details.
 
 ## 4.1
 
+### 4.1.6 - 2024-07-31
+
+4.1.6 is a **security release**, fixing [CVE-2024-41942].
+All JupyterHub deployments are encouraged to upgrade,
+but only those with users having the `admin:users` scope are affected.
+The [full advisory][CVE-2024-41942] will be published 7 days after the release.
+
+[CVE-2024-41942]: https://github.com/jupyterhub/jupyterhub/security/advisories/GHSA-9x4q-3gxw-849f
+
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/4.1.5...4.1.6))
+
 ### 4.1.5 - 2024-04-04
 
 ([full changelog](https://github.com/jupyterhub/jupyterhub/compare/4.1.4...4.1.5))
