@@ -1230,7 +1230,20 @@ class PAMAuthenticator(LocalAuthenticator):
 
     @default('executor')
     def _default_executor(self):
-        return ThreadPoolExecutor(1)
+        return ThreadPoolExecutor(self.executor_threads)
+
+    executor_threads = Integer(
+        1,
+        config=True,
+        help="""
+        Number of executor threads.
+
+        PAM auth requests happen in this thread, so it is mostly
+        waiting for the pam stack. One thread is usually enough,
+        unless your pam stack is doing something slow like network
+        requests
+        """,
+    )
 
     encoding = Unicode(
         'utf8',
