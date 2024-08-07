@@ -1233,7 +1233,7 @@ class PAMAuthenticator(LocalAuthenticator):
         return ThreadPoolExecutor(self.executor_threads)
 
     executor_threads = Integer(
-        1,
+        4,
         config=True,
         help="""
         Number of executor threads.
