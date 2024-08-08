@@ -361,9 +361,8 @@ class SingleUserNotebookAppMixin(Configurable):
         """override default log format to include time"""
         return "%(color)s[%(levelname)1.1s %(asctime)s.%(msecs).03d %(name)s %(module)s:%(lineno)d]%(end_color)s %(message)s"
 
-    def _confirm_exit(self):
-        # disable the exit confirmation for background notebook processes
-        self.io_loop.add_callback_from_signal(self.io_loop.stop)
+    def _handle_sigint(self, *args, **kwargs):
+        self._signal_stop(*args, **kwargs)
 
     def migrate_config(self):
         if self.disable_user_config:
