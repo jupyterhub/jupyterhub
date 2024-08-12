@@ -8,6 +8,7 @@ import os
 import re
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor
 from subprocess import PIPE, Popen, check_output
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 from unittest.mock import patch
@@ -15,6 +16,8 @@ from unittest.mock import patch
 import pytest
 import traitlets
 from traitlets.config import Config
+
+from jupyterhub.scopes import get_scopes_for
 
 from .. import orm
 from ..app import COOKIE_SECRET_BYTES, JupyterHub
@@ -289,8 +292,7 @@ def persist_db(tmpdir):
 def new_hub(request, tmpdir, persist_db):
     """Fixture to launch a new hub for testing"""
 
-    async def new_hub():
-        kwargs = {}
+    async def new_hub(**kwargs):
         ssl_enabled = getattr(request.module, "ssl_enabled", False)
         if ssl_enabled:
             kwargs['internal_certs_location'] = str(tmpdir)
@@ -537,3 +539,66 @@ async def test_recreate_service_from_database(
     # start one more, service should be gone
     app = await new_hub()
     assert service_name not in app._service_map
+
+
+async def test_revoke_blocked_users(app, username, groupname, new_hub):
+    config = Config()
+    config.Authenticator.admin_users = {username}
+    config.JupyterHub.load_groups = {
+        groupname: {
+            "users": [username],
+        },
+    }
+    config.JupyterHub.load_roles = [
+        {
+            "name": "testrole",
+            "scopes": ["access:services"],
+            "groups": [groupname],
+        }
+    ]
+    app = await new_hub(config=config)
+    user = app.users[username]
+
+    # load some credentials, start server
+    await user.spawn()
+    # await app.proxy.add_user(user)
+    spawner = user.spawners['']
+    token = user.new_api_token(return_orm=True)
+    app.cleanup_servers = False
+    app.stop()
+
+    # before state
+    assert await spawner.poll() is None
+    assert sorted(role.name for role in user.roles) == ['admin', 'user']
+    assert [g.name for g in user.groups] == [groupname]
+    assert user.admin
+    user_scopes = get_scopes_for(user)
+    assert "access:servers" in user_scopes
+    token_scopes = get_scopes_for(token)
+    assert "access:servers" in token_scopes
+
+    # start a new hub, now with blocked users
+    config = Config()
+    name_doesnt_exist = user.name + "-doesntexist"
+    config.Authenticator.blocked_users = {user.name, name_doesnt_exist}
+    config.JupyterHub.init_spawners_timeout = 60
+    # background spawner.proc.wait to avoid waiting for zombie process here
+    with ThreadPoolExecutor(1) as pool:
+        pool.submit(spawner.proc.wait)
+        app2 = await new_hub(config=config)
+    assert app2.db_url == app.db_url
+
+    # check that blocked user has no permissions
+    user2 = app2.users[user.name]
+    assert user2.roles == []
+    assert user2.groups == []
+    assert user2.admin is False
+    user_scopes = get_scopes_for(user2)
+    assert user_scopes == set()
+    token = orm.APIToken.find(app2.db, token.token)
+    token_scopes = get_scopes_for(token)
+    assert token_scopes == set()
+
+    # spawner stopped
+    assert user2.spawners == {}
+    assert await spawner.poll() is not None

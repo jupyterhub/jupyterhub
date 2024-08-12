@@ -2182,7 +2182,11 @@ class JupyterHub(Application):
         # but changes to the allowed_users set can occur in the database,
         # and persist across sessions.
         total_users = 0
+        blocked_users = self.authenticator.blocked_users
         for user in db.query(orm.User):
+            if user.name in blocked_users:
+                # don't call add_user with blocked users
+                continue
             try:
                 f = self.authenticator.add_user(user)
                 if f:
@@ -2237,6 +2241,35 @@ class JupyterHub(Application):
             if f:
                 await maybe_future(f)
         return user
+
+    async def init_blocked_users(self):
+        """Revoke all permissions for users in Authenticator.blocked_users"""
+        blocked_users = self.authenticator.blocked_users
+        if not blocked_users:
+            # nothing to check
+            return
+        db = self.db
+        for user in db.query(orm.User).filter(orm.User.name.in_(blocked_users)):
+            # revoke permissions from blocked users
+            # so already-issued credentials have no access to the API
+            self.log.debug(f"Found blocked user in database: {user.name}")
+            if user.admin:
+                self.log.warning(
+                    f"Removing admin permissions from blocked user {user.name}"
+                )
+                user.admin = False
+            if user.roles:
+                self.log.warning(
+                    f"Removing blocked user {user.name} from roles: {', '.join(role.name for role in user.roles)}"
+                )
+                user.roles = []
+            if user.groups:
+                self.log.warning(
+                    f"Removing blocked user {user.name} from groups: {', '.join(group.name for group in user.groups)}"
+                )
+                user.groups = []
+
+        db.commit()
 
     async def init_groups(self):
         """Load predefined groups into the database"""
@@ -2965,6 +2998,18 @@ class JupyterHub(Application):
         async def check_spawner(user, name, spawner):
             status = 0
             if spawner.server:
+                if user.name in self.authenticator.blocked_users:
+                    self.log.warning(
+                        f"Stopping spawner for blocked user: {spawner._log_name}"
+                    )
+                    try:
+                        await user.stop(name)
+                    except Exception:
+                        self.log.exception(
+                            f"Failed to stop {spawner._log_name}",
+                            exc_info=True,
+                        )
+                    return
                 try:
                     status = await spawner.poll()
                 except Exception:
@@ -3356,6 +3401,7 @@ class JupyterHub(Application):
         self.init_services()
         await self.init_api_tokens()
         await self.init_role_assignment()
+        await self.init_blocked_users()
         self.init_tornado_settings()
         self.init_handlers()
         self.init_tornado_application()

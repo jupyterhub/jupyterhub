@@ -1234,6 +1234,8 @@ class APIToken(Hashed, Base):
             orm_token.expires_at = cls.now() + timedelta(seconds=expires_in)
 
         db.commit()
+        if return_orm:
+            return orm_token
         return token
 
     def update_scopes(self, new_scopes):
