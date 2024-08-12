@@ -173,7 +173,7 @@ jobs:
             # make sure our `>=` pins really do express our minimum supported versions
             pip install -r ci/oldest-dependencies/requirements.old -e .
           else
-            pip install -e ".[test]"
+            pip install --pre -e ".[test]"
           fi
 
           if [ "${{ matrix.main_dependencies }}" != "" ]; then
