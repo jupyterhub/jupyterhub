@@ -466,7 +466,6 @@ class AdminHandler(BaseHandler):
             named_server_limit_per_user=await self.get_current_user_named_server_limit(),
             server_version=f'{__version__} {self.version_hash}',
             api_page_limit=self.settings["api_page_default_limit"],
-            base_url=self.settings["base_url"],
         )
         self.finish(html)
 
