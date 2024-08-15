@@ -544,6 +544,8 @@ async def test_recreate_service_from_database(
 async def test_revoke_blocked_users(app, username, groupname, new_hub):
     config = Config()
     config.Authenticator.admin_users = {username}
+    kept_username = username + "-kept"
+    config.Authenticator.allowed_users = {username, kept_username}
     config.JupyterHub.load_groups = {
         groupname: {
             "users": [username],
@@ -563,7 +565,8 @@ async def test_revoke_blocked_users(app, username, groupname, new_hub):
     await user.spawn()
     # await app.proxy.add_user(user)
     spawner = user.spawners['']
-    token = user.new_api_token(return_orm=True)
+    token = user.new_api_token()
+    orm_token = orm.APIToken.find(app.db, token)
     app.cleanup_servers = False
     app.stop()
 
@@ -574,7 +577,7 @@ async def test_revoke_blocked_users(app, username, groupname, new_hub):
     assert user.admin
     user_scopes = get_scopes_for(user)
     assert "access:servers" in user_scopes
-    token_scopes = get_scopes_for(token)
+    token_scopes = get_scopes_for(orm_token)
     assert "access:servers" in token_scopes
 
     # start a new hub, now with blocked users
@@ -595,10 +598,14 @@ async def test_revoke_blocked_users(app, username, groupname, new_hub):
     assert user2.admin is False
     user_scopes = get_scopes_for(user2)
     assert user_scopes == set()
-    token = orm.APIToken.find(app2.db, token.token)
-    token_scopes = get_scopes_for(token)
+    orm_token = orm.APIToken.find(app2.db, token)
+    token_scopes = get_scopes_for(orm_token)
     assert token_scopes == set()
 
     # spawner stopped
     assert user2.spawners == {}
     assert await spawner.poll() is not None
+
+    # (sanity check) didn't lose other user
+    kept_user = app2.users[kept_username]
+    assert 'user' in [r.name for r in kept_user.roles]

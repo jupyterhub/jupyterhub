@@ -1141,7 +1141,6 @@ class APIToken(Hashed, Base):
         expires_in=None,
         client_id=None,
         oauth_client=None,
-        return_orm=False,
     ):
         """Generate a new API token for a user or service"""
         assert user or service
@@ -1234,8 +1233,6 @@ class APIToken(Hashed, Base):
             orm_token.expires_at = cls.now() + timedelta(seconds=expires_in)
 
         db.commit()
-        if return_orm:
-            return orm_token
         return token
 
     def update_scopes(self, new_scopes):
