@@ -1141,7 +1141,6 @@ class APIToken(Hashed, Base):
         expires_in=None,
         client_id=None,
         oauth_client=None,
-        return_orm=False,
     ):
         """Generate a new API token for a user or service"""
         assert user or service

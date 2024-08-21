@@ -300,6 +300,14 @@ class Authenticator(LoggingConfigurable):
         If empty, does not perform any additional restriction.
 
         .. versionadded: 0.9
+        
+        .. versionchanged:: 5.2
+            Users blocked via `blocked_users` that may have logged in in the past
+            have all permissions and group membership revoked
+            and all servers stopped at JupyterHub startup.
+            Previously, User permissions (e.g. API tokens)
+            and servers were unaffected and required additional
+            administrator operations to block after a user is added to `blocked_users`.
 
         .. versionchanged:: 1.2
             `Authenticator.blacklist` renamed to `blocked_users`
