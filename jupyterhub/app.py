@@ -3414,7 +3414,6 @@ class JupyterHub(Application):
         metrics_collector = self.metrics_collector = PeriodicMetricsCollector(
             parent=self, db=self.db
         )
-        metrics_collector.start()
 
     async def cleanup(self):
         """Shutdown managed services and various subprocesses. Cleanup runtime files."""
@@ -3642,6 +3641,9 @@ class JupyterHub(Application):
             )
             loop.stop()
             return
+
+        # start collecting metrics
+        self.metrics_collector.start()
 
         # start the proxy
         if self.proxy.should_start:
