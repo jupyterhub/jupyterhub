@@ -308,17 +308,6 @@ def new_hub(request, tmpdir, persist_db):
 
 
 async def test_resume_spawners(tmpdir, request, new_hub):
-    async def new_hub():
-        kwargs = {}
-        ssl_enabled = getattr(request.module, "ssl_enabled", False)
-        if ssl_enabled:
-            kwargs['internal_certs_location'] = str(tmpdir)
-        app = MockHub(test_clean_db=False, **kwargs)
-        app.config.ConfigurableHTTPProxy.should_start = False
-        app.config.ConfigurableHTTPProxy.auth_token = 'unused'
-        await app.initialize([])
-        return app
-
     app = await new_hub()
     db = app.db
     # spawn a user's server
@@ -541,7 +530,7 @@ async def test_recreate_service_from_database(
     assert service_name not in app._service_map
 
 
-async def test_revoke_blocked_users(app, username, groupname, new_hub):
+async def test_revoke_blocked_users(username, groupname, new_hub):
     config = Config()
     config.Authenticator.admin_users = {username}
     kept_username = username + "-kept"
@@ -609,3 +598,4 @@ async def test_revoke_blocked_users(app, username, groupname, new_hub):
     # (sanity check) didn't lose other user
     kept_user = app2.users[kept_username]
     assert 'user' in [r.name for r in kept_user.roles]
+    app2.stop()
