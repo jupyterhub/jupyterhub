@@ -14,3 +14,25 @@ updates:
       interval: monthly
       time: "05:00"
       timezone: Etc/UTC
+  - package-ecosystem: npm
+    directory: /
+    groups:
+      # one big pull request
+      npm:
+        patterns:
+          - "*"
+    schedule:
+      interval: monthly
+      time: "05:00"
+      timezone: Etc/UTC
+  - package-ecosystem: npm
+    directory: /jsx
+    groups:
+      # one big pull request
+      jsx:
+        patterns:
+          - "*"
+    schedule:
+      interval: monthly
+      time: "05:00"
+      timezone: Etc/UTC
