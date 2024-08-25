@@ -3948,4 +3948,8 @@ UpgradeDB.classes.append(JupyterHub)
 main = JupyterHub.launch_instance
 
 if __name__ == "__main__":
-    main()
+    # don't invoke __main__.main here because __main__.JupyterHub
+    # is not jupyterhub.app.JupyterHub. There will be two!
+    from jupyterhub import app
+
+    app.JupyterHub.launch_instance()
