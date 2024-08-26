@@ -198,6 +198,23 @@ With a docker container, pass in the environment variable with the run command:
 
 [This example](https://github.com/jupyterhub/jupyterhub/tree/HEAD/examples/service-notebook/external) demonstrates how to combine the use of the `jupyterhub-singleuser` environment variables when launching a Notebook as an externally managed service.
 
+### Jupyter Notebook/Lab can be launched, but notebooks seem to hang when trying to execute a cell
+
+This often occurs when your browser is unable to open a websocket connection to a Jupyter kernel.
+
+#### Diagnose
+
+Open your browser console, e.g. [Chrome](https://developer.chrome.com/docs/devtools/console), [Firefox](https://firefox-source-docs.mozilla.org/devtools-user/web_console/).
+If you see errors related to opening websockets this is likely to be the problem.
+
+#### Solutions
+
+This could be caused by anything related to the network between your computer/browser and the server running JupyterHub, such as:
+
+- reverse proxies (see {ref}`howto:config:reverse-proxy` for example configurations)
+- anti-virus or firewalls running on your computer or JupyterHub server
+- transparent proxies running on your network
+
 ## How do I...?
 
 ### Use a chained SSL certificate
