@@ -28,7 +28,8 @@
   </div>
 {% endmacro %}
 <!DOCTYPE HTML>
-<html lang="en">
+<html lang="en"
+      data-bs-theme="{%- if dark_theme -%}dark{%- else -%}light{%- endif -%}">
   <head>
     <meta charset="utf-8">
     <title>
@@ -170,12 +171,12 @@
                         <span class="navbar-text me-1">{{ user.name }}</span>
                         <a id="logout"
                            role="button"
-                           class="btn btn-sm btn-outline-dark"
+                           class="btn btn-sm btn-outline-{%- if dark_theme -%}light{%- else -%}dark{%- endif -%}"
                            href="{{ logout_url }}"> <i aria-hidden="true" class="fa fa-sign-out"></i> Logout</a>
                       {% else %}
                         <a id="login"
                            role="button"
-                           class="btn btn-sm btn-outline-dark"
+                           class="btn btn-sm btn-outline-{%- if dark_theme -%}light{%- else -%}dark{%- endif -%}"
                            href="{{ login_url }}">Login</a>
                       {% endif %}
                     </span>

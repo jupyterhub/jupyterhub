@@ -545,6 +545,7 @@ class JupyterHub(Application):
             c.JupyterHub.template_vars = {
                 "key1": "value1",
                 "key2": callable_value,
+                "dark_theme": "true",
             }
         """,
     ).tag(config=True)

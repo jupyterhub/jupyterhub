@@ -8,6 +8,15 @@ example, to be defined once and incorporated into all pages. By providing
 your own template(s), you can have complete control over JupyterHub's
 appearance.
 
+## Dark Theme
+
+By default, bootstrap pages have a white (light) background color.
+
+If you want to change JupyerHub to a darker color, you can set the configuration
+variable `JupyterHub.template_vars = { 'dark_theme': 'true' }`.
+
+This adds `data-bs-theme="dark"` to the `<html>` element of `page.html`.
+
 ## Custom Templates
 
 JupyterHub will look for custom templates in all paths included in the
