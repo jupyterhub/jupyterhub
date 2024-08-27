@@ -80,13 +80,13 @@ test("Adds user from input to user selectables on button click", async () => {
   let input = screen.getByTestId("username-input");
   let validateUser = screen.getByTestId("validate-user");
   let submit = screen.getByTestId("submit");
-
-  userEvent.type(input, "bar");
-  fireEvent.click(validateUser);
+  const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+  await user.type(input, "bar");
+  await fireEvent.click(validateUser);
   await act(async () => okPacket);
 
   await act(async () => {
-    fireEvent.click(submit);
+    await fireEvent.click(submit);
   });
 
   expect(callbackSpy).toHaveBeenNthCalledWith(1, ["bar"], "group");
@@ -100,7 +100,7 @@ test("Removes a user recently added from input from the selectables list", async
   });
 
   let selectedUser = screen.getByText("foo");
-  fireEvent.click(selectedUser);
+  await await fireEvent.click(selectedUser);
 
   let unselectedUser = screen.getByText("foo");
 
@@ -117,14 +117,14 @@ test("Grays out a user, already in the group, when unselected and calls deleteUs
   let submit = screen.getByTestId("submit");
 
   let groupUser = screen.getByText("foo");
-  fireEvent.click(groupUser);
+  await fireEvent.click(groupUser);
 
   let unselectedUser = screen.getByText("foo");
   expect(unselectedUser.className).toBe("item unselected");
 
   // test deleteUser call
   await act(async () => {
-    fireEvent.click(submit);
+    await fireEvent.click(submit);
   });
 
   expect(callbackSpy).toHaveBeenNthCalledWith(1, ["foo"], "group");
@@ -140,7 +140,7 @@ test("Calls deleteGroup on button click", async () => {
   let deleteGroup = screen.getByTestId("delete-group");
 
   await act(async () => {
-    fireEvent.click(deleteGroup);
+    await fireEvent.click(deleteGroup);
   });
 
   expect(callbackSpy).toHaveBeenNthCalledWith(1, "group");
@@ -154,12 +154,12 @@ test("Shows a UI error dialogue when group edit fails", async () => {
   });
 
   let groupUser = screen.getByText("foo");
-  fireEvent.click(groupUser);
+  await fireEvent.click(groupUser);
 
   let submit = screen.getByTestId("submit");
 
   await act(async () => {
-    fireEvent.click(submit);
+    await fireEvent.click(submit);
   });
 
   let errorDialog = screen.getByText("Failed to edit group.");
@@ -176,12 +176,12 @@ test("Shows a UI error dialogue when group edit returns an improper status code"
   });
 
   let groupUser = screen.getByText("foo");
-  fireEvent.click(groupUser);
+  await fireEvent.click(groupUser);
 
   let submit = screen.getByTestId("submit");
 
   await act(async () => {
-    fireEvent.click(submit);
+    await fireEvent.click(submit);
   });
 
   let errorDialog = screen.getByText("Failed to edit group.");
@@ -200,7 +200,7 @@ test("Shows a UI error dialogue when group delete fails", async () => {
   let deleteGroup = screen.getByTestId("delete-group");
 
   await act(async () => {
-    fireEvent.click(deleteGroup);
+    await fireEvent.click(deleteGroup);
   });
 
   let errorDialog = screen.getByText("Failed to delete group.");
@@ -219,7 +219,7 @@ test("Shows a UI error dialogue when group delete returns an improper status cod
   let deleteGroup = screen.getByTestId("delete-group");
 
   await act(async () => {
-    fireEvent.click(deleteGroup);
+    await fireEvent.click(deleteGroup);
   });
 
   let errorDialog = screen.getByText("Failed to delete group.");

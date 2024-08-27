@@ -453,7 +453,7 @@ const ServerDashboard = (props) => {
                   setStateFilter(event.target.checked ? "active" : null);
                 }}
               />
-              <Form.Check.Label for="active-servers-filter">
+              <Form.Check.Label htmlFor="active-servers-filter">
                 {"only active servers"}
               </Form.Check.Label>
             </Form.Check>

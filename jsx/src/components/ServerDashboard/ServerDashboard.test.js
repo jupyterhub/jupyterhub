@@ -291,7 +291,7 @@ test("Invokes the startServer event on button click", async () => {
   expect(start_elems.length).toBe(Object.keys(bar_servers).length);
 
   await act(async () => {
-    fireEvent.click(start_elems[0]);
+    await fireEvent.click(start_elems[0]);
   });
 
   expect(callbackSpy).toHaveBeenCalled();
@@ -307,7 +307,7 @@ test("Invokes the stopServer event on button click", async () => {
   let stop = screen.getByText("Stop Server");
 
   await act(async () => {
-    fireEvent.click(stop);
+    await fireEvent.click(stop);
   });
 
   expect(callbackSpy).toHaveBeenCalled();
@@ -323,7 +323,7 @@ test("Invokes the shutdownHub event on button click", async () => {
   let shutdown = screen.getByText("Shutdown Hub");
 
   await act(async () => {
-    fireEvent.click(shutdown);
+    await fireEvent.click(shutdown);
   });
 
   expect(callbackSpy).toHaveBeenCalled();
@@ -338,7 +338,7 @@ test("Sorts according to username", async () => {
 
   expect(searchParams.get("sort")).toEqual(null);
   let handler = screen.getByTestId(testId);
-  fireEvent.click(handler);
+  await fireEvent.click(handler);
   expect(searchParams.get("sort")).toEqual("name");
 
   await act(async () => {
@@ -346,7 +346,7 @@ test("Sorts according to username", async () => {
     handler = screen.getByTestId(testId);
   });
 
-  fireEvent.click(handler);
+  await fireEvent.click(handler);
   expect(searchParams.get("sort")).toEqual("-name");
 
   await act(async () => {
@@ -354,7 +354,7 @@ test("Sorts according to username", async () => {
     handler = screen.getByTestId(testId);
   });
 
-  fireEvent.click(handler);
+  await fireEvent.click(handler);
   expect(searchParams.get("sort")).toEqual("name");
 });
 
@@ -367,7 +367,7 @@ test("Sorts according to last activity", async () => {
 
   expect(searchParams.get("sort")).toEqual(null);
   let handler = screen.getByTestId(testId);
-  fireEvent.click(handler);
+  await fireEvent.click(handler);
   expect(searchParams.get("sort")).toEqual("last_activity");
 
   await act(async () => {
@@ -375,7 +375,7 @@ test("Sorts according to last activity", async () => {
     handler = screen.getByTestId(testId);
   });
 
-  fireEvent.click(handler);
+  await fireEvent.click(handler);
   expect(searchParams.get("sort")).toEqual("-last_activity");
 
   await act(async () => {
@@ -383,7 +383,7 @@ test("Sorts according to last activity", async () => {
     handler = screen.getByTestId(testId);
   });
 
-  fireEvent.click(handler);
+  await fireEvent.click(handler);
   expect(searchParams.get("sort")).toEqual("last_activity");
 });
 
@@ -397,7 +397,7 @@ test("Filter according to server status (running/not running)", async () => {
   const label = "only active servers";
   let handler = screen.getByLabelText(label);
   expect(handler.checked).toEqual(false);
-  fireEvent.click(handler);
+  await fireEvent.click(handler);
 
   // FIXME: need to force a rerender to get updated checkbox
   // I don't think this should be required
@@ -408,7 +408,7 @@ test("Filter according to server status (running/not running)", async () => {
   expect(searchParams.get("state")).toEqual("active");
   expect(handler.checked).toEqual(true);
 
-  fireEvent.click(handler);
+  await fireEvent.click(handler);
 
   await act(async () => {
     rerender(serverDashboardJsx());
@@ -433,7 +433,7 @@ test("Shows server details with button click", async () => {
   expect(collapseBar).not.toHaveClass("show");
 
   await act(async () => {
-    fireEvent.click(button);
+    await fireEvent.click(button);
     jest.runAllTimers();
   });
 
@@ -441,7 +441,7 @@ test("Shows server details with button click", async () => {
   expect(collapseBar).not.toHaveClass("show");
 
   await act(async () => {
-    fireEvent.click(button);
+    await fireEvent.click(button);
     jest.runAllTimers();
   });
 
@@ -450,7 +450,7 @@ test("Shows server details with button click", async () => {
   expect(collapseBar).not.toHaveClass("show");
 
   await act(async () => {
-    fireEvent.click(button);
+    await fireEvent.click(button);
     jest.runAllTimers();
   });
 
@@ -480,7 +480,7 @@ test("Shows a UI error dialogue when start all servers fails", async () => {
   let startAll = screen.getByTestId("start-all");
 
   await act(async () => {
-    fireEvent.click(startAll);
+    await fireEvent.click(startAll);
   });
 
   let errorDialog = screen.getByText("Failed to start servers.");
@@ -496,7 +496,7 @@ test("Shows a UI error dialogue when stop all servers fails", async () => {
   let stopAll = screen.getByTestId("stop-all");
 
   await act(async () => {
-    fireEvent.click(stopAll);
+    await fireEvent.click(stopAll);
   });
 
   let errorDialog = screen.getByText("Failed to stop servers.");
@@ -513,7 +513,7 @@ test("Shows a UI error dialogue when start user server fails", async () => {
   expect(start_elems.length).toBe(Object.keys(bar_servers).length);
 
   await act(async () => {
-    fireEvent.click(start_elems[0]);
+    await fireEvent.click(start_elems[0]);
   });
 
   let errorDialog = screen.getByText("Failed to start server.");
@@ -531,7 +531,7 @@ test("Shows a UI error dialogue when start user server returns an improper statu
   expect(start_elems.length).toBe(Object.keys(bar_servers).length);
 
   await act(async () => {
-    fireEvent.click(start_elems[0]);
+    await fireEvent.click(start_elems[0]);
   });
 
   let errorDialog = screen.getByText("Failed to start server.");
@@ -550,7 +550,7 @@ test("Shows a UI error dialogue when stop user servers fails", async () => {
   let stop = screen.getByText("Stop Server");
 
   await act(async () => {
-    fireEvent.click(stop);
+    await fireEvent.click(stop);
   });
 
   let errorDialog = screen.getByText("Failed to stop server.");
@@ -569,7 +569,7 @@ test("Shows a UI error dialogue when stop user server returns an improper status
   let stop = screen.getByText("Stop Server");
 
   await act(async () => {
-    fireEvent.click(stop);
+    await fireEvent.click(stop);
   });
 
   let errorDialog = screen.getByText("Failed to stop server.");
@@ -584,12 +584,13 @@ test("Search for user calls updateUsers with name filter", async () => {
     render(serverDashboardJsx());
   });
 
+  const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
   let search = screen.getByLabelText("user-search");
 
   expect(mockUpdateUsers.mock.calls).toHaveLength(1);
 
   expect(searchParams.get("offset")).toEqual("2");
-  userEvent.type(search, "a");
+  await user.type(search, "a");
   expect(search.value).toEqual("a");
   await act(async () => {
     jest.runAllTimers();
@@ -599,7 +600,7 @@ test("Search for user calls updateUsers with name filter", async () => {
   // FIXME: useSelector mocks prevent updateUsers from being called
   // expect(mockUpdateUsers.mock.calls).toHaveLength(2);
   // expect(mockUpdateUsers).toBeCalledWith(0, 100, "a");
-  userEvent.type(search, "b");
+  await user.type(search, "b");
   expect(search.value).toEqual("ab");
   await act(async () => {
     jest.runAllTimers();
@@ -672,7 +673,7 @@ test("Start server and confirm pending state", async () => {
   expect(buttons[2].textContent).toBe("Edit User");
 
   await act(async () => {
-    fireEvent.click(buttons[0]);
+    await fireEvent.click(buttons[0]);
   });
   expect(mockUpdateUsers.mock.calls).toHaveLength(1);
 
