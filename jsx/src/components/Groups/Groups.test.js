@@ -138,7 +138,7 @@ test("Interacting with PaginationFooter causes page refresh", async () => {
 
   let next = screen.getByTestId("paginate-next");
   await act(async () => {
-    fireEvent.click(next);
+    await fireEvent.click(next);
   });
   expect(updateGroupsSpy).toBeCalledWith(2, 2);
   // mocked updateGroups means callback after load doesn't fire

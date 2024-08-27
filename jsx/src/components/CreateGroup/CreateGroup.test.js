@@ -63,9 +63,10 @@ test("Calls createGroup on submit", async () => {
 
   let input = screen.getByTestId("group-input");
   let submit = screen.getByTestId("submit");
+  const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
 
-  userEvent.type(input, "groupname");
-  await act(async () => fireEvent.click(submit));
+  await user.type(input, "groupname");
+  await act(async () => await fireEvent.click(submit));
 
   expect(callbackSpy).toHaveBeenNthCalledWith(1, "groupname");
 });
@@ -80,7 +81,7 @@ test("Shows a UI error dialogue when group creation fails", async () => {
   let submit = screen.getByTestId("submit");
 
   await act(async () => {
-    fireEvent.click(submit);
+    await fireEvent.click(submit);
   });
 
   let errorDialog = screen.getByText("Failed to create group.");
@@ -99,7 +100,7 @@ test("Shows a more specific UI error dialogue when user creation returns an impr
   let submit = screen.getByTestId("submit");
 
   await act(async () => {
-    fireEvent.click(submit);
+    await fireEvent.click(submit);
   });
 
   let errorDialog = screen.getByText(

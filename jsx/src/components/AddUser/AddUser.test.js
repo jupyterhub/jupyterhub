@@ -67,7 +67,7 @@ test("Removes users when they fail Regex", async () => {
 
   fireEvent.blur(textarea, { target: { value: "foo \n bar\na@b.co\n  \n\n" } });
   await act(async () => {
-    fireEvent.click(submit);
+    await fireEvent.click(submit);
   });
 
   expect(callbackSpy).toHaveBeenCalledWith(["foo", "bar", "a@b.co"], false);
@@ -84,10 +84,10 @@ test("Correctly submits admin", async () => {
   let submit = screen.getByTestId("submit");
   let check = screen.getByTestId("check");
 
-  userEvent.click(check);
+  await userEvent.click(check);
   fireEvent.blur(textarea, { target: { value: "foo" } });
   await act(async () => {
-    fireEvent.click(submit);
+    await fireEvent.click(submit);
   });
 
   expect(callbackSpy).toHaveBeenCalledWith(["foo"], true);
@@ -103,7 +103,7 @@ test("Shows a UI error dialogue when user creation fails", async () => {
   let submit = screen.getByTestId("submit");
 
   await act(async () => {
-    fireEvent.click(submit);
+    await fireEvent.click(submit);
   });
 
   let errorDialog = screen.getByText("Failed to create user.");
@@ -122,7 +122,7 @@ test("Shows a more specific UI error dialogue when user creation returns an impr
   let submit = screen.getByTestId("submit");
 
   await act(async () => {
-    fireEvent.click(submit);
+    await fireEvent.click(submit);
   });
 
   let errorDialog = screen.getByText(

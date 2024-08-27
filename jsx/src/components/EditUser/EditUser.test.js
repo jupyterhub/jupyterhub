@@ -80,7 +80,7 @@ test("Calls the delete user function when the button is pressed", async () => {
   let deleteUser = screen.getByTestId("delete-user");
 
   await act(async () => {
-    fireEvent.click(deleteUser);
+    await fireEvent.click(deleteUser);
   });
 
   expect(callbackSpy).toHaveBeenCalled();
@@ -95,7 +95,7 @@ test("Submits the edits when the button is pressed", async () => {
 
   let submit = screen.getByTestId("submit");
   await act(async () => {
-    fireEvent.click(submit);
+    await fireEvent.click(submit);
   });
 
   expect(callbackSpy).toHaveBeenCalled();
@@ -113,7 +113,7 @@ test("Shows a UI error dialogue when user edit fails", async () => {
 
   fireEvent.blur(usernameInput, { target: { value: "whatever" } });
   await act(async () => {
-    fireEvent.click(submit);
+    await fireEvent.click(submit);
   });
 
   let errorDialog = screen.getByText("Failed to edit user.");
@@ -134,7 +134,7 @@ test("Shows a UI error dialogue when user edit returns an improper status code",
 
   fireEvent.blur(usernameInput, { target: { value: "whatever" } });
   await act(async () => {
-    fireEvent.click(submit);
+    await fireEvent.click(submit);
   });
 
   let errorDialog = screen.getByText("Failed to edit user.");
