@@ -29,7 +29,7 @@
     "testEnvironment": "jsdom"
   },
   "dependencies": {
-    "bootstrap": "^5.2.3",
+    "bootstrap": "^5.3.3",
     "history": "^5.3.0",
     "lodash": "^4.17.21",
     "prop-types": "^15.8.1",
@@ -42,7 +42,7 @@
     "react-router-dom": "^6.22.2",
     "recompose": "npm:react-recompose@^0.33.0",
     "redux": "^4.2.1",
-    "regenerator-runtime": "^0.13.11"
+    "regenerator-runtime": "^0.14.1"
   },
   "devDependencies": {
     "@babel/core": "^7.21.4",
@@ -52,7 +52,7 @@
     "@testing-library/react": "^12.1.5",
     "@testing-library/user-event": "^13.5.0",
     "@webpack-cli/serve": "^2.0.1",
-    "babel-jest": "^29.5.0",
+    "babel-jest": "^29.7.0",
     "babel-loader": "^9.1.2",
     "css-loader": "^6.7.3",
     "eslint": "^8.57.0",
@@ -61,8 +61,8 @@
     "eslint-plugin-unused-imports": "^2.0.0",
     "file-loader": "^6.2.0",
     "identity-obj-proxy": "^3.0.0",
-    "jest": "^29.5.0",
-    "jest-environment-jsdom": "^29.5.0",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
     "prettier": "^2.8.7",
     "style-loader": "^3.3.2",
     "webpack": "^5.79.0",
