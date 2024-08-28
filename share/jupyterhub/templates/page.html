@@ -28,8 +28,7 @@
   </div>
 {% endmacro %}
 <!DOCTYPE HTML>
-<html lang="en"
-      data-bs-theme="{%- if dark_theme -%}dark{%- else -%}light{%- endif -%}">
+<html lang="en">
   <head>
     <meta charset="utf-8">
     <title>
@@ -49,6 +48,7 @@
       <script src="{{static_url("components/bootstrap/dist/js/bootstrap.bundle.min.js") }}" type="text/javascript" charset="utf-8"></script>
       <script src="{{static_url("components/requirejs/require.js") }}" type="text/javascript" charset="utf-8"></script>
       <script src="{{static_url("components/jquery/dist/jquery.min.js") }}" type="text/javascript" charset="utf-8"></script>
+      <script src="{{static_url("js/darkmode.js") }}" type="text/javascript" charset="utf-8"></script>
     {% endblock scripts %}
     {# djlint js formatting doesn't handle template blocks in js #}
     {# djlint: off #}
@@ -127,8 +127,8 @@
             </button>
           {% endif %}
           <div class="collapse navbar-collapse" id="thenavbar">
-            {% if user %}
-              <ul class="navbar-nav me-auto mb-0">
+            <ul class="navbar-nav me-auto mb-0">
+              {% if user %}
                 {% block nav_bar_left_items %}
                   <li class="nav-item">
                     <a class="nav-link" href="{{ base_url }}home">Home</a>
@@ -160,23 +160,33 @@
                     </li>
                   {% endif %}
                 {% endblock nav_bar_left_items %}
-              </ul>
-            {% endif %}
+              {% endif %}
+            </ul>
             <ul class="nav navbar-nav me-2">
               {% block nav_bar_right_items %}
+                <li class="nav-item">
+                  {% block theme_toggle %}
+                    <button class="btn btn-sm"
+                            id="dark-theme-toggle"
+                            aria-label="Toggle dark mode"
+                            title="Toggle dark mode">
+                      <i aria-hidden="true" class="fa fa-circle-half-stroke"></i>
+                    </button>
+                  {% endblock theme_toggle %}
+                </li>
                 <li class="nav-item">
                   {% block login_widget %}
                     <span id="login_widget">
                       {% if user %}
-                        <span class="navbar-text me-1">{{ user.name }}</span>
+                        <span class="me-1">{{ user.name }}</span>
                         <a id="logout"
                            role="button"
-                           class="btn btn-sm btn-outline-{%- if dark_theme -%}light{%- else -%}dark{%- endif -%}"
+                           class="btn btn-sm btn-outline-contrast"
                            href="{{ logout_url }}"> <i aria-hidden="true" class="fa fa-sign-out"></i> Logout</a>
                       {% else %}
                         <a id="login"
                            role="button"
-                           class="btn btn-sm btn-outline-{%- if dark_theme -%}light{%- else -%}dark{%- endif -%}"
+                           class="btn btn-sm btn-outline-contrast"
                            href="{{ login_url }}">Login</a>
                       {% endif %}
                     </span>

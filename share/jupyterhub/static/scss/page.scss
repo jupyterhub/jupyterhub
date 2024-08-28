@@ -18,7 +18,16 @@ $grid-float-breakpoint: map-get($grid-breakpoints, "sm");
     &:focus {
       // no color change
       color: var(--#{$prefix}navbar-color);
-      background-color: darken($body-tertiary-bg, 10%);
+      background-color: shift-color($body-tertiary-bg, 10%);
+    }
+  }
+}
+
+[data-bs-theme="dark"] .navbar-nav {
+  .nav-link {
+    &:hover,
+    &:focus {
+      background-color: shift-color($body-tertiary-bg-dark, -20%);
     }
   }
 }
@@ -90,4 +99,25 @@ $grid-float-breakpoint: map-get($grid-breakpoints, "sm");
     $color: #fff,
     $hover-color: #fff
   );
+}
+
+// contrast button variants
+// same as btn-dark on light and btn-light on dark
+.btn-contrast,
+[data-bs-theme="light"] .btn-contrast {
+  @extend .btn-dark;
+}
+
+.btn-outline-contrast,
+[data-bs-theme="light"] .btn-outline-contrast {
+  @extend .btn-outline-dark;
+}
+
+[data-bs-theme="dark"] {
+  .btn-contrast {
+    @extend .btn-light;
+  }
+  .btn-outline-contrast {
+    @extend .btn-outline-light;
+  }
 }
