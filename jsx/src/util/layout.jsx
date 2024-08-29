@@ -34,5 +34,5 @@ export const MainContainer = (props) => {
 MainContainer.propTypes = {
   errorAlert: PropTypes.string,
   setErrorAlert: PropTypes.func,
-  children: PropTypes.array,
+  children: PropTypes.node,
 };
