@@ -70,6 +70,7 @@ afterEach(() => {
   useSelector.mockClear();
   mockReducers.mockClear();
   useSearchParams.mockClear();
+  jest.runAllTimers();
 });
 
 test("Renders", async () => {

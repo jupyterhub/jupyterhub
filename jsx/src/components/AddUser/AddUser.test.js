@@ -45,6 +45,7 @@ beforeEach(() => {
 
 afterEach(() => {
   useDispatch.mockClear();
+  jest.runAllTimers();
 });
 
 test("Renders", async () => {
@@ -78,15 +79,15 @@ test("Correctly submits admin", async () => {
   await act(async () => {
     render(addUserJsx(callbackSpy));
   });
-
   let textarea = screen.getByTestId("user-textarea");
   let submit = screen.getByTestId("submit");
   let check = screen.getByTestId("check");
 
-  await userEvent.click(check);
-  fireEvent.blur(textarea, { target: { value: "foo" } });
+  await fireEvent.blur(textarea, { target: { value: "foo" } });
+  await fireEvent.click(check);
+  await fireEvent.click(submit);
   await act(async () => {
-    await fireEvent.click(submit);
+    await jest.runAllTimers();
   });
 
   expect(callbackSpy).toHaveBeenCalledWith(["foo"], true);

@@ -57,6 +57,7 @@ beforeEach(() => {
 
 afterEach(() => {
   useSelector.mockClear();
+  jest.runAllTimers();
 });
 
 test("Renders", async () => {
@@ -81,8 +82,10 @@ test("Adds user from input to user selectables on button click", async () => {
   let submit = screen.getByTestId("submit");
   const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
   await user.type(input, "bar");
-  await fireEvent.click(validateUser);
-  await act(async () => okPacket);
+  await user.click(validateUser);
+  await act(async () => {
+    await jest.runAllTimers();
+  });
 
   await act(async () => {
     await fireEvent.click(submit);

@@ -206,7 +206,6 @@ let mockUpdateUsers = jest.fn(({ offset, limit, sort, name_filter, state }) => {
 let searchParams = new URLSearchParams();
 
 beforeEach(() => {
-  jest.useFakeTimers();
   useSelector.mockImplementation((callback) => {
     return callback(mockAppState());
   });
@@ -391,8 +390,6 @@ test("Filter according to server status (running/not running)", async () => {
   await act(async () => {
     rerender = render(serverDashboardJsx()).rerender;
   });
-  console.log(rerender);
-  console.log("begin test");
   const label = "only active servers";
   let handler = screen.getByLabelText(label);
   expect(handler.checked).toEqual(false);
@@ -430,17 +427,14 @@ test("Shows server details with button click", async () => {
   expect(collapse).toHaveClass("collapse");
   expect(collapse).not.toHaveClass("show");
   expect(collapseBar).not.toHaveClass("show");
-
+  await fireEvent.click(button);
   await act(async () => {
-    await fireEvent.click(button);
     jest.runAllTimers();
   });
-
   expect(collapse).toHaveClass("collapse show");
   expect(collapseBar).not.toHaveClass("show");
-
+  await fireEvent.click(button);
   await act(async () => {
-    await fireEvent.click(button);
     jest.runAllTimers();
   });
 
@@ -448,8 +442,8 @@ test("Shows server details with button click", async () => {
   expect(collapse).not.toHaveClass("show");
   expect(collapseBar).not.toHaveClass("show");
 
+  await fireEvent.click(button);
   await act(async () => {
-    await fireEvent.click(button);
     jest.runAllTimers();
   });
 

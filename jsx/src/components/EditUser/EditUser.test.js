@@ -57,6 +57,7 @@ beforeEach(() => {
 
 afterEach(() => {
   useDispatch.mockClear();
+  jest.runAllTimers();
 });
 
 test("Renders", async () => {
