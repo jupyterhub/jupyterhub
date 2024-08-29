@@ -1,7 +1,6 @@
-import React from "react";
+import React, { act } from "react";
 import { withProps } from "recompose";
 import "@testing-library/jest-dom";
-import { act } from "react-dom/test-utils";
 import userEvent from "@testing-library/user-event";
 import {
   render,

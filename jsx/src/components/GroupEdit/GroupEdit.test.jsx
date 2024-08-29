@@ -1,6 +1,5 @@
-import React from "react";
+import React, { act } from "react";
 import "@testing-library/jest-dom";
-import { act } from "react-dom/test-utils";
 import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Provider, useSelector } from "react-redux";
