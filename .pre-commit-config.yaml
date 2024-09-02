@@ -16,7 +16,7 @@ ci:
 repos:
   # autoformat and lint Python code
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.5.6
+    rev: v0.6.3
     hooks:
       - id: ruff
         types_or:
@@ -37,7 +37,7 @@ repos:
 
   # autoformat HTML templates
   - repo: https://github.com/djlint/djLint
-    rev: v1.34.1
+    rev: v1.35.2
     hooks:
       - id: djlint-reformat-jinja
         files: ".*templates/.*.html"
