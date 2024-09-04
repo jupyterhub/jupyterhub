@@ -1186,7 +1186,7 @@ async def test_paging_on_admin_page(
         re.compile(".*" + f"1-{min(users_count_db, 50)}" + ".*")
     )
     if users_count_db > 50:
-        await expect(btn_next.locator("//span")).to_have_class("active-pagination")
+        await expect(btn_next).to_be_enabled()
         # click on Next button
         await btn_next.click()
         if users_count_db <= 100:
@@ -1195,15 +1195,13 @@ async def test_paging_on_admin_page(
             )
         else:
             await expect(displaying).to_have_text(re.compile(".*" + "51-100" + ".*"))
-            await expect(btn_next.locator("//span")).to_have_class("active-pagination")
-        await expect(btn_previous.locator("//span")).to_have_class("active-pagination")
+            await expect(btn_next).to_be_enabled()
+        await expect(btn_previous).to_be_enabled()
         # click on Previous button
         await btn_previous.click()
     else:
-        await expect(btn_next.locator("//span")).to_have_class("inactive-pagination")
-        await expect(btn_previous.locator("//span")).to_have_class(
-            "inactive-pagination"
-        )
+        await expect(btn_next).to_be_disabled()
+        await expect(btn_previous).to_be_disabled()
 
 
 @pytest.mark.parametrize(

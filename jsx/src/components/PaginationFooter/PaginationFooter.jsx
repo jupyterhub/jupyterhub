@@ -2,8 +2,6 @@ import React from "react";
 import PropTypes from "prop-types";
 import { Button, FormControl } from "react-bootstrap";
 
-import "./pagination-footer.css";
-
 const PaginationFooter = (props) => {
   const { offset, limit, visible, total, next, prev, handleLimit } = props;
   return (
@@ -13,33 +11,45 @@ const PaginationFooter = (props) => {
         {total ? `of ${total}` : ""}
         <br />
         {offset >= 1 ? (
-          <Button variant="light" size="sm">
-            <span
-              className="active-pagination"
-              data-testid="paginate-prev"
-              onClick={prev}
-            >
-              Previous
-            </span>
+          <Button
+            variant="light"
+            size="sm"
+            onClick={prev}
+            className="me-2"
+            data-testid="paginate-prev"
+          >
+            Previous
           </Button>
         ) : (
-          <Button variant="light" size="sm">
-            <span className="inactive-pagination">Previous</span>
+          <Button
+            variant="light"
+            size="sm"
+            className="me-2"
+            disabled
+            aria-disabled="true"
+          >
+            Previous
           </Button>
         )}
         {offset + visible < total ? (
-          <Button variant="light" size="sm">
-            <span
-              className="active-pagination"
-              data-testid="paginate-next"
-              onClick={next}
-            >
-              Next
-            </span>
+          <Button
+            variant="light"
+            size="sm"
+            className="me-2"
+            onClick={next}
+            data-testid="paginate-next"
+          >
+            Next
           </Button>
         ) : (
-          <Button variant="light" size="sm">
-            <span className="inactive-pagination">Next</span>
+          <Button
+            variant="light"
+            size="sm"
+            className="me-2"
+            disabled
+            aria-disabled="true"
+          >
+            Next
           </Button>
         )}
         <label>
