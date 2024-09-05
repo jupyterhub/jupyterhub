@@ -1087,6 +1087,7 @@ async def open_admin_page(app, browser, login_as=None):
         # url = url_path_join(public_host(app), app.hub.base_url, "/login?next=" + admin_page)
         await browser.goto(admin_page)
         await expect(browser).to_have_url(re.compile(".*/hub/admin"))
+    await browser.wait_for_load_state("networkidle")
 
 
 def create_list_of_users(create_user_with_scopes, n):
@@ -1254,6 +1255,7 @@ async def test_search_on_admin_page(
         await expect(displaying).to_contain_text(re.compile("1-50"))
         # click on Next button to verify that the rest part of filtered list is displayed on the next page
         await browser.get_by_role("button", name="Next").click()
+        await browser.wait_for_load_state("networkidle")
         filtered_list_on_next_page = browser.locator('//tr[@class="user-row"]')
         await expect(filtered_list_on_page).to_have_count(users_count_db_filtered - 50)
         for element in await filtered_list_on_next_page.get_by_test_id(
