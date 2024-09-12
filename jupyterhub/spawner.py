@@ -702,6 +702,7 @@ class Spawner(LoggingConfigurable):
 
     env_keep = List(
         [
+            'LD_LIBRARY_PATH',
             'PATH',
             'PYTHONPATH',
             'CONDA_ROOT',
