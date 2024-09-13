@@ -1,6 +1,5 @@
-import React from "react";
+import React, { act } from "react";
 import "@testing-library/jest-dom";
-import { act } from "react-dom/test-utils";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { Provider, useDispatch, useSelector } from "react-redux";
 import { createStore } from "redux";
@@ -58,6 +57,7 @@ beforeEach(() => {
 
 afterEach(() => {
   useDispatch.mockClear();
+  jest.runAllTimers();
 });
 
 test("Renders", async () => {

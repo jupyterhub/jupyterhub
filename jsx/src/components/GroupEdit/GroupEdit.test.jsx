@@ -1,6 +1,5 @@
-import React from "react";
+import React, { act } from "react";
 import "@testing-library/jest-dom";
-import { act } from "react-dom/test-utils";
 import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Provider, useSelector } from "react-redux";
@@ -58,6 +57,7 @@ beforeEach(() => {
 
 afterEach(() => {
   useSelector.mockClear();
+  jest.runAllTimers();
 });
 
 test("Renders", async () => {
@@ -82,8 +82,10 @@ test("Adds user from input to user selectables on button click", async () => {
   let submit = screen.getByTestId("submit");
   const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
   await user.type(input, "bar");
-  await fireEvent.click(validateUser);
-  await act(async () => okPacket);
+  await user.click(validateUser);
+  await act(async () => {
+    await jest.runAllTimers();
+  });
 
   await act(async () => {
     await fireEvent.click(submit);

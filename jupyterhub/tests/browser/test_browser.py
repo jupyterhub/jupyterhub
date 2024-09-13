@@ -1087,6 +1087,7 @@ async def open_admin_page(app, browser, login_as=None):
         # url = url_path_join(public_host(app), app.hub.base_url, "/login?next=" + admin_page)
         await browser.goto(admin_page)
         await expect(browser).to_have_url(re.compile(".*/hub/admin"))
+    await browser.wait_for_load_state("networkidle")
 
 
 def create_list_of_users(create_user_with_scopes, n):
@@ -1186,7 +1187,7 @@ async def test_paging_on_admin_page(
         re.compile(".*" + f"1-{min(users_count_db, 50)}" + ".*")
     )
     if users_count_db > 50:
-        await expect(btn_next.locator("//span")).to_have_class("active-pagination")
+        await expect(btn_next).to_be_enabled()
         # click on Next button
         await btn_next.click()
         if users_count_db <= 100:
@@ -1195,15 +1196,13 @@ async def test_paging_on_admin_page(
             )
         else:
             await expect(displaying).to_have_text(re.compile(".*" + "51-100" + ".*"))
-            await expect(btn_next.locator("//span")).to_have_class("active-pagination")
-        await expect(btn_previous.locator("//span")).to_have_class("active-pagination")
+            await expect(btn_next).to_be_enabled()
+        await expect(btn_previous).to_be_enabled()
         # click on Previous button
         await btn_previous.click()
     else:
-        await expect(btn_next.locator("//span")).to_have_class("inactive-pagination")
-        await expect(btn_previous.locator("//span")).to_have_class(
-            "inactive-pagination"
-        )
+        await expect(btn_next).to_be_disabled()
+        await expect(btn_previous).to_be_disabled()
 
 
 @pytest.mark.parametrize(
@@ -1256,6 +1255,7 @@ async def test_search_on_admin_page(
         await expect(displaying).to_contain_text(re.compile("1-50"))
         # click on Next button to verify that the rest part of filtered list is displayed on the next page
         await browser.get_by_role("button", name="Next").click()
+        await browser.wait_for_load_state("networkidle")
         filtered_list_on_next_page = browser.locator('//tr[@class="user-row"]')
         await expect(filtered_list_on_page).to_have_count(users_count_db_filtered - 50)
         for element in await filtered_list_on_next_page.get_by_test_id(

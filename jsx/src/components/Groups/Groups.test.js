@@ -1,6 +1,5 @@
-import React from "react";
+import React, { act } from "react";
 import "@testing-library/jest-dom";
-import { act } from "react-dom/test-utils";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { Provider, useSelector } from "react-redux";
 import { createStore } from "redux";
@@ -71,6 +70,7 @@ afterEach(() => {
   useSelector.mockClear();
   mockReducers.mockClear();
   useSearchParams.mockClear();
+  jest.runAllTimers();
 });
 
 test("Renders", async () => {
