@@ -81,10 +81,12 @@ jobs:
           cd docs
           make html
 
+      # Output broken and permanently redirected links in a readable format
       - name: check links
-        run: |
-          cd docs
-          make linkcheck
+        uses: manics/action-sphinx-linkcheck-summary@main
+        with:
+          docs-dir: docs
+          build-dir: docs/_build
 
       # make rediraffecheckdiff compares files for different changesets
       # these diff targets aren't always available
