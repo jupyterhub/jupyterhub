@@ -283,7 +283,7 @@ async def test_spawn_pending_progress(
         await launch_btn.click()
     # wait for progress message to appear
     progress = browser.locator("#progress-message")
-    progress_message = await progress.inner_text()
+    progress_message = await progress.text_content()
     async with browser.expect_navigation(url=re.compile(".*/user/" + f"{urlname}/")):
         # wait for log messages to appear
         expected_messages = [
@@ -293,7 +293,7 @@ async def test_spawn_pending_progress(
         ]
         while not user.spawner.ready:
             logs_list = [
-                await log.inner_text()
+                await log.text_content()
                 for log in await browser.locator("div.progress-log-event").all()
             ]
             if progress_message:
@@ -654,7 +654,7 @@ async def test_request_token_expiration(
         await api_token_table_area.locator("tr.token-row")
         .get_by_role("cell")
         .nth(0)
-        .inner_text()
+        .text_content()
     )
 
     assert note_on_page == expected_note
@@ -663,7 +663,7 @@ async def test_request_token_expiration(
         await api_token_table_area.locator("tr.token-row")
         .get_by_role("cell")
         .nth(2)
-        .inner_text()
+        .text_content()
     )
     assert last_used_text == "Never"
 
@@ -671,7 +671,7 @@ async def test_request_token_expiration(
         await api_token_table_area.locator("tr.token-row")
         .get_by_role("cell")
         .nth(4)
-        .inner_text()
+        .text_content()
     )
 
     if token_opt == "Never":
@@ -734,7 +734,7 @@ async def test_request_token_permissions(
     if not granted:
         error_dialog = browser.locator("#error-dialog")
         await expect(error_dialog).to_be_visible()
-        error_message = await error_dialog.locator(".modal-body").inner_text()
+        error_message = await error_dialog.locator(".modal-body").text_content()
         assert "API request failed (400)" in error_message
         assert expected_error in error_message
         await error_dialog.locator("button[aria-label='Close']").click()
