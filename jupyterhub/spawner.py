@@ -701,17 +701,7 @@ class Spawner(LoggingConfigurable):
     )
 
     env_keep = List(
-        [
-            'LD_LIBRARY_PATH',
-            'PATH',
-            'PYTHONPATH',
-            'CONDA_ROOT',
-            'CONDA_DEFAULT_ENV',
-            'VIRTUAL_ENV',
-            'LANG',
-            'LC_ALL',
-            'JUPYTERHUB_SINGLEUSER_APP',
-        ],
+        ['JUPYTERHUB_SINGLEUSER_APP'],
         help="""
         List of environment variables for the single-user server to inherit from the JupyterHub process.
 
@@ -1716,6 +1706,20 @@ class LocalProcessSpawner(Spawner):
         The process id (pid) of the single-user server process spawned for current user.
         """,
     )
+
+    @default("env_keep")
+    def _env_keep_default(self):
+        return [
+            "CONDA_DEFAULT_ENV",
+            "CONDA_ROOT",
+            "JUPYTERHUB_SINGLEUSER_APP",
+            "LANG",
+            "LC_ALL",
+            "LD_LIBRARY_PATH",
+            "PATH",
+            "PYTHONPATH",
+            "VIRTUAL_ENV",
+        ]
 
     def make_preexec_fn(self, name):
         """
