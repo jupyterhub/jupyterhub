@@ -1064,7 +1064,7 @@ class BaseHandler(RequestHandler):
                 human_retry_time = "%i0 seconds" % math.ceil(retry_time / 10.0)
             else:
                 # round number of minutes
-                human_retry_time = "%i minutes" % math.round(retry_time / 60.0)
+                human_retry_time = "%i minutes" % round(retry_time / 60.0)
 
             self.log.warning(
                 '%s pending spawns, throttling. Suggested retry in %s seconds.',
