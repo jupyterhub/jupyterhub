@@ -3,7 +3,7 @@
 # JupyterHub: A conceptual overview
 
 ```{warning}
-This page could is missing cross-links to other parts of
+This page could be missing cross-links to other parts of
 the documentation. You can help by adding them!
 ```
 
