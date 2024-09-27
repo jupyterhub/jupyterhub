@@ -1,6 +1,6 @@
-import React from "react";
+import React, { act } from "react";
+import { withProps } from "recompose";
 import "@testing-library/jest-dom";
-import { act } from "react-dom/test-utils";
 import userEvent from "@testing-library/user-event";
 import {
   render,
@@ -9,7 +9,8 @@ import {
   getByText,
   getAllByRole,
 } from "@testing-library/react";
-import { HashRouter, Switch } from "react-router-dom";
+import { HashRouter, Routes, Route, useSearchParams } from "react-router-dom";
+// import { CompatRouter,  } from "react-router-dom-v5-compat";
 import { Provider, useSelector } from "react-redux";
 import { createStore } from "redux";
 // eslint-disable-next-line
@@ -17,37 +18,48 @@ import regeneratorRuntime from "regenerator-runtime";
 
 import ServerDashboard from "./ServerDashboard";
 import { initialState, reducers } from "../../Store";
-import * as sinon from "sinon";
-
-let clock;
 
 jest.mock("react-redux", () => ({
   ...jest.requireActual("react-redux"),
   useSelector: jest.fn(),
 }));
+jest.mock("react-router-dom", () => ({
+  ...jest.requireActual("react-router-dom"),
+  useSearchParams: jest.fn(),
+}));
 
-var serverDashboardJsx = (spy) => (
-  <Provider store={createStore(mockReducers, mockAppState())}>
-    <HashRouter>
-      <Switch>
-        <ServerDashboard
-          updateUsers={spy}
-          shutdownHub={spy}
-          startServer={spy}
-          stopServer={spy}
-          startAll={spy}
-          stopAll={spy}
-        />
-      </Switch>
-    </HashRouter>
-  </Provider>
-);
+const serverDashboardJsx = (props) => {
+  // create mock ServerDashboard
+  // spies is a dict of properties to mock in
+  // any API calls that will fire during the test should be mocked
+  props = props || {};
+  if (!props.updateUsers) {
+    props.updateUsers = mockUpdateUsers;
+  }
+  return (
+    <Provider store={createStore(mockReducers, mockAppState())}>
+      <HashRouter>
+        <Routes>
+          <Route path="/" element={withProps(props)(ServerDashboard)()} />
+        </Routes>
+      </HashRouter>
+    </Provider>
+  );
+};
 
 var mockAsync = (data) =>
   jest.fn().mockImplementation(() => Promise.resolve(data ? data : { k: "v" }));
 
 var mockAsyncRejection = () =>
   jest.fn().mockImplementation(() => Promise.reject());
+
+const defaultUpdateUsersParams = {
+  offset: 0,
+  limit: 2,
+  name_filter: "",
+  sort: "id",
+  state: "",
+};
 
 var bar_servers = {
   "": {
@@ -74,44 +86,64 @@ var bar_servers = {
   },
 };
 
+/* create new user models */
+const newUser = (name) => {
+  return {
+    kind: "user",
+    name: name,
+    admin: false,
+    groups: [],
+    server: `/user/${name}`,
+    created: "2020-12-07T18:46:27.112695Z",
+    last_activity: "2020-12-07T21:00:33.336354Z",
+    servers: {},
+  };
+};
+
+const allUsers = [
+  {
+    kind: "user",
+    name: "foo",
+    admin: true,
+    groups: [],
+    server: "/user/foo/",
+    pending: null,
+    created: "2020-12-07T18:46:27.112695Z",
+    last_activity: "2020-12-07T21:00:33.336354Z",
+    servers: {
+      "": {
+        name: "",
+        last_activity: "2020-12-07T20:58:02.437408Z",
+        started: "2020-12-07T20:58:01.508266Z",
+        pending: null,
+        ready: true,
+        state: { pid: 28085 },
+        url: "/user/foo/",
+        user_options: {},
+        progress_url: "/hub/api/users/foo/server/progress",
+      },
+    },
+  },
+  {
+    kind: "user",
+    name: "bar",
+    admin: false,
+    groups: [],
+    server: null,
+    pending: null,
+    created: "2020-12-07T18:46:27.115528Z",
+    last_activity: "2020-12-07T20:43:51.013613Z",
+    servers: bar_servers,
+  },
+];
+
+for (var i = 2; i < 10; i++) {
+  allUsers.push(newUser(`test-${i}`));
+}
+
 var mockAppState = () =>
   Object.assign({}, initialState, {
-    user_data: [
-      {
-        kind: "user",
-        name: "foo",
-        admin: true,
-        groups: [],
-        server: "/user/foo/",
-        pending: null,
-        created: "2020-12-07T18:46:27.112695Z",
-        last_activity: "2020-12-07T21:00:33.336354Z",
-        servers: {
-          "": {
-            name: "",
-            last_activity: "2020-12-07T20:58:02.437408Z",
-            started: "2020-12-07T20:58:01.508266Z",
-            pending: null,
-            ready: true,
-            state: { pid: 28085 },
-            url: "/user/foo/",
-            user_options: {},
-            progress_url: "/hub/api/users/foo/server/progress",
-          },
-        },
-      },
-      {
-        kind: "user",
-        name: "bar",
-        admin: false,
-        groups: [],
-        server: null,
-        pending: null,
-        created: "2020-12-07T18:46:27.115528Z",
-        last_activity: "2020-12-07T20:43:51.013613Z",
-        servers: bar_servers,
-      },
-    ],
+    user_data: allUsers.slice(0, 2),
     user_page: {
       offset: 0,
       limit: 2,
@@ -119,7 +151,7 @@ var mockAppState = () =>
       next: {
         offset: 2,
         limit: 2,
-        url: "http://localhost:8000/hub/api/groups?offset=2&limit=2",
+        url: "http://localhost:8000/hub/api/users?offset=2&limit=2",
       },
     },
   });
@@ -137,34 +169,76 @@ var mockReducers = jest.fn((state, action) => {
   return state;
 });
 
-beforeEach(() => {
-  clock = sinon.useFakeTimers();
-  useSelector.mockImplementation((callback) => {
-    return callback(mockAppState());
+let mockUpdateUsers = jest.fn(({ offset, limit, sort, name_filter, state }) => {
+  /* mock updating users 
+  
+  this has tom implement the server-side filtering, sorting, etc.
+  (at least whatever we want to test of it)
+  */
+  let matchingUsers = allUsers;
+  if (state === "active") {
+    // only first user is active
+    matchingUsers = allUsers.slice(0, 1);
+  }
+  if (name_filter) {
+    matchingUsers = matchingUsers.filter((user) =>
+      user.name.startsWith(name_filter),
+    );
+  }
+
+  const total = matchingUsers.length;
+  const items = matchingUsers.slice(offset, offset + limit);
+
+  return Promise.resolve({
+    items: items,
+    _pagination: {
+      offset: offset,
+      limit: limit,
+      total: total,
+      next: {
+        offset: offset + limit,
+        limit: limit,
+      },
+    },
   });
 });
 
+let searchParams = new URLSearchParams();
+
+beforeEach(() => {
+  useSelector.mockImplementation((callback) => {
+    return callback(mockAppState());
+  });
+  searchParams = new URLSearchParams();
+  searchParams.set("limit", "2");
+
+  useSearchParams.mockImplementation(() => [
+    searchParams,
+    (callback) => {
+      searchParams = callback(searchParams);
+    },
+  ]);
+});
+
 afterEach(() => {
+  useSearchParams.mockClear();
   useSelector.mockClear();
   mockReducers.mockClear();
-  clock.restore();
+  mockUpdateUsers.mockClear();
+  jest.runAllTimers();
 });
 
 test("Renders", async () => {
-  let callbackSpy = mockAsync();
-
   await act(async () => {
-    render(serverDashboardJsx(callbackSpy));
+    render(serverDashboardJsx());
   });
 
   expect(screen.getByTestId("container")).toBeVisible();
 });
 
 test("Renders users from props.user_data into table", async () => {
-  let callbackSpy = mockAsync();
-
   await act(async () => {
-    render(serverDashboardJsx(callbackSpy));
+    render(serverDashboardJsx());
   });
 
   let foo = screen.getByTestId("user-name-div-foo");
@@ -177,10 +251,8 @@ test("Renders users from props.user_data into table", async () => {
 });
 
 test("Renders correctly the status of a single-user server", async () => {
-  let callbackSpy = mockAsync();
-
   await act(async () => {
-    render(serverDashboardJsx(callbackSpy));
+    render(serverDashboardJsx());
   });
 
   let start_elems = screen.getAllByText("Start Server");
@@ -194,10 +266,8 @@ test("Renders correctly the status of a single-user server", async () => {
 });
 
 test("Renders spawn page link", async () => {
-  let callbackSpy = mockAsync();
-
   await act(async () => {
-    render(serverDashboardJsx(callbackSpy));
+    render(serverDashboardJsx());
   });
 
   for (let server in bar_servers) {
@@ -212,14 +282,14 @@ test("Invokes the startServer event on button click", async () => {
   let callbackSpy = mockAsync();
 
   await act(async () => {
-    render(serverDashboardJsx(callbackSpy));
+    render(serverDashboardJsx({ startServer: callbackSpy }));
   });
 
   let start_elems = screen.getAllByText("Start Server");
   expect(start_elems.length).toBe(Object.keys(bar_servers).length);
 
   await act(async () => {
-    fireEvent.click(start_elems[0]);
+    await fireEvent.click(start_elems[0]);
   });
 
   expect(callbackSpy).toHaveBeenCalled();
@@ -229,13 +299,13 @@ test("Invokes the stopServer event on button click", async () => {
   let callbackSpy = mockAsync();
 
   await act(async () => {
-    render(serverDashboardJsx(callbackSpy));
+    render(serverDashboardJsx({ stopServer: callbackSpy }));
   });
 
   let stop = screen.getByText("Stop Server");
 
   await act(async () => {
-    fireEvent.click(stop);
+    await fireEvent.click(stop);
   });
 
   expect(callbackSpy).toHaveBeenCalled();
@@ -245,99 +315,109 @@ test("Invokes the shutdownHub event on button click", async () => {
   let callbackSpy = mockAsync();
 
   await act(async () => {
-    render(serverDashboardJsx(callbackSpy));
+    render(serverDashboardJsx({ shutdownHub: callbackSpy }));
   });
 
   let shutdown = screen.getByText("Shutdown Hub");
 
   await act(async () => {
-    fireEvent.click(shutdown);
+    await fireEvent.click(shutdown);
   });
 
   expect(callbackSpy).toHaveBeenCalled();
 });
 
 test("Sorts according to username", async () => {
-  let callbackSpy = mockAsync();
-
+  let rerender;
+  const testId = "user-sort";
   await act(async () => {
-    render(serverDashboardJsx(callbackSpy));
+    rerender = render(serverDashboardJsx()).rerender;
   });
 
-  let handler = screen.getByTestId("user-sort");
-  fireEvent.click(handler);
-
-  let first = screen.getAllByTestId("user-row-name")[0];
-  expect(first.textContent).toContain("bar");
-
-  fireEvent.click(handler);
-
-  first = screen.getAllByTestId("user-row-name")[0];
-  expect(first.textContent).toContain("foo");
-});
-
-test("Sorts according to admin", async () => {
-  let callbackSpy = mockAsync();
+  expect(searchParams.get("sort")).toEqual(null);
+  let handler = screen.getByTestId(testId);
+  await fireEvent.click(handler);
+  expect(searchParams.get("sort")).toEqual("name");
 
   await act(async () => {
-    render(serverDashboardJsx(callbackSpy));
+    rerender(serverDashboardJsx());
+    handler = screen.getByTestId(testId);
   });
 
-  let handler = screen.getByTestId("admin-sort");
-  fireEvent.click(handler);
+  await fireEvent.click(handler);
+  expect(searchParams.get("sort")).toEqual("-name");
 
-  let first = screen.getAllByTestId("user-row-admin")[0];
-  expect(first.textContent).toBe("admin");
+  await act(async () => {
+    rerender(serverDashboardJsx());
+    handler = screen.getByTestId(testId);
+  });
 
-  fireEvent.click(handler);
-
-  first = screen.getAllByTestId("user-row-admin")[0];
-  expect(first.textContent).toBe("");
+  await fireEvent.click(handler);
+  expect(searchParams.get("sort")).toEqual("name");
 });
 
 test("Sorts according to last activity", async () => {
-  let callbackSpy = mockAsync();
-
+  let rerender;
+  const testId = "last-activity-sort";
   await act(async () => {
-    render(serverDashboardJsx(callbackSpy));
+    rerender = render(serverDashboardJsx()).rerender;
   });
 
-  let handler = screen.getByTestId("last-activity-sort");
-  fireEvent.click(handler);
+  expect(searchParams.get("sort")).toEqual(null);
+  let handler = screen.getByTestId(testId);
+  await fireEvent.click(handler);
+  expect(searchParams.get("sort")).toEqual("last_activity");
 
-  let first = screen.getAllByTestId("user-row-name")[0];
-  expect(first.textContent).toContain("foo");
+  await act(async () => {
+    rerender(serverDashboardJsx());
+    handler = screen.getByTestId(testId);
+  });
 
-  fireEvent.click(handler);
+  await fireEvent.click(handler);
+  expect(searchParams.get("sort")).toEqual("-last_activity");
 
-  first = screen.getAllByTestId("user-row-name")[0];
-  expect(first.textContent).toContain("bar");
+  await act(async () => {
+    rerender(serverDashboardJsx());
+    handler = screen.getByTestId(testId);
+  });
+
+  await fireEvent.click(handler);
+  expect(searchParams.get("sort")).toEqual("last_activity");
 });
 
-test("Sorts according to server status (running/not running)", async () => {
-  let callbackSpy = mockAsync();
+test("Filter according to server status (running/not running)", async () => {
+  let rerender;
+  await act(async () => {
+    rerender = render(serverDashboardJsx()).rerender;
+  });
+  const label = "only active servers";
+  let handler = screen.getByLabelText(label);
+  expect(handler.checked).toEqual(false);
+  await fireEvent.click(handler);
+
+  // FIXME: need to force a rerender to get updated checkbox
+  // I don't think this should be required
+  await act(async () => {
+    rerender(serverDashboardJsx());
+    handler = screen.getByLabelText(label);
+  });
+  expect(searchParams.get("state")).toEqual("active");
+  expect(handler.checked).toEqual(true);
+
+  await fireEvent.click(handler);
 
   await act(async () => {
-    render(serverDashboardJsx(callbackSpy));
+    rerender(serverDashboardJsx());
+    handler = screen.getByLabelText(label);
   });
-
-  let handler = screen.getByTestId("running-status-sort");
-  fireEvent.click(handler);
-
-  let first = screen.getAllByTestId("user-row-name")[0];
-  expect(first.textContent).toContain("foo");
-
-  fireEvent.click(handler);
-
-  first = screen.getAllByTestId("user-row-name")[0];
-  expect(first.textContent).toContain("bar");
+  handler = screen.getByLabelText(label);
+  expect(handler.checked).toEqual(false);
+  expect(searchParams.get("state")).toEqual(null);
 });
 
 test("Shows server details with button click", async () => {
-  let callbackSpy = mockAsync();
-
   await act(async () => {
-    render(serverDashboardJsx(callbackSpy));
+    render(serverDashboardJsx());
   });
   let button = screen.getByTestId("foo-collapse-button");
   let collapse = screen.getByTestId("foo-collapse");
@@ -347,28 +427,25 @@ test("Shows server details with button click", async () => {
   expect(collapse).toHaveClass("collapse");
   expect(collapse).not.toHaveClass("show");
   expect(collapseBar).not.toHaveClass("show");
-
+  await fireEvent.click(button);
   await act(async () => {
-    fireEvent.click(button);
+    jest.runAllTimers();
   });
-  clock.tick(400);
-
   expect(collapse).toHaveClass("collapse show");
   expect(collapseBar).not.toHaveClass("show");
-
+  await fireEvent.click(button);
   await act(async () => {
-    fireEvent.click(button);
+    jest.runAllTimers();
   });
-  clock.tick(400);
 
   expect(collapse).toHaveClass("collapse");
   expect(collapse).not.toHaveClass("show");
   expect(collapseBar).not.toHaveClass("show");
 
+  await fireEvent.click(button);
   await act(async () => {
-    fireEvent.click(button);
+    jest.runAllTimers();
   });
-  clock.tick(400);
 
   expect(collapse).toHaveClass("collapse show");
   expect(collapseBar).not.toHaveClass("show");
@@ -379,10 +456,8 @@ test("Renders nothing if required data is not available", async () => {
     return callback({});
   });
 
-  let callbackSpy = mockAsync();
-
   await act(async () => {
-    render(serverDashboardJsx(callbackSpy));
+    render(serverDashboardJsx());
   });
 
   let noShow = screen.getByTestId("no-show");
@@ -391,32 +466,14 @@ test("Renders nothing if required data is not available", async () => {
 });
 
 test("Shows a UI error dialogue when start all servers fails", async () => {
-  let spy = mockAsync();
-  let rejectSpy = mockAsyncRejection;
-
   await act(async () => {
-    render(
-      <Provider store={createStore(() => {}, {})}>
-        <HashRouter>
-          <Switch>
-            <ServerDashboard
-              updateUsers={spy}
-              shutdownHub={spy}
-              startServer={spy}
-              stopServer={spy}
-              startAll={rejectSpy}
-              stopAll={spy}
-            />
-          </Switch>
-        </HashRouter>
-      </Provider>,
-    );
+    render(serverDashboardJsx({ startAll: mockAsyncRejection }));
   });
 
   let startAll = screen.getByTestId("start-all");
 
   await act(async () => {
-    fireEvent.click(startAll);
+    await fireEvent.click(startAll);
   });
 
   let errorDialog = screen.getByText("Failed to start servers.");
@@ -425,32 +482,14 @@ test("Shows a UI error dialogue when start all servers fails", async () => {
 });
 
 test("Shows a UI error dialogue when stop all servers fails", async () => {
-  let spy = mockAsync();
-  let rejectSpy = mockAsyncRejection;
-
   await act(async () => {
-    render(
-      <Provider store={createStore(() => {}, {})}>
-        <HashRouter>
-          <Switch>
-            <ServerDashboard
-              updateUsers={spy}
-              shutdownHub={spy}
-              startServer={spy}
-              stopServer={spy}
-              startAll={spy}
-              stopAll={rejectSpy}
-            />
-          </Switch>
-        </HashRouter>
-      </Provider>,
-    );
+    render(serverDashboardJsx({ stopAll: mockAsyncRejection }));
   });
 
   let stopAll = screen.getByTestId("stop-all");
 
   await act(async () => {
-    fireEvent.click(stopAll);
+    await fireEvent.click(stopAll);
   });
 
   let errorDialog = screen.getByText("Failed to stop servers.");
@@ -459,33 +498,15 @@ test("Shows a UI error dialogue when stop all servers fails", async () => {
 });
 
 test("Shows a UI error dialogue when start user server fails", async () => {
-  let spy = mockAsync();
-  let rejectSpy = mockAsyncRejection();
-
   await act(async () => {
-    render(
-      <Provider store={createStore(() => {}, {})}>
-        <HashRouter>
-          <Switch>
-            <ServerDashboard
-              updateUsers={spy}
-              shutdownHub={spy}
-              startServer={rejectSpy}
-              stopServer={spy}
-              startAll={spy}
-              stopAll={spy}
-            />
-          </Switch>
-        </HashRouter>
-      </Provider>,
-    );
+    render(serverDashboardJsx({ startServer: mockAsyncRejection() }));
   });
 
   let start_elems = screen.getAllByText("Start Server");
   expect(start_elems.length).toBe(Object.keys(bar_servers).length);
 
   await act(async () => {
-    fireEvent.click(start_elems[0]);
+    await fireEvent.click(start_elems[0]);
   });
 
   let errorDialog = screen.getByText("Failed to start server.");
@@ -494,33 +515,16 @@ test("Shows a UI error dialogue when start user server fails", async () => {
 });
 
 test("Shows a UI error dialogue when start user server returns an improper status code", async () => {
-  let spy = mockAsync();
   let rejectSpy = mockAsync({ status: 403 });
-
   await act(async () => {
-    render(
-      <Provider store={createStore(() => {}, {})}>
-        <HashRouter>
-          <Switch>
-            <ServerDashboard
-              updateUsers={spy}
-              shutdownHub={spy}
-              startServer={rejectSpy}
-              stopServer={spy}
-              startAll={spy}
-              stopAll={spy}
-            />
-          </Switch>
-        </HashRouter>
-      </Provider>,
-    );
+    render(serverDashboardJsx({ startServer: rejectSpy }));
   });
 
   let start_elems = screen.getAllByText("Start Server");
   expect(start_elems.length).toBe(Object.keys(bar_servers).length);
 
   await act(async () => {
-    fireEvent.click(start_elems[0]);
+    await fireEvent.click(start_elems[0]);
   });
 
   let errorDialog = screen.getByText("Failed to start server.");
@@ -533,28 +537,13 @@ test("Shows a UI error dialogue when stop user servers fails", async () => {
   let rejectSpy = mockAsyncRejection();
 
   await act(async () => {
-    render(
-      <Provider store={createStore(() => {}, {})}>
-        <HashRouter>
-          <Switch>
-            <ServerDashboard
-              updateUsers={spy}
-              shutdownHub={spy}
-              startServer={spy}
-              stopServer={rejectSpy}
-              startAll={spy}
-              stopAll={spy}
-            />
-          </Switch>
-        </HashRouter>
-      </Provider>,
-    );
+    render(serverDashboardJsx({ stopServer: rejectSpy }));
   });
 
   let stop = screen.getByText("Stop Server");
 
   await act(async () => {
-    fireEvent.click(stop);
+    await fireEvent.click(stop);
   });
 
   let errorDialog = screen.getByText("Failed to stop server.");
@@ -567,28 +556,13 @@ test("Shows a UI error dialogue when stop user server returns an improper status
   let rejectSpy = mockAsync({ status: 403 });
 
   await act(async () => {
-    render(
-      <Provider store={createStore(() => {}, {})}>
-        <HashRouter>
-          <Switch>
-            <ServerDashboard
-              updateUsers={spy}
-              shutdownHub={spy}
-              startServer={spy}
-              stopServer={rejectSpy}
-              startAll={spy}
-              stopAll={spy}
-            />
-          </Switch>
-        </HashRouter>
-      </Provider>,
-    );
+    render(serverDashboardJsx({ stopServer: rejectSpy }));
   });
 
   let stop = screen.getByText("Stop Server");
 
   await act(async () => {
-    fireEvent.click(stop);
+    await fireEvent.click(stop);
   });
 
   let errorDialog = screen.getByText("Failed to stop server.");
@@ -598,100 +572,62 @@ test("Shows a UI error dialogue when stop user server returns an improper status
 
 test("Search for user calls updateUsers with name filter", async () => {
   let spy = mockAsync();
-  let mockUpdateUsers = jest.fn((offset, limit, name_filter) => {
-    return Promise.resolve({
-      items: [],
-      _pagination: {
-        offset: offset,
-        limit: limit,
-        total: offset + limit * 2,
-        next: {
-          offset: offset + limit,
-          limit: limit,
-        },
-      },
-    });
-  });
   await act(async () => {
-    render(
-      <Provider store={createStore(mockReducers, mockAppState())}>
-        <HashRouter>
-          <Switch>
-            <ServerDashboard
-              updateUsers={mockUpdateUsers}
-              shutdownHub={spy}
-              startServer={spy}
-              stopServer={spy}
-              startAll={spy}
-              stopAll={spy}
-            />
-          </Switch>
-        </HashRouter>
-      </Provider>,
-    );
+    searchParams.set("offset", "2");
+    render(serverDashboardJsx());
   });
 
+  const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
   let search = screen.getByLabelText("user-search");
 
   expect(mockUpdateUsers.mock.calls).toHaveLength(1);
 
-  userEvent.type(search, "a");
+  expect(searchParams.get("offset")).toEqual("2");
+  await user.type(search, "a");
   expect(search.value).toEqual("a");
-  clock.tick(400);
-  expect(mockReducers.mock.calls).toHaveLength(3);
-  var lastState =
-    mockReducers.mock.results[mockReducers.mock.results.length - 1].value;
-  expect(lastState.name_filter).toEqual("a");
-  // TODO: this should
-  expect(mockUpdateUsers.mock.calls).toHaveLength(1);
-  userEvent.type(search, "b");
+  await act(async () => {
+    jest.runAllTimers();
+  });
+  expect(searchParams.get("name_filter")).toEqual("a");
+  expect(searchParams.get("offset")).toEqual(null);
+  // FIXME: useSelector mocks prevent updateUsers from being called
+  // expect(mockUpdateUsers.mock.calls).toHaveLength(2);
+  // expect(mockUpdateUsers).toBeCalledWith(0, 100, "a");
+  await user.type(search, "b");
   expect(search.value).toEqual("ab");
-  clock.tick(400);
-  expect(mockReducers.mock.calls).toHaveLength(4);
-  lastState =
-    mockReducers.mock.results[mockReducers.mock.results.length - 1].value;
-  expect(lastState.name_filter).toEqual("ab");
-  expect(lastState.user_page.offset).toEqual(0);
+  await act(async () => {
+    jest.runAllTimers();
+  });
+  expect(searchParams.get("name_filter")).toEqual("ab");
+  // expect(mockUpdateUsers).toBeCalledWith(0, 100, "ab");
 });
 
-test("Interacting with PaginationFooter causes state update and refresh via useEffect call", async () => {
-  let callbackSpy = mockAsync();
-
+test("Interacting with PaginationFooter requests page update", async () => {
   await act(async () => {
-    render(serverDashboardJsx(callbackSpy));
+    render(serverDashboardJsx());
   });
 
-  expect(callbackSpy).toBeCalledWith(0, 2, "");
+  expect(mockUpdateUsers).toBeCalledWith(defaultUpdateUsersParams);
 
-  expect(mockReducers.mock.results).toHaveLength(2);
-  lastState =
-    mockReducers.mock.results[mockReducers.mock.results.length - 1].value;
-  console.log(lastState);
-  expect(lastState.user_page.offset).toEqual(0);
-  expect(lastState.user_page.limit).toEqual(2);
+  var n = 3;
+  expect(searchParams.get("offset")).toEqual(null);
+  expect(searchParams.get("limit")).toEqual("2");
 
   let next = screen.getByTestId("paginate-next");
-  fireEvent.click(next);
-  clock.tick(400);
+  await act(async () => {
+    fireEvent.click(next);
+    jest.runAllTimers();
+  });
 
-  expect(mockReducers.mock.results).toHaveLength(3);
-  var lastState =
-    mockReducers.mock.results[mockReducers.mock.results.length - 1].value;
-  expect(lastState.user_page.offset).toEqual(2);
-  expect(lastState.user_page.limit).toEqual(2);
-
-  // FIXME: should call updateUsers, does in reality.
-  // tests don't reflect reality due to mocked state/useSelector
-  // unclear how to fix this.
-  // expect(callbackSpy.mock.calls).toHaveLength(2);
-  // expect(callbackSpy).toHaveBeenCalledWith(2, 2, "");
+  expect(mockUpdateUsers).toBeCalledWith({
+    ...defaultUpdateUsersParams,
+    offset: 2,
+  });
 });
 
 test("Server delete button exists for named servers", async () => {
-  let callbackSpy = mockAsync();
-
   await act(async () => {
-    render(serverDashboardJsx(callbackSpy));
+    render(serverDashboardJsx());
   });
 
   for (let server in bar_servers) {
@@ -705,57 +641,43 @@ test("Server delete button exists for named servers", async () => {
 });
 
 test("Start server and confirm pending state", async () => {
-  let spy = mockAsync();
-
   let mockStartServer = jest.fn(() => {
     return new Promise(async (resolve) =>
-      clock.setTimeout(() => {
+      setTimeout(() => {
         resolve({ status: 200 });
       }, 100),
     );
   });
 
-  let mockUpdateUsers = jest.fn(() => Promise.resolve(mockAppState()));
-
   await act(async () => {
     render(
-      <Provider store={createStore(mockReducers, {})}>
-        <HashRouter>
-          <Switch>
-            <ServerDashboard
-              updateUsers={mockUpdateUsers}
-              shutdownHub={spy}
-              startServer={mockStartServer}
-              stopServer={spy}
-              startAll={spy}
-              stopAll={spy}
-            />
-          </Switch>
-        </HashRouter>
-      </Provider>,
+      serverDashboardJsx({
+        startServer: mockStartServer,
+      }),
     );
   });
 
   let actions = screen.getAllByTestId("user-row-server-activity")[1];
   let buttons = getAllByRole(actions, "button");
 
-  expect(buttons.length).toBe(2);
+  expect(buttons.length).toBe(3);
   expect(buttons[0].textContent).toBe("Start Server");
   expect(buttons[1].textContent).toBe("Spawn Page");
+  expect(buttons[2].textContent).toBe("Edit User");
 
   await act(async () => {
-    fireEvent.click(buttons[0]);
+    await fireEvent.click(buttons[0]);
   });
   expect(mockUpdateUsers.mock.calls).toHaveLength(1);
 
-  expect(buttons.length).toBe(2);
+  expect(buttons.length).toBe(3);
   expect(buttons[0].textContent).toBe("Start Server");
   expect(buttons[0]).toBeDisabled();
   expect(buttons[1].textContent).toBe("Spawn Page");
   expect(buttons[1]).toBeEnabled();
 
   await act(async () => {
-    await clock.tick(100);
+    jest.runAllTimers();
   });
   expect(mockUpdateUsers.mock.calls).toHaveLength(2);
 });

@@ -6,6 +6,7 @@ Meant to be compatible with jupyter_server and classic notebook
 Use make_singleuser_app to create a compatible Application class
 with JupyterHub authentication mixins enabled.
 """
+
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import asyncio
@@ -44,20 +45,15 @@ from traitlets.config import Configurable
 from .._version import __version__, _check_version
 from ..log import log_request
 from ..services.auth import HubOAuth, HubOAuthCallbackHandler, HubOAuthenticated
-from ..utils import exponential_backoff, isoformat, make_ssl_context, url_path_join
+from ..utils import (
+    _bool_env,
+    exponential_backoff,
+    isoformat,
+    make_ssl_context,
+    url_path_join,
+)
+from ._decorator import allow_unauthenticated
 from ._disable_user_config import _disable_user_config, _exclude_home
-
-
-def _bool_env(key):
-    """Cast an environment variable to bool
-
-    0, empty, or unset is False; All other values are True.
-    """
-    if os.environ.get(key, "") in {"", "0"}:
-        return False
-    else:
-        return True
-
 
 # Authenticate requests with the Hub
 
@@ -137,6 +133,7 @@ class JupyterHubLoginHandlerMixin:
 
 
 class JupyterHubLogoutHandlerMixin:
+    @allow_unauthenticated
     def get(self):
         self.settings['hub_auth'].clear_cookie(self)
         self.redirect(
@@ -151,6 +148,10 @@ class OAuthCallbackHandlerMixin(HubOAuthCallbackHandler):
     @property
     def hub_auth(self):
         return self.settings['hub_auth']
+
+    @allow_unauthenticated
+    async def get(self):
+        return await super().get()
 
 
 # register new hub related command-line aliases
@@ -340,7 +341,7 @@ class SingleUserNotebookAppMixin(Configurable):
             # If we receive a non-absolute path, make it absolute.
             value = os.path.abspath(value)
         if not os.path.isdir(value):
-            raise TraitError("No such notebook dir: %r" % value)
+            raise TraitError(f"No such notebook dir: {value!r}")
         return value
 
     @default('log_level')
@@ -360,9 +361,8 @@ class SingleUserNotebookAppMixin(Configurable):
         """override default log format to include time"""
         return "%(color)s[%(levelname)1.1s %(asctime)s.%(msecs).03d %(name)s %(module)s:%(lineno)d]%(end_color)s %(message)s"
 
-    def _confirm_exit(self):
-        # disable the exit confirmation for background notebook processes
-        self.io_loop.add_callback_from_signal(self.io_loop.stop)
+    def _handle_sigint(self, *args, **kwargs):
+        self._signal_stop(*args, **kwargs)
 
     def migrate_config(self):
         if self.disable_user_config:
@@ -587,7 +587,7 @@ class SingleUserNotebookAppMixin(Configurable):
             self.log.warning("Enabling jupyterhub test extension")
             self.jpserver_extensions["jupyterhub.tests.extension"] = True
 
-    def initialize(self, argv=None):
+    def initialize(self, argv=None, **kwargs):
         if self.disable_user_config:
             _disable_user_config(self)
         # disable trash by default
@@ -604,7 +604,7 @@ class SingleUserNotebookAppMixin(Configurable):
         # jupyter-server calls it too late, notebook doesn't define it yet
         # only called in jupyter-server >= 1.9
         self.init_ioloop()
-        super().initialize(argv)
+        super().initialize(argv, **kwargs)
         self.patch_templates()
 
     def init_ioloop(self):
@@ -682,10 +682,10 @@ class SingleUserNotebookAppMixin(Configurable):
         )
         headers = s.setdefault('headers', {})
         headers['X-JupyterHub-Version'] = __version__
-        # set CSP header directly to workaround bugs in jupyter/notebook 5.0
+        # set default CSP to prevent iframe embedding across jupyterhub components
         headers.setdefault(
             'Content-Security-Policy',
-            ';'.join(["frame-ancestors 'self'", "report-uri " + csp_report_uri]),
+            ';'.join(["frame-ancestors 'none'", "report-uri " + csp_report_uri]),
         )
         super().init_webapp()
 
@@ -832,7 +832,7 @@ def patch_base_handler(BaseHandler, log=None):
         # but we also need to ensure BaseHandler *itself* doesn't
         # override the public tornado API methods we have inserted.
         # If they are defined in BaseHandler, explicitly replace them with our methods.
-        for name in ("get_current_user", "get_login_url"):
+        for name in ("get_current_user", "get_login_url", "check_xsrf_cookie"):
             if name in BaseHandler.__dict__:
                 log.debug(
                     f"Overriding {BaseHandler}.{name} with HubAuthenticatedHandler.{name}"

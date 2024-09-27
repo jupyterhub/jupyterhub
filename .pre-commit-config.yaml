@@ -14,53 +14,45 @@ ci:
   autoupdate_schedule: monthly
 
 repos:
-  # Autoformat: Python code, syntax patterns are modernized
-  - repo: https://github.com/asottile/pyupgrade
-    rev: v3.15.0
+  # autoformat and lint Python code
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.3
     hooks:
-      - id: pyupgrade
-        args:
-          - --py37-plus
-
-  # Autoformat: Python code
-  - repo: https://github.com/PyCQA/autoflake
-    rev: v2.2.1
-    hooks:
-      - id: autoflake
-        # args ref: https://github.com/PyCQA/autoflake#advanced-usage
-        args:
-          - --in-place
-
-  # Autoformat: Python code
-  - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
-    hooks:
-      - id: isort
-
-  # Autoformat: Python code
-  - repo: https://github.com/psf/black
-    rev: 24.1.1
-    hooks:
-      - id: black
+      - id: ruff
+        types_or:
+          - python
+          - jupyter
+        args: ["--fix", "--show-fixes"]
+      - id: ruff-format
+        types_or:
+          - python
+          - jupyter
 
   # Autoformat: markdown, yaml, javascript (see the file .prettierignore)
   - repo: https://github.com/pre-commit/mirrors-prettier
     rev: v4.0.0-alpha.8
     hooks:
       - id: prettier
+        exclude: .*/templates/.*
+
+  # autoformat HTML templates
+  - repo: https://github.com/djlint/djLint
+    rev: v1.35.2
+    hooks:
+      - id: djlint-reformat-jinja
+        files: ".*templates/.*.html"
+        types_or: ["html"]
+        exclude: redoc.html
+      - id: djlint-jinja
+        files: ".*templates/.*.html"
+        types_or: ["html"]
 
   # Autoformat and linting, misc. details
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v4.6.0
     hooks:
       - id: end-of-file-fixer
         exclude: share/jupyterhub/static/js/admin-react.js
       - id: requirements-txt-fixer
       - id: check-case-conflict
       - id: check-executables-have-shebangs
-
-  # Linting: Python code (see the file .flake8)
-  - repo: https://github.com/PyCQA/flake8
-    rev: "7.0.0"
-    hooks:
-      - id: flake8

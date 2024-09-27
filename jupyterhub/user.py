@@ -1,13 +1,13 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
+import asyncio
 import json
 import warnings
 from collections import defaultdict
-from datetime import timedelta
 from urllib.parse import quote, urlparse, urlunparse
 
 from sqlalchemy import inspect
-from tornado import gen, web
+from tornado import web
 from tornado.httputil import urlencode
 from tornado.log import app_log
 
@@ -125,7 +125,7 @@ class UserDict(dict):
         elif isinstance(key, str):
             orm_user = self.db.query(orm.User).filter(orm.User.name == key).first()
             if orm_user is None:
-                raise KeyError("No such user: %s" % key)
+                raise KeyError(f"No such user: {key}")
             else:
                 key = orm_user.id
         if isinstance(key, orm.User):
@@ -142,7 +142,7 @@ class UserDict(dict):
             if id not in self:
                 orm_user = self.db.query(orm.User).filter(orm.User.id == id).first()
                 if orm_user is None:
-                    raise KeyError("No such user: %s" % id)
+                    raise KeyError(f"No such user: {id}")
                 user = self.add(orm_user)
             else:
                 user = super().__getitem__(id)
@@ -301,6 +301,106 @@ class User:
             self.orm_user.groups = []
         self.db.commit()
 
+    def sync_roles(self, auth_roles):
+        """Synchronize roles with database"""
+        auth_roles_by_name = {role['name']: role for role in auth_roles}
+
+        current_user_roles = {r.name for r in self.orm_user.roles}
+        new_user_roles = set(auth_roles_by_name.keys())
+
+        granted_roles = new_user_roles.difference(current_user_roles)
+        stripped_roles = current_user_roles.difference(new_user_roles)
+
+        if granted_roles:
+            self.log.info(f"Granting user {self.name} roles(s): {granted_roles}")
+        if stripped_roles:
+            self.log.info(f"Stripping user {self.name} roles(s): {stripped_roles}")
+
+        existing_granted_roles = {
+            r.name
+            for r in self.db.query(orm.Role).filter(orm.Role.name.in_(granted_roles))
+        }
+        created_roles = existing_granted_roles.difference(granted_roles)
+
+        if created_roles:
+            self.log.info(f"Creating new roles {created_roles} in the database")
+
+        for role_name in new_user_roles:
+            if role_name in created_roles:
+                self.log.info(f"Creating new role {role_name}")
+            else:
+                self.log.debug(f"Updating existing role {role_name}")
+
+            role = auth_roles_by_name[role_name]
+            role['managed_by_auth'] = True
+
+            # creates role, or if it exists, update its `description` and `scopes`
+            try:
+                orm_role = roles.create_role(
+                    self.db, role, commit=False, reset_to_defaults=False
+                )
+            except (
+                roles.RoleValueError,
+                roles.InvalidNameError,
+                scopes.ScopeNotFound,
+            ) as e:
+                raise web.HTTPError(409, str(e))
+
+            # Update the groups, services and users for the role
+            entity_map = {
+                'groups': orm.Group,
+                'services': orm.Service,
+                'users': orm.User,
+            }
+            for key, Class in entity_map.items():
+                if key in role.keys():
+                    entities = []
+                    not_found_entities = []
+                    for entity_name in role[key]:
+                        entity = Class.find(self.db, entity_name)
+                        if entity is None:
+                            not_found_entities.append(entity_name)
+                        else:
+                            entities.append(entity)
+                    setattr(orm_role, key, entities)
+                    if not_found_entities:
+                        self.log.warning(
+                            f'Could not assign the role {role_name} to {key}:'
+                            f' {not_found_entities} not found in the database.'
+                        )
+
+        # assign the granted roles to the current user
+        for role_name in granted_roles:
+            roles.grant_role(
+                self.db,
+                entity=self.orm_user,
+                rolename=role_name,
+                commit=False,
+                managed=True,
+            )
+
+        # strip the user of roles no longer directly granted
+        for role_name in stripped_roles:
+            roles.strip_role(
+                self.db, entity=self.orm_user, rolename=role_name, commit=False
+            )
+        managed_stripped_roles = (
+            self.db.query(orm.Role)
+            .filter(
+                orm.Role.name.in_(stripped_roles) & (orm.Role.managed_by_auth == True)
+            )
+            .all()
+        )
+        for stripped_role in managed_stripped_roles:
+            if (
+                not stripped_role.users
+                and not stripped_role.services
+                and not stripped_role.groups
+            ):
+                self.db.delete(stripped_role)
+
+        self.db.commit()
+
     async def save_auth_state(self, auth_state):
         """Encrypt and store auth_state"""
         if auth_state is None:
@@ -405,7 +505,7 @@ class User:
 
         # use fully quoted name for client_id because it will be used in cookie-name
         # self.escaped_name may contain @ which is legal in URLs but not cookie keys
-        client_id = 'jupyterhub-user-%s' % quote(self.name)
+        client_id = f'jupyterhub-user-{quote(self.name)}'
         if server_name:
             client_id = f'{client_id}-{quote(server_name)}'
 
@@ -426,6 +526,9 @@ class User:
             _deprecated_db_session=self.db,
             oauth_client_id=client_id,
             cookie_options=self.settings.get('cookie_options', {}),
+            cookie_host_prefix_enabled=self.settings.get(
+                "cookie_host_prefix_enabled", False
+            ),
             trusted_alt_names=trusted_alt_names,
             user_options=orm_spawner.user_options or {},
         )
@@ -687,7 +790,7 @@ class User:
 
         orm_server = orm.Server(base_url=base_url)
         db.add(orm_server)
-        note = "Server at %s" % base_url
+        note = f"Server at {base_url}"
         db.commit()
 
         spawner = self.get_spawner(server_name, replace_failed=True)
@@ -801,6 +904,7 @@ class User:
             db.commit()
             # wait for spawner.start to return
             # run optional preparation work to bootstrap the notebook
+            await spawner.apply_group_overrides()
             await maybe_future(spawner.run_pre_spawn_hook())
             if self.settings.get('internal_ssl'):
                 self.log.debug("Creating internal SSL certs for %s", spawner._log_name)
@@ -808,9 +912,13 @@ class User:
                 spawner.cert_paths = await maybe_future(spawner.move_certs(hub_paths))
             self.log.debug("Calling Spawner.start for %s", spawner._log_name)
             f = maybe_future(spawner.start())
-            # commit any changes in spawner.start (always commit db changes before yield)
+            # commit any changes in spawner.start (always commit db changes before await)
             db.commit()
-            url = await gen.with_timeout(timedelta(seconds=spawner.start_timeout), f)
+            # gen.with_timeout protects waited-for tasks from cancellation,
+            # whereas wait_for cancels tasks that don't finish within timeout.
+            # we want this task to halt if it doesn't return in the time limit.
+            await asyncio.wait_for(f, timeout=spawner.start_timeout)
+            url = f.result()
             if url:
                 # get ip, port info from return value of start()
                 if isinstance(url, str):
@@ -859,7 +967,7 @@ class User:
                         )
                         self.db.delete(found)
                         self.db.commit()
-                        raise ValueError("Invalid token for %s!" % self.name)
+                        raise ValueError(f"Invalid token for {self.name}!")
                 else:
                     # Spawner.api_token has changed, but isn't in the db.
                     # What happened? Maybe something unclean in a resumed container.
@@ -872,7 +980,7 @@ class User:
                     self.new_api_token(
                         spawner.api_token,
                         generated=False,
-                        note="retrieved from spawner %s" % server_name,
+                        note=f"retrieved from spawner {server_name}",
                         scopes=resolved_scopes,
                     )
                 # update OAuth client secret with updated API token
@@ -897,9 +1005,7 @@ class User:
                 self.settings['statsd'].incr('spawner.failure.timeout')
             else:
                 self.log.exception(
-                    "Unhandled error starting {user}'s server: {error}".format(
-                        user=self.name, error=e
-                    )
+                    f"Unhandled error starting {self.name}'s server: {e}"
                 )
                 self.settings['statsd'].incr('spawner.failure.error')
                 e.reason = 'error'
@@ -907,9 +1013,7 @@ class User:
                 await self.stop(spawner.name)
             except Exception:
                 self.log.exception(
-                    "Failed to cleanup {user}'s server that failed to start".format(
-                        user=self.name
-                    ),
+                    f"Failed to cleanup {self.name}'s server that failed to start",
                     exc_info=True,
                 )
             # raise original exception
@@ -958,18 +1062,14 @@ class User:
             else:
                 e.reason = 'error'
                 self.log.exception(
-                    "Unhandled error waiting for {user}'s server to show up at {url}: {error}".format(
-                        user=self.name, url=server.url, error=e
-                    )
+                    f"Unhandled error waiting for {self.name}'s server to show up at {server.url}: {e}"
                 )
                 self.settings['statsd'].incr('spawner.failure.http_error')
             try:
                 await self.stop(spawner.name)
             except Exception:
                 self.log.exception(
-                    "Failed to cleanup {user}'s server that failed to start".format(
-                        user=self.name
-                    ),
+                    f"Failed to cleanup {self.name}'s server that failed to start",
                     exc_info=True,
                 )
             # raise original TimeoutError
@@ -1031,7 +1131,7 @@ class User:
             # trigger post-stop hook
             try:
                 await maybe_future(spawner.run_post_stop_hook())
-            except:
+            except Exception:
                 self.log.exception("Error in Spawner.post_stop_hook for %s", self)
             spawner.clear_state()
             spawner.orm_spawner.state = spawner.get_state()

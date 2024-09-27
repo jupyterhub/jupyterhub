@@ -156,7 +156,7 @@ class JupyterHubRequestValidator(RequestValidator):
             self.db.query(orm.OAuthClient).filter_by(identifier=client_id).first()
         )
         if orm_client is None:
-            raise ValueError("No such client: %s" % client_id)
+            raise ValueError(f"No such client: {client_id}")
         scopes = set(orm_client.allowed_scopes)
         if 'inherit' not in scopes:
             # add identify-user scope
@@ -255,7 +255,7 @@ class JupyterHubRequestValidator(RequestValidator):
             self.db.query(orm.OAuthClient).filter_by(identifier=client_id).first()
         )
         if orm_client is None:
-            raise ValueError("No such client: %s" % client_id)
+            raise ValueError(f"No such client: {client_id}")
 
         orm_code = orm.OAuthCode(
             code=code['code'],
@@ -345,7 +345,7 @@ class JupyterHubRequestValidator(RequestValidator):
         app_log.debug("Saving bearer token %s", log_token)
 
         if request.user is None:
-            raise ValueError("No user for access token: %s" % request.user)
+            raise ValueError(f"No user for access token: {request.user}")
         client = (
             self.db.query(orm.OAuthClient)
             .filter_by(identifier=request.client.client_id)

@@ -221,11 +221,11 @@ class Proxy(LoggingConfigurable):
         host_route = not routespec.startswith('/')
         if host_route and not self.host_routing:
             raise ValueError(
-                "Cannot add host-based route %r, not using host-routing" % routespec
+                f"Cannot add host-based route {routespec!r}, not using host-routing"
             )
         if self.host_routing and not host_route:
             raise ValueError(
-                "Cannot add route without host %r, using host-routing" % routespec
+                f"Cannot add route without host {routespec!r}, using host-routing"
             )
         # add trailing slash
         if not routespec.endswith('/'):
@@ -337,8 +337,7 @@ class Proxy(LoggingConfigurable):
 
         if spawner.pending and spawner.pending != 'spawn':
             raise RuntimeError(
-                "%s is pending %s, shouldn't be added to the proxy yet!"
-                % (spawner._log_name, spawner.pending)
+                f"{spawner._log_name} is pending {spawner.pending}, shouldn't be added to the proxy yet!"
             )
 
         await self.add_route(
@@ -614,8 +613,8 @@ class ConfigurableHTTPProxy(Proxy):
         # check for required token if proxy is external
         if not self.auth_token and not self.should_start:
             raise ValueError(
-                "%s.auth_token or CONFIGPROXY_AUTH_TOKEN env is required"
-                " if Proxy.should_start is False" % self.__class__.__name__
+                f"{self.__class__.__name__}.auth_token or CONFIGPROXY_AUTH_TOKEN env is required"
+                " if Proxy.should_start is False"
             )
 
     def _check_previous_process(self):
@@ -687,7 +686,9 @@ class ConfigurableHTTPProxy(Proxy):
         cmd = []
         proxy_api = 'proxy-api'
         proxy_client = 'proxy-client'
-        api_key = self.app.internal_proxy_certs[proxy_api][
+        api_key = self.app.internal_proxy_certs[
+            proxy_api
+        ][
             'keyfile'
         ]  # Check content in next test and just patch manulaly or in the config of the file
         api_cert = self.app.internal_proxy_certs[proxy_api]['certfile']
@@ -757,11 +758,11 @@ class ConfigurableHTTPProxy(Proxy):
             )
         except FileNotFoundError as e:
             self.log.error(
-                "Failed to find proxy %r\n"
+                f"Failed to find proxy {self.command!r}\n"
                 "The proxy can be installed with `npm install -g configurable-http-proxy`."
                 "To install `npm`, install nodejs which includes `npm`."
                 "If you see an `EACCES` error or permissions error, refer to the `npm` "
-                "documentation on How To Prevent Permissions Errors." % self.command
+                "documentation on How To Prevent Permissions Errors."
             )
             raise
 
@@ -941,9 +942,7 @@ class ConfigurableHTTPProxy(Proxy):
                 # errors.
                 if e.code >= 500:
                     self.log.warning(
-                        "api_request to the proxy failed with status code {}, retrying...".format(
-                            e.code
-                        )
+                        f"api_request to the proxy failed with status code {e.code}, retrying..."
                     )
                     return False  # a falsy return value make exponential_backoff retry
                 else:

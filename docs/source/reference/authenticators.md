@@ -37,14 +37,19 @@ A [generic implementation](https://github.com/jupyterhub/oauthenticator/blob/mas
 ## The Dummy Authenticator
 
 When testing, it may be helpful to use the
-{class}`jupyterhub.auth.DummyAuthenticator`. This allows for any username and
-password unless if a global password has been set. Once set, any username will
+{class}`~.jupyterhub.auth.DummyAuthenticator`. This allows for any username and
+password unless a global password has been set. Once set, any username will
 still be accepted but the correct password will need to be provided.
+
+:::{versionadded} 5.0
+The DummyAuthenticator's default `allow_all` is True,
+unlike most other Authenticators.
+:::
 
 ## Additional Authenticators
 
-A partial list of other authenticators is available on the
-[JupyterHub wiki](https://github.com/jupyterhub/jupyterhub/wiki/Authenticators).
+Additional authenticators can be found on GitHub
+by searching for [topic:jupyterhub topic:authenticator](https://github.com/search?q=topic%3Ajupyterhub%20topic%3Aauthenticator&type=repositories).
 
 ## Technical Overview of Authentication
 
@@ -54,9 +59,9 @@ The base authenticator uses simple username and password authentication.
 
 The base Authenticator has one central method:
 
-#### Authenticator.authenticate method
+#### Authenticator.authenticate
 
-    Authenticator.authenticate(handler, data)
+{meth}`.Authenticator.authenticate`
 
 This method is passed the Tornado `RequestHandler` and the `POST data`
 from JupyterHub's login form. Unless the login form has been customized,
@@ -81,7 +86,8 @@ Writing an Authenticator that looks up passwords in a dictionary
 requires only overriding this one method:
 
 ```python
-from IPython.utils.traitlets import Dict
+from secrets import compare_digest
+from traitlets import Dict
 from jupyterhub.auth import Authenticator
 
 class DictionaryAuthenticator(Authenticator):
@@ -91,8 +97,14 @@ class DictionaryAuthenticator(Authenticator):
     )
 
     async def authenticate(self, handler, data):
-        if self.passwords.get(data['username']) == data['password']:
-            return data['username']
+        username = data["username"]
+        password = data["password"]
+        check_password = self.passwords.get(username, "")
+        # always call compare_digest, for timing attacks
+        if compare_digest(check_password, password) and username in self.passwords:
+            return username
+        else:
+            return None
 ```
 
 #### Normalize usernames
@@ -136,7 +148,7 @@ To only allow usernames that start with 'w':
 c.Authenticator.username_pattern = r'w.*'
 ```
 
-### How to write a custom authenticator
+## How to write a custom authenticator
 
 You can use custom Authenticator subclasses to enable authentication
 via other mechanisms. One such example is using [GitHub OAuth][].
@@ -147,11 +159,6 @@ For example, the Authenticator methods, {meth}`.Authenticator.pre_spawn_start`
 and {meth}`.Authenticator.post_spawn_stop`, are hooks that can be used to do
 auth-related startup (e.g. opening PAM sessions) and cleanup
 (e.g. closing PAM sessions).
-
-See a list of custom Authenticators [on the wiki](https://github.com/jupyterhub/jupyterhub/wiki/Authenticators).
-
-If you are interested in writing a custom authenticator, you can read
-[this tutorial](http://jupyterhub-tutorial.readthedocs.io/en/latest/authenticators.html).
 
 ### Registering custom Authenticators via entry points
 
@@ -187,6 +194,166 @@ previously required.
 Additionally, configurable attributes for your authenticator will
 appear in jupyterhub help output and auto-generated configuration files
 via `jupyterhub --generate-config`.
+
+(authenticator-allow)=
+
+### Allowing access
+
+When dealing with logging in, there are generally two _separate_ steps:
+
+authentication
+: identifying who is trying to log in, and
+
+authorization
+: deciding whether an authenticated user is allowed to access your JupyterHub
+
+{meth}`Authenticator.authenticate` is responsible for authenticating users.
+It is perfectly fine in the simplest cases for `Authenticator.authenticate` to be responsible for authentication _and_ authorization,
+in which case `authenticate` may return `None` if the user is not authorized.
+
+However, Authenticators also have two methods, {meth}`~.Authenticator.check_allowed` and {meth}`~.Authenticator.check_blocked_users`, which are called after successful authentication to further check if the user is allowed.
+
+If `check_blocked_users()` returns False, authorization stops and the user is not allowed.
+
+If `Authenticator.allow_all` is True OR `check_allowed()` returns True, authorization proceeds.
+
+:::{versionadded} 5.0
+{attr}`.Authenticator.allow_all` and {attr}`.Authenticator.allow_existing_users` are new in JupyterHub 5.0.
+
+By default, `allow_all` is False,
+which is a change from pre-5.0, where `allow_all` was implicitly True if `allowed_users` was empty.
+:::
+
+### Overriding `check_allowed`
+
+:::{versionchanged} 5.0
+`check_allowed()` is **not called** if `allow_all` is True.
+:::
+
+:::{versionchanged} 5.0
+Starting with 5.0, `check_allowed()` should **NOT** return True if no allow config
+is specified (`allow_all` should be used instead).
+
+:::
+
+The base implementation of {meth}`~.Authenticator.check_allowed` checks:
+
+- if username is in the `allowed_users` set, return True
+- else return False
+
+:::{versionchanged} 5.0
+Prior to 5.0, this would also return True if `allowed_users` was empty.
+
+For clarity, this is no longer the case. A new `allow_all` property (default False) has been added which is checked _before_ calling `check_allowed`.
+If `allow_all` is True, this takes priority over `check_allowed`, which will be ignored.
+
+If your Authenticator subclass similarly returns True when no allow config is defined,
+this is fully backward compatible for your users, but means `allow_all = False` has no real effect.
+
+You can make your Authenticator forward-compatible with JupyterHub 5 by defining `allow_all` as a boolean config trait on your class:
+
+```python
+class MyAuthenticator(Authenticator):
+
+    # backport allow_all from JupyterHub 5
+    allow_all = Bool(False, config=True)
+
+    def check_allowed(self, username, authentication):
+        if self.allow_all:
+            # replaces previous "if no auth config"
+            return True
+        ...
+```
+
+:::
+
+If an Authenticator defines additional sources of `allow` configuration,
+such as membership in a group or other information,
+it should override `check_allowed` to account for this.
+
+:::{note}
+`allow_` configuration should generally be _additive_,
+i.e. if access is granted by _any_ allow configuration,
+a user should be authorized.
+
+JupyterHub recommends that Authenticators applying _restrictive_ configuration should use names like `block_` or `require_`,
+and check this during `check_blocked_users` or `authenticate`, not `check_allowed`.
+:::
+
+In general, an Authenticator's skeleton should look like:
+
+```python
+class MyAuthenticator(Authenticator):
+    # backport allow_all for compatibility with JupyterHub < 5
+    allow_all = Bool(False, config=True)
+    require_something = List(config=True)
+    allowed_something = Set()
+
+    def authenticate(self, data, handler):
+        ...
+        if success:
+            return {"username": username, "auth_state": {...}}
+        else:
+            return None
+
+    def check_blocked_users(self, username, authentication=None):
+        """Apply _restrictive_ configuration"""
+
+        if self.require_something and not has_something(username, self.request_):
+            return False
+        # repeat for each restriction
+        if restriction_defined and restriction_not_met:
+            return False
+        return super().check_blocked_users(self, username, authentication)
+
+    def check_allowed(self, username, authentication=None):
+        """Apply _permissive_ configuration
+
+        Only called if check_blocked_users returns True
+        AND allow_all is False
+        """
+        if self.allow_all:
+            # check here to backport allow_all behavior
+            # from JupyterHub 5
+            # this branch will never be taken with jupyterhub >=5
+            return True
+        if self.allowed_something and user_has_something(username):
+            return True
+        # repeat for each allow
+        if allow_config and allow_met:
+            return True
+        # should always have this at the end
+        if self.allowed_users and username in self.allowed_users:
+            return True
+        # do not call super!
+        # super().check_allowed is not safe with JupyterHub < 5.0,
+        # as it will return True if allowed_users is empty
+        return False
+```
+
+Key points:
+
+- `allow_all` is backported from JupyterHub 5, for consistent behavior in all versions of JupyterHub (optional)
+- restrictive configuration is checked in `check_blocked_users`
+- if any restriction is not met, `check_blocked_users` returns False
+- permissive configuration is checked in `check_allowed`
+- if any `allow` condition is met, `check_allowed` returns True
+
+So the logical expression for a user being authorized should look like:
+
+> if ALL restrictions are met AND ANY admissions are met: user is authorized
+
+#### Custom error messages
+
+Any of these authentication and authorization methods may raise a `web.HTTPError` Exception
+
+```python
+from tornado import web
+
+raise web.HTTPError(403, "informative message")
+```
+
+if you want to show a more informative login failure message rather than the generic one.
 
 (authenticator-auth-state)=
 
@@ -291,7 +458,7 @@ c.Authenticator.manage_groups = True
 to enable this behavior.
 The default is False for Authenticators that ship with JupyterHub,
 but may be True for custom Authenticators.
-Check your Authenticator's documentation for manage_groups support.
+Check your Authenticator's documentation for `manage_groups` support.
 
 If True, {meth}`.Authenticator.authenticate` and {meth}`.Authenticator.refresh_user` may include a field `groups`
 which is a list of group names the user should be a member of:
@@ -302,7 +469,51 @@ which is a list of group names the user should be a member of:
 - If `None` is returned, no changes are made to the user's group membership
 
 If authenticator-managed groups are enabled,
-all group-management via the API is disabled.
+all group-management via the API is disabled,
+and roles cannot be specified with `load_groups` traitlet.
+
+(authenticator-roles)=
+
+## Authenticator-managed roles
+
+:::{versionadded} 5.0
+:::
+
+Some identity providers may have their own concept of role membership that you would like to preserve in JupyterHub.
+This is now possible with {attr}`.Authenticator.manage_roles`.
+
+You can set the config:
+
+```python
+c.Authenticator.manage_roles = True
+```
+
+to enable this behavior.
+The default is False for Authenticators that ship with JupyterHub,
+but may be True for custom Authenticators.
+Check your Authenticator's documentation for `manage_roles` support.
+
+If True, {meth}`.Authenticator.authenticate` and {meth}`.Authenticator.refresh_user` may include a field `roles`
+which is a list of roles that user should be assigned to:
+
+- User will be assigned each role in the list
+- User will be revoked roles not in the list (but they may still retain the role privileges if they inherit the role from their group)
+- Any roles not already present in the database will be created
+- Attributes of the roles (`description`, `scopes`, `groups`, `users`, and `services`) will be updated if given
+- If `None` is returned, no changes are made to the user's roles
+
+If authenticator-managed roles are enabled,
+all role-management via the API is disabled,
+and roles cannot be assigned to groups nor users via `load_roles` traitlet
+(roles can still be created via `load_roles` or assigned to services).
+
+When an authenticator manages roles, the initial roles and role assignments
+can be loaded from role specifications returned by the {meth}`.Authenticator.load_managed_roles()` method.
+
+The authenticator-manged roles and role assignment will be deleted after restart if:
+
+- {attr}`.Authenticator.reset_managed_roles_on_startup` is set to `True`, and
+- the roles and role assignments are not included in the initial set of roles returned by the {meth}`.Authenticator.load_managed_roles()` method.
 
 ## pre_spawn_start and post_spawn_stop hooks
 

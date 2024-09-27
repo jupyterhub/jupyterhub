@@ -8,6 +8,7 @@ import errno
 import functools
 import hashlib
 import inspect
+import os
 import random
 import re
 import secrets
@@ -26,12 +27,31 @@ from hmac import compare_digest
 from operator import itemgetter
 from urllib.parse import quote
 
+if sys.version_info >= (3, 10):
+    from contextlib import aclosing
+else:
+    from async_generator import aclosing
+
 import idna
-from async_generator import aclosing
 from sqlalchemy.exc import SQLAlchemyError
 from tornado import gen, ioloop, web
 from tornado.httpclient import AsyncHTTPClient, HTTPError
 from tornado.log import app_log
+
+
+def _bool_env(key, default=False):
+    """Cast an environment variable to bool
+
+    If unset or empty, return `default`
+    `0` is False; all other values are True.
+    """
+    value = os.environ.get(key, "")
+    if value == "":
+        return default
+    if value.lower() in {"0", "false"}:
+        return False
+    else:
+        return True
 
 
 # Deprecated aliases: no longer needed now that we require 3.7
@@ -253,9 +273,7 @@ async def wait_for_server(ip, port, timeout=10):
     tic = time.perf_counter()
     await exponential_backoff(
         lambda: can_connect(ip, port),
-        "Server at {ip}:{port} didn't respond in {timeout} seconds".format(
-            ip=ip, port=port, timeout=timeout
-        ),
+        f"Server at {ip}:{port} didn't respond in {timeout} seconds",
         timeout=timeout,
     )
     toc = time.perf_counter()
@@ -297,13 +315,13 @@ async def wait_for_http_server(url, timeout=10, ssl_context=None):
                 errno.ECONNRESET,
             }:
                 app_log.warning("Failed to connect to %s (%s)", url, e)
+        except Exception as e:
+            app_log.warning("Error while waiting for server %s (%s)", url, e)
         return False
 
     re = await exponential_backoff(
         is_reachable,
-        "Server at {url} didn't respond in {timeout} seconds".format(
-            url=url, timeout=timeout
-        ),
+        f"Server at {url} didn't respond in {timeout} seconds",
         timeout=timeout,
     )
     toc = time.perf_counter()
@@ -486,7 +504,7 @@ def print_ps_info(file=sys.stderr):
     if cpu >= 10:
         cpu_s = "%i" % cpu
     else:
-        cpu_s = "%.1f" % cpu
+        cpu_s = f"{cpu:.1f}"
 
     # format memory (only resident set)
     rss = p.memory_info().rss
@@ -507,19 +525,14 @@ def print_ps_info(file=sys.stderr):
     threadlen = len('threads')
 
     print(
-        "%s %s %s %s"
-        % ('%CPU'.ljust(cpulen), 'MEM'.ljust(memlen), 'FDs'.ljust(fdlen), 'threads'),
+        "{} {} {} {}".format(
+            '%CPU'.ljust(cpulen), 'MEM'.ljust(memlen), 'FDs'.ljust(fdlen), 'threads'
+        ),
         file=file,
     )
 
     print(
-        "%s %s %s %s"
-        % (
-            cpu_s.ljust(cpulen),
-            mem_s.ljust(memlen),
-            fd_s.ljust(fdlen),
-            str(p.num_threads()).ljust(7),
-        ),
+        f"{cpu_s.ljust(cpulen)} {mem_s.ljust(memlen)} {fd_s.ljust(fdlen)} {str(p.num_threads()).ljust(7)}",
         file=file,
     )
 
@@ -549,7 +562,7 @@ def print_stacks(file=sys.stderr):
 
     print("Active threads: %i" % threading.active_count(), file=file)
     for thread in threading.enumerate():
-        print("Thread %s:" % thread.name, end='', file=file)
+        print(f"Thread {thread.name}:", end='', file=file)
         frame = sys._current_frames()[thread.ident]
         stack = traceback.extract_stack(frame)
         if thread is threading.current_thread():
@@ -788,7 +801,7 @@ _dns_safe = set(string.ascii_letters + string.digits + '-.')
 _dns_needs_replace = _dns_safe | {"%"}
 
 
-@lru_cache()
+@lru_cache
 def _dns_quote(name):
     """Escape a name for use in a dns label
 
@@ -929,3 +942,23 @@ def subdomain_hook_idna(name, domain, kind):
     else:
         suffix = f"--{kind}"
     return f"{safe_name}{suffix}.{domain}"
+
+
+# From https://github.com/jupyter-server/jupyter_server/blob/fc0ac3236fdd92778ea765db6e8982212c8389ee/jupyter_server/config_manager.py#L14
+def recursive_update(target, new):
+    """
+    Recursively update one dictionary in-place using another.
+
+    None values will delete their keys.
+    """
+    for k, v in new.items():
+        if isinstance(v, dict):
+            if k not in target:
+                target[k] = {}
+            recursive_update(target[k], v)
+
+        elif v is None:
+            target.pop(k, None)
+
+        else:
+            target[k] = v

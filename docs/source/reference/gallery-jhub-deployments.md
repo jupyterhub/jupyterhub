@@ -82,15 +82,6 @@ Within CERN, there are two noteworthy JupyterHub deployments in operation:
 - Advanced Computing
   - [Palmetto cluster and JupyterHub](https://citi.sites.clemson.edu/2016/08/18/JupyterHub-for-Palmetto-Cluster.html)
 
-### University of Colorado Boulder
-
-- (CU Research Computing) CURC
-
-  - [JupyterHub User Guide](https://curc.readthedocs.io/en/latest/gateways/jupyterhub.html)
-    - Slurm job dispatched on Crestone compute cluster
-    - log troubleshooting
-    - Profiles in IPython Clusters tab
-
 ### ETH Zurich
 
 [ETH Zurich](https://ethz.ch/en.html), (Federal Institute of Technology Zurich), is a public research university in Zürich, Switzerland, with focus on science, technology, engineering, and mathematics, although its 16 departments span a variety of disciplines and subjects.

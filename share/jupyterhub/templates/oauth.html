@@ -1,52 +1,52 @@
 {% extends "page.html" %}
-
 {% block login_widget %}
-{% endblock %}
-
+{% endblock login_widget %}
 {% block main %}
-<div class="container col-md-6 col-md-offset-3">
-    <h1 class="text-center">Authorize access</h1>
-
-    <h2>
-        An application is requesting authorization to access data associated with your JupyterHub account
-    </h2>
-
-    <p>
-        {{ oauth_client.description }} (oauth URL: {{ oauth_client.redirect_uri }})
-        would like permission to identify you.
-        {% if scope_descriptions | length == 1 and not scope_descriptions[0].scope %}
-        It will not be able to take actions on
-        your behalf.
-        {% endif %}
-    </p>
-
-    <h3>This will grant the application permission to:</h3>
-    <div>
-        <form method="POST" action="">
-            <input type="hidden" name="_xsrf" value="{{ xsrf }}"/>
-            {# these are the 'real' inputs to the form -#}
-            {% for scope in allowed_scopes %}
-            <input type="hidden" name="scopes" value="{{ scope }}"/>
-            {% endfor %}
-
-            {% for scope_info in scope_descriptions %}
-            <div class="checkbox input-group">
-                <label>
-                    <input type="checkbox" name="raw-scopes" checked="true" title="This authorization is required"
-                           disabled="disabled"
-                           {# disabled because it's required #} />
-                    <span>
-            {{ scope_info['description'] }}
-            {% if scope_info['filter'] %}
-            Applies to {{ scope_info['filter'] }}.
-            {% endif %}
-          </span>
-                </label>
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-md-8">
+        <h1 class="text-center">Authorize access</h1>
+        <p class="lead">An application is requesting authorization to access data associated with your JupyterHub account</p>
+        <p>
+          {{ oauth_client.description }} (oauth URL: {{ oauth_client.redirect_uri }})
+          would like permission to identify you.
+          {% if scope_descriptions | length == 1 and not scope_descriptions[0].scope %}
+            It will not be able to take actions on
+            your behalf.
+          {% endif %}
+        </p>
+        <form method="post" action="">
+          <div class="card">
+            <div class="card-header">
+              <p class="h5">This will grant the application permission to:</p>
             </div>
-            {% endfor %}
-            <input type="submit" value="Authorize" class="form-control btn-jupyter"/>
+            <div class="card-body">
+              <input type="hidden" name="_xsrf" value="{{ xsrf }}" />
+              {# these are the 'real' inputs to the form -#}
+              {% for scope in allowed_scopes %}<input type="hidden" name="scopes" value="{{ scope }}" />{% endfor %}
+              {% for scope_info in scope_descriptions %}
+                <div class="checkbox input-group">
+                  <label>
+                    {# disabled because it's required #}
+                    <input type="checkbox"
+                           name="raw-scopes"
+                           checked="true"
+                           title="This authorization is required"
+                           disabled="disabled" />
+                    <span>
+                      {{ scope_info['description'] }}
+                      {% if scope_info['filter'] %}Applies to {{ scope_info['filter'] }}.{% endif %}
+                    </span>
+                  </label>
+                </div>
+              {% endfor %}
+            </div>
+            <div class="card-footer">
+              <button type="submit" class="form-control btn btn-jupyter mt-2">Authorize</button>
+            </div>
+          </div>
         </form>
+      </div>
     </div>
-</div>
-
-{% endblock %}
+  </div>
+{% endblock main %}

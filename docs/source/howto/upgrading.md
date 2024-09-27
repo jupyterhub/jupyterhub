@@ -1,4 +1,4 @@
-(upgrading-jupyterhub)=
+(howto:upgrading-jupyterhub)=
 
 # Upgrading JupyterHub
 
@@ -13,6 +13,14 @@ This documentation is lengthy because it is quite detailed. Most likely, upgradi
 JupyterHub is painless, quick and with minimal user interruption.
 
 The steps are discussed in detail, so if you get stuck at any step you can always refer to this guide.
+
+For specific version migrations:
+
+```{toctree}
+:maxdepth: 1
+
+./upgrading-v5
+```
 
 ## Read the Changelog
 

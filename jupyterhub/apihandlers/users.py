@@ -5,12 +5,17 @@
 import asyncio
 import inspect
 import json
+import sys
 from datetime import timedelta, timezone
 
-from async_generator import aclosing
+if sys.version_info >= (3, 10):
+    from contextlib import aclosing
+else:
+    from async_generator import aclosing
+
 from dateutil.parser import parse as parse_date
 from sqlalchemy import func, or_
-from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy.orm import joinedload, raiseload, selectinload  # noqa
 from tornado import web
 from tornado.iostream import StreamClosedError
 
@@ -63,10 +68,13 @@ class SelfAPIHandler(APIHandler):
 
         # add session_id associated with token
         # added in 2.0
+        # token_id added in 5.0
         token = self.get_token()
         if token:
+            model["token_id"] = token.api_id
             model["session_id"] = token.session_id
         else:
+            model["token_id"] = None
             model["session_id"] = None
 
         # add scopes to identify model,
@@ -88,14 +96,38 @@ class UserListAPIHandler(APIHandler):
     def get(self):
         state_filter = self.get_argument("state", None)
         name_filter = self.get_argument("name_filter", None)
+        sort = sort_by_param = self.get_argument("sort", "id")
+        sort_direction = "asc"
+        if sort[:1] == '-':
+            sort_direction = "desc"
+            sort = sort[1:]
+
         offset, limit = self.get_api_pagination()
+
+        if sort in {"id", "name", "last_activity"}:
+            sort_column = getattr(orm.User, sort)
+        else:
+            raise web.HTTPError(
+                400,
+                f"sort must be 'id', 'name', or 'last_activity', not '{sort_by_param}'",
+            )
+
+        # NULL is sorted inconsistently, so make it explicit
+        if sort_direction == "asc":
+            sort_order = (sort_column.is_not(None), sort_column.asc())
+        elif sort_direction == "desc":
+            sort_order = (sort_column.is_(None), sort_column.desc())
+        else:
+            # this can't happen, users don't specify direction
+            raise ValueError(
+                f"sort_direction must be 'asc' or 'desc', got '{sort_direction}'"
+            )
 
         # post_filter
         post_filter = None
 
         # starting query
-        # fetch users and groups, which will be used for filters
-        query = self.db.query(orm.User).outerjoin(orm.Group, orm.User.groups)
+        query = self.db.query(orm.User)
 
         if state_filter in {"active", "ready"}:
             # only get users with active servers
@@ -109,6 +141,8 @@ class UserListAPIHandler(APIHandler):
                 .join(orm.Spawner, orm.User._orm_spawners)
                 # this implicitly gets Users with *any* active server
                 .filter(orm.Spawner.server != None)
+                # group-by ensures the count is correct
+                .group_by(orm.User.id)
             )
             if state_filter == "ready":
                 # have to post-process query results because active vs ready
@@ -127,18 +161,17 @@ class UserListAPIHandler(APIHandler):
                 .having(func.count(orm.Server.id) == 0)
             )
         elif state_filter:
-            raise web.HTTPError(400, "Unrecognized state filter: %r" % state_filter)
-        else:
-            # no filter, return all users
-            query = query.outerjoin(orm.Spawner, orm.User._orm_spawners).outerjoin(
-                orm.Server, orm.Spawner.server
-            )
+            raise web.HTTPError(400, f"Unrecognized state filter: {state_filter!r}")
 
         # apply eager load options
         query = query.options(
             selectinload(orm.User.roles),
             selectinload(orm.User.groups),
-            joinedload(orm.User._orm_spawners),
+            joinedload(orm.User._orm_spawners).joinedload(orm.Spawner.user),
+            # raiseload here helps us make sure we've loaded everything in one query
+            # but since we share a single db session, we can't do this for real
+            # but it's useful in testing
+            # raiseload("*"),
         )
 
         sub_scope = self.parsed_scopes['list:users']
@@ -168,7 +201,7 @@ class UserListAPIHandler(APIHandler):
             query = query.filter(orm.User.name.ilike(f'%{name_filter}%'))
 
         full_query = query
-        query = query.order_by(orm.User.id.asc()).offset(offset).limit(limit)
+        query = query.order_by(*sort_order).offset(offset).limit(limit)
 
         user_list = []
         for u in query:
@@ -189,6 +222,8 @@ class UserListAPIHandler(APIHandler):
             data = user_list
 
         self.write(json.dumps(data))
+        # if testing with raiseload above, need expire_all to avoid affecting other operations
+        # self.db.expire_all()
 
     @needs_scope('admin:users')
     async def post(self):
@@ -201,6 +236,8 @@ class UserListAPIHandler(APIHandler):
         # admin is set for all users
         # to create admin and non-admin users requires at least two API requests
         admin = data.get('admin', False)
+        if admin and not self.current_user.admin:
+            raise web.HTTPError(403, "Only admins can grant admin permissions")
 
         to_create = []
         invalid_names = []
@@ -211,15 +248,15 @@ class UserListAPIHandler(APIHandler):
                 continue
             user = self.find_user(name)
             if user is not None:
-                self.log.warning("User %s already exists" % name)
+                self.log.warning(f"User {name} already exists")
             else:
                 to_create.append(name)
 
         if invalid_names:
             if len(invalid_names) == 1:
-                msg = "Invalid username: %s" % invalid_names[0]
+                msg = f"Invalid username: {invalid_names[0]}"
             else:
-                msg = "Invalid usernames: %s" % ', '.join(invalid_names)
+                msg = "Invalid usernames: {}".format(', '.join(invalid_names))
             raise web.HTTPError(400, msg)
 
         if not to_create:
@@ -235,7 +272,7 @@ class UserListAPIHandler(APIHandler):
             try:
                 await maybe_future(self.authenticator.add_user(user))
             except Exception as e:
-                self.log.error("Failed to create user: %s" % name, exc_info=True)
+                self.log.error(f"Failed to create user: {name}", exc_info=True)
                 self.users.delete(user)
                 raise web.HTTPError(400, f"Failed to create user {name}: {e}")
             else:
@@ -272,23 +309,27 @@ class UserAPIHandler(APIHandler):
         data = self.get_json_body()
         user = self.find_user(user_name)
         if user is not None:
-            raise web.HTTPError(409, "User %s already exists" % user_name)
+            raise web.HTTPError(409, f"User {user_name} already exists")
 
-        user = self.user_from_username(user_name)
         if data:
             self._check_user_model(data)
-            if 'admin' in data:
-                user.admin = data['admin']
-                assign_default_roles(self.db, entity=user)
+            if data.get('admin', False) and not self.current_user.admin:
+                raise web.HTTPError(403, "Only admins can grant admin permissions")
+
+        # create the user
+        user = self.user_from_username(user_name)
+        if data and data.get('admin', False):
+            user.admin = data['admin']
+            assign_default_roles(self.db, entity=user)
         self.db.commit()
 
         try:
             await maybe_future(self.authenticator.add_user(user))
         except Exception:
-            self.log.error("Failed to create user: %s" % user_name, exc_info=True)
+            self.log.error(f"Failed to create user: {user_name}", exc_info=True)
             # remove from registry
             self.users.delete(user)
-            raise web.HTTPError(400, "Failed to create user: %s" % user_name)
+            raise web.HTTPError(400, f"Failed to create user: {user_name}")
 
         self.write(json.dumps(self.user_model(user)))
         self.set_status(201)
@@ -303,15 +344,14 @@ class UserAPIHandler(APIHandler):
         if user.spawner._stop_pending:
             raise web.HTTPError(
                 400,
-                "%s's server is in the process of stopping, please wait." % user_name,
+                f"{user_name}'s server is in the process of stopping, please wait.",
             )
         if user.running:
             await self.stop_single_user(user)
             if user.spawner._stop_pending:
                 raise web.HTTPError(
                     400,
-                    "%s's server is in the process of stopping, please wait."
-                    % user_name,
+                    f"{user_name}'s server is in the process of stopping, please wait.",
                 )
 
         await maybe_future(self.authenticator.delete_user(user))
@@ -335,9 +375,21 @@ class UserAPIHandler(APIHandler):
             if self.find_user(data['name']):
                 raise web.HTTPError(
                     400,
-                    "User %s already exists, username must be unique" % data['name'],
+                    "User {} already exists, username must be unique".format(
+                        data['name']
+                    ),
                 )
+
+        if not self.current_user.admin:
+            if user.admin:
+                raise web.HTTPError(403, "Only admins can modify other admins")
+            if 'admin' in data and data['admin']:
+                raise web.HTTPError(403, "Only admins can grant admin permissions")
         for key, value in data.items():
+            value_s = "..." if key == "auth_state" else repr(value)
+            self.log.info(
+                f"{self.current_user.name} setting {key}={value_s} for {user.name}"
+            )
             if key == 'auth_state':
                 await user.save_auth_state(value)
             else:
@@ -367,7 +419,7 @@ class UserTokenListAPIHandler(APIHandler):
         """Get tokens for a given user"""
         user = self.find_user(user_name)
         if not user:
-            raise web.HTTPError(404, "No such user: %s" % user_name)
+            raise web.HTTPError(404, f"No such user: {user_name}")
 
         now = utcnow(with_tz=False)
         api_tokens = []
@@ -453,10 +505,29 @@ class UserTokenListAPIHandler(APIHandler):
                     400, f"token {key} must be null or a list of strings, not {value!r}"
                 )
 
+        expires_in = body.get('expires_in', None)
+        if not (expires_in is None or isinstance(expires_in, int)):
+            raise web.HTTPError(
+                400,
+                f"token expires_in must be null or integer, not {expires_in!r}",
+            )
+        expires_in_max = self.settings["token_expires_in_max_seconds"]
+        if expires_in_max:
+            # validate expires_in against limit
+            if expires_in is None:
+                # expiration unspecified, use max value
+                # (default before max limit was introduced was 'never', this is closest equivalent)
+                expires_in = expires_in_max
+            elif expires_in > expires_in_max:
+                raise web.HTTPError(
+                    400,
+                    f"token expires_in: {expires_in} must not exceed {expires_in_max}",
+                )
+
         try:
             api_token = user.new_api_token(
                 note=note,
-                expires_in=body.get('expires_in', None),
+                expires_in=expires_in,
                 roles=token_roles,
                 scopes=token_scopes,
             )
@@ -568,10 +639,8 @@ class UserServerAPIHandler(APIHandler):
                 if named_server_limit_per_user <= len(named_spawners):
                     raise web.HTTPError(
                         400,
-                        "User {} already has the maximum of {} named servers."
-                        "  One must be deleted before a new server can be created".format(
-                            user_name, named_server_limit_per_user
-                        ),
+                        f"User {user_name} already has the maximum of {named_server_limit_per_user} named servers."
+                        "  One must be deleted before a new server can be created",
                     )
         spawner = user.get_spawner(server_name, replace_failed=True)
         pending = spawner.pending
@@ -591,7 +660,7 @@ class UserServerAPIHandler(APIHandler):
             finally:
                 spawner._spawn_pending = False
             if state is None:
-                raise web.HTTPError(400, "%s is already running" % spawner._log_name)
+                raise web.HTTPError(400, f"{spawner._log_name} is already running")
 
         options = self.get_json_body()
         await self.spawn_single_user(user, server_name, options=options)
@@ -641,14 +710,22 @@ class UserServerAPIHandler(APIHandler):
                 asyncio.ensure_future(_remove_spawner(spawner._stop_future))
             return
 
-        if spawner.pending:
-            raise web.HTTPError(
-                400,
-                f"{spawner._log_name} is pending {spawner.pending}, please wait",
-            )
-
         stop_future = None
-        if spawner.ready:
+        if spawner.pending:
+            # we are interrupting a pending start
+            # hopefully nothing gets leftover
+            self.log.warning(
+                f"Interrupting spawner {spawner._log_name}, pending {spawner.pending}"
+            )
+            spawn_future = spawner._spawn_future
+            if spawn_future:
+                spawn_future.cancel()
+            # Give cancel a chance to resolve?
+            # not sure what we would wait for here,
+            await asyncio.sleep(1)
+            stop_future = await self.stop_single_user(user, server_name)
+
+        elif spawner.ready:
             # include notify, so that a server that died is noticed immediately
             status = await spawner.poll_and_notify()
             if status is None:
@@ -757,7 +834,7 @@ class SpawnProgressAPIHandler(APIHandler):
                 'progress': 100,
                 'ready': True,
                 'message': f"Server ready at {url}",
-                'html_message': 'Server ready at <a href="{0}">{0}</a>'.format(url),
+                'html_message': f'Server ready at <a href="{url}">{url}</a>',
                 'url': url,
             }
             original_ready_event = ready_event.copy()
@@ -784,7 +861,9 @@ class SpawnProgressAPIHandler(APIHandler):
             # not pending, no progress to fetch
             # check if spawner has just failed
             f = spawn_future
-            if f and f.done() and f.exception():
+            if f and f.cancelled():
+                failed_event['message'] = "Spawn cancelled"
+            elif f and f.done() and f.exception():
                 exc = f.exception()
                 message = getattr(exc, "jupyterhub_message", str(exc))
                 failed_event['message'] = f"Spawn failed: {message}"
@@ -823,7 +902,9 @@ class SpawnProgressAPIHandler(APIHandler):
         else:
             # what happened? Maybe spawn failed?
             f = spawn_future
-            if f and f.done() and f.exception():
+            if f and f.cancelled():
+                failed_event['message'] = "Spawn cancelled"
+            elif f and f.done() and f.exception():
                 exc = f.exception()
                 message = getattr(exc, "jupyterhub_message", str(exc))
                 failed_event['message'] = f"Spawn failed: {message}"
@@ -856,9 +937,7 @@ def _parse_timestamp(timestamp):
     if (dt - now) > timedelta(minutes=59):
         raise web.HTTPError(
             400,
-            "Rejecting activity from more than an hour in the future: {}".format(
-                isoformat(dt)
-            ),
+            f"Rejecting activity from more than an hour in the future: {isoformat(dt)}",
         )
     return dt
 

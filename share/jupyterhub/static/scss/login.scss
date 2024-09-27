@@ -3,21 +3,19 @@
   height: 80vh;
 
   & #insecure-login-warning {
-    .bg-warning();
+    background-color: $warning-bg-subtle;
     padding: 10px;
   }
 
   .service-login {
     text-align: center;
-    display: table-cell;
     vertical-align: middle;
-    margin: auto auto 20% auto;
+    margin: auto;
   }
 
   form {
-    display: table-cell;
     vertical-align: middle;
-    margin: auto auto 20% auto;
+    margin: auto;
     width: 350px;
   }
 
@@ -30,9 +28,9 @@
   .auth-form-header {
     padding: 10px 20px;
     color: #fff;
-    background: @jupyter-orange;
-    border-radius: @border-radius-large @border-radius-large 0 0;
+    background: $jupyter-orange;
     font-size: large;
+    border-radius: $border-radius-large $border-radius-large 0 0;
   }
 
   .auth-form-header > h1 {
@@ -45,6 +43,6 @@
     padding: 20px;
     border: thin silver solid;
     border-top: none;
-    border-radius: 0 0 @border-radius-large @border-radius-large;
+    border-radius: 0 0 $border-radius-large $border-radius-large;
   }
 }

@@ -40,10 +40,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Validate REST API definition
-        uses: char0n/swagger-editor-validate@v1.3.2
+      - uses: actions/setup-node@v4
         with:
-          definition-file: docs/source/_static/rest-api.yml
+          node-version: "20"
+          cache: npm
+
+      - name: Validate REST API definition
+        run: |
+          npx @redocly/cli lint
 
   test-docs:
     runs-on: ubuntu-22.04
@@ -57,10 +61,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            docs/requirements.txt
 
       - name: Install requirements
         run: |
-          pip install -r docs/requirements.txt pytest
+          pip install -e . -r docs/requirements.txt pytest
 
       - name: pytest docs/
         run: |
@@ -73,10 +81,12 @@ jobs:
           cd docs
           make html
 
+      # Output broken and permanently redirected links in a readable format
       - name: check links
-        run: |
-          cd docs
-          make linkcheck
+        uses: manics/action-sphinx-linkcheck-summary@main
+        with:
+          docs-dir: docs
+          build-dir: docs/_build
 
       # make rediraffecheckdiff compares files for different changesets
       # these diff targets aren't always available

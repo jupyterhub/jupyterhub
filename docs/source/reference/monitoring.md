@@ -32,3 +32,11 @@ export JUPYTERHUB_METRICS_PREFIX=jupyterhub_prod
 ```
 
 would result in the metric `jupyterhub_prod_active_users`, etc.
+
+## Configuring metrics
+
+```{eval-rst}
+.. currentmodule:: jupyterhub.metrics
+
+.. autoconfigurable:: PeriodicMetricsCollector
+```

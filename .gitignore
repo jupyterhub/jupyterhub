@@ -22,6 +22,8 @@ jupyterhub_cookie_secret
 jupyterhub.sqlite
 jupyterhub.sqlite*
 share/jupyterhub/static/components
+share/jupyterhub/static/css/style.css
+share/jupyterhub/static/css/style.css.map
 share/jupyterhub/static/css/style.min.css
 share/jupyterhub/static/css/style.min.css.map
 share/jupyterhub/static/js/admin-react.js*
@@ -38,3 +40,5 @@ docs/source/reference/metrics.rst
 oldest-requirements.txt
 jupyterhub-proxy.pid
 examples/server-api/service-token
+
+*.hot-update*

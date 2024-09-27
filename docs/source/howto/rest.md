@@ -1,4 +1,4 @@
-(using-jupyterhub-rest-api)=
+(howto:rest-api)=
 
 # Using JupyterHub's REST API
 
@@ -202,7 +202,7 @@ Authorization header.
 ### Use requests
 
 Using the popular Python [requests](https://docs.python-requests.org)
-library, an API GET request is made, and the request sends an API token for
+library, an API GET request is made to [/users](rest-api-get-users), and the request sends an API token for
 authorization. The response contains information about the users, here's example code to make an API request for the users of a JupyterHub deployment
 
 ```python
@@ -220,7 +220,7 @@ r.raise_for_status()
 users = r.json()
 ```
 
-This example provides a slightly more complicated request, yet the
+This example provides a slightly more complicated request (to [/groups/formgrade-data301/users](rest-api-post-group-users)), yet the
 process is very similar:
 
 ```python
@@ -254,7 +254,7 @@ provided by notebook servers managed by JupyterHub if it has the necessary `acce
 
 Pagination is available through the `offset` and `limit` query parameters on
 list endpoints, which can be used to return ideally sized windows of results.
-Here's example code demonstrating pagination on the `GET /users`
+Here's example code demonstrating pagination on the [`GET /users`](rest-api-get-users)
 endpoint to fetch the first 20 records.
 
 ```python
@@ -353,12 +353,18 @@ hub:
 
 With that setting in place, a new named-server is activated like this:
 
+```{parsed-literal}
+[POST /api/users/:username/servers/:servername](rest-api-post-user-server-name)
+```
+
+e.g.
+
 ```bash
 curl -X POST -H "Authorization: token <token>" "http://127.0.0.1:8081/hub/api/users/<user>/servers/<serverA>"
 curl -X POST -H "Authorization: token <token>" "http://127.0.0.1:8081/hub/api/users/<user>/servers/<serverB>"
 ```
 
-The same servers can be stopped by substituting `DELETE` for `POST` above.
+The same servers can be [stopped](rest-api-delete-user-server-name) by substituting `DELETE` for `POST` above.
 
 ### Some caveats for using named-servers
 

@@ -1,4 +1,4 @@
-(services)=
+(services-reference)=
 
 # Services
 
@@ -87,7 +87,7 @@ the Service. For example, a 'cull idle' notebook server task configured as a
 Hub-Managed Service would include:
 
 - the Service name,
-- admin permissions, and
+- permissions to see when users are active, and to stop servers
 - the `command` to launch the Service which will cull idle servers after a
   timeout interval
 
@@ -213,7 +213,7 @@ c.JupyterHub.load_roles = [
 ]
 ```
 
-When a service has a configured URL or explicit `oauth_client_id` or `oauth_redirect_uri`, it can operate as an [OAuth client](jupyterhub-oauth).
+When a service has a configured URL or explicit `oauth_client_id` or `oauth_redirect_uri`, it can operate as an [OAuth client](explanation:hub-oauth).
 When a user visits an oauth-authenticated service,
 completion of authentication results in issuing an oauth token.
 
@@ -514,7 +514,7 @@ For example, using flask:
 :language: python
 ```
 
-We recommend looking at the [`HubOAuth`][huboauth] class implementation for reference,
+We recommend looking at the {class}`.HubOAuth` class implementation for reference,
 and taking note of the following process:
 
 1. retrieve the token from the request.

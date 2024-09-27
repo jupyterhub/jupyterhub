@@ -56,7 +56,7 @@ for administration of the Hub and its users.
 ### Check prerequisites
 
 - A Linux/Unix based system
-- [Python](https://www.python.org/downloads/) 3.6 or greater
+- [Python](https://www.python.org/downloads/) 3.8 or greater
 - [nodejs/npm](https://www.npmjs.com/)
 
   - If you are using **`conda`**, the nodejs and npm dependencies will be installed for

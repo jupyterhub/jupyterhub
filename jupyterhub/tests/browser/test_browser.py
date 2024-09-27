@@ -1,6 +1,8 @@
 """Tests for the Playwright Python"""
 
+import asyncio
 import json
+import pprint
 import re
 from unittest import mock
 from urllib.parse import parse_qs, urlparse
@@ -11,7 +13,8 @@ from tornado.escape import url_escape
 from tornado.httputil import url_concat
 
 from jupyterhub import orm, roles, scopes
-from jupyterhub.tests.utils import public_host, public_url, ujoin
+from jupyterhub.tests.test_named_servers import named_servers  # noqa
+from jupyterhub.tests.utils import async_requests, public_host, public_url, ujoin
 from jupyterhub.utils import url_escape_path, url_path_join
 
 pytestmark = pytest.mark.browser
@@ -29,6 +32,20 @@ async def login(browser, username, password=None):
     await browser.get_by_role("button", name="Sign in").click()
 
 
+async def login_home(browser, app, username):
+    """Visit login page, login, go home
+
+    A good way to start a session
+    """
+    login_url = url_concat(
+        url_path_join(public_url(app), "hub/login"),
+        {"next": ujoin(app.hub.base_url, "home")},
+    )
+    await browser.goto(login_url)
+    async with browser.expect_navigation(url=re.compile(".*/hub/home")):
+        await login(browser, username)
+
+
 async def test_open_login_page(app, browser):
     login_url = url_path_join(public_host(app), app.hub.base_url, "login")
     await browser.goto(login_url)
@@ -44,7 +61,7 @@ async def test_submit_login_form(app, browser, user_special_chars):
     login_url = url_path_join(public_host(app), app.hub.base_url, "login")
     await browser.goto(login_url)
     await login(browser, user.name, password=user.name)
-    expected_url = ujoin(public_url(app), f"/user/{user_special_chars.urlname}/")
+    expected_url = public_url(app, user)
     await expect(browser).to_have_url(expected_url)
 
 
@@ -56,7 +73,7 @@ async def test_submit_login_form(app, browser, user_special_chars):
             # will encode given parameters for an unauthenticated URL in the next url
             # the next parameter will contain the app base URL (replaces BASE_URL in tests)
             'spawn',
-            [('param', 'value')],
+            {'param': 'value'},
             '/hub/login?next={{BASE_URL}}hub%2Fspawn%3Fparam%3Dvalue',
             '/hub/login?next={{BASE_URL}}hub%2Fspawn%3Fparam%3Dvalue',
         ),
@@ -64,15 +81,15 @@ async def test_submit_login_form(app, browser, user_special_chars):
             # login?param=fromlogin&next=encoded(/hub/spawn?param=value)
             # will drop parameters given to the login page, passing only the next url
             'login',
-            [('param', 'fromlogin'), ('next', '/hub/spawn?param=value')],
-            '/hub/login?param=fromlogin&next=%2Fhub%2Fspawn%3Fparam%3Dvalue',
-            '/hub/login?next=%2Fhub%2Fspawn%3Fparam%3Dvalue',
+            {'param': 'fromlogin', 'next': '/hub/spawn?param=value'},
+            '/hub/login?param=fromlogin&next={{BASE_URL}}hub%2Fspawn%3Fparam%3Dvalue',
+            '/hub/login?next={{BASE_URL}}hub%2Fspawn%3Fparam%3Dvalue',
         ),
         (
             # login?param=value&anotherparam=anothervalue
             # will drop parameters given to the login page, and use an empty next url
             'login',
-            [('param', 'value'), ('anotherparam', 'anothervalue')],
+            {'param': 'value', 'anotherparam': 'anothervalue'},
             '/hub/login?param=value&anotherparam=anothervalue',
             '/hub/login?next=',
         ),
@@ -80,7 +97,7 @@ async def test_submit_login_form(app, browser, user_special_chars):
             # login
             # simplest case, accessing the login URL, gives an empty next url
             'login',
-            [],
+            {},
             '/hub/login',
             '/hub/login?next=',
         ),
@@ -98,6 +115,8 @@ async def test_open_url_login(
     user = user_special_chars.user
     login_url = url_path_join(public_host(app), app.hub.base_url, url)
     await browser.goto(login_url)
+    if params.get("next"):
+        params["next"] = url_path_join(app.base_url, params["next"])
     url_new = url_path_join(public_host(app), app.hub.base_url, url_concat(url, params))
     print(url_new)
     await browser.goto(url_new)
@@ -264,7 +283,7 @@ async def test_spawn_pending_progress(
         await launch_btn.click()
     # wait for progress message to appear
     progress = browser.locator("#progress-message")
-    progress_message = await progress.inner_text()
+    progress_message = await progress.text_content()
     async with browser.expect_navigation(url=re.compile(".*/user/" + f"{urlname}/")):
         # wait for log messages to appear
         expected_messages = [
@@ -274,7 +293,7 @@ async def test_spawn_pending_progress(
         ]
         while not user.spawner.ready:
             logs_list = [
-                await log.inner_text()
+                await log.text_content()
                 for log in await browser.locator("div.progress-log-event").all()
             ]
             if progress_message:
@@ -322,6 +341,64 @@ async def open_home_page(app, browser, user):
     await browser.goto(url)
     await login(browser, user.name, password=str(user.name))
     await expect(browser).to_have_url(re.compile(".*/hub/home"))
+
+
+async def test_home_nav_collapse(app, browser, user_special_chars):
+    user = user_special_chars.user
+    await open_home_page(app, browser, user)
+    nav = browser.locator(".navbar")
+    navbar_collapse = nav.locator(".navbar-collapse")
+    logo = nav.locator("#jupyterhub-logo")
+    home = nav.get_by_text("Home")
+    logout_name = nav.get_by_text(user.name)
+    logout_btn = nav.get_by_text("Logout")
+    toggler = nav.locator(".navbar-toggler")
+
+    await expect(nav).to_be_visible()
+
+    await browser.set_viewport_size({"width": 640, "height": 480})
+    # links visible, nav items visible, collapse not visible
+    await expect(logo).to_be_visible()
+    await expect(home).to_be_visible()
+    await expect(logout_name).to_be_visible()
+    await expect(logout_btn).to_be_visible()
+    await expect(toggler).not_to_be_visible()
+
+    # below small breakpoint (576px)
+    await browser.set_viewport_size({"width": 500, "height": 480})
+    # logo visible, links and logout not visible, toggler visible
+    await expect(logo).to_be_visible()
+    await expect(home).not_to_be_visible()
+    await expect(logout_name).not_to_be_visible()
+    await expect(logout_btn).not_to_be_visible()
+    await expect(toggler).to_be_visible()
+
+    # click toggler, links should be visible
+    await toggler.click()
+    # wait for expand to finish
+    # expand animates through `collapse -> collapsing -> collapse show`
+    await expect(navbar_collapse).to_have_class(re.compile(r"\bshow\b"))
+    await expect(home).to_be_visible()
+    await expect(logout_name).to_be_visible()
+    await expect(logout_btn).to_be_visible()
+    await expect(toggler).to_be_visible()
+    # wait for expand animation
+    # click toggler again, links should hide
+    # need to wait for expand to complete
+    await toggler.click()
+    await expect(navbar_collapse).not_to_have_class(re.compile(r"\bshow\b"))
+    await expect(home).not_to_be_visible()
+    await expect(logout_name).not_to_be_visible()
+    await expect(logout_btn).not_to_be_visible()
+    await expect(toggler).to_be_visible()
+
+    # resize, should re-show
+    await browser.set_viewport_size({"width": 640, "height": 480})
+    await expect(logo).to_be_visible()
+    await expect(home).to_be_visible()
+    await expect(logout_name).to_be_visible()
+    await expect(logout_btn).to_be_visible()
+    await expect(toggler).not_to_be_visible()
 
 
 async def test_start_button_server_not_started(app, browser, user_special_chars):
@@ -404,11 +481,75 @@ async def open_token_page(app, browser, user):
     await expect(browser).to_have_url(re.compile(".*/hub/token"))
 
 
+@pytest.mark.parametrize(
+    "expires_in_max, expected_options",
+    [
+        pytest.param(
+            None,
+            [
+                ('1 Hour', '3600'),
+                ('1 Day', '86400'),
+                ('1 Week', '604800'),
+                ('1 Month', '2592000'),
+                ('1 Year', '31536000'),
+                ('Never', ''),
+            ],
+            id="default",
+        ),
+        pytest.param(
+            86400,
+            [
+                ('1 Hour', '3600'),
+                ('1 Day', '86400'),
+            ],
+            id="1day",
+        ),
+        pytest.param(
+            3600 * 36,
+            [
+                ('1 Hour', '3600'),
+                ('1 Day', '86400'),
+                ('Max (36 hours)', ''),
+            ],
+            id="36hours",
+        ),
+        pytest.param(
+            86400 * 10,
+            [
+                ('1 Hour', '3600'),
+                ('1 Day', '86400'),
+                ('1 Week', '604800'),
+                ('Max (10 days)', ''),
+            ],
+            id="10days",
+        ),
+    ],
+)
+async def test_token_form_expires_in(
+    app, browser, user_special_chars, expires_in_max, expected_options
+):
+    with mock.patch.dict(
+        app.tornado_settings, {"token_expires_in_max_seconds": expires_in_max}
+    ):
+        await open_token_page(app, browser, user_special_chars.user)
+    # check the list of tokens duration
+    dropdown = browser.locator('#token-expiration-seconds')
+    options = await dropdown.locator('option').all()
+    actual_values = [
+        (await option.text_content(), await option.get_attribute('value'))
+        for option in options
+    ]
+    assert actual_values == expected_options
+    # get the value of the 'selected' attribute of the currently selected option
+    selected_value = dropdown.locator('option[selected]')
+    await expect(selected_value).to_have_text(expected_options[-1][0])
+
+
 async def test_token_request_form_and_panel(app, browser, user_special_chars):
     """verify elements of the request token form"""
 
     await open_token_page(app, browser, user_special_chars.user)
-    request_btn = browser.locator('//div[@class="text-center"]').get_by_role("button")
+    request_btn = browser.locator('//button[@type="submit"]')
     expected_btn_name = 'Request new API token'
     # check if the request token button is enabled
     # check the buttons name
@@ -419,24 +560,6 @@ async def test_token_request_form_and_panel(app, browser, user_special_chars):
     await expect(field_note).to_be_editable()
     await expect(field_note).to_be_enabled()
     await expect(field_note).to_be_empty()
-
-    # check the list of tokens duration
-    dropdown = browser.locator('#token-expiration-seconds')
-    options = await dropdown.locator('option').all()
-    expected_values_in_list = {
-        '1 Hour': '3600',
-        '1 Day': '86400',
-        '1 Week': '604800',
-        'Never': '',
-    }
-    actual_values = {
-        await option.text_content(): await option.get_attribute('value')
-        for option in options
-    }
-    assert actual_values == expected_values_in_list
-    # get the value of the 'selected' attribute of the currently selected option
-    selected_value = dropdown.locator('option[selected]')
-    await expect(selected_value).to_have_text("Never")
 
     # check scopes field
     scopes_input = browser.get_by_label("Permissions")
@@ -450,7 +573,7 @@ async def test_token_request_form_and_panel(app, browser, user_special_chars):
     expected_panel_token_heading = "Your new API Token"
     token_area = browser.locator('#token-area')
     await expect(token_area).to_be_visible()
-    token_area_heading = token_area.locator('//div[@class="panel-heading"]')
+    token_area_heading = token_area.locator('div.card-header')
     await expect(token_area_heading).to_have_text(expected_panel_token_heading)
     token_result = browser.locator('#token-result')
     await expect(token_result).not_to_be_empty()
@@ -458,7 +581,7 @@ async def test_token_request_form_and_panel(app, browser, user_special_chars):
     # verify that "Your new API Token" panel is hidden after refresh the page
     await browser.reload(wait_until="load")
     await expect(token_area).to_be_hidden()
-    api_token_table_area = browser.locator('//div[@class="row"]').nth(2)
+    api_token_table_area = browser.locator("div#api-tokens-section")
     await expect(api_token_table_area.get_by_role("table")).to_be_visible()
     expected_table_name = "API Tokens"
     await expect(api_token_table_area.get_by_role("heading")).to_have_text(
@@ -511,7 +634,7 @@ async def test_request_token_expiration(
         # reload the page
         await browser.reload(wait_until="load")
     # API Tokens table: verify that elements are displayed
-    api_token_table_area = browser.locator("div#api-tokens-section").nth(0)
+    api_token_table_area = browser.locator("div#api-tokens-section")
     await expect(api_token_table_area.get_by_role("table")).to_be_visible()
     await expect(api_token_table_area.locator("tr.token-row")).to_have_count(1)
 
@@ -531,7 +654,7 @@ async def test_request_token_expiration(
         await api_token_table_area.locator("tr.token-row")
         .get_by_role("cell")
         .nth(0)
-        .inner_text()
+        .text_content()
     )
 
     assert note_on_page == expected_note
@@ -540,7 +663,7 @@ async def test_request_token_expiration(
         await api_token_table_area.locator("tr.token-row")
         .get_by_role("cell")
         .nth(2)
-        .inner_text()
+        .text_content()
     )
     assert last_used_text == "Never"
 
@@ -548,7 +671,7 @@ async def test_request_token_expiration(
         await api_token_table_area.locator("tr.token-row")
         .get_by_role("cell")
         .nth(4)
-        .inner_text()
+        .text_content()
     )
 
     if token_opt == "Never":
@@ -611,15 +734,17 @@ async def test_request_token_permissions(
     if not granted:
         error_dialog = browser.locator("#error-dialog")
         await expect(error_dialog).to_be_visible()
-        error_message = await error_dialog.locator(".modal-body").inner_text()
+        error_message = await error_dialog.locator(".modal-body").text_content()
         assert "API request failed (400)" in error_message
         assert expected_error in error_message
+        await error_dialog.locator("button[aria-label='Close']").click()
+        await expect(error_dialog).not_to_be_visible()
         return
 
     await browser.reload(wait_until="load")
 
     # API Tokens table: verify that elements are displayed
-    api_token_table_area = browser.locator("div#api-tokens-section").nth(0)
+    api_token_table_area = browser.locator("div#api-tokens-section")
     await expect(api_token_table_area.get_by_role("table")).to_be_visible()
     await expect(api_token_table_area.locator("tr.token-row")).to_have_count(1)
 
@@ -665,9 +790,7 @@ async def test_revoke_token(app, browser, token_type, user_special_chars):
     await browser.wait_for_load_state("load")
     await expect(browser).to_have_url(re.compile(".*/hub/token"))
     if token_type == "both" or token_type == "request_by_user":
-        request_btn = browser.locator('//div[@class="text-center"]').get_by_role(
-            "button"
-        )
+        request_btn = browser.locator('//button[@type="submit"]')
         await request_btn.click()
         # wait for token response to show up on the page
         await browser.wait_for_load_state("load")
@@ -853,12 +976,15 @@ async def test_oauth_page(
     oauth_client.allowed_scopes = sorted(roles.roles_to_scopes([service_role]))
     app.db.commit()
     # open the service url in the browser
-    service_url = url_path_join(public_url(app, service) + 'owhoami/?arg=x')
+    service_url = url_path_join(public_url(app, service), 'owhoami/?arg=x')
     await browser.goto(service_url)
 
-    expected_redirect_url = url_path_join(
-        app.base_url + f"services/{service.name}/oauth_callback"
-    )
+    if app.subdomain_host:
+        expected_redirect_url = url_path_join(
+            public_url(app, service), "oauth_callback"
+        )
+    else:
+        expected_redirect_url = url_path_join(service.prefix, "oauth_callback")
     expected_client_id = f"service-{service.name}"
 
     # decode the URL
@@ -871,9 +997,9 @@ async def test_oauth_page(
 
     # login user
     await login(browser, user.name, password=str(user.name))
-    auth_btn = browser.locator('//input[@type="submit"]')
+    auth_btn = browser.locator('//button[@type="submit"]')
     await expect(auth_btn).to_be_enabled()
-    text_permission = browser.get_by_role("paragraph")
+    text_permission = browser.get_by_role("paragraph").nth(1)
     await expect(text_permission).to_contain_text(f"JupyterHub service {service.name}")
     await expect(text_permission).to_contain_text(f"oauth URL: {expected_redirect_url}")
 
@@ -961,6 +1087,7 @@ async def open_admin_page(app, browser, login_as=None):
         # url = url_path_join(public_host(app), app.hub.base_url, "/login?next=" + admin_page)
         await browser.goto(admin_page)
         await expect(browser).to_have_url(re.compile(".*/hub/admin"))
+    await browser.wait_for_load_state("networkidle")
 
 
 def create_list_of_users(create_user_with_scopes, n):
@@ -1041,7 +1168,7 @@ async def test_start_stop_all_servers_on_admin_page(app, browser, admin_user):
     )
 
 
-@pytest.mark.parametrize("added_count_users", [10, 47, 48, 49, 110])
+@pytest.mark.parametrize("added_count_users", [10, 49, 50, 51, 99, 100, 101])
 async def test_paging_on_admin_page(
     app, browser, admin_user, added_count_users, create_user_with_scopes
 ):
@@ -1057,27 +1184,25 @@ async def test_paging_on_admin_page(
     btn_next = browser.get_by_role("button", name="Next")
     # verify "Previous"/"Next" button clickability depending on users number on the page
     await expect(displaying).to_have_text(
-        re.compile(".*" + f"0-{min(users_count_db,50)}" + ".*")
+        re.compile(".*" + f"1-{min(users_count_db, 50)}" + ".*")
     )
     if users_count_db > 50:
-        await expect(btn_next.locator("//span")).to_have_class("active-pagination")
+        await expect(btn_next).to_be_enabled()
         # click on Next button
         await btn_next.click()
         if users_count_db <= 100:
             await expect(displaying).to_have_text(
-                re.compile(".*" + f"50-{users_count_db}" + ".*")
+                re.compile(".*" + f"51-{users_count_db}" + ".*")
             )
         else:
-            await expect(displaying).to_have_text(re.compile(".*" + "50-100" + ".*"))
-            await expect(btn_next.locator("//span")).to_have_class("active-pagination")
-        await expect(btn_previous.locator("//span")).to_have_class("active-pagination")
+            await expect(displaying).to_have_text(re.compile(".*" + "51-100" + ".*"))
+            await expect(btn_next).to_be_enabled()
+        await expect(btn_previous).to_be_enabled()
         # click on Previous button
         await btn_previous.click()
     else:
-        await expect(btn_next.locator("//span")).to_have_class("inactive-pagination")
-        await expect(btn_previous.locator("//span")).to_have_class(
-            "inactive-pagination"
-        )
+        await expect(btn_next).to_be_disabled()
+        await expect(btn_previous).to_be_disabled()
 
 
 @pytest.mark.parametrize(
@@ -1116,8 +1241,9 @@ async def test_search_on_admin_page(
     displaying = browser.get_by_text("Displaying")
     if users_count_db_filtered <= 50:
         await expect(filtered_list_on_page).to_have_count(users_count_db_filtered)
+        start = 1 if users_count_db_filtered else 0
         await expect(displaying).to_contain_text(
-            re.compile(f"0-{users_count_db_filtered}")
+            re.compile(f"{start}-{users_count_db_filtered}")
         )
         # check that users names contain the search value in the filtered list
         for element in await filtered_list_on_page.get_by_test_id(
@@ -1126,9 +1252,10 @@ async def test_search_on_admin_page(
             await expect(element).to_contain_text(re.compile(f".*{search_value}.*"))
     else:
         await expect(filtered_list_on_page).to_have_count(50)
-        await expect(displaying).to_contain_text(re.compile("0-50"))
+        await expect(displaying).to_contain_text(re.compile("1-50"))
         # click on Next button to verify that the rest part of filtered list is displayed on the next page
         await browser.get_by_role("button", name="Next").click()
+        await browser.wait_for_load_state("networkidle")
         filtered_list_on_next_page = browser.locator('//tr[@class="user-row"]')
         await expect(filtered_list_on_page).to_have_count(users_count_db_filtered - 50)
         for element in await filtered_list_on_next_page.get_by_test_id(
@@ -1235,3 +1362,277 @@ async def test_start_stop_server_on_admin_page(
     await expect(browser.get_by_role("button", name="Spawn Page")).to_have_count(
         len(users_list)
     )
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        "fresh",
+        "invalid",
+        "valid-prefix-invalid-root",
+        "valid-prefix-invalid-other-prefix",
+    ],
+)
+async def test_login_xsrf_initial_cookies(app, browser, case, username):
+    """Test that login works with various initial states for xsrf tokens
+
+    Page will be reloaded with correct values
+    """
+    hub_root = public_host(app)
+    hub_url = url_path_join(public_host(app), app.hub.base_url)
+    hub_parent = hub_url.rstrip("/").rsplit("/", 1)[0] + "/"
+    login_url = url_path_join(
+        hub_url, url_concat("login", {"next": url_path_join(app.base_url, "/hub/home")})
+    )
+    # start with all cookies cleared
+    await browser.context.clear_cookies()
+    if case == "invalid":
+        await browser.context.add_cookies(
+            [{"name": "_xsrf", "value": "invalid-hub-prefix", "url": hub_url}]
+        )
+    elif case.startswith("valid-prefix"):
+        if "invalid-root" in case:
+            invalid_url = hub_root
+        else:
+            invalid_url = hub_parent
+        await browser.goto(login_url)
+        # first visit sets valid xsrf cookie
+        cookies = await browser.context.cookies()
+        assert len(cookies) == 1
+        # second visit is also made with invalid xsrf on `/`
+        # handling of this behavior is undefined in HTTP itself!
+        # _either_ the invalid cookie on / is ignored
+        # _or_ both will be cleared
+        # currently, this test assumes the observed behavior,
+        # which is that the invalid cookie on `/` has _higher_ priority
+        await browser.context.add_cookies(
+            [{"name": "_xsrf", "value": "invalid-root", "url": invalid_url}]
+        )
+        cookies = await browser.context.cookies()
+        assert len(cookies) == 2
+
+    # after visiting page, cookies get re-established
+    await browser.goto(login_url)
+    cookies = await browser.context.cookies()
+    print(cookies)
+    cookie = cookies[0]
+    assert cookie['name'] == '_xsrf'
+    assert cookie["path"] == app.hub.base_url
+
+    # next page visit, cookies don't change
+    await browser.goto(login_url)
+    cookies_2 = await browser.context.cookies()
+    assert cookies == cookies_2
+    # login is successful
+    await login(browser, username, username)
+
+
+async def test_prefix_redirect_not_running(browser, app, user):
+    # tests PrefixRedirectHandler for stopped servers
+    await login_home(browser, app, user.name)
+    # visit user url (includes subdomain, if enabled)
+    url = public_url(app, user, "/tree/")
+    await browser.goto(url)
+    # make sure we end up on the Hub (domain included)
+    expected_url = url_path_join(public_url(app), f"hub/user/{user.name}/tree/")
+    await expect(browser).to_have_url(expected_url)
+
+
+def _cookie_dict(cookie_list):
+    """Convert list of cookies to dict of the form
+
+    { 'path': {'key': {cookie} } }
+    """
+    cookie_dict = {}
+    for cookie in cookie_list:
+        path_cookies = cookie_dict.setdefault(cookie['path'], {})
+        path_cookies[cookie['name']] = cookie
+    return cookie_dict
+
+
+async def test_singleuser_xsrf(
+    app,
+    browser,
+    user,
+    create_user_with_scopes,
+    full_spawn,
+    named_servers,  # noqa: F811
+):
+    # full login process, checking XSRF handling
+    # start two servers
+    target_user = user
+    target_start = asyncio.ensure_future(target_user.spawn())
+
+    browser_user = create_user_with_scopes("self", "access:servers")
+    # login browser_user
+    login_url = url_path_join(public_host(app), app.hub.base_url, "login")
+    await browser.goto(login_url)
+    await login(browser, browser_user.name, browser_user.name)
+    # end up at single-user
+    await expect(browser).to_have_url(re.compile(rf".*/user/{browser_user.name}/.*"))
+    # wait for target user to start, too
+    await target_start
+    await app.proxy.add_user(target_user)
+
+    # visit target user, sets credentials for second server
+    await browser.goto(public_url(app, target_user))
+    await expect(browser).to_have_url(re.compile(r".*/oauth2/authorize"))
+    auth_button = browser.locator('//button[@type="submit"]')
+    await expect(auth_button).to_be_enabled()
+    await auth_button.click()
+    await expect(browser).to_have_url(re.compile(rf".*/user/{target_user.name}/.*"))
+
+    # at this point, we are on a page served by target_user,
+    # logged in as browser_user
+    # basic check that xsrf isolation works
+    cookies = await browser.context.cookies()
+    cookie_dict = _cookie_dict(cookies)
+    pprint.pprint(cookie_dict)
+
+    # we should have xsrf tokens for both singleuser servers and the hub
+    target_prefix = target_user.prefix
+    user_prefix = browser_user.prefix
+    hub_prefix = app.hub.base_url
+    assert target_prefix in cookie_dict
+    assert user_prefix in cookie_dict
+    assert hub_prefix in cookie_dict
+    target_xsrf = cookie_dict[target_prefix].get("_xsrf", {}).get("value")
+    assert target_xsrf
+    user_xsrf = cookie_dict[user_prefix].get("_xsrf", {}).get("value")
+    assert user_xsrf
+    hub_xsrf = cookie_dict[hub_prefix].get("_xsrf", {}).get("value")
+    assert hub_xsrf
+    assert hub_xsrf != target_xsrf
+    assert hub_xsrf != user_xsrf
+    assert target_xsrf != user_xsrf
+
+    # we are on a page served by target_user
+    # check that we can't access
+
+    async def fetch_user_page(path, params=None):
+        url = url_path_join(public_url(app, browser_user), path)
+        if params:
+            url = url_concat(url, params)
+        status = await browser.evaluate(
+            """
+            async (user_url) => {
+              try {
+                response = await fetch(user_url);
+              } catch (e) {
+                return 'error';
+              }
+              return response.status;
+            }
+            """,
+            url,
+        )
+        return status
+
+    if app.subdomain_host:
+        expected_status = 'error'
+    else:
+        expected_status = 403
+    status = await fetch_user_page("/api/contents")
+    assert status == expected_status
+    status = await fetch_user_page("/api/contents", params={"_xsrf": target_xsrf})
+    assert status == expected_status
+
+    if not app.subdomain_host:
+        expected_status = 200
+    status = await fetch_user_page("/api/contents", params={"_xsrf": user_xsrf})
+    assert status == expected_status
+
+    # check that we can't iframe the other user's page
+    async def iframe(src):
+        return await browser.evaluate(
+            """
+            async (src) => {
+                const frame = document.createElement("iframe");
+                frame.src = src;
+                return new Promise((resolve, reject) => {
+                    frame.addEventListener("load", (event) => {
+                        if (frame.contentDocument) {
+                            resolve("got document!");
+                        } else {
+                            resolve("blocked")
+                        }
+                    });
+                    setTimeout(() => {
+                        // some browsers (firefox) never fire load event
+                        // despite spec appasrently stating it must always do so,
+                        // even for rejected frames
+                        resolve("timeout")
+                    }, 3000)
+
+                    document.body.appendChild(frame);
+                });
+            }
+            """,
+            src,
+        )
+
+    hub_iframe = await iframe(url_path_join(public_url(app), "hub/admin"))
+    assert hub_iframe in {"timeout", "blocked"}
+    user_iframe = await iframe(public_url(app, browser_user))
+    assert user_iframe in {"timeout", "blocked"}
+
+    # check that server page can still connect to its own kernels
+    token = target_user.new_api_token(scopes=["access:servers!user"])
+
+    async def test_kernel(kernels_url):
+        headers = {"Authorization": f"Bearer {token}"}
+        r = await async_requests.post(kernels_url, headers=headers)
+        r.raise_for_status()
+        kernel = r.json()
+        kernel_id = kernel["id"]
+        kernel_url = url_path_join(kernels_url, kernel_id)
+        kernel_ws_url = "ws" + url_path_join(kernel_url, "channels")[4:]
+        try:
+            result = await browser.evaluate(
+                """
+                async (ws_url) => {
+                    ws = new WebSocket(ws_url);
+                    finished = await new Promise((resolve, reject) => {
+                        ws.onerror = (err) => {
+                            reject(err);
+                        };
+                        ws.onopen = () => {
+                            resolve("ok");
+                        };
+                    });
+                    return finished;
+                }
+                """,
+                kernel_ws_url,
+            )
+        finally:
+            r = await async_requests.delete(kernel_url, headers=headers)
+            r.raise_for_status()
+        assert result == "ok"
+
+    kernels_url = url_path_join(public_url(app, target_user), "/api/kernels")
+    await test_kernel(kernels_url)
+
+    # final check: make sure named servers work.
+    # first, visit spawn page to launch server,
+    # will issue cookies, etc.
+    server_name = "named"
+    url = url_path_join(
+        public_host(app),
+        url_path_join(app.base_url, f"hub/spawn/{browser_user.name}/{server_name}"),
+    )
+    await browser.goto(url)
+    await expect(browser).to_have_url(
+        re.compile(rf".*/user/{browser_user.name}/{server_name}/.*")
+    )
+    # from named server URL, make sure we can talk to a kernel
+    token = browser_user.new_api_token(scopes=["access:servers!user"])
+    # named-server URL
+    kernels_url = url_path_join(
+        public_url(app, browser_user), server_name, "api/kernels"
+    )
+    await test_kernel(kernels_url)
+    # go back to user's own page, test again
+    # make sure we didn't break anything
+    await browser.goto(public_url(app, browser_user))
+    await test_kernel(url_path_join(public_url(app, browser_user), "api/kernels"))

@@ -5,6 +5,7 @@
 import json
 import re
 from typing import List, Optional
+from urllib.parse import urlunparse
 
 from pydantic import (
     BaseModel,
@@ -80,7 +81,7 @@ class _ShareAPIHandler(APIHandler):
         """Truncated server model for use in shares
 
         - Adds "user" field (just name for now)
-        - Limits fields to "name", "url", "ready"
+        - Limits fields to "name", "url", "full_url", "ready"
           from standard server model
         """
         user = self.users[spawner.user.id]
@@ -95,7 +96,7 @@ class _ShareAPIHandler(APIHandler):
             }
         }
         # subset keys for sharing
-        for key in ["name", "url", "ready"]:
+        for key in ["name", "url", "full_url", "ready"]:
             if key in full_model:
                 server_model[key] = full_model[key]
 
@@ -128,6 +129,12 @@ class _ShareAPIHandler(APIHandler):
             model["accept_url"] = url_concat(
                 self.hub.base_url + "accept-share", {"code": code}
             )
+            model["full_accept_url"] = None
+            public_url = self.settings.get("public_url")
+            if public_url:
+                model["full_accept_url"] = urlunparse(
+                    public_url._replace(path=model["accept_url"])
+                )
         return model
 
     def _init_share_query(self, kind="share"):

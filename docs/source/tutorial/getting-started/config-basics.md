@@ -99,4 +99,4 @@ maintenance, re-configuration, etc.), then user connections are not
 interrupted. For simplicity, by default the hub starts the proxy
 automatically, so if the hub restarts, the proxy restarts, and user
 connections are interrupted. It is easy to run the proxy separately,
-for information see [the separate proxy page](separate-proxy).
+for information see [the separate proxy page](howto:separate-proxy).

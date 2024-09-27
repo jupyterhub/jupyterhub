@@ -1,4 +1,4 @@
-"$id": hub.jupyter.org/server-action
+"$id": https://schema.jupyter.org/jupyterhub/events/server-action
 version: 1
 title: JupyterHub server events
 description: |

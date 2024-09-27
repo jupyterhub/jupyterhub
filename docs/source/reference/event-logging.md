@@ -1,27 +1,22 @@
 # Event logging and telemetry
 
-JupyterHub can be configured to record structured events from a running server using Jupyter's [Telemetry System]. The types of events that JupyterHub emits are defined by [JSON schemas] listed at the bottom of this page.
+JupyterHub can be configured to record structured events from a running server using Jupyter's [Events System]. The types of events that JupyterHub emits are defined by [JSON schemas] listed at the bottom of this page.
 
 ## How to emit events
 
-Event logging is handled by its `Eventlog` object. This leverages Python's standing [logging] library to emit, filter, and collect event data.
+Event logging is handled by its `EventLogger` object. This leverages Python's standing [logging] library to emit, filter, and collect event data.
 
-To begin recording events, you'll need to set two configurations:
+To begin recording events, you'll need to set at least one configuration option:
 
-> 1. `handlers`: tells the EventLog _where_ to route your events. This trait is a list of Python logging handlers that route events to the event log file.
-> 2. `allows_schemas`: tells the EventLog _which_ events should be recorded. No events are emitted by default; all recorded events must be listed here.
+> `EventLogger.handlers`: tells the EventLogger _where_ to route your events. This trait is a list of Python logging handlers that route events to e.g. an event log file.
 
 Here's a basic example:
 
-```
+```python
 import logging
 
-c.EventLog.handlers = [
+c.EventLogger.handlers = [
     logging.FileHandler('event.log'),
-]
-
-c.EventLog.allowed_schemas = [
-    'hub.jupyter.org/server-action'
 ]
 ```
 
@@ -37,6 +32,15 @@ The output is a file, `"event.log"`, with events recorded as JSON data.
 server-actions
 ```
 
+:::{versionchanged} 5.0
+JupyterHub 5.0 changes from the deprecated jupyter-telemetry to jupyter-events.
+
+The main changes are:
+
+- `EventLog` configuration is now called `EventLogger`
+- The `hub.jupyter.org/server-action` schema is now called `https://schema.jupyter.org/jupyterhub/events/server-action`
+  :::
+
 [json schemas]: https://json-schema.org/
 [logging]: https://docs.python.org/3/library/logging.html
-[telemetry system]: https://github.com/jupyter/telemetry
+[events system]: https://jupyter-events.readthedocs.io

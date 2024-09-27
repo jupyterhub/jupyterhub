@@ -1,199 +1,178 @@
 {% extends "page.html" %}
-
 {% block main %}
-
-<div class="container">
-  <h1 class="sr-only">Manage JupyterHub Tokens</h1>
-  <div class="row">
-    <form id="request-token-form" class="col-md-offset-3 col-md-6">
-      <div class="text-center">
-        <button type="submit" class="btn btn-lg btn-jupyter">
-          Request new API token
-        </button>
-      </div>
-      <div class="form-group">
-        <label for="token-note">Note</label>
-        <input
-          id="token-note"
-          class="form-control"
-          placeholder="note to identify your new token">
-        <small id="note-note" class="form-text text-muted">
-          This note will help you keep track of what your tokens are for.
-        </small>
-        <br/>
-        <label for="token-expiration-seconds">Token expires in</label>
-        {% block expiration_options %}
-        <select id="token-expiration-seconds"
-                class="form-control">
-          <!-- unit used for each value is `seconds` -->
-          <option value="3600">1 Hour</option>
-          <option value="86400">1 Day</option>
-          <option value="604800">1 Week</option>
-          <option value="" selected="selected">Never</option>
-        </select>
-        {% endblock expiration_options %}
-        <small id="note-expires-at" class="form-text text-muted">
-          You can configure when your token will expire.
-        </small>
-        <br/>
-        <label for="token-scopes">Permissions</label>
-        <input id="token-scopes" class="form-control" placeholder="list of scopes for the token to have, separated by space">
-        <small id="note-token-scopes" class="form-text text-muted">
-          You can limit the permissions of the token so it can only do what you want it to.
-          If none are specified, the token will have permission to do everything you can do.
-          See the <a href="https://jupyterhub.readthedocs.io/en/stable/rbac/scopes.html#available-scopes">JupyterHub documentation for a list of available scopes</a>.
-        </small>
-      </div>
-    </form>
-  </div>
-
-  <div class="row">
-      <div id="token-area" class="col-md-6 col-md-offset-3" style="display: none;">
-        <div class="panel panel-default">
-          <div class="panel-heading">
-            Your new API Token
-          </div>
-          <div class="panel-body">
-            <p class="lead text-center">
+  <div class="container">
+    <h1 class="sr-only">Manage JupyterHub Tokens</h1>
+    <div class="row justify-content-center">
+      <form id="request-token-form" class="col-lg-6">
+        <div class="form-group">
+          <label for="token-note" class="form-label">Note</label>
+          <input id="token-note"
+                 class="form-control"
+                 placeholder="note to identify your new token">
+          <small id="note-note" class="form-text">This note will help you keep track of what your tokens are for.</small>
+          <br />
+          <label for="token-expiration-seconds" class="form-label">Token expires in</label>
+          {% block expiration_options %}
+            <select id="token-expiration-seconds" class="form-select">{{ token_expires_in_options_html | safe }}</select>
+          {% endblock expiration_options %}
+          <small id="note-expires-at" class="form-text">You can configure when your token will expire.</small>
+          <br />
+          <label for="token-scopes" class="form-label">Permissions</label>
+          <input id="token-scopes"
+                 class="form-control"
+                 placeholder="list of scopes for the token to have, separated by space">
+          <small id="note-token-scopes" class="form-text">
+            You can limit the permissions of the token so it can only do what you want it to.
+            If none are specified, the token will have permission to do everything you can do.
+            See the <a href="https://jupyterhub.readthedocs.io/en/stable/rbac/scopes.html#available-scopes">JupyterHub documentation for a list of available scopes</a>.
+          </small>
+        </div>
+        <div class="text-center m-4">
+          <button type="submit" class="btn btn-lg btn-jupyter">Request new API token</button>
+        </div>
+      </form>
+    </div>
+    <div class="row justify-content-center">
+      <div id="token-area" class="col-lg-6" style="display: none;">
+        <div class="card">
+          <div class="card-header">Your new API Token</div>
+          <div class="card-body">
+            <p class="card-title text-center">
               <span id="token-result"></span>
             </p>
-            <p>
+            <p class="card-text">
               Copy this token. You won't be able to see it again,
               but you can always come back here to get a new one.
             </p>
           </div>
         </div>
       </div>
+    </div>
+    {% if api_tokens %}
+      <div class="row" id="api-tokens-section">
+        <div class="col">
+          <h2>API Tokens</h2>
+          <p>
+            These are tokens with access to the JupyterHub API.
+            Permissions for each token may be viewed via the JupyterHub tokens API.
+            Revoking the API token for a running server will require restarting that server.
+          </p>
+          <table class="table table-striped" id="api-tokens-table">
+            <thead>
+              <tr>
+                <th>Note</th>
+                <th>Permissions</th>
+                <th>Last used</th>
+                <th>Created</th>
+                <th>Expires</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for token in api_tokens %}
+                <tr class="token-row container" data-token-id="{{ token.api_id }}">
+                  {% block token_row scoped %}
+                    <td class="note-col col">{{ token.note }}</td>
+                    <td class="scope-col col">
+                      <details>
+                        <summary>scopes</summary>
+                        {% for scope in token.scopes %}<pre class="token-scope">{{ scope }}</pre>{% endfor %}
+                      </details>
+                    </td>
+                    <td class="time-col col">
+                      {%- if token.last_activity -%}
+                        {{ token.last_activity.isoformat() + 'Z' }}
+                      {%- else -%}
+                        Never
+                      {%- endif -%}
+                    </td>
+                    <td class="time-col col">
+                      {%- if token.created -%}
+                        {{ token.created.isoformat() + 'Z' }}
+                      {%- else -%}
+                        N/A
+                      {%- endif -%}
+                    </td>
+                    <td class="time-col col">
+                      {%- if token.expires_at -%}
+                        {{ token.expires_at.isoformat() + 'Z' }}
+                      {%- else -%}
+                        Never
+                      {%- endif -%}
+                    </td>
+                    <td class="col text-center">
+                      <button class="revoke-token-btn btn btn-xs btn-danger">revoke</button>
+                    </td>
+                  {% endblock token_row %}
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    {% endif %}
+    {% if oauth_clients %}
+      <div class="row" id="oauth-clients-section">
+        <h2>Authorized Applications</h2>
+        <p>
+          These are applications that use OAuth with JupyterHub
+          to identify users (mostly notebook servers).
+          OAuth tokens can generally only be used to identify you,
+          not take actions on your behalf.
+        </p>
+        <table class="table table-striped" id="oauth-tokens-table">
+          <thead>
+            <tr>
+              <th>Application</th>
+              <th>Permissions</th>
+              <th>Last used</th>
+              <th>First authorized</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for client in oauth_clients %}
+              <tr class="token-row" data-token-id="{{ client['token_id'] }}">
+                {% block client_row scoped %}
+                  <td class="note-col col-sm-4">{{ client['description'] }}</td>
+                  <td class="scope-col col-sm-1">
+                    <details>
+                      <summary>scopes</summary>
+                      {# create  set of scopes on all tokens -#}
+                      {# sum concatenates all token.scopes into a single list -#}
+                      {# then filter to unique set and sort -#}
+                      {% for scope in client.tokens | sum(attribute="scopes", start=[]) | unique | sort %}
+                        <pre class="token-scope">{{ scope }}</pre>
+                      {% endfor %}
+                    </details>
+                  </td>
+                  <td class="time-col col-sm-3">
+                    {%- if client['last_activity'] -%}
+                      {{ client['last_activity'].isoformat() + 'Z' }}
+                    {%- else -%}
+                      Never
+                    {%- endif -%}
+                  </td>
+                  <td class="time-col col-sm-3">
+                    {%- if client['created'] -%}
+                      {{ client['created'].isoformat() + 'Z' }}
+                    {%- else -%}
+                      N/A
+                    {%- endif -%}
+                  </td>
+                  <td class="col-sm-1 text-center">
+                    <button class="revoke-token-btn btn btn-xs btn-danger">revoke</button>
+                  </td>
+                {% endblock client_row %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
   </div>
-
-  {% if api_tokens %}
-  <div class="row" id="api-tokens-section">
-    <h2>API Tokens</h2>
-    <p>
-      These are tokens with access to the JupyterHub API.
-      Permissions for each token may be viewed via the JupyterHub tokens API.
-      Revoking the API token for a running server will require restarting that server.
-    </p>
-    <table class="table table-striped" id="api-tokens-table">
-      <thead>
-        <tr>
-          <th>Note</th>
-          <th>Permissions</th>
-          <th>Last used</th>
-          <th>Created</th>
-          <th>Expires</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for token in api_tokens %}
-        <tr class="token-row" data-token-id="{{token.api_id}}">
-          {% block token_row scoped %}
-          <td class="note-col col-sm-4">{{token.note}}</td>
-          <td class="scope-col col-sm-1">
-            <details>
-              <summary>scopes</summary>
-                {% for scope in token.scopes %}
-                <pre class="token-scope">{{ scope }}</pre>
-                {% endfor %}
-            </details>
-          </td>
-          <td class="time-col col-sm-3">
-            {%- if token.last_activity -%}
-            {{ token.last_activity.isoformat() + 'Z' }}
-            {%- else -%}
-            Never
-            {%- endif -%}
-          </td>
-          <td class="time-col col-sm-3">
-            {%- if token.created -%}
-            {{ token.created.isoformat() + 'Z' }}
-            {%- else -%}
-            N/A
-            {%- endif -%}
-          </td>
-          <td class="time-col col-sm-3">
-            {%- if token.expires_at -%}
-            {{ token.expires_at.isoformat() + 'Z' }}
-            {%- else -%}
-            Never
-            {%- endif -%}
-          </td>
-          <td class="col-sm-1 text-center">
-            <button class="revoke-token-btn btn btn-xs btn-danger">revoke</button>
-          </td>
-          {% endblock token_row %}
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% endif %}
-
-  {% if oauth_clients %}
-  <div class="row" id="oauth-clients-section">
-    <h2>Authorized Applications</h2>
-    <p>
-      These are applications that use OAuth with JupyterHub
-      to identify users (mostly notebook servers).
-
-      OAuth tokens can generally only be used to identify you,
-      not take actions on your behalf.
-    </p>
-    <table class="table table-striped" id="oauth-tokens-table">
-      <thead>
-        <tr>
-          <th>Application</th>
-          <th>Permissions</th>
-          <th>Last used</th>
-          <th>First authorized</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for client in oauth_clients %}
-        <tr class="token-row"
-          data-token-id="{{ client['token_id'] }}">
-          {% block client_row scoped %}
-          <td class="note-col col-sm-4">{{ client['description'] }}</td>
-          <td class="scope-col col-sm-1">
-            <details>
-              <summary>scopes</summary>
-                {# create  set of scopes on all tokens -#}
-                {# sum concatenates all token.scopes into a single list -#}
-                {# then filter to unique set and sort -#}
-                {% for scope in client.tokens | sum(attribute="scopes", start=[]) | unique | sort %}
-                <pre class="token-scope">{{ scope }}</pre>
-                {% endfor %}
-            </details>
-          </td>
-          <td class="time-col col-sm-3">
-            {%- if client['last_activity'] -%}
-            {{ client['last_activity'].isoformat() + 'Z' }}
-            {%- else -%}
-            Never
-            {%- endif -%}
-          </td>
-          <td class="time-col col-sm-3">
-            {%- if client['created'] -%}
-            {{ client['created'].isoformat() + 'Z' }}
-            {%- else -%}
-            N/A
-            {%- endif -%}
-          </td>
-          <td class="col-sm-1 text-center">
-            <button class="revoke-token-btn btn btn-xs btn-danger">revoke</button>
-          {% endblock client_row %}
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% endif %}
-</div>
 {% endblock main %}
-
 {% block script %}
-{{ super() }}
-<script type="text/javascript">
-require(["token"]);
-</script>
+  {{ super() }}
+  <script type="text/javascript">
+    require(["token"]);
+  </script>
 {% endblock script %}

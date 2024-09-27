@@ -1,4 +1,4 @@
-(singleuser)=
+(explanation:singleuser)=
 
 # The JupyterHub single-user server
 
@@ -24,7 +24,7 @@ It's the same!
 
 ## Single-user server authentication
 
-Implementation-wise, JupyterHub single-user servers are a special-case of {ref}`services`
+Implementation-wise, JupyterHub single-user servers are a special-case of {ref}`services-reference`
 and as such use the same (OAuth) authentication mechanism (more on OAuth in JupyterHub at [](oauth)).
 This is primarily implemented in the {class}`~.HubOAuth` class.
 
@@ -104,6 +104,6 @@ But technically, all JupyterHub cares about is that it is:
 1. an http server at the prescribed URL, accessible from the Hub and proxy, and
 2. authenticated via [OAuth](oauth) with the Hub (it doesn't even have to do this, if you want to do your own authentication, as is done in BinderHub)
 
-which means that you can customize JupyterHub to launch _any_ web application that meets these criteria, by following the specifications in {ref}`services`.
+which means that you can customize JupyterHub to launch _any_ web application that meets these criteria, by following the specifications in {ref}`services-reference`.
 
 Most of the time, though, it's easier to use [jupyter-server-proxy](https://jupyter-server-proxy.readthedocs.io) if you want to launch additional web applications in JupyterHub.

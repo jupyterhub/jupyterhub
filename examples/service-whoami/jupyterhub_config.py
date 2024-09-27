@@ -1,10 +1,13 @@
 import sys
 
+c = get_config()  # noqa
+
 c.JupyterHub.services = [
     {
         'name': 'whoami-api',
         'url': 'http://127.0.0.1:10101',
         'command': [sys.executable, './whoami.py'],
+        'display': False,
     },
     {
         'name': 'whoami-oauth',
@@ -34,3 +37,5 @@ c.JupyterHub.load_roles = [
 c.JupyterHub.authenticator_class = 'dummy'
 c.JupyterHub.spawner_class = 'simple'
 c.JupyterHub.ip = '127.0.0.1'  # let's just run on localhost while dummy auth is enabled
+# default to home page, since we don't want to start servers for this demo
+c.JupyterHub.default_url = "/hub/home"

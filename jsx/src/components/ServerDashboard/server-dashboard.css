@@ -43,6 +43,47 @@ tr.noborder > td {
   vertical-align: inherit;
 }
 
-.user-row .actions > * {
-  margin-right: 5px;
+.user-row .actions button {
+  margin: 4px;
+}
+
+.admin-header-buttons {
+  /* float header action buttons to the right */
+  text-align: right;
+}
+
+/* column widths for dashboard
+
+goals:
+
+- want stable width for running-status
+  so clicking the running filter doesn't cause a jump
+- shrink fixed-content columns (action, admin)
+- allow variable content columns (username, server name)
+  to claim remaining space
+
+*/
+
+.admin-table-head #user-header {
+}
+.admin-table-head #admin-header {
+  width: 64px;
+}
+.admin-table-head #last-activity-header {
+  min-width: 180px;
+}
+.admin-table-head #actions-header {
+  width: 410px;
+}
+
+/* vertical stack server buttons on small windows */
+@media (max-width: 991px) {
+  .admin-table-head #actions-header {
+    width: 140px;
+  }
+  .user-row .actions button {
+    /* full-width buttons when they get collapsed into a single column */
+    margin: 4px 0px 4px 0px;
+    width: 100%;
+  }
 }

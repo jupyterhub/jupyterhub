@@ -1,3 +1,5 @@
+(howto:log-messages)=
+
 # Interpreting common log messages
 
 When debugging errors and outages, looking at the logs emitted by

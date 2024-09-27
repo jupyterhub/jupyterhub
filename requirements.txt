@@ -1,10 +1,10 @@
 alembic>=1.4
-async_generator>=1.9
+async_generator>=1.9; python_version < '3.10'
 certipy>=0.1.2
 idna
 importlib_metadata>=3.6; python_version < '3.10'
 jinja2>=2.11.0
-jupyter_telemetry>=0.1.0
+jupyter_events
 oauthlib>=3.0
 packaging
 pamela>=1.1.0; sys_platform != 'win32'

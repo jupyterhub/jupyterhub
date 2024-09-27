@@ -113,27 +113,34 @@ class NPM(BaseCommand):
 
 
 class CSS(BaseCommand):
-    description = "compile CSS from LESS"
+    description = "compile CSS"
 
     def should_run(self):
-        """Does less need to run?"""
-        # from IPython.html.tasks.py
-
+        """Does CSS need to run?"""
         css_targets = [pjoin(static, 'css', 'style.min.css')]
         css_maps = [t + '.map' for t in css_targets]
         targets = css_targets + css_maps
-        if not all(os.path.exists(t) for t in targets):
-            # some generated files don't exist
-            return True
-        earliest_target = sorted(mtime(t) for t in targets)[0]
+        earliest_target_mtime = float('inf')
+        earliest_target_name = ''
+        for t in targets:
+            if not os.path.exists(t):
+                print(f"Need to build css target: {t}")
+                return True
+            target_mtime = mtime(t)
+            if target_mtime < earliest_target_mtime:
+                earliest_target_name = t
+                earliest_target_mtime = target_mtime
 
-        # check if any .less files are newer than the generated targets
+        # check if any .scss files are newer than the generated targets
         for dirpath, dirnames, filenames in os.walk(static):
             for f in filenames:
-                if f.endswith('.less'):
+                if f.endswith('.scss'):
                     path = pjoin(static, dirpath, f)
                     timestamp = mtime(path)
-                    if timestamp > earliest_target:
+                    if timestamp > earliest_target_mtime:
+                        print(
+                            f"mtime for {path} > {earliest_target_name}, needs update"
+                        )
                         return True
 
         return False
@@ -144,33 +151,18 @@ class CSS(BaseCommand):
             return
 
         self.run_command('js')
-        print("Building css with less")
+        print("Building css")
 
-        style_less = pjoin(static, 'less', 'style.less')
-        style_css = pjoin(static, 'css', 'style.min.css')
-        sourcemap = style_css + '.map'
-
-        args = [
-            'npm',
-            'run',
-            'lessc',
-            '--',
-            '--clean-css',
-            f'--source-map-basepath={static}',
-            f'--source-map={sourcemap}',
-            '--source-map-rootpath=../',
-            style_less,
-            style_css,
-        ]
+        args = ['npm', 'run', 'css']
         try:
             check_call(args, cwd=here, shell=shell)
         except OSError as e:
-            print("Failed to run lessc: %s" % e, file=sys.stderr)
+            print(f"Failed to build css: {e}", file=sys.stderr)
             print("You can install js dependencies with `npm install`", file=sys.stderr)
             raise
         # update data-files in case this created new files
         self.distribution.data_files = get_data_files()
-        assert not self.should_run(), 'CSS.run failed'
+        assert not self.should_run(), 'CSS.run did not produce up-to-date output'
 
 
 class JSX(BaseCommand):
@@ -211,13 +203,6 @@ class JSX(BaseCommand):
         print("Building JSX admin app")
         check_call(
             ["npm", "run", "build"],
-            cwd=self.jsx_dir,
-            shell=shell,
-        )
-
-        print("Copying JSX admin app to static/js")
-        check_call(
-            ["npm", "run", "place"],
             cwd=self.jsx_dir,
             shell=shell,
         )

@@ -1,6 +1,5 @@
-import React from "react";
+import React, { act } from "react";
 import "@testing-library/jest-dom";
-import { act } from "react-dom/test-utils";
 import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Provider, useDispatch, useSelector } from "react-redux";
@@ -26,11 +25,7 @@ var mockAsyncRejection = () =>
 var addUserJsx = (spy, spy2, spy3) => (
   <Provider store={createStore(() => {}, {})}>
     <HashRouter>
-      <AddUser
-        addUsers={spy}
-        updateUsers={spy3 || spy2 || spy}
-        history={{ push: () => {} }}
-      />
+      <AddUser addUsers={spy} updateUsers={spy3 || spy2 || spy} />
     </HashRouter>
   </Provider>
 );
@@ -50,6 +45,7 @@ beforeEach(() => {
 
 afterEach(() => {
   useDispatch.mockClear();
+  jest.runAllTimers();
 });
 
 test("Renders", async () => {
@@ -71,7 +67,7 @@ test("Removes users when they fail Regex", async () => {
 
   fireEvent.blur(textarea, { target: { value: "foo \n bar\na@b.co\n  \n\n" } });
   await act(async () => {
-    fireEvent.click(submit);
+    await fireEvent.click(submit);
   });
 
   expect(callbackSpy).toHaveBeenCalledWith(["foo", "bar", "a@b.co"], false);
@@ -83,15 +79,15 @@ test("Correctly submits admin", async () => {
   await act(async () => {
     render(addUserJsx(callbackSpy));
   });
-
   let textarea = screen.getByTestId("user-textarea");
   let submit = screen.getByTestId("submit");
   let check = screen.getByTestId("check");
 
-  userEvent.click(check);
-  fireEvent.blur(textarea, { target: { value: "foo" } });
+  await fireEvent.blur(textarea, { target: { value: "foo" } });
+  await fireEvent.click(check);
+  await fireEvent.click(submit);
   await act(async () => {
-    fireEvent.click(submit);
+    await jest.runAllTimers();
   });
 
   expect(callbackSpy).toHaveBeenCalledWith(["foo"], true);
@@ -107,7 +103,7 @@ test("Shows a UI error dialogue when user creation fails", async () => {
   let submit = screen.getByTestId("submit");
 
   await act(async () => {
-    fireEvent.click(submit);
+    await fireEvent.click(submit);
   });
 
   let errorDialog = screen.getByText("Failed to create user.");
@@ -126,7 +122,7 @@ test("Shows a more specific UI error dialogue when user creation returns an impr
   let submit = screen.getByTestId("submit");
 
   await act(async () => {
-    fireEvent.click(submit);
+    await fireEvent.click(submit);
   });
 
   let errorDialog = screen.getByText(

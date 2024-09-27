@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import "./table-select.css";
 import PropTypes from "prop-types";
+import { Button } from "react-bootstrap";
 
 const DynamicTable = (props) => {
   var [message, setMessage] = useState(""),
@@ -32,7 +33,7 @@ const DynamicTable = (props) => {
     setMessage2("");
   };
 
-  const handleClick = () => {
+  const handleAddItem = () => {
     if (message != "") {
       if (message2 != "") {
         propkeys.push(message);
@@ -52,101 +53,78 @@ const DynamicTable = (props) => {
     setOwnValues(propvalues);
     setMessage("");
     setMessage2("");
-    console.log(propkeys);
-    console.log(propvalues);
-    console.log(propobject);
   };
 
-  const renderKeyRows = () => {
-    if (propkeys) {
-      return propkeys.map(function (o, i) {
-        return (
-          <tr key={"item-" + i}>
-            <td>
-              <input
-                className="form-control"
-                type="text"
-                value={propkeys[i]}
-                id={o}
-                onChange={(e) => {
-                  if (e.target.value != "") {
-                    propkeys[i] = e.target.value;
-                  } else {
-                    propvalues.splice(i, 1);
-                    propkeys.splice(i, 1);
-                  }
-                  setOwnKeys(propkeys);
-                  props.setPropKeys(propkeys);
-                  props.setProp(propobject);
-                  handleRefresh();
-                }}
-              />
-            </td>
-          </tr>
-        );
-      });
-    }
+  const KeyValueRow = (i) => {
+    // one table row for a key-value pair
+    const key = propkeys[i];
+    const value = propvalues[i];
+    return (
+      <tr key={"item-" + i}>
+        <td>
+          <input
+            className="form-control"
+            type="text"
+            value={propkeys[i]}
+            id={key}
+            onChange={(e) => {
+              if (e.target.value != "") {
+                propkeys[i] = e.target.value;
+              } else {
+                propvalues.splice(i, 1);
+                propkeys.splice(i, 1);
+              }
+              setOwnKeys(propkeys);
+              props.setPropKeys(propkeys);
+              props.setProp(propobject);
+              handleRefresh();
+            }}
+          />
+        </td>
+        <td>
+          <input
+            className="form-control"
+            type="text"
+            value={value}
+            onChange={(e) => {
+              propvalues[i] = e.target.value;
+              props.setPropValues(propvalues);
+              setOwnValues(propvalues);
+              handleRefresh();
+            }}
+          />
+        </td>
+        <td>
+          <Button
+            variant="danger"
+            onClick={() => {
+              propvalues.splice(i, 1);
+              propkeys.splice(i, 1);
+              var propobject = {};
+              propkeys.forEach((key, i) => (propobject[key] = propvalues[i]));
+              props.setProp(propobject);
+              props.setPropKeys(propkeys);
+              props.setPropValues(propvalues);
+              setOwnValues(propvalues);
+              setOwnKeys(propkeys);
+              handleRefresh();
+            }}
+          >
+            Delete
+          </Button>
+        </td>
+      </tr>
+    );
   };
-  const renderValueRows = () => {
-    if (propvalues) {
-      return propvalues.map(function (o, i) {
-        //console.log("ValRows" +i)
-        //console.log("ValRows" +o)
-        return (
-          <tr key={"item-" + i}>
-            <td>
-              <input
-                className="form-control"
-                type="text"
-                value={o}
-                onChange={(e) => {
-                  propvalues[i] = e.target.value;
-                  props.setPropValues(propvalues);
-                  setOwnValues(propvalues);
-                  handleRefresh();
-                }}
-              />
-            </td>
-          </tr>
-        );
-      });
-    }
-  };
-  const renderDelete = () => {
-    if (propvalues) {
-      return propvalues.map(function (o, i) {
-        return (
-          <tr key={"item-" + i}>
-            <td>
-              <button
-                className="btn btn-default"
-                onClick={() => {
-                  propvalues.splice(i, 1);
-                  propkeys.splice(i, 1);
-                  var propobject = {};
-                  propkeys.forEach(
-                    (key, i) => (propobject[key] = propvalues[i]),
-                  );
-                  props.setProp(propobject);
-                  props.setPropKeys(propkeys);
-                  props.setPropValues(propvalues);
-                  setOwnValues(propvalues);
-                  setOwnKeys(propkeys);
-                  handleRefresh();
-                }}
-              >
-                Delete
-              </button>
-            </td>
-          </tr>
-        );
-      });
-    }
+
+  const renderKeyValueRows = () => {
+    if (!propkeys) return null;
+    return propkeys.map((key, i) => KeyValueRow(i));
   };
 
   return (
     <div>
-      <table className="">
+      <table className="properties-table">
         <thead>
           <tr>
             <th>Key</th>
@@ -154,44 +132,37 @@ const DynamicTable = (props) => {
           </tr>
         </thead>
         <tbody>
+          {renderKeyValueRows()}
           <tr>
-            <td>{renderKeyRows()}</td>
-            <td>{renderValueRows()}</td>
-            <td>{renderDelete()}</td>
+            <td>
+              <input
+                className="form-control"
+                type="text"
+                value={message}
+                onChange={(e) => updateMessageKey(e)}
+              />
+            </td>
+            <td>
+              <input
+                className="form-control"
+                type="text"
+                value={message2}
+                onChange={(e) => updateMessageValue(e)}
+              />
+            </td>
+            <td>
+              <Button
+                id="add-item"
+                data-testid="add-item"
+                className="text-nowrap"
+                onClick={() => handleAddItem()}
+              >
+                Add Item
+              </Button>
+            </td>
           </tr>
         </tbody>
       </table>
-      <form>
-        <tr>
-          <td>
-            <input
-              className="form-control"
-              type="text"
-              value={message}
-              onChange={(e) => updateMessageKey(e)}
-            />
-          </td>
-          <td>
-            <input
-              className="form-control"
-              type="text"
-              value={message2}
-              onChange={(e) => updateMessageValue(e)}
-            />
-          </td>
-          <td>
-            <button
-              id="add-item"
-              data-testid="add-item"
-              className="btn btn-default"
-              type="button"
-              onClick={() => handleClick()}
-            >
-              Add Item
-            </button>
-          </td>
-        </tr>
-      </form>
       <hr />
     </div>
   );
@@ -199,8 +170,9 @@ const DynamicTable = (props) => {
 DynamicTable.propTypes = {
   current_keys: PropTypes.array,
   current_values: PropTypes.array,
-  setPropKeys: PropTypes.array,
-  setPropValues: PropTypes.array,
+  current_propobject: PropTypes.object,
+  setPropKeys: PropTypes.func,
+  setPropValues: PropTypes.func,
   setProp: PropTypes.func,
 };
 export default DynamicTable;

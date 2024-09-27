@@ -14,3 +14,44 @@ updates:
       interval: monthly
       time: "05:00"
       timezone: Etc/UTC
+  - package-ecosystem: npm
+    directory: /
+    groups:
+      # one big pull request for minor bumps
+      npm-minor:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+    schedule:
+      interval: monthly
+  - package-ecosystem: npm
+    directory: /jsx
+    groups:
+      # one big pull request for minor bumps
+      jsx-minor:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+      # group major bumps of react-related dependencies
+      jsx-react:
+        patterns:
+          - "react*"
+          - "redux*"
+          - "*react"
+          - "recompose"
+        update-types:
+          - major
+      # group major bumps of webpack-related dependencies
+      jsx-webpack:
+        patterns:
+          - "webpack*"
+          - "@babel/*"
+          - "*-loader"
+        update-types:
+          - major
+    schedule:
+      interval: monthly

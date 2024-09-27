@@ -44,8 +44,8 @@ from .. import metrics, orm, roles
 from ..app import JupyterHub
 from ..auth import PAMAuthenticator
 from ..spawner import SimpleLocalProcessSpawner
-from ..utils import random_port, utcnow
-from .utils import async_requests, public_url, ssl_setup
+from ..utils import random_port, url_path_join, utcnow
+from .utils import AsyncSession, public_url, ssl_setup
 
 
 def mock_authenticate(username, password, service, encoding):
@@ -243,6 +243,8 @@ class MockHub(JupyterHub):
             cert_location = kwargs['internal_certs_location']
             kwargs['external_certs'] = ssl_setup(cert_location, 'hub-ca')
         super().__init__(*args, **kwargs)
+        if 'allow_all' not in self.config.Authenticator:
+            self.config.Authenticator.allow_all = True
 
     @default('subdomain_host')
     def _subdomain_host_default(self):
@@ -372,29 +374,32 @@ class MockHub(JupyterHub):
     async def login_user(self, name):
         """Login a user by name, returning her cookies."""
         base_url = public_url(self)
-        external_ca = None
+        s = AsyncSession()
         if self.internal_ssl:
-            external_ca = self.external_certs['files']['ca']
+            s.verify = self.external_certs['files']['ca']
         login_url = base_url + 'hub/login'
-        r = await async_requests.get(login_url)
+        r = await s.get(login_url)
         r.raise_for_status()
         xsrf = r.cookies['_xsrf']
 
-        r = await async_requests.post(
+        r = await s.post(
             url_concat(login_url, {"_xsrf": xsrf}),
-            cookies=r.cookies,
             data={'username': name, 'password': name},
             allow_redirects=False,
-            verify=external_ca,
         )
         r.raise_for_status()
-        r.cookies["_xsrf"] = xsrf
-        assert sorted(r.cookies.keys()) == [
+        # make second request to get updated xsrf cookie
+        r2 = await s.get(
+            url_path_join(base_url, "hub/home"),
+            allow_redirects=False,
+        )
+        assert r2.status_code == 200
+        assert sorted(s.cookies.keys()) == [
             '_xsrf',
             'jupyterhub-hub-login',
             'jupyterhub-session-id',
         ]
-        return r.cookies
+        return s.cookies
 
 
 class InstrumentedSpawner(MockSpawner):

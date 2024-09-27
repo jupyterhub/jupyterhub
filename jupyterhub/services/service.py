@@ -167,6 +167,12 @@ class Service(LoggingConfigurable):
     - url: str (None)
         The URL where the service is/should be.
         If specified, the service will be added to the proxy at /services/:name
+    - oauth_redirect_url: str ('/services/:name/oauth_redirect')
+        The URI for the oauth redirect.
+
+        Not usually needed, but must be set for external services that are not accessed through the proxy,
+        or any service which have a redirect URI different from the default of `/services/:name/oauth_redirect`.
+
     - oauth_no_confirm: bool(False)
         Whether this service should be allowed to complete oauth
         with logged-in users without prompting for confirmation.
@@ -321,7 +327,7 @@ class Service(LoggingConfigurable):
 
     @default('oauth_client_id')
     def _default_client_id(self):
-        return 'service-%s' % self.name
+        return f'service-{self.name}'
 
     @validate("oauth_client_id")
     def _validate_client_id(self, proposal):
@@ -335,7 +341,9 @@ class Service(LoggingConfigurable):
     oauth_redirect_uri = Unicode(
         help="""OAuth redirect URI for this service.
 
-        You shouldn't generally need to change this.
+        Must be set for external services that are not accessed through the proxy,
+        or any service which have a redirect URI different from the default.
+
         Default: `/services/:name/oauth_callback`
         """
     ).tag(input=True, in_db=False)
@@ -411,7 +419,7 @@ class Service(LoggingConfigurable):
     async def start(self):
         """Start a managed service"""
         if not self.managed:
-            raise RuntimeError("Cannot start unmanaged service %s" % self)
+            raise RuntimeError(f"Cannot start unmanaged service {self}")
         self.log.info("Starting service %r: %r", self.name, self.command)
         env = {}
         env.update(self.environment)
@@ -465,7 +473,7 @@ class Service(LoggingConfigurable):
         """Stop a managed service"""
         self.log.debug("Stopping service %s", self.name)
         if not self.managed:
-            raise RuntimeError("Cannot stop unmanaged service %s" % self)
+            raise RuntimeError(f"Cannot stop unmanaged service {self}")
         if self.spawner:
             if self.orm.server:
                 self.db.delete(self.orm.server)

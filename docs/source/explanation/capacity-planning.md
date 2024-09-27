@@ -1,3 +1,5 @@
+(explanation:capacity-planning)=
+
 # Capacity planning
 
 General capacity planning advice for JupyterHub is hard to give,

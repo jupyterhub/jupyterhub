@@ -2,123 +2,106 @@
 {% if announcement_login is string %}
   {% set announcement = announcement_login %}
 {% endif %}
-
 {% block login_widget %}
-{% endblock %}
-
+{% endblock login_widget %}
 {% block main %}
-
-{% block login %}
-<div id="login-main" class="container">
-{% block login_container %}
-{% if custom_html %}
-{{ custom_html | safe }}
-{% elif login_service %}
-<div class="service-login">
-  <p id='insecure-login-warning' class='hidden'>
-  Warning: JupyterHub seems to be served over an unsecured HTTP connection.
-  We strongly recommend enabling HTTPS for JupyterHub.
-  </p>
-
-  <a role="button" class='btn btn-jupyter btn-lg' href='{{ authenticator_login_url | safe }}'>
-    Sign in with {{login_service}}
-  </a>
-</div>
-{% else %}
-<form action="{{ authenticator_login_url | safe }}" method="post" role="form">
-  <div class="auth-form-header">
-    <h1>Sign in</h1>
-  </div>
-  <div class='auth-form-body'>
-
-    <p id='insecure-login-warning' class='hidden'>
-    Warning: JupyterHub seems to be served over an unsecured HTTP connection.
-    We strongly recommend enabling HTTPS for JupyterHub.
-    </p>
-
-    {% if login_error %}
-    <p class="login_error">
-      {{login_error}}
-    </p>
-    {% endif %}
-    <input type="hidden" name="_xsrf" value="{{ xsrf }}"/>
-    <label for="username_input">Username:</label>
-    <input
-      id="username_input"
-      type="text"
-      autocapitalize="off"
-      autocorrect="off"
-      autocomplete="username"
-      class="form-control"
-      name="username"
-      val="{{username}}"
-      autofocus="autofocus"
-    />
-    <label for='password_input'>Password:</label>
-    <input
-      type="password"
-      class="form-control"
-      autocomplete="current-password"
-      name="password"
-      id="password_input"
-    />
-    {% if authenticator.request_otp %}
-    <label for='otp_input'>{{ authenticator.otp_prompt }}</label>
-    <input
-      class="form-control"
-      autocomplete="one-time-password"
-      name="otp"
-      id="otp_input"
-    />
-    {% endif %}
-
-    <div class="feedback-container">
-      <input
-        id="login_submit"
-        type="submit"
-        class='btn btn-jupyter form-control'
-        value='Sign in'
-        tabindex="3"
-        />
-      <div class="feedback-widget hidden">
-        <i class="fa fa-spinner"></i>
-      </div>
+  {% block login %}
+    <div id="login-main" class="container">
+      {% block login_container %}
+        {% if custom_html %}
+          {{ custom_html | safe }}
+        {% elif login_service %}
+          <div class="service-login">
+            <p id='insecure-login-warning' class='hidden'>
+              Warning: JupyterHub seems to be served over an unsecured HTTP connection.
+              We strongly recommend enabling HTTPS for JupyterHub.
+            </p>
+            <a role="button"
+               class='btn btn-jupyter btn-lg'
+               href='{{ authenticator_login_url | safe }}'>Sign in with {{ login_service }}</a>
+          </div>
+        {% else %}
+          <form action="{{ authenticator_login_url | safe }}"
+                method="post"
+                role="form">
+            <div class="auth-form-header">
+              <h1>Sign in</h1>
+            </div>
+            <div class='auth-form-body m-auto'>
+              <p id='insecure-login-warning' class='hidden'>
+                Warning: JupyterHub seems to be served over an unsecured HTTP connection.
+                We strongly recommend enabling HTTPS for JupyterHub.
+              </p>
+              {% if login_error %}<p class="login_error">{{ login_error }}</p>{% endif %}
+              <input type="hidden" name="_xsrf" value="{{ xsrf }}" />
+              <label for="username_input">Username:</label>
+              <input id="username_input"
+                     type="text"
+                     autocapitalize="off"
+                     autocorrect="off"
+                     autocomplete="username"
+                     class="form-control"
+                     name="username"
+                     val="{{ username }}"
+                     autofocus="autofocus" />
+              <label for='password_input'>Password:</label>
+              <input type="password"
+                     class="form-control"
+                     autocomplete="current-password"
+                     name="password"
+                     id="password_input" />
+              {% if authenticator.request_otp %}
+                <label for='otp_input'>{{ authenticator.otp_prompt }}</label>
+                <input class="form-control"
+                       autocomplete="one-time-password"
+                       name="otp"
+                       id="otp_input" />
+              {% endif %}
+              <div class="feedback-container">
+                <input id="login_submit"
+                       type="submit"
+                       class='btn btn-jupyter form-control'
+                       value='Sign in'
+                       tabindex="3" />
+                <div class="feedback-widget hidden">
+                  <i class="fa fa-spinner"></i>
+                </div>
+              </div>
+              {% block login_terms %}
+                {% if login_term_url %}
+                  <div id="login_terms" class="login_terms">
+                    <input type="checkbox"
+                           id="login_terms_checkbox"
+                           name="login_terms_checkbox"
+                           required />
+                    {% block login_terms_text %}
+                      {# allow overriding the text #}
+                      By logging into the platform you accept the <a href="{{ login_term_url }}">terms and conditions</a>.
+                    {% endblock login_terms_text %}
+                  </div>
+                {% endif %}
+              {% endblock login_terms %}
+            </div>
+          </form>
+        {% endif %}
+      {% endblock login_container %}
     </div>
-
-    {% block login_terms %}
-    {% if login_term_url %}
-    <div id="login_terms" class="login_terms">
-    <input type="checkbox" id="login_terms_checkbox" name="login_terms_checkbox" required />
-    {% block login_terms_text %} {# allow overriding the text #}
-    By logging into the platform you accept the <a href="{{ login_term_url }}">terms and conditions</a>.
-    {% endblock login_terms_text %}
-    </div>
-    {% endif %}
-    {% endblock login_terms %}
-
-  </div>
-</form>
-{% endif %}
-{% endblock login_container %}
-</div>
-{% endblock login %}
-
-{% endblock %}
-
+  {% endblock login %}
+{% endblock main %}
 {% block script %}
-{{ super() }}
-<script>
-if (window.location.protocol === "http:") {
-  // unhide http warning
-  var warning = document.getElementById('insecure-login-warning');
-  warning.className = warning.className.replace(/\bhidden\b/, '');
-}
-// setup onSubmit feedback
-$('form').submit((e) => {
-  var form = $(e.target);
-  form.find('.feedback-container>input').attr('disabled', true);
-  form.find('.feedback-container>*').toggleClass('hidden');
-  form.find('.feedback-widget>*').toggleClass('fa-pulse');
-});
-</script>
-{% endblock %}
+  {{ super() }}
+  <script>
+    if (!window.isSecureContext) {
+      // unhide http warning
+      var warning = document.getElementById('insecure-login-warning');
+      warning.className = warning.className.replace(/\bhidden\b/, '');
+    }
+    // setup onSubmit feedback
+    $('form').submit((e) => {
+      var form = $(e.target);
+      form.find('.feedback-container>input').attr('disabled', true);
+      form.find('.feedback-container>*').toggleClass('hidden');
+      form.find('.feedback-widget>*').toggleClass('fa-pulse');
+    });
+  </script>
+{% endblock script %}

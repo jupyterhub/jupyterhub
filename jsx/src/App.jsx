@@ -1,11 +1,11 @@
 import React from "react";
-import ReactDOM from "react-dom";
+import { createRoot } from "react-dom/client";
 import { Provider } from "react-redux";
 import { createStore } from "redux";
 import { compose } from "recompose";
 import { initialState, reducers } from "./Store";
 import withAPI from "./util/withAPI";
-import { HashRouter, Switch, Route } from "react-router-dom";
+import { HashRouter, Routes, Route } from "react-router-dom";
 
 import ServerDashboard from "./components/ServerDashboard/ServerDashboard";
 import Groups from "./components/Groups/Groups";
@@ -23,38 +23,22 @@ const App = () => {
     <div className="resets">
       <Provider store={store}>
         <HashRouter>
-          <Switch>
+          <Routes>
+            <Route path="/" element={compose(withAPI)(ServerDashboard)()} />
+            <Route path="/groups" element={compose(withAPI)(Groups)()} />
+            <Route path="/group-edit" element={compose(withAPI)(GroupEdit)()} />
             <Route
-              exact
-              path="/"
-              component={compose(withAPI)(ServerDashboard)}
-            />
-            <Route exact path="/groups" component={compose(withAPI)(Groups)} />
-            <Route
-              exact
-              path="/group-edit"
-              component={compose(withAPI)(GroupEdit)}
-            />
-            <Route
-              exact
               path="/create-group"
-              component={compose(withAPI)(CreateGroup)}
+              element={compose(withAPI)(CreateGroup)()}
             />
-            <Route
-              exact
-              path="/add-users"
-              component={compose(withAPI)(AddUser)}
-            />
-            <Route
-              exact
-              path="/edit-user"
-              component={compose(withAPI)(EditUser)}
-            />
-          </Switch>
+            <Route path="/add-users" element={compose(withAPI)(AddUser)()} />
+            <Route path="/edit-user" element={compose(withAPI)(EditUser)()} />
+          </Routes>
         </HashRouter>
       </Provider>
     </div>
   );
 };
 
-ReactDOM.render(<App />, document.getElementById("react-admin-hook"));
+const root = createRoot(document.getElementById("react-admin-hook"));
+root.render(<App />);

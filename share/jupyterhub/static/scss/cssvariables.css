@@ -1,0 +1,20 @@
+/* CSS variables
+ note: SCSS variable overrides must be loaded _before_ bootstrap (variables.scss)
+ while CSS variable overrides must be loaded _after_ bootstrap (cssvariables.scss)
+*/
+
+.navbar {
+  /* higher contrast nav links by default */
+  --bs-navbar-color: rgba(black, 0.95);
+}
+
+.navbar-nav {
+  /* no color change on nav links 
+    darken background on hover, no change to text
+    background part is in page.scss
+  */
+
+  --bs-nav-link-color: var(--bs-navbar-color);
+  --bs-nav-link-hover-color: var(--bs-nav-link-color);
+  --bs-nav-link-active-color: var(--bs-nav-link-color);
+}

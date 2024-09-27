@@ -28,7 +28,7 @@ module.exports = {
   output: {
     publicPath: "/",
     filename: "admin-react.js",
-    path: path.resolve(__dirname, "build"),
+    path: path.resolve(__dirname, "../share/jupyterhub/static/js/"),
   },
   resolve: {
     extensions: [".css", ".js", ".jsx"],

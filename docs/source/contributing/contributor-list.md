@@ -1,3 +1,5 @@
+(contributing:contributors)=
+
 # Contributors
 
 Project Jupyter thanks the following people for their help and

@@ -1,4 +1,4 @@
-(contributing-docs)=
+(contributing:docs)=
 
 # Contributing Documentation
 
@@ -13,7 +13,7 @@ stored under the `docs/source` directory) and converts it into various
 formats for people to read. To make sure the documentation you write or
 change renders correctly, it is good practice to test it locally.
 
-1. Make sure you have successfully completed {ref}`contributing/setup`.
+1. Make sure you have successfully completed {ref}`contributing:setup`.
 
 2. Install the packages required to build the docs.
 

@@ -82,7 +82,10 @@ def _disable_user_config(serverapp):
     assert serverapp.config_file_paths == config_file_paths
 
     # patch jupyter_path to exclude $HOME
-    global _original_jupyter_paths, _jupyter_paths_without_home, _original_jupyter_config_dir
+    global \
+        _original_jupyter_paths, \
+        _jupyter_paths_without_home, \
+        _original_jupyter_config_dir
     _original_jupyter_paths = paths.jupyter_path()
     _jupyter_paths_without_home = list(_exclude_home(_original_jupyter_paths))
 

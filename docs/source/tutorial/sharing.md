@@ -159,11 +159,14 @@ which will have a JSON response:
   'last_exchanged_at': None,
   'code': 'U-eYLFT1lGstEqfMHpAIvTZ1MRjZ1Y1a-loGQ0K86to',
   'accept_url': '/hub/accept-share?code=U-eYLFT1lGstEqfMHpAIvTZ1MRjZ1Y1a-loGQ0K86to',
+  'full_accept_url': 'https://hub.example.org/accept-share?code=U-eYLFT1lGstEqfMHpAIvTZ1MRjZ1Y1a-loGQ0K86to',
 }
 ```
 
 The most relevant fields here are `code`, which contains the code itself, and `accept_url`, which is the URL path for the page another user.
 Note: it does not contain the _hostname_ of the hub, which JupyterHub often does not know.
+If `public_url` configuration is defined, `full_accept_url` will be the full URL including the host.
+Otherwise, it will be null.
 
 Share codes are guaranteed to be url-safe, so no encoding is required.
 

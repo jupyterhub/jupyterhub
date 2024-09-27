@@ -1,15 +1,18 @@
 import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { Button, Col } from "react-bootstrap";
 import PropTypes from "prop-types";
+import ErrorAlert from "../../util/error";
 
 const AddUser = (props) => {
-  var [users, setUsers] = useState([]),
+  const [users, setUsers] = useState([]),
     [admin, setAdmin] = useState(false),
     [errorAlert, setErrorAlert] = useState(null),
     limit = useSelector((state) => state.limit);
 
-  var dispatch = useDispatch();
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   var dispatchPageChange = (data, page) => {
     dispatch({
@@ -21,36 +24,19 @@ const AddUser = (props) => {
     });
   };
 
-  var { addUsers, updateUsers, history } = props;
+  var { addUsers, updateUsers } = props;
 
   return (
     <>
       <div className="container" data-testid="container">
-        {errorAlert != null ? (
-          <div className="row">
-            <div className="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
-              <div className="alert alert-danger">
-                {errorAlert}
-                <button
-                  type="button"
-                  className="close"
-                  onClick={() => setErrorAlert(null)}
-                >
-                  <span>&times;</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <></>
-        )}
+        <ErrorAlert errorAlert={errorAlert} setErrorAlert={setErrorAlert} />
         <div className="row">
-          <div className="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
-            <div className="panel panel-default">
-              <div className="panel-heading">
+          <Col md={{ span: 10, offset: 1 }} lg={{ span: 8, offset: 2 }}>
+            <div className="card">
+              <div className="card-header">
                 <h4>Add Users</h4>
               </div>
-              <div className="panel-body">
+              <div className="card-body">
                 <form>
                   <div className="form-group">
                     <textarea
@@ -81,22 +67,24 @@ const AddUser = (props) => {
                   </div>
                 </form>
               </div>
-              <div className="panel-footer">
-                <button id="return" className="btn btn-light">
-                  <Link to="/">Back</Link>
-                </button>
+              <div className="card-footer">
+                <Link to="/">
+                  <Button variant="light" id="return">
+                    Back
+                  </Button>
+                </Link>
                 <span> </span>
-                <button
+                <Button
                   id="submit"
                   data-testid="submit"
-                  className="btn btn-primary"
+                  variant="primary"
                   onClick={() => {
                     addUsers(users, admin)
                       .then((data) =>
                         data.status < 300
                           ? updateUsers(0, limit)
                               .then((data) => dispatchPageChange(data, 0))
-                              .then(() => history.push("/"))
+                              .then(() => navigate("/"))
                               .catch(() =>
                                 setErrorAlert(`Failed to update users.`),
                               )
@@ -110,10 +98,10 @@ const AddUser = (props) => {
                   }}
                 >
                   Add Users
-                </button>
+                </Button>
               </div>
             </div>
-          </div>
+          </Col>
         </div>
       </div>
     </>
@@ -123,9 +111,6 @@ const AddUser = (props) => {
 AddUser.propTypes = {
   addUsers: PropTypes.func,
   updateUsers: PropTypes.func,
-  history: PropTypes.shape({
-    push: PropTypes.func,
-  }),
 };
 
 export default AddUser;

@@ -1,51 +1,52 @@
 {% extends "page.html" %}
 {% block login_widget %}
-{% endblock %}
-
+{% endblock login_widget %}
 {% block main %}
-<div class="container col-md-6 col-md-offset-3">
-  <h1 class="text-center">Accept sharing invitation</h1>
-
-  <h2>
-    You ({{ user.name }}) have been invited to access {{ owner.name }}'s server
-    {%- if spawner.name %} ({{ spawner.name }}){%- endif %} at <a href="{{ spawner_url | safe }}">{{ spawner_url }}</a>.
-  </h2>
-
-  {% if not spawner_ready %}
-  <p class="alert alert-danger">
-    The server at {{ spawner_url }} is not currently running.
-    After accepting permission, you may need to ask {{ owner.name }}
-    to start the server before you can access it.
-  </p>
-  {% endif %}
-
-  <p>
-    By accepting the invitation, you will be granted the following permissions,
-    restricted to this particular server:
-  </p>
-
-  <div>
-    <form method="POST" action="">
-      {# these are the 'real' inputs to the form -#}
-      <input type="hidden" name="_xsrf" value="{{ xsrf }}" />
-      <input type="hidden" name="code" value="{{ code }}" />
-      {% for scope_info in scope_descriptions -%}
-      <div class="checkbox input-group">
-        <label>
-          <span>
-            {{ scope_info['description'] }}
-            {% if scope_info['filter'] %}
-            Applies to {{ scope_info['filter'] }}. {% endif %}
-          </span>
-        </label>
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-md-6">
+        <h1 class="text-center">Accept sharing invitation</h1>
+        <p class="lead">
+          You ({{ user.name }}) have been invited to access {{ owner.name }}'s server
+          {%- if spawner.name %}({{ spawner.name }}){%- endif %} at <a href="{{ spawner_url | safe }}">{{ spawner_url }}</a>
+        </p>
+        {% if not spawner_ready %}
+          <p class="alert alert-danger">
+            The server at {{ spawner_url }} is not currently running.
+            After accepting permission, you may need to ask {{ owner.name }}
+            to start the server before you can access it.
+          </p>
+        {% endif %}
+        <form method="post" action="">
+          <div class="card">
+            <div class="card-header">
+              By accepting the invitation, you will be granted the following permissions,
+              restricted to this particular server:
+            </div>
+            <div class="card-body">
+              {# these are the 'real' inputs to the form -#}
+              <input type="hidden" name="_xsrf" value="{{ xsrf }}" />
+              <input type="hidden" name="code" value="{{ code }}" />
+              {% for scope_info in scope_descriptions -%}
+                <div class="form-check input-group">
+                  <label>
+                    <span>
+                      {{ scope_info['description'] }}
+                      {% if scope_info['filter'] %}Applies to {{ scope_info['filter'] }}.{% endif %}
+                    </span>
+                  </label>
+                </div>
+              {% endfor -%}
+            </div>
+            <div class="card-footer">
+              <button type="submit" class="form-control btn btn-jupyter">Accept invitation</button>
+              <p class="small">
+                After accepting the invitation, you will be redirected to <a href="{{ next_url | safe }}">{{ next_url }}</a>.
+              </p>
+            </div>
+          </div>
+        </form>
       </div>
-      {% endfor -%}
-      <p>
-        After accepting the invitation, you will be redirected to <a href="{{ next_url | safe }}">{{ next_url }}</a>.
-      </p>
-      <input type="submit" value="Accept invitation" class="form-control btn-jupyter" />
-    </form>
+    </div>
   </div>
-</div>
-
-{% endblock %}
+{% endblock main %}

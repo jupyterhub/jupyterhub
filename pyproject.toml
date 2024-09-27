@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 # ref: https://setuptools.pypa.io/en/latest/userguide/pyproject_config.html
 [project]
 name = "jupyterhub"
-version = "5.0.0.dev"
+version = "5.2.0.dev"
 dynamic = ["readme", "dependencies"]
 description = "JupyterHub: A multi-user server for Jupyter notebooks"
 authors = [
@@ -51,8 +51,7 @@ test = [
   # the test test_nbclassic_control_panel.
   "nbclassic",
   "pytest>=3.3",
-  # FIXME: unpin pytest-asyncio
-  "pytest-asyncio>=0.17,<0.23",
+  "pytest-asyncio>=0.17,!=0.23.*",
   "pytest-cov",
   "pytest-rerunfailures",
   "requests-mock",
@@ -104,43 +103,38 @@ fallback_version = "0.0.0"
 # [tool.setuptools.data-files]
 # "share/jupyterhub" = ["share/jupyterhub/**"]
 
+# ruff is our linter and formatter
 
-# autoflake is used for autoformatting Python code
-#
-# ref: https://github.com/PyCQA/autoflake#readme
-#
-[tool.autoflake]
-ignore-init-module-imports = true
-remove-all-unused-imports = true
-remove-duplicate-keys = true
-#remove-unused-variables = true
+[tool.ruff.format]
+quote-style = "preserve"
 
-
-# isort is used for autoformatting Python code
-#
-# ref: https://pycqa.github.io/isort/
-#
-[tool.isort]
-profile = "black"
-
-
-# black is used for autoformatting Python code
-#
-# ref: https://black.readthedocs.io/en/stable/
-#
-[tool.black]
-skip-string-normalization = true
-# target-version should be all supported versions, see
-# https://github.com/psf/black/issues/751#issuecomment-473066811
-target_version = [
-    "py37",
-    "py38",
-    "py39",
-    "py310",
-    "py311",
-    "py312",
+[tool.ruff.lint]
+ignore = [
+    "F841", # unused variable
+]
+select = [
+    "E9", # syntax
+    "I", # isort
+    "UP", # pyupgrade
+    "F", # flake8
 ]
 
+# djlint lints/formats our jinja templates
+# https://djlint.com/docs/configuration/
+[tool.djlint]
+indent = 2
+# ignore often-incorrect lint
+# H006: image height/width attributes
+# ignore style lint that formatter doesn't catch
+# H008: double-quotes
+# H029: form method case
+ignore = "H006,H008,H021,H029"
+use_gitignore = true
+
+format_js = true
+
+[tool.djlint.js]
+indent_size = 2
 
 # tbump is used to simplify and standardize the release process when updating
 # the version, making a git commit and tag, and pushing changes.
@@ -152,7 +146,7 @@ target_version = [
 github_url = "https://github.com/jupyterhub/jupyterhub"
 
 [tool.tbump.version]
-current = "5.0.0.dev"
+current = "5.2.0.dev"
 
 # Example of a semver regexp.
 # Make sure this matches current_version before

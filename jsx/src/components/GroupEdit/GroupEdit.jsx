@@ -1,17 +1,21 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import PropTypes from "prop-types";
+import { Button, Card } from "react-bootstrap";
 import GroupSelect from "../GroupSelect/GroupSelect";
 import DynamicTable from "../DynamicTable/DynamicTable";
+import { MainContainer } from "../../util/layout";
 
 const GroupEdit = (props) => {
-  var [selected, setSelected] = useState([]),
+  const [selected, setSelected] = useState([]),
     [changed, setChanged] = useState(false),
     [errorAlert, setErrorAlert] = useState(null),
+    navigate = useNavigate(),
+    location = useLocation(),
     limit = useSelector((state) => state.limit);
 
-  var dispatch = useDispatch();
+  const dispatch = useDispatch();
   const hasDuplicates = (a) => a.filter((e, i) => a.indexOf(e) != i).length > 0;
   const dispatchPageUpdate = (data, page) => {
     dispatch({
@@ -23,71 +27,48 @@ const GroupEdit = (props) => {
     });
   };
 
-  var {
+  const {
     addToGroup,
     updateProp,
     removeFromGroup,
     deleteGroup,
     updateGroups,
     validateUser,
-    history,
-    location,
   } = props;
 
-  if (!location.state) {
-    history.push("/groups");
-    return <></>;
-  }
+  useEffect(() => {
+    if (!location.state) {
+      navigate("/groups");
+    }
+  }, [location]);
 
-  var { group_data } = location.state;
-  var [propobject, setProp] = useState(group_data.properties);
-  var [propkeys, setPropKeys] = useState([]);
-  var [propvalues, setPropValues] = useState([]);
-
+  const { group_data } = location.state || {};
   if (!group_data) return <div></div>;
+  const [propobject, setProp] = useState(group_data.properties);
+  const [propkeys, setPropKeys] = useState([]);
+  const [propvalues, setPropValues] = useState([]);
 
   return (
-    <div className="container" data-testid="container">
-      {errorAlert != null ? (
-        <div className="row">
-          <div className="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
-            <div className="alert alert-danger">
-              {errorAlert}
-              <button
-                type="button"
-                className="close"
-                onClick={() => setErrorAlert(null)}
-              >
-                <span>&times;</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <></>
-      )}
-      <div className="row">
-        <div className="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
-          <h3>Editing Group {group_data.name}</h3>
-          <br></br>
-          <div className="alert alert-info">Manage group members</div>
-        </div>
-      </div>
-      <GroupSelect
-        users={group_data.users}
-        validateUser={validateUser}
-        onChange={(selection) => {
-          setSelected(selection);
-          setChanged(true);
-        }}
-      />
-      <div className="row">
-        <div className="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
-          <div className="alert alert-info">Manage group properties</div>
-        </div>
-      </div>
-      <div className="row">
-        <div className="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
+    <MainContainer errorAlert={errorAlert} setErrorAlert={setErrorAlert}>
+      <h1>Editing Group {group_data.name}</h1>
+      <Card>
+        <Card.Header>
+          <h2>Manage group members</h2>
+        </Card.Header>
+        <Card.Body>
+          <GroupSelect
+            users={group_data.users}
+            validateUser={validateUser}
+            onChange={(selection) => {
+              setSelected(selection);
+              setChanged(true);
+            }}
+          />
+        </Card.Body>
+        <Card.Header>
+          <h2>Manage group properties</h2>
+        </Card.Header>
+        <Card.Body>
           <DynamicTable
             current_propobject={group_data.properties}
             setProp={setProp}
@@ -96,19 +77,21 @@ const GroupEdit = (props) => {
 
             //Add keys
           />
-        </div>
-      </div>
-
-      <div className="row">
-        <div className="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
-          <button id="return" className="btn btn-light">
-            <Link to="/groups">Back</Link>
-          </button>
+          <div>
+            <span id="error"></span>
+          </div>
+        </Card.Body>
+        <Card.Footer>
+          <Link to="/groups">
+            <Button variant="light" id="return">
+              Back
+            </Button>
+          </Link>
           <span> </span>
-          <button
+          <Button
             id="submit"
             data-testid="submit"
-            className="btn btn-primary"
+            variant="primary"
             onClick={() => {
               // check for changes
               let new_users = selected.filter(
@@ -156,15 +139,12 @@ const GroupEdit = (props) => {
             }}
           >
             Apply
-          </button>
-          <div>
-            <span id="error"></span>
-          </div>
-          <button
+          </Button>
+          <Button
             id="delete-group"
             data-testid="delete-group"
-            className="btn btn-danger"
-            style={{ float: "right" }}
+            variant="danger"
+            className="float-end"
             onClick={() => {
               var groupName = group_data.name;
               deleteGroup(groupName)
@@ -173,32 +153,24 @@ const GroupEdit = (props) => {
                   data.status < 300
                     ? updateGroups(0, limit)
                         .then((data) => dispatchPageUpdate(data, 0))
-                        .then(() => history.push("/groups"))
+                        .then(() => navigate("/groups"))
                     : setErrorAlert(`Failed to delete group.`);
                 })
                 .catch(() => setErrorAlert(`Failed to delete group.`));
             }}
           >
             Delete Group
-          </button>
-          <br></br>
-          <br></br>
-        </div>
-      </div>
-    </div>
+          </Button>
+          <div>
+            <span id="error"></span>
+          </div>
+        </Card.Footer>
+      </Card>
+    </MainContainer>
   );
 };
 
 GroupEdit.propTypes = {
-  location: PropTypes.shape({
-    state: PropTypes.shape({
-      group_data: PropTypes.object,
-      callback: PropTypes.func,
-    }),
-  }),
-  history: PropTypes.shape({
-    push: PropTypes.func,
-  }),
   addToGroup: PropTypes.func,
   removeFromGroup: PropTypes.func,
   deleteGroup: PropTypes.func,

@@ -1,3 +1,5 @@
+(howto:config:no-sudo)=
+
 # Run JupyterHub without root privileges using `sudo`
 
 **Note:** Setting up `sudo` permissions involves many pieces of system

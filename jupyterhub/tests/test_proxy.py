@@ -10,9 +10,8 @@ import pytest
 from traitlets import TraitError
 from traitlets.config import Config
 
-from ..utils import random_port
+from ..utils import random_port, wait_for_http_server
 from ..utils import url_path_join as ujoin
-from ..utils import wait_for_http_server
 from .mocking import MockHub
 from .test_api import add_user, api_request
 from .utils import skip_if_ssl
@@ -172,7 +171,7 @@ async def test_external_proxy(request):
 async def test_check_routes(app, username, disable_check_routes):
     proxy = app.proxy
     test_user = add_user(app.db, app, name=username)
-    r = await api_request(app, 'users/%s/server' % username, method='post')
+    r = await api_request(app, f'users/{username}/server', method='post')
     r.raise_for_status()
 
     # check a valid route exists for user

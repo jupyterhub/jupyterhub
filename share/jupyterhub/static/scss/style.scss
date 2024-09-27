@@ -1,0 +1,71 @@
+/*!
+*
+* Bootstrap
+*
+*/
+
+// 1. Include functions first (so you can manipulate colors, SVGs, calc, etc)
+@import "../components/bootstrap/scss/functions"; // Required
+
+// 2. Include any default variable overrides here
+@import "./variables.scss";
+
+@import "../components/bootstrap/scss/bootstrap"; // Full bootstrap (maybe wasteful?)
+
+// // 3. Include remainder of required Bootstrap stylesheets (including any separate color mode stylesheets)
+// @import "../components/bootstrap/scss/variables"; // Required
+// @import "../components/bootstrap/scss/variables-dark"; // Required
+//
+//
+// // 4. Include any default map overrides here
+//
+// // 5. Include remainder of required parts
+// @import "../components/bootstrap/scss/maps"; // Required
+// @import "../components/bootstrap/scss/mixins"; // Required
+// @import "../components/bootstrap/scss/root"; // Required
+//
+// // 6. Optionally include any other parts as needed
+// @import "../components/bootstrap/scss/utilities";
+// @import "../components/bootstrap/scss/reboot";
+// @import "../components/bootstrap/scss/type";
+// @import "../components/bootstrap/scss/images";
+// @import "../components/bootstrap/scss/navbar";
+// @import "../components/bootstrap/scss/alert";
+// @import "../components/bootstrap/scss/buttons";
+// @import "../components/bootstrap/scss/containers";
+// @import "../components/bootstrap/scss/grid";
+// @import "../components/bootstrap/scss/modal";
+
+// 7. Optionally include utilities API last to generate classes based on the Sass map in `_utilities.scss`
+// @import "../components/bootstrap/scss/utilities/api";
+
+// CSS variables must be loaded _after_ bootstrap to override
+@import "./cssvariables";
+
+// redefine .btn-xs, removed in bootstrap 4
+.btn-xs {
+  // $padding-y, $padding-x, $font-size, $border-radius
+  @include button-size(1px, 5px, 14px, 3px);
+}
+
+/*!
+*
+* Font Awesome
+*
+*/
+$fa-font-path: "../components/@fortawesome/fontawesome-free/webfonts";
+@import "../components/@fortawesome/fontawesome-free/scss/fontawesome";
+// You can include all the other styles the same as before
+@import "../components/@fortawesome/fontawesome-free/scss/regular.scss";
+@import "../components/@fortawesome/fontawesome-free/scss/solid.scss";
+
+/*!
+*
+* Jupyter
+*
+*/
+
+@import "./page.scss";
+@import "./admin.scss";
+@import "./error.scss";
+@import "./login.scss";

@@ -75,10 +75,14 @@ You can only modify access to one server at a time.
 To grant access to a particular user, in addition to `shares`, the granter must have at least `read:user:name` permission for the target user (or `read:group:name` if it's a group).
 
 Send a POST request to `/api/shares/:username/:servername` to grant permissions.
+
+```{parsed-literal}
+[POST /api/shares/:username/:servername](rest-api-post-shares-server)
+```
+
 The JSON body should specify what permissions to grant and whom to grant them to:
 
-```
-POST /api/shares/:username/:servername
+```python
 {
     "scopes": [],
     "user": "username", # or:
@@ -100,8 +104,8 @@ You can only modify access to one server at a time.
 
 Send a PATCH request to `/api/shares/:username/:servername` to revoke permissions.
 
-```
-PATCH /api/shares/:username/:servername
+```{parsed-literal}
+[PATCH /api/shares/:username/:servername](rest-api-patch-shares-server)
 ```
 
 The JSON body should specify the scopes to revoke
@@ -121,16 +125,16 @@ If `scopes` is empty or unspecified, _all_ scopes are revoked from the target us
 
 A DELETE request will revoke all shared access permissions for the given server.
 
-```
-DELETE /api/shares/:username/:servername
+```{parsed-literal}
+[DELETE /api/shares/:username/:servername](rest-api-delete-shares-server)
 ```
 
 ### View shares for a server
 
 To view shares for a given server, you need the permission `read:shares` with the appropriate _server_ filter.
 
-```
-GET /api/shares/:username/:servername
+```{parsed-literal}
+[GET /api/shares/:username/:servername](rest-api-get-shares-server)
 ```
 
 This is a paginated endpoint, so responses has `items` as a list of Share models, and `_pagination` for information about retrieving all shares if there are many:
@@ -158,34 +162,34 @@ This is a paginated endpoint, so responses has `items` as a list of Share models
 }
 ```
 
-see the [rest-api](rest-api) for full details of the response models.
+see the [rest-api](rest-api-get-shares-server) for full details of the response models.
 
 ### View servers shared with user or group
 
 To review servers shared with a given user or group, you need the permission `read:users:shares` or `read:groups:shares` with the appropriate _user_ or _group_ filter.
 
+```{parsed-literal}
+[GET /api/users/:username/shared](rest-api-get-user-shared)
 ```
 
-GET /api/users/:username/shared
+or
 
-# or
-
-GET /api/groups/:groupname/shared
-
+```{parsed-literal}
+[GET /api/groups/:groupname/shared](rest-api-get-group-shared)
 ```
 
 These are paginated endpoints.
 
 ### Access permission for a single user on a single server
 
+```{parsed-literal}
+[GET /api/users/:username/shared/:ownername/:servername](rest-api-get-user-shared-server)
 ```
 
-GET /api/users/:username/shared/:ownername/:servername
+or
 
-# or
-
-GET /api/groups/:groupname/shared/:ownername/:servername
-
+```{parsed-literal}
+[GET /api/groups/:groupname/shared/:ownername/:servername](rest-api-get-group-shared-server)
 ```
 
 will return the _single_ Share info for the given user or group for the server specified by `ownername/servername`,
@@ -198,13 +202,13 @@ you need the permissions `users:shares` or `groups:shares` with the appropriate 
 This allows users to 'leave' shared servers, without needing permission to manage the server's sharing permissions.
 
 ```
+[DELETE /api/users/:username/shared/:ownername/:servername](rest-api-delete-user-shared-server)
+```
 
-DELETE /api/users/:username/shared/:ownername/:servername
+or
 
-# or
-
-DELETE /api/groups/:groupname/shared/:ownername/:servername
-
+```
+[DELETE /api/groups/:groupname/shared/:ownername/:servername](rest-api-delete-group-shared-server)
 ```
 
 will revoke all permissions granted to the user or group for the specified server.
@@ -237,7 +241,7 @@ A Share returned in the REST API has the following structure:
 
 where exactly one of `user` and `group` is not null and the other is null.
 
-See the [rest-api](rest-api) for full details of the response models.
+See the [rest-api](rest-api-get-shares-server) for full details of the response models.
 
 ## Share via invitation code
 
@@ -259,8 +263,8 @@ Share codes are much like shares, except:
 
 To create a share code:
 
-```
-POST /api/share-code/:username/:servername
+```{parsed-literal}
+[POST /api/share-codes/:username/:servername](rest-api-post-share-code)
 ```
 
 where the body should include the scopes to be granted and expiration.
@@ -282,13 +286,14 @@ The response contains the code itself:
 {
   "code": "abc1234....",
   "accept_url": "/hub/accept-share?code=abc1234",
+  "full_accept_url": "https://hub.example.org/hub/accept-share?code=abc1234",
   "id": "sc_1234",
   "scopes": [...],
   ...
 }
 ```
 
-See the [rest-api](rest-api) for full details of the response models.
+See the [rest-api](rest-api-post-share-code) for full details of the response models.
 
 ### Accepting sharing invitations
 
@@ -308,8 +313,8 @@ you will need to contact the owner of the server to start it.
 
 You can see existing invitations for
 
-```
-GET /hub/api/share-codes/:username/:servername
+```{parsed-literal}
+[GET /hub/api/share-codes/:username/:servername](rest-api-get-share-codes-server)
 ```
 
 which produces a paginated list of share codes (_excluding_ the codes themselves, which are not stored by jupyterhub):
@@ -373,14 +378,14 @@ and the `id` that can be used for revocation:
 }
 ```
 
-see the [rest-api](rest-api) for full details of the response models.
+see the [rest-api](rest-api-get-share-codes-server) for full details of the response models.
 
 ### Revoking invitations
 
 If you've finished inviting users to a server, you can revoke all invitations with:
 
-```
-DELETE /hub/api/share-codes/:username/:servername
+```{parsed-literal}
+[DELETE /hub/api/share-codes/:username/:servername](rest-api-delete-share-code)
 ```
 
 or revoke a single invitation code:

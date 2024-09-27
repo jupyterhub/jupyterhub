@@ -23,8 +23,7 @@ from ..spawner import SimpleLocalProcessSpawner, Spawner
 from ..user import User
 from ..utils import AnyTimeoutError, maybe_future, new_token, url_path_join
 from .mocking import public_url
-from .test_api import add_user
-from .utils import async_requests
+from .utils import add_user, async_requests, find_user
 
 _echo_sleep = """
 import sys, time
@@ -221,8 +220,8 @@ def test_string_formatting(db):
     name = s.user.name
     assert s.notebook_dir == 'user/{username}/'
     assert s.default_url == '/base/{username}'
-    assert s.format_string(s.notebook_dir) == 'user/%s/' % name
-    assert s.format_string(s.default_url) == '/base/%s' % name
+    assert s.format_string(s.notebook_dir) == f'user/{name}/'
+    assert s.format_string(s.default_url) == f'/base/{name}'
 
 
 async def test_popen_kwargs(db):
@@ -496,7 +495,7 @@ async def test_hub_connect_url(db):
     assert env["JUPYTERHUB_API_URL"] == "https://example.com/api"
     assert (
         env["JUPYTERHUB_ACTIVITY_URL"]
-        == "https://example.com/api/users/%s/activity" % name
+        == f"https://example.com/api/users/{name}/activity"
     )
 
 
@@ -598,3 +597,123 @@ def test_spawner_server(db):
     spawner.server = Server.from_url("http://1.2.3.4")
     assert spawner.server is not None
     assert spawner.server.ip == "1.2.3.4"
+
+
+async def test_group_override(app):
+    app.load_groups = {
+        "admin": {"users": ["admin"]},
+        "user": {"users": ["admin", "user"]},
+    }
+    await app.init_groups()
+
+    group_overrides = {
+        "01-admin-mem-limit": {
+            "groups": ["admin"],
+            "spawner_override": {"start_timeout": 120},
+        }
+    }
+
+    admin_user = find_user(app.db, "admin")
+    s = Spawner(user=admin_user)
+    s.start_timeout = 60
+    s.group_overrides = group_overrides
+    await s.apply_group_overrides()
+    assert s.start_timeout == 120
+
+    non_admin_user = find_user(app.db, "user")
+    s = Spawner(user=non_admin_user)
+    s.start_timeout = 60
+    s.group_overrides = group_overrides
+    await s.apply_group_overrides()
+    assert s.start_timeout == 60
+
+
+async def test_group_override_lexical_ordering(app):
+    app.load_groups = {
+        "admin": {"users": ["admin"]},
+        "user": {"users": ["admin", "user"]},
+    }
+    await app.init_groups()
+
+    group_overrides = {
+        # this should be applied last, even though it is specified first,
+        # due to lexical ordering based on key names
+        "02-admin-mem-limit": {
+            "groups": ["admin"],
+            "spawner_override": {"start_timeout": 300},
+        },
+        "01-admin-mem-limit": {
+            "groups": ["admin"],
+            "spawner_override": {"start_timeout": 120},
+        },
+    }
+
+    admin_user = find_user(app.db, "admin")
+    s = Spawner(user=admin_user)
+    s.start_timeout = 60
+    s.group_overrides = group_overrides
+    await s.apply_group_overrides()
+    assert s.start_timeout == 300
+
+
+async def test_group_override_dict_merging(app):
+    app.load_groups = {
+        "admin": {"users": ["admin"]},
+        "user": {"users": ["admin", "user"]},
+    }
+    await app.init_groups()
+
+    group_overrides = {
+        "01-admin-env-add": {
+            "groups": ["admin"],
+            "spawner_override": {"environment": {"AM_I_ADMIN": "yes"}},
+        },
+        "02-user-env-add": {
+            "groups": ["user"],
+            "spawner_override": {"environment": {"AM_I_USER": "yes"}},
+        },
+    }
+
+    admin_user = find_user(app.db, "admin")
+    s = Spawner(user=admin_user)
+    s.group_overrides = group_overrides
+    await s.apply_group_overrides()
+    assert s.environment["AM_I_ADMIN"] == "yes"
+    assert s.environment["AM_I_USER"] == "yes"
+
+    admin_user = find_user(app.db, "user")
+    s = Spawner(user=admin_user)
+    s.group_overrides = group_overrides
+    await s.apply_group_overrides()
+    assert s.environment["AM_I_USER"] == "yes"
+    assert "AM_I_ADMIN" not in s.environment
+
+
+async def test_group_override_callable(app):
+    app.load_groups = {
+        "admin": {"users": ["admin"]},
+        "user": {"users": ["admin", "user"]},
+    }
+    await app.init_groups()
+
+    def group_overrides(spawner):
+        return {
+            "01-admin-mem-limit": {
+                "groups": ["admin"],
+                "spawner_override": {"start_timeout": 120},
+            }
+        }
+
+    admin_user = find_user(app.db, "admin")
+    s = Spawner(user=admin_user)
+    s.start_timeout = 60
+    s.group_overrides = group_overrides
+    await s.apply_group_overrides()
+    assert s.start_timeout == 120
+
+    non_admin_user = find_user(app.db, "user")
+    s = Spawner(user=non_admin_user)
+    s.start_timeout = 60
+    s.group_overrides = group_overrides
+    await s.apply_group_overrides()
+    assert s.start_timeout == 60

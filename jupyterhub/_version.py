@@ -3,7 +3,7 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 # version_info updated by running `tbump`
-version_info = (5, 0, 0, "", "dev")
+version_info = (5, 2, 0, "", "dev")
 
 # pep 440 version: no dot before beta/rc, but before .dev
 # 0.1.0rc1
@@ -70,6 +70,4 @@ def _check_version(hub_version, singleuser_version, log):
                 singleuser_version,
             )
     else:
-        log.debug(
-            "jupyterhub and jupyterhub-singleuser both on version %s" % hub_version
-        )
+        log.debug(f"jupyterhub and jupyterhub-singleuser both on version {hub_version}")

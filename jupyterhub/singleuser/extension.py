@@ -44,26 +44,17 @@ from jupyterhub._version import __version__, _check_version
 from jupyterhub.log import log_request
 from jupyterhub.services.auth import HubOAuth, HubOAuthCallbackHandler
 from jupyterhub.utils import (
+    _bool_env,
     exponential_backoff,
     isoformat,
     make_ssl_context,
     url_path_join,
 )
 
+from ._decorator import allow_unauthenticated
 from ._disable_user_config import _disable_user_config
 
 SINGLEUSER_TEMPLATES_DIR = str(Path(__file__).parent.resolve().joinpath("templates"))
-
-
-def _bool_env(key):
-    """Cast an environment variable to bool
-
-    0, empty, or unset is False; All other values are True.
-    """
-    if os.environ.get(key, "") in {"", "0"}:
-        return False
-    else:
-        return True
 
 
 def _exclude_home(path_list):
@@ -78,6 +69,7 @@ def _exclude_home(path_list):
 
 
 class JupyterHubLogoutHandler(LogoutHandler):
+    @allow_unauthenticated
     def get(self):
         hub_auth = self.identity_provider.hub_auth
         # clear token stored in single-user cookie (set by hub_auth)
@@ -105,6 +97,10 @@ class JupyterHubOAuthCallbackHandler(HubOAuthCallbackHandler):
     def initialize(self, hub_auth):
         self.hub_auth = hub_auth
 
+    @allow_unauthenticated
+    async def get(self):
+        return await super().get()
+
 
 class JupyterHubIdentityProvider(IdentityProvider):
     """Identity Provider for JupyterHub OAuth
@@ -126,6 +122,9 @@ class JupyterHubIdentityProvider(IdentityProvider):
     def _default_hub_auth(self):
         # HubAuth gets most of its config from the environment
         return HubOAuth(parent=self)
+
+    def _patch_xsrf(self, handler):
+        self.hub_auth._patch_xsrf(handler)
 
     def _patch_get_login_url(self, handler):
         original_get_login_url = handler.get_login_url
@@ -161,6 +160,7 @@ class JupyterHubIdentityProvider(IdentityProvider):
         if hasattr(handler, "_jupyterhub_user"):
             return handler._jupyterhub_user
         self._patch_get_login_url(handler)
+        self._patch_xsrf(handler)
         user = await self.hub_auth.get_user(handler, sync=False)
         if user is None:
             handler._jupyterhub_user = None
@@ -412,9 +412,12 @@ class JupyterHubSingleUser(ExtensionApp):
             return
 
         last_activity_timestamp = isoformat(last_activity)
+        failure_count = 0
 
         async def notify():
+            nonlocal failure_count
             self.log.debug("Notifying Hub of activity %s", last_activity_timestamp)
+
             req = HTTPRequest(
                 url=self.hub_activity_url,
                 method='POST',
@@ -433,8 +436,12 @@ class JupyterHubSingleUser(ExtensionApp):
             )
             try:
                 await client.fetch(req)
-            except Exception:
-                self.log.exception("Error notifying Hub of activity")
+            except Exception as e:
+                failure_count += 1
+                # log traceback at debug-level
+                self.log.debug("Error notifying Hub of activity", exc_info=True)
+                # only one-line error visible by default
+                self.log.error("Error notifying Hub of activity: %s", e)
                 return False
             else:
                 return True
@@ -446,6 +453,8 @@ class JupyterHubSingleUser(ExtensionApp):
             max_wait=15,
             timeout=60,
         )
+        if failure_count:
+            self.log.info("Sent hub activity after %s retries", failure_count)
         self._last_activity_sent = last_activity
 
     async def keep_activity_updated(self):
@@ -632,6 +641,9 @@ class JupyterHubSingleUser(ExtensionApp):
         app.web_app.settings["page_config_hook"] = (
             app.identity_provider.page_config_hook
         )
+        # disable xsrf_cookie checks by Tornado, which run too early
+        # checks in Jupyter Server are unconditional
+        app.web_app.settings["xsrf_cookies"] = False
         # if the user has configured a log function in the tornado settings, do not override it
         if not 'log_function' in app.config.ServerApp.get('tornado_settings', {}):
             app.web_app.settings["log_function"] = log_request
@@ -641,6 +653,9 @@ class JupyterHubSingleUser(ExtensionApp):
 
         # check jupyterhub version
         app.io_loop.run_sync(self.check_hub_version)
+
+        # set default CSP to prevent iframe embedding across jupyterhub components
+        headers.setdefault("Content-Security-Policy", "frame-ancestors 'none'")
 
         async def _start_activity():
             self._activity_task = asyncio.ensure_future(self.keep_activity_updated())

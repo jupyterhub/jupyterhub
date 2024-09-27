@@ -103,6 +103,9 @@ jobs:
             subset: singleuser
           - python: "3.11"
             browser: browser
+          - python: "3.11"
+            subdomain: subdomain
+            browser: browser
           - python: "3.12"
             main_dependencies: main_dependencies
 
@@ -155,6 +158,11 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "${{ matrix.python }}"
+          cache: pip
+          cache-dependency-path: |
+            pyproject.toml
+            requirements.txt
+            ci/oldest-dependencies/requirements.old
 
       - name: Install Python dependencies
         run: |
@@ -165,7 +173,7 @@ jobs:
             # make sure our `>=` pins really do express our minimum supported versions
             pip install -r ci/oldest-dependencies/requirements.old -e .
           else
-            pip install -e ".[test]"
+            pip install --pre -e ".[test]"
           fi
 
           if [ "${{ matrix.main_dependencies }}" != "" ]; then

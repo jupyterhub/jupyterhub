@@ -1,0 +1,32 @@
+{# djlint: off #}
+{%- extends "!layout.html" %}
+{# not sure why, but theme CSS prevents scrolling within redoc content
+ # If this were fixed, we could keep the navbar and footer
+ #}
+{% block css %}
+{% endblock css %}
+{% block docs_navbar %}
+{% endblock docs_navbar %}
+{% block footer %}
+{% endblock footer %}
+{%- block body_tag -%}<body>{%- endblock body_tag %}
+{%- block extrahead %}
+  {{ super() }}
+  <link href="{{ pathto('_static/redoc-fonts.css', 1) }}" rel="stylesheet" />
+  <script src="{{ pathto('_static/redoc.js', 1) }}"></script>
+{%- endblock extrahead %}
+{%- block content %}
+  <redoc id="redoc-spec"></redoc>
+  <script>
+    if (location.protocol === "file:") {
+      document.body.innerText = "Rendered API specification doesn't work with file: protocol. Use sphinx-autobuild to do local builds of the docs, served over HTTP."
+    } else {
+      Redoc.init(
+        "{{ pathto('_static/rest-api.yml', 1) }}",
+          {{ meta.redoc_options | default ({}) }},
+        document.getElementById("redoc-spec"),
+      );
+    }
+  </script>
+{%- endblock content %}
+{# djlint: on #}

@@ -48,7 +48,7 @@ scope_definitions = {
         'doc_description': 'Access the admin page. Permission to take actions via the admin page granted separately.',
     },
     'admin:users': {
-        'description': 'Read, write, create and delete users and their authentication state, not including their servers or tokens.',
+        'description': 'Read, modify, create, and delete users and their authentication state, not including their servers or tokens. This is an extremely privileged scope and should be considered tantamount to superuser.',
         'subscopes': ['admin:auth_state', 'users', 'read:roles:users', 'delete:users'],
     },
     'admin:auth_state': {'description': 'Read a user’s authentication state.'},
@@ -64,7 +64,7 @@ scope_definitions = {
         'subscopes': ['read:users:name'],
     },
     'read:users': {
-        'description': 'Read user models (excluding including servers, tokens and authentication state).',
+        'description': 'Read user models (including servers, tokens and authentication state).',
         'subscopes': [
             'read:users:name',
             'read:users:groups',
@@ -109,7 +109,7 @@ scope_definitions = {
         'subscopes': ['groups', 'read:roles:groups', 'delete:groups'],
     },
     'groups': {
-        'description': 'Read and write group information, including adding/removing users to/from groups.',
+        'description': 'Read and write group information, including adding/removing any users to/from groups. Note: adding users to groups may affect permissions.',
         'subscopes': ['read:groups', 'list:groups'],
     },
     'list:groups': {
@@ -212,7 +212,7 @@ def _intersect_expanded_scopes(scopes_a, scopes_b, db=None):
     scopes_b = frozenset(scopes_b)
 
     # cached lookups for group membership of users and servers
-    @lru_cache()
+    @lru_cache
     def groups_for_user(username):
         """Get set of group names for a given username"""
         # if we need a group lookup, the result is not cacheable
@@ -225,7 +225,7 @@ def _intersect_expanded_scopes(scopes_a, scopes_b, db=None):
         )
         return {row[0] for row in group_query}
 
-    @lru_cache()
+    @lru_cache
     def groups_for_server(server):
         """Get set of group names for a given server"""
         username, _, servername = server.partition("/")
@@ -456,7 +456,7 @@ def expand_share_scopes(share):
     )
 
 
-@lru_cache()
+@lru_cache
 def _expand_self_scope(username):
     """
     Users have a metascope 'self' that should be expanded to standard user privileges.
@@ -807,13 +807,17 @@ def has_scope(scope, have_scopes, *, post_filter=False, db=None):
         return False
 
 
+class ScopeNotFound(KeyError):
+    pass
+
+
 def _check_scopes_exist(scopes, who_for=None):
     """Check if provided scopes exist
 
     Arguments:
       scopes (list): list of scopes to check
 
-    Raises KeyError if scope does not exist
+    Raises ScopeNotFound if scope does not exist
     """
 
     allowed_scopes = set(scope_definitions.keys())
@@ -829,14 +833,14 @@ def _check_scopes_exist(scopes, who_for=None):
         scopename, _, filter_ = scope.partition('!')
         if scopename not in allowed_scopes:
             if scopename == "all":
-                raise KeyError("Draft scope 'all' is now called 'inherit'")
-            raise KeyError(f"Scope '{scope}' {log_for} does not exist")
+                raise ScopeNotFound("Draft scope 'all' is now called 'inherit'")
+            raise ScopeNotFound(f"Scope '{scope}' {log_for} does not exist")
         if filter_:
             full_filter = f"!{filter_}"
             if full_filter not in exact_filters and not full_filter.startswith(
                 filter_prefixes
             ):
-                raise KeyError(
+                raise ScopeNotFound(
                     f"Scope filter {filter_} '{full_filter}' in scope '{scope}' {log_for} does not exist"
                 )
 
@@ -1253,7 +1257,7 @@ def define_custom_scopes(scopes):
         The keys are the scopes,
         while the values are dictionaries with at least a `description` field,
         and optional `subscopes` field.
-        %s
+        CUSTOM_SCOPE_DESCRIPTION
     Examples::
 
         define_custom_scopes(
@@ -1270,9 +1274,7 @@ def define_custom_scopes(scopes):
                 },
             }
         )
-    """ % indent(
-        _custom_scope_description, " " * 8
-    )
+    """.replace("CUSTOM_SCOPE_DESCRIPTION", indent(_custom_scope_description, " " * 8))
     for scope, scope_definition in scopes.items():
         if scope in scope_definitions and scope_definitions[scope] != scope_definition:
             raise ValueError(

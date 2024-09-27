@@ -1,12 +1,17 @@
 """Tests for utilities"""
 
 import asyncio
+import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import Mock
 
+if sys.version_info >= (3, 10):
+    from contextlib import aclosing
+else:
+    from async_generator import aclosing
+
 import pytest
-from async_generator import aclosing
 from tornado import gen
 from tornado.concurrent import run_on_executor
 from tornado.httpserver import HTTPRequest

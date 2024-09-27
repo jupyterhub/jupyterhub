@@ -1,21 +1,22 @@
-openapi: 3.0.3
-# note: 3.1.0 required for requestBody on DELETE
-# which we should maybe move away from
+openapi: 3.1.0
 info:
-  title: JupyterHub
-  description: The REST API for JupyterHub
+  title: JupyterHub REST API
+  description: |
+    The REST API for JupyterHub.
+    <a href="./">Return to JupyterHub documentation</a>.
   license:
     name: BSD-3-Clause
-  version: 5.0.0.dev
+    identifier: BSD-3-Clause
+  version: 5.2.0.dev
 servers:
   - url: /hub/api
 security:
   - token: []
-  - oauth2:
-      - self
+  - oauth2: []
 paths:
   /:
     get:
+      operationId: get-api
       summary: Get JupyterHub version
       description: |
         This endpoint is not authenticated for the purpose of clients and user
@@ -33,6 +34,7 @@ paths:
                     description: The version of JupyterHub itself
   /info:
     get:
+      operationId: get-info
       summary: Get detailed info about JupyterHub
       description: |
         Detailed JupyterHub information, including Python version,
@@ -149,7 +151,12 @@ paths:
             - read:hub
   /user:
     get:
-      summary: Return authenticated user's model
+      operationId: get-current-user
+      summary: Get current user
+      description: |
+        Returns the User model for the owner of the authenticating token.
+        Includes information about the requesting token itself,
+        such as the currently authorized scopes.
       responses:
         200:
           description: |
@@ -160,17 +167,10 @@ paths:
               schema:
                 $ref: "#/components/schemas/RequestIdentity"
       security:
-        - oauth2:
-            - read:users
-            - read:users:name
-            - read:users:groups
-            - read:users:activity
-            - read:servers
-            - read:roles:users
-            - admin:auth_state
-            - admin:server_state
+        - oauth2: []
   /users:
     get:
+      operationId: get-users
       summary: List users
       parameters:
         - name: state
@@ -202,6 +202,30 @@ paths:
           schema:
             type: boolean
           allowEmptyValue: true
+        - name: sort
+          in: query
+          description: |
+            Sort users by this key (new in JupyterHub 5.0).
+            Default: `id` (opaque but stable internal order).
+            Supported fields: `id`, `name`, `last_activity`.
+            Results will be in ascending order.
+            Descending order can be requested with a `-` prefix,
+            e.g. `sort=-last_activity` for most recently active users first.
+          schema:
+            type: string
+          examples:
+            default:
+              value: id
+              summary: |
+                default: sort by internal id
+            by_name:
+              value: name
+              summary: |
+                sort by user.name
+            recent_activity:
+              value: "-last_activity"
+              summary: |
+                sort by last activity, most recent first
       responses:
         200:
           description: The Hub's user list
@@ -213,15 +237,9 @@ paths:
                   $ref: "#/components/schemas/User"
       security:
         - oauth2:
-            - read:users
-            - read:users:name
-            - read:users:groups
-            - read:users:activity
-            - read:servers
-            - read:roles:users
-            - admin:auth_state
-            - admin:server_state
+            - list:users
     post:
+      operationId: post-users
       summary: Create multiple users
       requestBody:
         content:
@@ -251,9 +269,9 @@ paths:
       security:
         - oauth2:
             - admin:users
-      x-codegen-request-body-name: body
   /users/{name}:
     get:
+      operationId: get-user
       summary: Get a user by name
       parameters:
         - $ref: "#/components/parameters/userName"
@@ -273,14 +291,8 @@ paths:
       security:
         - oauth2:
             - read:users
-            - read:users:name
-            - read:users:groups
-            - read:users:activity
-            - read:servers
-            - read:roles:users
-            - admin:auth_state
-            - admin:server_state
     post:
+      operationId: post-user
       summary: Create a single user
       parameters:
         - $ref: "#/components/parameters/userName"
@@ -295,6 +307,7 @@ paths:
         - oauth2:
             - admin:users
     delete:
+      operationId: delete-user
       summary: Delete a user
       parameters:
         - $ref: "#/components/parameters/userName"
@@ -304,8 +317,9 @@ paths:
           content: {}
       security:
         - oauth2:
-            - admin:users
+            - delete:users
     patch:
+      operationId: patch-user
       summary: Modify a user
       description: Change a user's name or admin status
       parameters:
@@ -340,9 +354,9 @@ paths:
       security:
         - oauth2:
             - admin:users
-      x-codegen-request-body-name: body
   /users/{name}/activity:
     post:
+      operationId: post-user-activity
       summary: Notify Hub of activity for a given user
       description:
         Notify the Hub of activity by the user, e.g. accessing a service
@@ -390,6 +404,8 @@ paths:
                     last_activity: 2019-02-06T12:54:14Z
         required: false
       responses:
+        200:
+          description: Successfully updated activity
         401:
           description: Authentication/Authorization error
           content: {}
@@ -399,9 +415,9 @@ paths:
       security:
         - oauth2:
             - users:activity
-      x-codegen-request-body-name: body
   /users/{name}/server:
     post:
+      operationId: post-user-server
       summary: Start a user's single-user notebook server
       parameters:
         - $ref: "#/components/parameters/userName"
@@ -430,8 +446,9 @@ paths:
       security:
         - oauth2:
             - servers
-      x-codegen-request-body-name: options
+
     delete:
+      operationId: delete-user-server
       summary: Stop a user's server
       parameters:
         - $ref: "#/components/parameters/userName"
@@ -446,9 +463,10 @@ paths:
           content: {}
       security:
         - oauth2:
-            - servers
+            - delete:servers
   /users/{name}/servers/{server_name}:
     post:
+      operationId: post-user-server-name
       summary: Start a user's named server
       parameters:
         - $ref: "#/components/parameters/userName"
@@ -476,8 +494,8 @@ paths:
       security:
         - oauth2:
             - servers
-      x-codegen-request-body-name: options
     delete:
+      operationId: delete-user-server-name
       summary: Stop a user's named server
       description: |
         To remove the named server in addition to deleting it,
@@ -490,21 +508,20 @@ paths:
         - $ref: "#/components/parameters/userName"
         - $ref: "#/components/parameters/serverName"
 
-      # FIXME: openapi 3.1 is required for requestBody on DELETE
-      # we probably shouldn't have request bodies on DELETE
-      # requestBody:
-      #   content:
-      #     application/json:
-      #       schema:
-      #         type: object
-      #         properties:
-      #           remove:
-      #             type: boolean
-      #             description: |
-      #               Whether to fully remove the server, rather than just stop it.
-      #               Removing a server deletes things like the state of the stopped server.
-      #               Default: false.
-      #   required: false
+      # FIXME: we probably shouldn't have request bodies on DELETE
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                remove:
+                  type: boolean
+                  description: |
+                    Whether to fully remove the server, rather than just stop it.
+                    Removing a server deletes things like the state of the stopped server.
+                    Default: false.
+        required: false
       responses:
         202:
           description:
@@ -516,11 +533,11 @@ paths:
           content: {}
       security:
         - oauth2:
-            - servers
-      # x-codegen-request-body-name: body
+            - delete:servers
 
   /users/{name}/shared:
     get:
+      operationId: get-user-shared
       summary: List servers shared with user
       description:
         Returns list of Shares granting the user access to servers owned
@@ -548,6 +565,7 @@ paths:
 
   /users/{name}/shared/{owner}/{server_name}:
     get:
+      operationId: get-user-shared-server
       summary: |
         Get user's shared access to server
       description: |
@@ -569,6 +587,7 @@ paths:
         - oauth2:
             - read:users:shares
     delete:
+      operationId: delete-user-shared-server
       summary: |
         Leave a shared server
       description: |
@@ -591,6 +610,7 @@ paths:
 
   /users/{name}/tokens:
     get:
+      operationId: get-user-tokens
       summary: List tokens for the user
       parameters:
         - $ref: "#/components/parameters/userName"
@@ -600,9 +620,12 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Token"
+                type: object
+                properties:
+                  api_tokens:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Token"
         401:
           description: Authentication/Authorization error
           content: {}
@@ -613,11 +636,12 @@ paths:
         - oauth2:
             - read:tokens
     post:
+      operationId: post-user-tokens
       summary: Create a new token for the user
       description: |
         Creates a new token owned by the user.
         Permissions can be limited by specifying a list of `scopes` in the JSON request body
-        (starting in JupyerHub 3.0; previously, permissions could be specified as `roles`,
+        (starting in JupyterHub 3.0; previously, permissions could be specified as `roles`,
         which is deprecated in 3.0).
       parameters:
         - $ref: "#/components/parameters/userName"
@@ -660,7 +684,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Token"
+                $ref: "#/components/schemas/NewToken"
         400:
           description: Body must be a JSON dict or empty
           content: {}
@@ -670,9 +694,10 @@ paths:
       security:
         - oauth2:
             - tokens
-      x-codegen-request-body-name: token_params
+
   /users/{name}/tokens/{token_id}:
     get:
+      operationId: get-user-token
       summary: Get one token
       description: Get the details for one token by id
       parameters:
@@ -684,7 +709,7 @@ paths:
             type: string
       responses:
         200:
-          description: The info for the new token
+          description: The info for the token
           content:
             application/json:
               schema:
@@ -693,6 +718,7 @@ paths:
         - oauth2:
             - read:tokens
     delete:
+      operationId: delete-user-token
       summary: Delete (revoke) a token by id
       parameters:
         - $ref: "#/components/parameters/userName"
@@ -710,6 +736,7 @@ paths:
             - tokens
   /groups:
     get:
+      operationId: get-groups
       summary: List groups
       parameters:
         - $ref: "#/components/parameters/paginationOffset"
@@ -725,11 +752,10 @@ paths:
                   $ref: "#/components/schemas/Group"
       security:
         - oauth2:
-            - read:groups
-            - read:groups:name
-            - read:roles:groups
+            - list:groups
   /groups/{name}:
     get:
+      operationId: get-group
       summary: Get a group by name
       parameters:
         - $ref: "#/components/parameters/groupName"
@@ -743,9 +769,8 @@ paths:
       security:
         - oauth2:
             - read:groups
-            - read:groups:name
-            - read:roles:groups
     post:
+      operationId: post-group
       summary: Create a group
       parameters:
         - $ref: "#/components/parameters/groupName"
@@ -760,6 +785,7 @@ paths:
         - oauth2:
             - admin:groups
     delete:
+      operationId: delete-group
       summary: Delete a group
       parameters:
         - $ref: "#/components/parameters/groupName"
@@ -769,10 +795,11 @@ paths:
           content: {}
       security:
         - oauth2:
-            - admin:groups
+            - delete:groups
 
   /groups/{name}/shared:
     get:
+      operationId: get-group-shared
       summary: List servers shared with group
       description: |
         Lists shares granting `group` access to shared servers
@@ -799,6 +826,7 @@ paths:
 
   /groups/{name}/shared/{owner}/{server_name}:
     get:
+      operationId: get-group-shared-server
       summary: Get group's shared access
       description: |
         Get the Share representing a single group's access to a single server
@@ -818,6 +846,7 @@ paths:
         - oauth2:
             - read:groups:shares
     delete:
+      operationId: delete-group-shared-server
       summary: Leave a share (group)
       description: |
         Leave a share by revoking a group's permissions on a single server
@@ -838,6 +867,7 @@ paths:
 
   /groups/{name}/users:
     post:
+      operationId: post-group-users
       summary: Add users to a group
       parameters:
         - $ref: "#/components/parameters/groupName"
@@ -864,8 +894,8 @@ paths:
       security:
         - oauth2:
             - groups
-      x-codegen-request-body-name: body
     delete:
+      operationId: delete-group-users
       summary: |
         Remove users from a group
       description: |
@@ -880,19 +910,19 @@ paths:
 
       parameters:
         - $ref: "#/components/parameters/groupName"
-      # requestBody:
-      #   description: The users to remove from the group
-      #   content:
-      #     application/json:
-      #       schema:
-      #         type: object
-      #         properties:
-      #           users:
-      #             type: array
-      #             description: List of usernames to remove from the group
-      #             items:
-      #               type: string
-      #   required: true
+      requestBody:
+        description: The users to remove from the group
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                users:
+                  type: array
+                  description: List of usernames to remove from the group
+                  items:
+                    type: string
+        required: true
       responses:
         200:
           description: The users have been removed from the group
@@ -900,10 +930,10 @@ paths:
       security:
         - oauth2:
             - groups
-      x-codegen-request-body-name: body
 
   /groups/{name}/properties:
     put:
+      operationId: put-group-properties
       summary: Set group properties
       description: |
         Set properties on a group
@@ -929,10 +959,10 @@ paths:
       security:
         - oauth2:
             - groups
-      x-codegen-request-body-name: body
 
   /shares/{owner}:
     get:
+      operationId: get-shares-owner
       summary: List shares by owner
       description: |
         List shares granting access to any of owner's servers
@@ -961,6 +991,7 @@ paths:
 
   /shares/{owner}/{server_name}:
     get:
+      operationId: get-shares-server
       summary: List server shares
       description: |
         List shares granting access to a single server
@@ -988,6 +1019,7 @@ paths:
         - oauth2:
             - read:shares
     post:
+      operationId: post-shares-server
       summary: Grant shared access
       description: |
         Grant shared access to a single server
@@ -1024,7 +1056,6 @@ paths:
                   items:
                     type: string
         required: true
-      x-codegen-request-body-name: body
       responses:
         200:
           description: The updated Share permissions
@@ -1038,6 +1069,7 @@ paths:
             - read:users:name
             - read:groups:name
     patch:
+      operationId: patch-shares-server
       summary: Revoke shared access
       description: |
         Revoke shared access to a single server for a single user or group.
@@ -1074,7 +1106,6 @@ paths:
                   items:
                     type: string
         required: true
-      x-codegen-request-body-name: body
       responses:
         200:
           description: |
@@ -1090,6 +1121,7 @@ paths:
             - read:users:name
             - read:groups:name
     delete:
+      operationId: delete-shares-server
       summary: Revoke all shared access
       description: |
         Revoke all shared access to a given server
@@ -1100,13 +1132,14 @@ paths:
       responses:
         204:
           description: |
-            All shares for teh server have been deleted
+            All shares for the server have been deleted
       security:
         - oauth2:
             - shares
 
   /share-codes/{owner}:
     get:
+      operationId: get-share-codes-owner
       summary: List share codes by owner
       description: |
         List share codes granting access to a user's servers
@@ -1135,6 +1168,7 @@ paths:
 
   /share-codes/{owner}/{server_name}:
     get:
+      operationId: get-share-codes-server
       summary: List share codes
       description: |
         List share codes which can be exchanged for access to a single server
@@ -1162,6 +1196,7 @@ paths:
         - oauth2:
             - read:shares
     post:
+      operationId: post-share-code
       summary: Issue share code
       description: |
         Issue a share code, which can be exchanged for shared access to a single server
@@ -1187,7 +1222,6 @@ paths:
                   items:
                     type: string
         required: true
-      x-codegen-request-body-name: body
       responses:
         200:
           description: |
@@ -1209,12 +1243,21 @@ paths:
                         example: abc123
                       accept_url:
                         type: string
-                        description: The URL for acepting the code
+                        description: The URL path for accepting the code
                         example: /hub/accept-share?code=abc123
+                      full_accept_url:
+                        type:
+                          - string
+                          - "null"
+                        description: |
+                          The full URL for accepting the code,
+                          if JupyterHub.public_url configuration is defined.
+                        example: https://hub.example.org/hub/accept-share?code=abc123
       security:
         - oauth2:
             - shares
     delete:
+      operationId: delete-share-code
       summary: Revoke share code
       description: |
         Revoke a share code by id or code.
@@ -1244,6 +1287,7 @@ paths:
 
   /services:
     get:
+      operationId: get-services
       summary: List services
       parameters:
         - $ref: "#/components/parameters/paginationOffset"
@@ -1260,10 +1304,9 @@ paths:
       security:
         - oauth2:
             - read:services
-            - read:services:name
-            - read:roles:services
   /services/{name}:
     get:
+      operationId: get-service
       summary: Get a service by name
       parameters:
         - name: name
@@ -1282,10 +1325,9 @@ paths:
       security:
         - oauth2:
             - read:services
-            - read:services:name
-            - read:roles:services
   /proxy:
     get:
+      operationId: get-proxy
       summary: Get the proxy's routing table
       description:
         A convenience alias for getting the routing table directly from
@@ -1307,6 +1349,7 @@ paths:
         - oauth2:
             - proxy
     post:
+      operationId: post-proxy
       summary: Force the Hub to sync with the proxy
       responses:
         200:
@@ -1316,6 +1359,7 @@ paths:
         - oauth2:
             - proxy
     patch:
+      operationId: patch-proxy
       summary: Notify the Hub about a new proxy
       description: Notifies the Hub of a new proxy to use.
       requestBody:
@@ -1347,9 +1391,10 @@ paths:
       security:
         - oauth2:
             - proxy
-      x-codegen-request-body-name: body
   /authorizations/token:
     post:
+      deprecated: true
+      operationId: post-auth-token
       summary: Request a new API token
       description: |
         Request a new API token to use with the JupyterHub REST API.
@@ -1385,9 +1430,11 @@ paths:
       security:
         - oauth2:
             - tokens
-      x-codegen-request-body-name: credentials
+
   /authorizations/token/{token}:
     get:
+      deprecated: true
+      operationId: get-auth-token
       summary: Identify a user or service from an API token
       parameters:
         - name: token
@@ -1407,6 +1454,7 @@ paths:
             - (no_scope)
   /authorizations/cookie/{cookie_name}/{cookie_value}:
     get:
+      operationId: get-auth-cookie
       summary: Identify a user from a cookie
       description:
         Used by single-user notebook servers to hand off cookie authentication
@@ -1435,6 +1483,7 @@ paths:
       deprecated: true
   /oauth2/authorize:
     get:
+      operationId: get-oauth-authorize
       summary: OAuth 2.0 authorize endpoint
       description: |
         Redirect users to this URL to begin the OAuth process.
@@ -1472,6 +1521,7 @@ paths:
           content: {}
   /oauth2/token:
     post:
+      operationId: post-oauth-token
       summary: Request an OAuth2 token
       description: |
         Request an OAuth2 token from an authorization code.
@@ -1480,6 +1530,7 @@ paths:
         content:
           application/x-www-form-urlencoded:
             schema:
+              type: object
               required:
                 - client_id
                 - client_secret
@@ -1496,6 +1547,8 @@ paths:
                 grant_type:
                   type: string
                   description: The grant type (always 'authorization_code')
+                  enum:
+                    - authorization_code
                 code:
                   type: string
                   description: The code provided by the authorization redirect
@@ -1519,6 +1572,7 @@ paths:
                     description: Will always be 'Bearer'
   /shutdown:
     post:
+      operationId: post-shutdown
       summary: Shutdown the Hub
       requestBody:
         content:
@@ -1542,12 +1596,11 @@ paths:
           description: Shutdown successful
           content: {}
         400:
-          description: Unexpeced value for proxy or servers
+          description: Unexpected value for proxy or servers
           content: {}
       security:
         - oauth2:
             - shutdown
-      x-codegen-request-body-name: body
 
 components:
   parameters:
@@ -1630,8 +1683,9 @@ components:
           description: |
             fields for the next page, if any.
             Null if this is the last page.
-          type: object
-          nullable: true
+          type:
+            - object
+            - "null"
           properties:
             offset:
               type: number
@@ -1735,12 +1789,31 @@ components:
         url:
           type: string
           description: |
-            The URL where the server can be accessed
+            The URL path where the server can be accessed
             (typically /user/:name/:server.name/).
+            Will be a full URL if subdomains are configured.
         progress_url:
           type: string
           description: |
-            The URL for an event-stream to retrieve events during a spawn.
+            The URL path for an event-stream to retrieve events during a spawn.
+        full_url:
+          type:
+            - string
+            - "null"
+          description: |
+            The full URL of the server (`https://hub.example.org/user/:name/:servername`).
+            `null` unless JupyterHub.public_url or subdomains are configured.
+
+            Added in 5.0.
+        full_progress_url:
+          type:
+            - string
+            - "null"
+          description: |
+            The full URL for the progress events (`https://hub.example.org/hub/api/users/:name/servers/:servername/progress`).
+            `null` unless JupyterHub.public_url is configured.
+
+            Added in 5.0.
         started:
           type: string
           description: UTC timestamp when the server was last started.
@@ -1779,8 +1852,9 @@ components:
         - type: object
           properties:
             session_id:
-              type: string
-              nullable: true
+              type:
+                - string
+                - "null"
               description: |
                 The session id associated with the request's OAuth token, if any.
                 null, if the request token not associated with a session id.
@@ -1797,6 +1871,16 @@ components:
               example:
                 - "read:users"
                 - "access:servers!user=name"
+            token_id:
+              type:
+                - string
+                - "null"
+              description: |
+                The id of the token authorizing the request, if any.
+                This id can be used to revoke the token via the API.
+                Null if the request is not authorized with a token.
+
+                Added in 5.0.
     Group:
       type: object
       properties:
@@ -1868,7 +1952,14 @@ components:
           description: the server name. '' for the default server.
         url:
           type: string
-          description: the server's URL
+          description: the server's URL (path only when not using subdomains)
+        full_url:
+          type:
+            - string
+            - "null"
+          description: |
+            The full URL of the server (`https://hub.example.org/user/:name/:servername`).
+            `null` unless JupyterHub.public_url or subdomains are configured.
         ready:
           type: boolean
           description: whether the server is ready
@@ -1897,8 +1988,9 @@ components:
           description:
             the group being shared with (exactly one of 'user' or 'group'
             will be non-null, the other will be null)
-          type: object
-          nullable: true
+          type:
+            - object
+            - "null"
           properties:
             name:
               type: string
@@ -1906,8 +1998,9 @@ components:
           description:
             the user being shared with (exactly one of 'user' or 'group'
             will be non-null, the other will be null)
-          type: object
-          nullable: true
+          type:
+            - object
+            - "null"
           properties:
             name:
               type: string
@@ -1931,6 +2024,7 @@ components:
           items:
             type: string
         id:
+          type: string
           description: |
             the share-code's id.
             Can be used to revoke share codes.
@@ -1943,11 +2037,69 @@ components:
             When the share code will expire,
             always in the future.
             `null` if the code does not expire.
-          type: string
-          nullable: true
+          type:
+            - string
+            - "null"
           format: date-time
 
     Token:
+      type: object
+      properties:
+        id:
+          type: string
+          description:
+            The id of the API token. Used for modifying or deleting the
+            token.
+        user:
+          type: string
+          description: The user that owns a token (undefined if owned by a service)
+        service:
+          type: string
+          description: The service that owns the token (undefined of owned by a user)
+        roles:
+          type: array
+          description:
+            Deprecated in JupyterHub 3, always an empty list. Tokens have
+            'scopes' starting from JupyterHub 3.
+          items:
+            type: string
+        scopes:
+          type: array
+          description:
+            List of scopes this token has been assigned. New in JupyterHub
+            3. In JupyterHub 2.x, tokens were assigned 'roles' instead of scopes.
+          items:
+            type: string
+        note:
+          type: string
+          description:
+            A note about the token, typically describing what it was created
+            for.
+        created:
+          type: string
+          description: Timestamp when this token was created
+          format: date-time
+        expires_at:
+          type: string
+          description: Timestamp when this token expires. Null if there is no expiry.
+          format: date-time
+        last_activity:
+          type: string
+          description: |
+            Timestamp of last-seen activity using this token.
+            Can be null if token has never been used.
+          format: date-time
+        session_id:
+          type:
+            - string
+            - "null"
+          description: |
+            The session id associated with the token, if any.
+            Only used for tokens set during oauth flows.
+
+            Added in 2.0.
+
+    NewToken:
       type: object
       properties:
         token:
@@ -1977,7 +2129,7 @@ components:
           type: array
           description:
             List of scopes this token has been assigned. New in JupyterHub
-            3. In JupyterHub 2.x, tokens were assigned 'roles' insead of scopes.
+            3. In JupyterHub 2.x, tokens were assigned 'roles' instead of scopes.
           items:
             type: string
         note:
@@ -2000,31 +2152,25 @@ components:
             Can be null if token has never been used.
           format: date-time
         session_id:
-          type: string
-          nullable: true
+          type:
+            - string
+            - "null"
           description: |
             The session id associated with the token, if any.
             Only used for tokens set during oauth flows.
 
             Added in 2.0.
-  responses:
-    NotFound:
-      description: The specified resource was not found
-      content: {}
-    Unauthorized:
-      description: Authentication/Authorization error
-      content: {}
+
   securitySchemes:
     token:
-      type: apiKey
-      name: Authorization
-      in: header
+      type: http
+      scheme: bearer
     oauth2:
       type: oauth2
       flows:
         authorizationCode:
-          authorizationUrl: https://hub.example/hub/api/oauth2/authorize
-          tokenUrl: https://hub.example/hub/api/oauth2/token
+          authorizationUrl: /hub/api/oauth2/authorize
+          tokenUrl: /hub/api/oauth2/token
           scopes:
             (no_scope): Identify the owner of the requesting entity.
             self:
@@ -2037,8 +2183,9 @@ components:
               Access the admin page. Permission to take actions via the admin
               page granted separately.
             admin:users:
-              Read, write, create and delete users and their authentication
-              state, not including their servers or tokens.
+              Read, modify, create, and delete users and their authentication
+              state, not including their servers or tokens. This is an extremely privileged
+              scope and should be considered tantamount to superuser.
             admin:auth_state: Read a user’s authentication state.
             users:
               Read and write permissions to user models (excluding servers, tokens
@@ -2046,8 +2193,8 @@ components:
             delete:users: Delete users.
             list:users: List users, including at least their names.
             read:users:
-              Read user models (excluding including servers, tokens and
-              authentication state).
+              Read user models (including servers, tokens and authentication
+              state).
             read:users:name: Read names of users.
             read:users:groups: Read users’ group membership.
             read:users:activity: Read time of last user activity.
@@ -2069,8 +2216,8 @@ components:
             read:tokens: Read user tokens.
             admin:groups: Read and write group information, create and delete groups.
             groups:
-              Read and write group information, including adding/removing users
-              to/from groups.
+              "Read and write group information, including adding/removing any
+              users to/from groups. Note: adding users to groups may affect permissions."
             list:groups: List groups, including at least their names.
             read:groups: Read group models.
             read:groups:name: Read group names.

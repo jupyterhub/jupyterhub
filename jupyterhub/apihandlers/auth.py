@@ -46,7 +46,7 @@ class TokenAPIHandler(APIHandler):
         elif orm_token.service:
             model = self.service_model(orm_token.service)
         else:
-            self.log.warning("%s has no user or service. Deleting..." % orm_token)
+            self.log.warning(f"{orm_token} has no user or service. Deleting...")
             self.db.delete(orm_token)
             self.db.commit()
             raise web.HTTPError(404)

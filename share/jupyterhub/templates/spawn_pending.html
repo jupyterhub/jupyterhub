@@ -1,94 +1,95 @@
 {% extends "page.html" %}
-
 {% block main %}
-
-<div class="container">
-  <div class="row">
-    <div class="text-center">
-      {% block message %}
-      <p>Your server is starting up.</p>
-      <p>You will be redirected automatically when it's ready for you.</p>
-      {% endblock %}
-      <div class="progress">
-        <div id="progress-bar" class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%;">
-          <span class="sr-only"><span id="sr-progress">0%</span> Complete</span>
+  <div class="container">
+    <div class="row">
+      <div class="text-center">
+        {% block message %}
+          <p>Your server is starting up.</p>
+          <p>You will be redirected automatically when it's ready for you.</p>
+        {% endblock message %}
+        <div class="progress">
+          <div id="progress-bar"
+               class="progress-bar"
+               role="progressbar"
+               aria-valuenow="0"
+               aria-valuemin="0"
+               aria-valuemax="100">
+            <span class="sr-only"><span id="sr-progress">0%</span> Complete</span>
+          </div>
         </div>
+        <p id="progress-message"></p>
       </div>
-      <p id="progress-message"></p>
+    </div>
+    <div class="row justify-content-center">
+      <div class="col-md-8">
+        <details id="progress-details">
+          <summary>Event log</summary>
+          <div id="progress-log"></div>
+        </details>
+      </div>
     </div>
   </div>
-  <div class="row">
-    <div class="col-md-8 col-md-offset-2">
-      <details id="progress-details">
-        <summary>Event log</summary>
-        <div id="progress-log"></div>
-      </details>
-    </div>
-  </div>
-</div>
-
-{% endblock %}
-
+{% endblock main %}
 {% block script %}
-{{ super() }}
-<script type="text/javascript">
-require(["jquery"], function ($) {
-  $("#refresh").click(function () {
-    window.location.reload();
-  });
+  {{ super() }}
+  <script type="text/javascript">
+    require(["jquery"], function($) {
+      $("#refresh").click(function() {
+        window.location.reload();
+      });
 
-  // hook up event-stream for progress
-  var evtSource = new EventSource("{{ progress_url }}");
-  var progressMessage = $("#progress-message");
-  var progressBar = $("#progress-bar");
-  var srProgress = $("#sr-progress");
-  var progressLog = $("#progress-log");
+      // hook up event-stream for progress
+      var evtSource = new EventSource("{{ progress_url }}");
+      var progressMessage = $("#progress-message");
+      var progressBar = $("#progress-bar");
+      var srProgress = $("#sr-progress");
+      var progressLog = $("#progress-log");
 
-  evtSource.onmessage = function(e) {
-    var evt = JSON.parse(e.data);
-    console.log(evt);
-    if (evt.progress !== undefined) {
-      // update progress
-      var progText = evt.progress.toString();
-      progressBar.attr('aria-valuenow', progText);
-      srProgress.text(progText + '%');
-      progressBar.css('width', progText + '%');
-    }
-    // update message
-    var html_message;
-    if (evt.html_message !== undefined) {
-      progressMessage.html(evt.html_message);
-      html_message = evt.html_message;
-    } else if (evt.message !== undefined) {
-      progressMessage.text(evt.message);
-      html_message = progressMessage.html();
-    }
-    if (html_message) {
-      progressLog.append(
-        $("<div>")
-          .addClass('progress-log-event')
-          .html(html_message)
-      );
-    }
+      evtSource.onmessage = function(e) {
+        var evt = JSON.parse(e.data);
+        console.log(evt);
+        if (evt.progress !== undefined) {
+          // update progress
+          var progText = evt.progress.toString();
+          progressBar.attr('aria-valuenow', progText);
+          srProgress.text(progText + '%');
+          progressBar.css('width', progText + '%');
+        }
+        // update message
+        var html_message;
+        if (evt.html_message !== undefined) {
+          progressMessage.html(evt.html_message);
+          html_message = evt.html_message;
+        } else if (evt.message !== undefined) {
+          progressMessage.text(evt.message);
+          html_message = progressMessage.html();
+        }
+        if (html_message) {
+          progressLog.append(
+            $("<div>")
+            .addClass('progress-log-event')
+            .html(html_message)
+          );
+        }
 
-    if (evt.ready) {
-      evtSource.close();
-      // reload the current page
-      // which should result in a redirect to the running server
-      window.location.reload();
-    }
+        if (evt.ready) {
+          evtSource.close();
+          // reload the current page
+          // which should result in a redirect to the running server
+          window.location.reload();
+        }
 
-    if (evt.failed) {
-      evtSource.close();
-      // turn progress bar red
-      progressBar.addClass('progress-bar-danger');
-      // open event log for debugging
-      $('#progress-details').prop('open', true);
-    }
-  };
+        if (evt.failed) {
+          evtSource.close();
+          // turn progress bar red
+          progressBar.addClass('progress-bar-danger');
+          // open event log for debugging
+          $('#progress-details').prop('open', true);
+        }
+      };
 
-  // signal that page has finished loading (mostly for tests)
-  window._jupyterhub_page_loaded = true;
-});
-</script>
-{% endblock %}
+      // signal that page has finished loading (mostly for tests)
+      window._jupyterhub_page_loaded = true;
+    });
+  </script>
+{% endblock script %}

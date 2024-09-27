@@ -39,14 +39,14 @@ class ShutdownAPIHandler(APIHandler):
                 proxy = data['proxy']
                 if proxy not in {True, False}:
                     raise web.HTTPError(
-                        400, "proxy must be true or false, got %r" % proxy
+                        400, f"proxy must be true or false, got {proxy!r}"
                     )
                 app.cleanup_proxy = proxy
             if 'servers' in data:
                 servers = data['servers']
                 if servers not in {True, False}:
                     raise web.HTTPError(
-                        400, "servers must be true or false, got %r" % servers
+                        400, f"servers must be true or false, got {servers!r}"
                     )
                 app.cleanup_servers = servers
 

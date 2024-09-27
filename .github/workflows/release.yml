@@ -36,6 +36,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: pip
 
       - uses: actions/setup-node@v4
         with:
@@ -84,7 +85,7 @@ jobs:
 
   publish-docker:
     runs-on: ubuntu-22.04
-    timeout-minutes: 20
+    timeout-minutes: 30
 
     services:
       # So that we can test this in PRs/branches
@@ -148,7 +149,7 @@ jobs:
           branchRegex: ^\w[\w-.]*$
 
       - name: Build and push jupyterhub
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           platforms: linux/amd64,linux/arm64
@@ -171,7 +172,7 @@ jobs:
           branchRegex: ^\w[\w-.]*$
 
       - name: Build and push jupyterhub-onbuild
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           build-args: |
             BASE_IMAGE=${{ fromJson(steps.jupyterhubtags.outputs.tags)[0] }}
@@ -194,7 +195,7 @@ jobs:
           branchRegex: ^\w[\w-.]*$
 
       - name: Build and push jupyterhub-demo
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           build-args: |
             BASE_IMAGE=${{ fromJson(steps.onbuildtags.outputs.tags)[0] }}
@@ -220,7 +221,7 @@ jobs:
           branchRegex: ^\w[\w-.]*$
 
       - name: Build and push jupyterhub/singleuser
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           build-args: |
             JUPYTERHUB_VERSION=${{ github.ref_type == 'tag' && github.ref_name || format('git:{0}', github.sha) }}

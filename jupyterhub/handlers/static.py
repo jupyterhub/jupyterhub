@@ -15,7 +15,9 @@ class CacheControlStaticFilesHandler(StaticFileHandler):
         return None
 
     def set_extra_headers(self, path):
-        if "v" not in self.request.arguments:
+        if "v" not in self.request.arguments or self.settings.get(
+            "no_cache_static", False
+        ):
             self.add_header("Cache-Control", "no-cache")
 
 

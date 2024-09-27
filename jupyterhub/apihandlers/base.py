@@ -40,7 +40,7 @@ class APIHandler(BaseHandler):
         return 'application/json'
 
     @property
-    @lru_cache()
+    @lru_cache
     def accepts_pagination(self):
         """Return whether the client accepts the pagination preview media type"""
         accept_header = self.request.headers.get("Accept", "")
@@ -76,15 +76,8 @@ class APIHandler(BaseHandler):
 
         return True
 
-    async def prepare(self):
-        await super().prepare()
-        # tornado only checks xsrf on non-GET
-        # we also check xsrf on GETs to API endpoints
-        # make sure this runs after auth, which happens in super().prepare()
-        if self.request.method not in {"HEAD", "OPTIONS"} and self.settings.get(
-            "xsrf_cookies"
-        ):
-            self.check_xsrf_cookie()
+    # we also check xsrf on GETs to API endpoints
+    _xsrf_safe_methods = {"HEAD", "OPTIONS"}
 
     def check_xsrf_cookie(self):
         if not hasattr(self, '_jupyterhub_user'):
@@ -209,7 +202,22 @@ class APIHandler(BaseHandler):
             'url': url_path_join(user.url, url_escape_path(spawner.name), '/'),
             'user_options': spawner.user_options,
             'progress_url': user.progress_url(spawner.name),
+            'full_url': None,
+            'full_progress_url': None,
         }
+        # fill out full_url fields
+        public_url = self.settings.get("public_url")
+        if urlparse(model["url"]).netloc:
+            # if using subdomains, this is already a full URL
+            model["full_url"] = model["url"]
+        if public_url:
+            model["full_progress_url"] = urlunparse(
+                public_url._replace(path=model["progress_url"])
+            )
+            if not model["full_url"]:
+                # set if not defined already by subdomain
+                model["full_url"] = urlunparse(public_url._replace(path=model["url"]))
+
         scope_filter = self.get_scope_filter('admin:server_state')
         if scope_filter(spawner, kind='server'):
             model['state'] = state
@@ -352,6 +360,10 @@ class APIHandler(BaseHandler):
             if include_stopped_servers:
                 # add any stopped servers in the db
                 seen = set(servers.keys())
+                if isinstance(user, orm.User):
+                    # need high-level User wrapper for spawner model
+                    # FIXME: this shouldn't be needed!
+                    user = self.users[user]
                 for name, orm_spawner in user.orm_spawners.items():
                     if name not in seen and scope_filter(orm_spawner, kind='server'):
                         servers[name] = self.server_model(orm_spawner, user=user)
@@ -449,15 +461,14 @@ class APIHandler(BaseHandler):
             name (str): name of the model, used in error messages
         """
         if not isinstance(model, dict):
-            raise web.HTTPError(400, "Invalid JSON data: %r" % model)
+            raise web.HTTPError(400, f"Invalid JSON data: {model!r}")
         if not set(model).issubset(set(model_types)):
-            raise web.HTTPError(400, "Invalid JSON keys: %r" % model)
+            raise web.HTTPError(400, f"Invalid JSON keys: {model!r}")
         for key, value in model.items():
             if not isinstance(value, model_types[key]):
                 raise web.HTTPError(
                     400,
-                    "%s.%s must be %s, not: %r"
-                    % (name, key, model_types[key], type(value)),
+                    f"{name}.{key} must be {model_types[key]}, not: {type(value)!r}",
                 )
 
     def _check_user_model(self, model):

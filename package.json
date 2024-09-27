@@ -10,17 +10,15 @@
   },
   "scripts": {
     "postinstall": "python3 ./bower-lite",
-    "fmt": "prettier --write --trailing-comma es5 share/jupyterhub/static/js/*",
-    "lessc": "lessc"
+    "css": "sass --style compressed -I share/jupyterhub/static/components --source-map share/jupyterhub/static/scss/style.scss:share/jupyterhub/static/css/style.min.css",
+    "build:watch": "npm run css -- --watch"
   },
   "devDependencies": {
-    "less": "^3.9.0",
-    "less-plugin-clean-css": "^1.5.1",
-    "prettier": "^1.16.4"
+    "sass": "^1.74.1"
   },
   "dependencies": {
-    "bootstrap": "^3.4.1",
-    "font-awesome": "^4.7.0",
+    "@fortawesome/fontawesome-free": "^6.1.1",
+    "bootstrap": "^5.3.0",
     "jquery": "^3.5.1",
     "moment": "^2.29.4",
     "requirejs": "^2.3.6"

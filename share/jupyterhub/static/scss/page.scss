@@ -1,0 +1,123 @@
+$logo-height: 28px;
+$grid-float-breakpoint: map-get($grid-breakpoints, "sm");
+
+#jupyterhub-logo {
+  @media (max-width: $grid-float-breakpoint) {
+    // same length as the navbar-toggle element, displayed on responsive mode
+    margin-left: 15px;
+  }
+  .jpy-logo {
+    height: $logo-height;
+    margin-top: calc($navbar-brand-height - $logo-height) / 2;
+  }
+}
+
+.navbar-nav {
+  .nav-link {
+    &:hover,
+    &:focus {
+      // no color change
+      color: var(--#{$prefix}navbar-color);
+      background-color: shift-color($body-tertiary-bg, 10%);
+    }
+  }
+}
+
+[data-bs-theme="dark"] .navbar-nav {
+  .nav-link {
+    &:hover,
+    &:focus {
+      background-color: shift-color($body-tertiary-bg-dark, -20%);
+    }
+  }
+}
+
+.navbar-right {
+  li {
+    span {
+      // same as .nav > li > a from bootstrap, but applied to the span[id="login_widget"]
+      // or any other span that matches .nav > li > span, but only in responsive mode
+      @media (max-width: $grid-float-breakpoint) {
+        position: relative;
+        display: block;
+        padding: 10px 15px;
+      }
+    }
+  }
+}
+
+#header {
+  border-bottom: 1px solid #e7e7e7;
+}
+
+.hidden {
+  display: none;
+}
+
+#progress-log {
+  margin-top: 8px;
+}
+
+.progress-log-event {
+  border-top: 1px solid #e7e7e7;
+  padding: 8px;
+}
+
+// hover-highlight on log events?
+// .progress-log-event:hover {
+//   background: rgba(66, 165, 245, 0.2);
+// }
+
+.feedback {
+  &-container {
+    margin-top: 16px;
+  }
+
+  &-widget {
+    padding: 5px 0px 0px 6px;
+    i {
+      font-size: 2em;
+      color: lightgrey;
+    }
+  }
+}
+
+// common form display
+
+.form-control:focus {
+  box-shadow:
+    inset 0 1px 1px rgba(0, 0, 0, 0.075),
+    0 0 8px $jupyter-orange;
+  border-color: $jupyter-orange;
+  outline-color: $jupyter-orange;
+}
+
+.btn-jupyter {
+  @include button-variant(
+    $background: $jupyter-orange,
+    $border: $jupyter-red,
+    $color: #fff,
+    $hover-color: #fff
+  );
+}
+
+// contrast button variants
+// same as btn-dark on light and btn-light on dark
+.btn-contrast,
+[data-bs-theme="light"] .btn-contrast {
+  @extend .btn-dark;
+}
+
+.btn-outline-contrast,
+[data-bs-theme="light"] .btn-outline-contrast {
+  @extend .btn-outline-dark;
+}
+
+[data-bs-theme="dark"] {
+  .btn-contrast {
+    @extend .btn-light;
+  }
+  .btn-outline-contrast {
+    @extend .btn-outline-light;
+  }
+}

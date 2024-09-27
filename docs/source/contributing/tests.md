@@ -11,7 +11,7 @@ can find them under the [jupyterhub/tests](https://github.com/jupyterhub/jupyter
 
 ## Running the tests
 
-1. Make sure you have completed {ref}`contributing/setup`.
+1. Make sure you have completed {ref}`contributing:setup`.
    Once you are done, you would be able to run `jupyterhub` from the command line and access it from your web browser.
    This ensures that the dev environment is properly set up for tests to run.
 
@@ -126,7 +126,7 @@ For more information on asyncio and event-loops, here are some resources:
 
 ### All the tests are failing
 
-Make sure you have completed all the steps in {ref}`contributing/setup` successfully, and are able to access JupyterHub from your browser at http://localhost:8000 after starting `jupyterhub` in your command line.
+Make sure you have completed all the steps in {ref}`contributing:setup` successfully, and are able to access JupyterHub from your browser at http://localhost:8000 after starting `jupyterhub` in your command line.
 
 ## Code formatting and linting
 

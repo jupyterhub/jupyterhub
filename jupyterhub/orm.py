@@ -163,19 +163,19 @@ class Server(Base):
 # lots of things have roles
 # mapping tables are the same for all of them
 
-_role_map_tables = []
+_role_associations = {}
 
-for has_role in (
+for entity in (
     'user',
     'group',
     'service',
 ):
-    role_map = Table(
-        f'{has_role}_role_map',
+    table = Table(
+        f'{entity}_role_map',
         Base.metadata,
         Column(
-            f'{has_role}_id',
-            ForeignKey(f'{has_role}s.id', ondelete='CASCADE'),
+            f'{entity}_id',
+            ForeignKey(f'{entity}s.id', ondelete='CASCADE'),
             primary_key=True,
         ),
         Column(
@@ -183,8 +183,12 @@ for has_role in (
             ForeignKey('roles.id', ondelete='CASCADE'),
             primary_key=True,
         ),
+        Column('managed_by_auth', Boolean, default=False, nullable=False),
     )
-    _role_map_tables.append(role_map)
+
+    _role_associations[entity] = type(
+        entity.title() + 'RoleMap', (Base,), {'__table__': table}
+    )
 
 
 class Role(Base):
@@ -195,19 +199,17 @@ class Role(Base):
     name = Column(Unicode(255), unique=True)
     description = Column(Unicode(1023))
     scopes = Column(JSONList, default=[])
+
     users = relationship('User', secondary='user_role_map', back_populates='roles')
     services = relationship(
         'Service', secondary='service_role_map', back_populates='roles'
     )
     groups = relationship('Group', secondary='group_role_map', back_populates='roles')
 
+    managed_by_auth = Column(Boolean, default=False, nullable=False)
+
     def __repr__(self):
-        return "<{} {} ({}) - scopes: {}>".format(
-            self.__class__.__name__,
-            self.name,
-            self.description,
-            self.scopes,
-        )
+        return f"<{self.__class__.__name__} {self.name} ({self.description}) - scopes: {self.scopes}>"
 
     @classmethod
     def find(cls, db, name):
@@ -237,6 +239,7 @@ class Group(Base):
     roles = relationship(
         'Role', secondary='group_role_map', back_populates='groups', lazy="selectin"
     )
+
     shared_with_me = relationship(
         "Share",
         back_populates="group",
@@ -365,12 +368,7 @@ class User(Base):
     kind = "user"
 
     def __repr__(self):
-        return "<{cls}({name} {running}/{total} running)>".format(
-            cls=self.__class__.__name__,
-            name=self.name,
-            total=len(self._orm_spawners),
-            running=sum(bool(s.server) for s in self._orm_spawners),
-        )
+        return f"<{self.__class__.__name__}({self.name} {sum(bool(s.server) for s in self._orm_spawners)}/{len(self._orm_spawners)} running)>"
 
     def new_api_token(self, token=None, **kwargs):
         """Create a new API token
@@ -730,7 +728,7 @@ class _Share:
         return cls._apply_filter(frozenset(scopes), spawner.user.name, spawner.name)
 
     @staticmethod
-    @lru_cache()
+    @lru_cache
     def _apply_filter(scopes, owner_name, server_name):
         """
         implementation of Share.apply_filter
@@ -1098,13 +1096,7 @@ class APIToken(Hashed, Base):
             # this shouldn't happen
             kind = 'owner'
             name = 'unknown'
-        return "<{cls}('{pre}...', {kind}='{name}', client_id={client_id!r})>".format(
-            cls=self.__class__.__name__,
-            pre=self.prefix,
-            kind=kind,
-            name=name,
-            client_id=self.client_id,
-        )
+        return f"<{self.__class__.__name__}('{self.prefix}...', {kind}='{name}', client_id={self.client_id!r})>"
 
     @classmethod
     def find(cls, db, token, *, kind=None):
@@ -1121,7 +1113,7 @@ class APIToken(Hashed, Base):
         elif kind == 'service':
             prefix_match = prefix_match.filter(cls.service_id != None)
         elif kind is not None:
-            raise ValueError("kind must be 'user', 'service', or None, not %r" % kind)
+            raise ValueError(f"kind must be 'user', 'service', or None, not {kind!r}")
         for orm_token in prefix_match:
             if orm_token.match(token):
                 if not orm_token.client_id:
@@ -1149,7 +1141,6 @@ class APIToken(Hashed, Base):
         expires_in=None,
         client_id=None,
         oauth_client=None,
-        return_orm=False,
     ):
         """Generate a new API token for a user or service"""
         assert user or service
@@ -1518,11 +1509,9 @@ def check_db_revision(engine):
         app_log.debug("database schema version found: %s", alembic_revision)
     else:
         raise DatabaseSchemaMismatch(
-            "Found database schema version {found} != {head}. "
+            f"Found database schema version {alembic_revision} != {head}. "
             "Backup your database and run `jupyterhub upgrade-db`"
-            " to upgrade to the latest schema.".format(
-                found=alembic_revision, head=head
-            )
+            " to upgrade to the latest schema."
         )
 
 

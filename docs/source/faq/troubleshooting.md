@@ -1,4 +1,4 @@
-(troubleshooting)=
+(faq:troubleshooting)=
 
 # Troubleshooting
 
@@ -167,7 +167,7 @@ When your whole JupyterHub sits behind an organization proxy (_not_ a reverse pr
 
 ### Launching Jupyter Notebooks to run as an externally managed JupyterHub service with the `jupyterhub-singleuser` command returns a `JUPYTERHUB_API_TOKEN` error
 
-{ref}`services` allow processes to interact with JupyterHub's REST API. Example use-cases include:
+{ref}`services-reference` allow processes to interact with JupyterHub's REST API. Example use-cases include:
 
 - **Secure Testing**: provide a canonical Jupyter Notebook for testing production data to reduce the number of entry points into production systems.
 - **Grading Assignments**: provide access to shared Jupyter Notebooks that may be used for management tasks such as grading assignments.
@@ -197,6 +197,23 @@ With a docker container, pass in the environment variable with the run command:
       jupyter/datascience-notebook:latest
 
 [This example](https://github.com/jupyterhub/jupyterhub/tree/HEAD/examples/service-notebook/external) demonstrates how to combine the use of the `jupyterhub-singleuser` environment variables when launching a Notebook as an externally managed service.
+
+### Jupyter Notebook/Lab can be launched, but notebooks seem to hang when trying to execute a cell
+
+This often occurs when your browser is unable to open a websocket connection to a Jupyter kernel.
+
+#### Diagnose
+
+Open your browser console, e.g. [Chrome](https://developer.chrome.com/docs/devtools/console), [Firefox](https://firefox-source-docs.mozilla.org/devtools-user/web_console/).
+If you see errors related to opening websockets this is likely to be the problem.
+
+#### Solutions
+
+This could be caused by anything related to the network between your computer/browser and the server running JupyterHub, such as:
+
+- reverse proxies (see {ref}`howto:config:reverse-proxy` for example configurations)
+- anti-virus or firewalls running on your computer or JupyterHub server
+- transparent proxies running on your network
 
 ## How do I...?
 
@@ -258,17 +275,6 @@ the entire filesystem and set the default to the user's home directory.
 
     c.Spawner.notebook_dir = '/'
     c.Spawner.default_url = '/home/%U' # %U will be replaced with the username
-
-### How do I increase the number of pySpark executors on YARN?
-
-From the command line, pySpark executors can be configured using a command
-similar to this one:
-
-    pyspark --total-executor-cores 2 --executor-memory 1G
-
-[Cloudera documentation for configuring spark on YARN applications](https://www.cloudera.com/documentation/enterprise/latest/topics/cdh_ig_running_spark_on_yarn.html#spark_on_yarn_config_apps)
-provides additional information. The [pySpark configuration documentation](https://spark.apache.org/docs/0.9.0/configuration.html)
-is also helpful for programmatic configuration examples.
 
 ### How do I use JupyterLab's pre-release version with JupyterHub?
 

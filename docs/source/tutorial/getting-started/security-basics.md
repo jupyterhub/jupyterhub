@@ -43,7 +43,7 @@ is important that these files be put in a secure location on your server, where
 they are not readable by regular users.
 
 If you are using a **chain certificate**, see also chained certificate for SSL
-in the JupyterHub [Troubleshooting FAQ](troubleshooting).
+in the JupyterHub [Troubleshooting FAQ](faq:troubleshooting).
 
 ### Using letsencrypt
 
@@ -68,7 +68,7 @@ c.JupyterHub.ssl_cert = '/etc/letsencrypt/live/example.com/fullchain.pem'
 ### If SSL termination happens outside of the Hub
 
 In certain cases, for example, if the hub is running behind a reverse proxy, and
-[SSL termination is being provided by NGINX](https://www.nginx.com/resources/admin-guide/nginx-ssl-termination/),
+[SSL termination is being provided by NGINX](https://docs.nginx.com/nginx/admin-guide/security-controls/terminating-ssl-http/),
 it is reasonable to run the hub without SSL.
 
 To achieve this, remove `c.JupyterHub.ssl_key` and `c.JupyterHub.ssl_cert`
