@@ -20,6 +20,56 @@ Contributors to major version bumps in JupyterHub include:
 
 ## [Unreleased]
 
+## 5.2
+
+### 5.2.0 - 2024-10-01
+
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/5.1.0...5.2.0))
+
+#### New features added
+
+- add dark mode toggle [#4897](https://github.com/jupyterhub/jupyterhub/pull/4897) ([@minrk](https://github.com/minrk), [@benz0li](https://github.com/benz0li))
+- Revoke all permissions from Authenticator.blocked_users [#4865](https://github.com/jupyterhub/jupyterhub/pull/4865) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics))
+
+#### Enhancements made
+
+- Add `LD_LIBRARY_PATH` to `LocalProcessSpawner.env_keep`, move most env_keep defaults to LocalProcessSpawner [#4904](https://github.com/jupyterhub/jupyterhub/pull/4904) ([@edmorley](https://github.com/edmorley), [@minrk](https://github.com/minrk), [@manics](https://github.com/manics))
+- Add PAMAuthenticator.executor_threads configurable, increase default to 4 [#4863](https://github.com/jupyterhub/jupyterhub/pull/4863) ([@Will-Shanks](https://github.com/Will-Shanks), [@minrk](https://github.com/minrk))
+
+#### Bugs fixed
+
+- Fix incorrect rounding function with large spawn_throttle_retry_range upper bound [#4913](https://github.com/jupyterhub/jupyterhub/pull/4913) ([@emmanuel-ferdman](https://github.com/emmanuel-ferdman), [@minrk](https://github.com/minrk))
+- fix python3 -m jupyterhub.app [#4876](https://github.com/jupyterhub/jupyterhub/pull/4876) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics))
+- Admin pages: use inherited base_url from render_template [#4867](https://github.com/jupyterhub/jupyterhub/pull/4867) ([@manics](https://github.com/manics), [@minrk](https://github.com/minrk))
+- singleuser: fix shutdown mixin [#4864](https://github.com/jupyterhub/jupyterhub/pull/4864) ([@oliver-sanders](https://github.com/oliver-sanders), [@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+
+#### Maintenance and upkeep improvements
+
+- browser tests: use text_content instead of inner_text [#4906](https://github.com/jupyterhub/jupyterhub/pull/4906) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- update-types typo in dependabot.yml [#4884](https://github.com/jupyterhub/jupyterhub/pull/4884) ([@minrk](https://github.com/minrk))
+- only group minor dependencies in dependabot [#4882](https://github.com/jupyterhub/jupyterhub/pull/4882) ([@minrk](https://github.com/minrk))
+- start metrics collector in start [#4870](https://github.com/jupyterhub/jupyterhub/pull/4870) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics))
+- bump require.js [#4868](https://github.com/jupyterhub/jupyterhub/pull/4868) ([@minrk](https://github.com/minrk))
+- unpin pytest-asyncio [#4664](https://github.com/jupyterhub/jupyterhub/pull/4664) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics), [@seifertm](https://github.com/seifertm))
+- Display Sphinx linkcheck output in a more readable format [#4881](https://github.com/jupyterhub/jupyterhub/pull/4881) ([@manics](https://github.com/manics), [@minrk](https://github.com/minrk))
+- add dependabot config for npm [#4869](https://github.com/jupyterhub/jupyterhub/pull/4869) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics))
+
+#### Documentation improvements
+
+- Fix typo in concepts.md [#4916](https://github.com/jupyterhub/jupyterhub/pull/4916) ([@dirtbirb](https://github.com/dirtbirb), [@consideRatio](https://github.com/consideRatio))
+- add University of Portland to sample orgs [#4896](https://github.com/jupyterhub/jupyterhub/pull/4896) ([@rinvii](https://github.com/rinvii), [@minrk](https://github.com/minrk))
+- docs: remove some outdated links [#4883](https://github.com/jupyterhub/jupyterhub/pull/4883) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics))
+- FAQ: websocket problems [#4880](https://github.com/jupyterhub/jupyterhub/pull/4880) ([@manics](https://github.com/manics), [@minrk](https://github.com/minrk))
+
+#### Contributors to this release
+
+The following people contributed discussions, new ideas, code and documentation contributions, and review.
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/#how-does-this-tool-define-contributions-in-the-reports).
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2024-07-31&to=2024-10-01&type=c))
+
+@benz0li ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Abenz0li+updated%3A2024-07-31..2024-10-01&type=Issues)) | @consideRatio ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3AconsideRatio+updated%3A2024-07-31..2024-10-01&type=Issues)) | @dirtbirb ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Adirtbirb+updated%3A2024-07-31..2024-10-01&type=Issues)) | @edmorley ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aedmorley+updated%3A2024-07-31..2024-10-01&type=Issues)) | @emmanuel-ferdman ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aemmanuel-ferdman+updated%3A2024-07-31..2024-10-01&type=Issues)) | @jelmd ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ajelmd+updated%3A2024-07-31..2024-10-01&type=Issues)) | @manics ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amanics+updated%3A2024-07-31..2024-10-01&type=Issues)) | @minrk ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk+updated%3A2024-07-31..2024-10-01&type=Issues)) | @oliver-sanders ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aoliver-sanders+updated%3A2024-07-31..2024-10-01&type=Issues)) | @rinvii ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Arinvii+updated%3A2024-07-31..2024-10-01&type=Issues)) | @seifertm ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aseifertm+updated%3A2024-07-31..2024-10-01&type=Issues)) | @Will-Shanks ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3AWill-Shanks+updated%3A2024-07-31..2024-10-01&type=Issues))
+
 ## 5.1
 
 ### 5.1.0 - 2024-07-31
