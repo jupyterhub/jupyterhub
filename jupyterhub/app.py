@@ -298,7 +298,7 @@ class JupyterHub(Application):
                             e,
                         )
                         continue
-                    if cls not in classes and isinstance(cls, Configurable):
+                    if cls not in classes and issubclass(cls, Configurable):
                         classes.append(cls)
         return classes
 
