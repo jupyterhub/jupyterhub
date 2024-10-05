@@ -282,7 +282,7 @@ class JupyterHub(Application):
 
     @default('classes')
     def _load_classes(self):
-        classes = [Spawner, Authenticator, CryptKeeper]
+        classes = {Spawner, Authenticator, CryptKeeper}
         for name, trait in self.traits(config=True).items():
             # load entry point groups into configurable class list
             # so that they show up in config files, etc.
@@ -298,9 +298,9 @@ class JupyterHub(Application):
                             e,
                         )
                         continue
-                    if cls not in classes and isinstance(cls, Configurable):
-                        classes.append(cls)
-        return classes
+                    if issubclass(cls, Configurable):
+                        classes.add(cls)
+        return list(classes)
 
     load_groups = Dict(
         Union([Dict(), List()]),
