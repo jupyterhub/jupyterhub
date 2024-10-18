@@ -3640,7 +3640,7 @@ class JupyterHub(Application):
                     if service.managed:
                         status = await service.spawner.poll()
                         if status is not None:
-                            self.log.error(
+                            self.log.critical(
                                 "Service %s exited with status %s",
                                 service_name,
                                 status,
@@ -3649,12 +3649,20 @@ class JupyterHub(Application):
                 else:
                     return True
             else:
-                self.log.error(
-                    "Cannot connect to %s service %s at %s. Is it running?",
-                    service.kind,
-                    service_name,
-                    service.url,
-                )
+                if service.managed:
+                    self.log.critical(
+                        "Cannot connect to %s service %s",
+                        service_name,
+                        service.kind,
+                        exc_info=True,
+                    )
+                else:
+                    self.log.warning(
+                        "Cannot connect to %s service %s at %s. Is it running?",
+                        service.kind,
+                        service_name,
+                        service.url,
+                    )
                 return False
         return True
 
@@ -3745,18 +3753,8 @@ class JupyterHub(Application):
         # start the service(s)
         for service_name, service in self._service_map.items():
             service_ready = await self.start_service(service_name, service, ssl_context)
-            if not service_ready:
-                if service.from_config:
-                    # Stop the application if a config-based service failed to start.
-                    self.exit(1)
-                else:
-                    # Only warn for database-based service, so that admin can connect
-                    # to hub to remove the service.
-                    self.log.error(
-                        "Failed to reach externally managed service %s",
-                        service_name,
-                        exc_info=True,
-                    )
+            if not service_ready and service.managed:
+                self.exit(1)
 
         await self.proxy.check_routes(self.users, self._service_map)
 
