@@ -3654,7 +3654,6 @@ class JupyterHub(Application):
                         "Cannot connect to %s service %s",
                         service_name,
                         service.kind,
-                        exc_info=True,
                     )
                 else:
                     self.log.warning(
