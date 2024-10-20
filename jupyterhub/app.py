@@ -873,13 +873,7 @@ class JupyterHub(Application):
         but your identity provider is likely much more strict,
         allowing you to make assumptions about the name.
 
-        The default behavior is to have all services
-        on a single `services.{domain}` subdomain,
-        and each user on `{username}.{domain}`.
-        This is the 'legacy' scheme,
-        and doesn't work for all usernames.
-
-        The 'idna' scheme is a new scheme that should produce a valid domain name for any user,
+        The 'idna' hook should produce a valid domain name for any user,
         using IDNA encoding for unicode usernames, and a truncate-and-hash approach for
         any usernames that can't be easily encoded into a domain component.
 
