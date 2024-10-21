@@ -70,7 +70,7 @@ if _as_extension:
         raise ImportError(
             "Failed to import JupyterHub singleuser extension."
             " Make sure to install dependencies for your single-user server, e.g.\n"
-            "    pip install 'jupyterhub[singleuser]'"
+            "    pip install jupyterlab"
         ) from e
 else:
     try:
@@ -84,7 +84,7 @@ else:
         raise ImportError(
             f"Failed to import {_app_env_log}."
             " Make sure to install dependencies for your single-user server, e.g.\n"
-            "    pip install 'jupyterhub[singleuser]'"
+            "    pip install jupyterlab"
         ) from e
 
     # backward-compatibility
