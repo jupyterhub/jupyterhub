@@ -22,6 +22,32 @@ Contributors to major version bumps in JupyterHub include:
 
 ## 5.2
 
+### 5.2.1 - 2024-10-21
+
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/5.2.0...5.2.1))
+
+#### Enhancements made
+
+- informative error on missing dependencies for singleuser server [#4934](https://github.com/jupyterhub/jupyterhub/pull/4934) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+
+#### Bugs fixed
+
+- Abort jupyterhub startup only if managed services fail [#4930](https://github.com/jupyterhub/jupyterhub/pull/4930) ([@consideRatio](https://github.com/consideRatio), [@minrk](https://github.com/minrk))
+- Loaded EntryPointTypes are types, not instances [#4922](https://github.com/jupyterhub/jupyterhub/pull/4922) ([@manics](https://github.com/manics), [@minrk](https://github.com/minrk))
+
+#### Documentation improvements
+
+- Remove out-of-date info from subdomain_hook doc [#4932](https://github.com/jupyterhub/jupyterhub/pull/4932) ([@manics](https://github.com/manics), [@minrk](https://github.com/minrk))
+
+#### Contributors to this release
+
+The following people contributed discussions, new ideas, code and documentation contributions, and review.
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/#how-does-this-tool-define-contributions-in-the-reports).
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2024-10-01&to=2024-10-21&type=c))
+
+@consideRatio ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3AconsideRatio+updated%3A2024-10-01..2024-10-21&type=Issues)) | @manics ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amanics+updated%3A2024-10-01..2024-10-21&type=Issues)) | @minrk ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk+updated%3A2024-10-01..2024-10-21&type=Issues))
+
 ### 5.2.0 - 2024-10-01
 
 ([full changelog](https://github.com/jupyterhub/jupyterhub/compare/5.1.0...5.2.0))
