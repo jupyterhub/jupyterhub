@@ -30,7 +30,17 @@ const withAPI = withProps(() => ({
   startAll: (names) =>
     names.map((e) => jhapiRequest("/users/" + e + "/server", "POST")),
   stopAll: (names) =>
-    names.map((e) => jhapiRequest("/users/" + e + "/server", "DELETE")),
+    names.map((name) =>
+      jhapiRequest("/users/" + name, "GET")
+        .then((data) => data.json())
+        .then((data) =>
+          Promise.all(
+            Object.keys(data.servers).map((server) =>
+              jhapiRequest("/users/" + name + "/servers/" + server, "DELETE"),
+            ),
+          ),
+        ),
+    ),
   addToGroup: (users, groupname) =>
     jhapiRequest("/groups/" + groupname + "/users", "POST", { users }),
   updateProp: (propobject, groupname) =>
