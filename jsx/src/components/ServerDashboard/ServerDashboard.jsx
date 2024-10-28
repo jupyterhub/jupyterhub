@@ -508,7 +508,7 @@ const ServerDashboard = (props) => {
                   variant="primary"
                   className="start-all"
                   data-testid="start-all"
-                  title="start all servers on the current page"
+                  title="Start all default servers on the current page"
                   onClick={() => {
                     Promise.all(startAll(user_data.map((e) => e.name)))
                       .then((res) => {
@@ -539,11 +539,12 @@ const ServerDashboard = (props) => {
                   variant="danger"
                   className="stop-all"
                   data-testid="stop-all"
-                  title="stop all servers on the current page"
+                  title="Stop all servers including named servers on the current page"
                   onClick={() => {
                     Promise.all(stopAll(user_data.map((e) => e.name)))
                       .then((res) => {
-                        let failedServers = res.filter((e) => !e.ok);
+                        // Array of arrays of servers for each user
+                        let failedServers = res.flat().filter((e) => !e.ok);
                         if (failedServers.length > 0) {
                           setErrorAlert(
                             `Failed to stop ${failedServers.length} ${
