@@ -18,6 +18,7 @@
 [![GitHub](https://img.shields.io/badge/issue_tracking-github-blue?logo=github)](https://github.com/jupyterhub/jupyterhub/issues)
 [![Discourse](https://img.shields.io/badge/help_forum-discourse-blue?logo=discourse)](https://discourse.jupyter.org/c/jupyterhub)
 [![Gitter](https://img.shields.io/badge/social_chat-gitter-blue?logo=gitter)](https://gitter.im/jupyterhub/jupyterhub)
+[![Gurubase](https://img.shields.io/badge/Gurubase-Ask%20JupyterHub%20Guru-006BFF)](https://gurubase.io/g/jupyterhub)
 
 With [JupyterHub](https://jupyterhub.readthedocs.io) you can create a
 **multi-user Hub** that spawns, manages, and proxies multiple instances of the
