@@ -223,6 +223,7 @@ class Authenticator(LoggingConfigurable):
 
         Authenticator subclasses may override the default with e.g.::
 
+            from traitlets import default
             @default("allow_all")
             def _default_allow_all(self):
                 # if _any_ auth config (depends on the Authenticator)
