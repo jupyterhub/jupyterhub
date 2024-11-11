@@ -77,10 +77,16 @@ class Authenticator(LoggingConfigurable):
         help="""The max age (in seconds) of authentication info
         before forcing a refresh of user auth info.
 
-        Refreshing auth info allows, e.g. requesting/re-validating auth tokens.
+        Authenticators that support it may re-load managed groups,
+        refresh auth tokens, etc., or force a new login if auth info cannot be refreshed.
 
-        See :meth:`.refresh_user` for what happens when user auth info is refreshed
-        (nothing by default).
+        See :meth:`.refresh_user` for what happens when user auth info is refreshed,
+        which varies by authenticator.
+        If an Authenticator does not implement `refresh_user`,
+        auth info will never be considered stale.
+
+        Set `auth_refresh_age = 0` to disable time-based calls to `refresh_user`.
+        You can still use :attr:`refresh_pre_spawn` if `auth_refresh_age` is disabled.
         """,
     )
 
