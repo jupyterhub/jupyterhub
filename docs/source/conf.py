@@ -12,6 +12,7 @@ from pathlib import Path
 from urllib.request import urlretrieve
 
 from docutils import nodes
+from intersphinx_registry import get_intersphinx_mapping
 from ruamel.yaml import YAML
 from sphinx.directives.other import SphinxDirective
 from sphinx.util import logging
@@ -303,12 +304,15 @@ linkcheck_anchors_ignore = [
 # -- Intersphinx -------------------------------------------------------------
 # ref: https://www.sphinx-doc.org/en/master/usage/extensions/intersphinx.html#configuration
 #
-intersphinx_mapping = {
-    "python": ("https://docs.python.org/3/", None),
-    "tornado": ("https://www.tornadoweb.org/en/stable/", None),
-    "jupyter-server": ("https://jupyter-server.readthedocs.io/en/stable/", None),
-    "nbgitpuller": ("https://nbgitpuller.readthedocs.io/en/latest", None),
-}
+
+intersphinx_mapping = get_intersphinx_mapping(
+    packages={
+        "python",
+        "tornado",
+        "jupyter-server",
+        "nbgitpuller",
+    }
+)
 
 # -- Options for the opengraph extension -------------------------------------
 # ref: https://github.com/wpilibsuite/sphinxext-opengraph#options
