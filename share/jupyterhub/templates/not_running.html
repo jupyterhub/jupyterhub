@@ -58,11 +58,7 @@
   {% if implicit_spawn_seconds %}
     <script type="text/javascript">
       var spawn_url = "{{ spawn_url }}";
-      var implicit_spawn_seconds = {
-        {
-          implicit_spawn_seconds
-        }
-      };
+      var implicit_spawn_seconds = {{ implicit_spawn_seconds }};
       setTimeout(function() {
           console.log("redirecting to spawn at", spawn_url);
           window.location = spawn_url;
