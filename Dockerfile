@@ -26,7 +26,7 @@
 # the JupyterHub wheel on the native architecture only
 # https://www.docker.com/blog/faster-multi-platform-builds-dockerfile-cross-compilation-guide/
 
-ARG BASE_IMAGE=ubuntu:22.04
+ARG BASE_IMAGE=ubuntu:24.04
 
 
 ######################################################################
@@ -52,9 +52,9 @@ RUN apt-get update -qq \
     python3-pycurl \
     python3-venv \
  && python3 -m pip install --no-cache-dir --upgrade setuptools pip build wheel
-# Ubuntu 22.04 comes with Nodejs 12 which is too old for building JupyterHub JS
-# It's fine at runtime though (used only by configurable-http-proxy)
-ARG NODE_MAJOR=20
+# Ubuntu 24.04 provides nodejs version 18 which is a bit outdated, so we install
+# a newer version by adding an apt source (used only by configurable-http-proxy)
+ARG NODE_MAJOR=22
 RUN mkdir -p /etc/apt/keyrings \
  && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
  && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list \
