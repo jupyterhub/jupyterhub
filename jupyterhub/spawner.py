@@ -365,14 +365,6 @@ class Spawner(LoggingConfigurable):
         help="""Allowed roles for oauth tokens.
 
         Deprecated in 3.0: use oauth_client_allowed_scopes
-
-        This sets the maximum and default roles
-        assigned to oauth tokens issued by a single-user server's
-        oauth client (i.e. tokens stored in browsers after authenticating with the server),
-        defining what actions the server can take on behalf of logged-in users.
-
-        Default is an empty list, meaning minimal permissions to identify users,
-        no actions can be taken on their behalf.
         """,
     ).tag(config=True)
 
@@ -385,6 +377,8 @@ class Spawner(LoggingConfigurable):
         oauth client (i.e. tokens stored in browsers after authenticating with the server),
         defining what actions the server can take on behalf of logged-in users.
 
+        Access to the current server will always be included in this list.
+        This property contains additional scopes.
         Default is an empty list, meaning minimal permissions to identify users,
         no actions can be taken on their behalf.
 
