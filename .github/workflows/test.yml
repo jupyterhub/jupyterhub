@@ -258,7 +258,7 @@ jobs:
         run: |
           pytest -k "${{ matrix.subset }}" --maxfail=2 --cov=jupyterhub jupyterhub/tests
 
-      - uses: codecov/codecov-action@v4
+      - uses: codecov/codecov-action@v5
 
   docker-build:
     runs-on: ubuntu-22.04
