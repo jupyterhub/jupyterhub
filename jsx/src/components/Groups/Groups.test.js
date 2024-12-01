@@ -3,7 +3,7 @@ import "@testing-library/jest-dom";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { Provider, useSelector } from "react-redux";
 import { createStore } from "redux";
-import { HashRouter, useSearchParams } from "react-router-dom";
+import { HashRouter, useSearchParams } from "react-router";
 // eslint-disable-next-line
 import regeneratorRuntime from "regenerator-runtime";
 
@@ -15,8 +15,8 @@ jest.mock("react-redux", () => ({
   useSelector: jest.fn(),
 }));
 
-jest.mock("react-router-dom", () => ({
-  ...jest.requireActual("react-router-dom"),
+jest.mock("react-router", () => ({
+  ...jest.requireActual("react-router"),
   useSearchParams: jest.fn(),
 }));
 

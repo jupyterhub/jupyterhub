@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router";
 import PropTypes from "prop-types";
 import { Button, Card } from "react-bootstrap";
 import GroupSelect from "../GroupSelect/GroupSelect";

@@ -3,7 +3,7 @@ import { useSelector, useDispatch } from "react-redux";
 import PropTypes from "prop-types";
 
 import { Button, Card } from "react-bootstrap";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router";
 import { usePaginationParams } from "../../util/paginationParams";
 import PaginationFooter from "../PaginationFooter/PaginationFooter";
 import { MainContainer } from "../../util/layout";

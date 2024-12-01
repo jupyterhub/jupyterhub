@@ -4,7 +4,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Provider, useDispatch, useSelector } from "react-redux";
 import { createStore } from "redux";
-import { HashRouter } from "react-router-dom";
+import { HashRouter } from "react-router";
 // eslint-disable-next-line
 import regeneratorRuntime from "regenerator-runtime";
 import CreateGroup from "./CreateGroup";
