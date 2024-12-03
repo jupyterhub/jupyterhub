@@ -168,10 +168,12 @@ async def test_refresh_pre_spawn_expired_admin_request(
     await app.login_user(admin_user.name)
     user._auth_refreshed -= 10
 
-    # auth needs refresh but can't without a new login; spawn should fail
+    # auth needs refresh but can't without a new login
     user._auth_refreshed -= app.authenticator.auth_refresh_age
+    before = user._auth_refreshed
     r = await api_request(
         app, 'users', user.name, 'server', method='post', name=admin_user.name
     )
-    # api requests can't do login redirects
-    assert r.status_code == 403
+    # admins can still launch with expired auth
+    assert 200 <= r.status_code < 300
+    assert user._auth_refreshed == before
