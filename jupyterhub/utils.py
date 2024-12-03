@@ -502,20 +502,20 @@ def print_ps_info(file=sys.stderr):
     # format CPU percentage
     cpu = p.cpu_percent(0.1)
     if cpu >= 10:
-        cpu_s = "%i" % cpu
+        cpu_s = str(int(cpu))
     else:
         cpu_s = f"{cpu:.1f}"
 
     # format memory (only resident set)
     rss = p.memory_info().rss
     if rss >= 1e9:
-        mem_s = '%.1fG' % (rss / 1e9)
+        mem_s = f'{rss / 1e9:.1f}G'
     elif rss >= 1e7:
-        mem_s = '%.0fM' % (rss / 1e6)
+        mem_s = f'{rss / 1e6:.0f}M'
     elif rss >= 1e6:
-        mem_s = '%.1fM' % (rss / 1e6)
+        mem_s = f'{rss / 1e6:.1f}M'
     else:
-        mem_s = '%.0fk' % (rss / 1e3)
+        mem_s = f'{rss / 1e3:.0f}k'
 
     # left-justify and shrink-to-fit columns
     cpulen = max(len(cpu_s), 4)
@@ -560,7 +560,7 @@ def print_stacks(file=sys.stderr):
 
     from .log import coroutine_frames
 
-    print("Active threads: %i" % threading.active_count(), file=file)
+    print(f"Active threads: {threading.active_count()}", file=file)
     for thread in threading.enumerate():
         print(f"Thread {thread.name}:", end='', file=file)
         frame = sys._current_frames()[thread.ident]
@@ -592,7 +592,7 @@ def print_stacks(file=sys.stderr):
     # coroutines to native `async def`
     tasks = asyncio_all_tasks()
     if tasks:
-        print("AsyncIO tasks: %i" % len(tasks))
+        print(f"AsyncIO tasks: {len(tasks)}")
         for task in tasks:
             task.print_stack(file=file)
 

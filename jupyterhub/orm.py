@@ -1050,7 +1050,7 @@ class APIToken(Hashed, Base):
 
     @property
     def api_id(self):
-        return 'a%i' % self.id
+        return f"a{self.id}"
 
     @property
     def owner(self):

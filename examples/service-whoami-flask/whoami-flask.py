@@ -9,7 +9,6 @@ import secrets
 from functools import wraps
 
 from flask import Flask, Response, make_response, redirect, request, session
-
 from jupyterhub.services.auth import HubOAuth
 
 prefix = os.environ.get('JUPYTERHUB_SERVICE_PREFIX', '/')

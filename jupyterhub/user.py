@@ -920,19 +920,16 @@ class User:
             await asyncio.wait_for(f, timeout=spawner.start_timeout)
             url = f.result()
             if url:
-                # get ip, port info from return value of start()
-                if isinstance(url, str):
-                    # >= 0.9 can return a full URL string
-                    pass
-                else:
-                    # >= 0.7 returns (ip, port)
+                # get url from return value of start()
+                if not isinstance(url, str):
+                    # older Spawners return (ip, port)
                     proto = 'https' if self.settings['internal_ssl'] else 'http'
-
+                    ip, port = url
                     # check if spawner returned an IPv6 address
-                    if ':' in url[0]:
-                        url = '%s://[%s]:%i' % ((proto,) + url)
-                    else:
-                        url = '%s://%s:%i' % ((proto,) + url)
+                    if ':' in ip:
+                        # ipv6 needs [::] in url
+                        ip = f'[{ip}]'
+                    url = f'{proto}://{ip}:{int(port)}'
                 urlinfo = urlparse(url)
                 server.proto = urlinfo.scheme
                 server.ip = urlinfo.hostname
