@@ -1009,9 +1009,18 @@ class BaseHandler(RequestHandler):
         if self.authenticator.refresh_pre_spawn:
             auth_user = await self.refresh_auth(user, force=True)
             if auth_user is None:
-                raise web.HTTPError(
-                    403, "auth has expired for %s, login again", user.name
-                )
+                if (
+                    isinstance(self.current_user, User)
+                    and self.current_user.id == user.id
+                ):
+                    raise web.HTTPError(
+                        403, "auth has expired for %s, login again", user.name
+                    )
+                else:
+                    # allow with a warning if it's being launched by someone else
+                    self.log.warning(
+                        f"Allowing launch of {user.name}/{server_name} with expired auth by {self.current_user.kind}:{self.current_user.name}"
+                    )
 
         spawn_start_time = time.perf_counter()
         self.extra_error_html = self.spawn_home_error
