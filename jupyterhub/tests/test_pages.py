@@ -1060,7 +1060,7 @@ async def test_oauth_token_page(app):
 
 @pytest.mark.parametrize("error_status", [503, 404])
 async def test_proxy_error(app, error_status):
-    r = await get_page('/error/%i' % error_status, app)
+    r = await get_page(f'/error/{error_status}', app)
     assert r.status_code == 200
 
 

@@ -256,7 +256,7 @@ class MockHub(JupyterHub):
             port = urlparse(self.subdomain_host).port
         else:
             port = random_port()
-        return 'http://127.0.0.1:%i/@/space%%20word/' % (port,)
+        return f'http://127.0.0.1:{port}/@/space%20word/'
 
     @default('ip')
     def _ip_default(self):

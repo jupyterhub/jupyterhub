@@ -1225,7 +1225,7 @@ class LocalAuthenticator(Authenticator):
         cmd = [arg.replace('USERNAME', name) for arg in self.add_user_cmd]
         try:
             uid = self.uids[name]
-            cmd += ['--uid', '%d' % uid]
+            cmd += ['--uid', str(uid)]
         except KeyError:
             self.log.debug(f"No UID for user {name}")
         cmd += [name]

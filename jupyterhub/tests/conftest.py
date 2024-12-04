@@ -358,14 +358,15 @@ async def _mockservice(request, app, name, external=False, url=False):
           (as opposed to headless, API-only).
     """
     spec = {'name': name, 'command': mockservice_cmd, 'admin': True}
+    port = random_port()
     if url:
         if app.internal_ssl:
-            spec['url'] = 'https://127.0.0.1:%i' % random_port()
+            spec['url'] = f'https://127.0.0.1:{port}'
         else:
-            spec['url'] = 'http://127.0.0.1:%i' % random_port()
+            spec['url'] = f'http://127.0.0.1:{port}'
 
     if external:
-        spec['oauth_redirect_uri'] = 'http://127.0.0.1:%i' % random_port()
+        spec['oauth_redirect_uri'] = f'http://127.0.0.1:{port}'
 
     event_loop = asyncio.get_running_loop()
 

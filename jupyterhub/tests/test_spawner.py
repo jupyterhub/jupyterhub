@@ -260,7 +260,7 @@ async def test_shell_cmd(db, tmpdir, request):
     s.server.port = port
     db.commit()
     await wait_for_spawner(s)
-    r = await async_requests.get('http://%s:%i/env' % (ip, port))
+    r = await async_requests.get(f'http://{ip}:{port}/env')
     r.raise_for_status()
     env = r.json()
     assert env['TESTVAR'] == 'foo'

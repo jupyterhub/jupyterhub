@@ -260,7 +260,7 @@ class UserListAPIHandler(APIHandler):
             raise web.HTTPError(400, msg)
 
         if not to_create:
-            raise web.HTTPError(409, "All %i users already exist" % len(usernames))
+            raise web.HTTPError(409, f"All {len(usernames)} users already exist")
 
         created = []
         for name in to_create:

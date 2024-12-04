@@ -1061,10 +1061,12 @@ class BaseHandler(RequestHandler):
             # round suggestion to nicer human value (nearest 10 seconds or minute)
             if retry_time <= 90:
                 # round human seconds up to nearest 10
-                human_retry_time = "%i0 seconds" % math.ceil(retry_time / 10.0)
+                delay = math.ceil(retry_time / 10.0)
+                human_retry_time = f"{delay}0 seconds"
             else:
                 # round number of minutes
-                human_retry_time = "%i minutes" % round(retry_time / 60.0)
+                delay = round(retry_time / 60.0)
+                human_retry_time = f"{delay} minutes"
 
             self.log.warning(
                 '%s pending spawns, throttling. Suggested retry in %s seconds.',
@@ -1099,12 +1101,12 @@ class BaseHandler(RequestHandler):
         self.log.debug(
             "%i%s concurrent spawns",
             spawn_pending_count,
-            '/%i' % concurrent_spawn_limit if concurrent_spawn_limit else '',
+            f'/{concurrent_spawn_limit}' if concurrent_spawn_limit else '',
         )
         self.log.debug(
             "%i%s active servers",
             active_count,
-            '/%i' % active_server_limit if active_server_limit else '',
+            f'/{active_server_limit}' if active_server_limit else '',
         )
 
         spawner = user.spawners[server_name]

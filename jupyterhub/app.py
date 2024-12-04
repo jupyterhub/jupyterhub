@@ -3320,7 +3320,7 @@ class JupyterHub(Application):
         if self.pid_file:
             self.log.debug("Writing PID %i to %s", pid, self.pid_file)
             with open(self.pid_file, 'w') as f:
-                f.write('%i' % pid)
+                f.write(str(pid))
 
     @catch_config_error
     async def initialize(self, *args, **kwargs):
