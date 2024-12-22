@@ -37,7 +37,10 @@ from . import orm
 from .utils import utcnow
 
 metrics_prefix = os.getenv('JUPYTERHUB_METRICS_PREFIX', 'jupyterhub')
-bucket_sizes = os.getenv('JUPYTERHUB_SERVER_SPAWN_DURATION_SECONDS_BUCKET_SIZES', [0.5, 1, 2.5, 5, 10, 15, 30, 60, 120, 180, 300, 600, float("inf")])
+bucket_sizes = os.getenv(
+    'JUPYTERHUB_SERVER_SPAWN_DURATION_SECONDS_BUCKET_SIZES',
+    [0.5, 1, 2.5, 5, 10, 15, 30, 60, 120, 180, 300, 600, float("inf")],
+)
 
 REQUEST_DURATION_SECONDS = Histogram(
     'request_duration_seconds',
