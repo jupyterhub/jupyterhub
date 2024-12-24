@@ -42,6 +42,10 @@ const GroupEdit = (props) => {
     }
   }, [location]);
 
+  useEffect(() => {
+    setSelected(group_data.users);
+  }, []);
+
   const { group_data } = location.state || {};
   if (!group_data) return <div></div>;
   const [propobject, setProp] = useState(group_data.properties);
