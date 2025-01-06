@@ -30,20 +30,23 @@ from enum import Enum
 
 from prometheus_client import Gauge, Histogram
 from tornado.ioloop import PeriodicCallback
-from traitlets import Any, Bool, Dict, Float, Integer, List, TraitError, HasTraits
+from traitlets import Any, Bool, Dict, Float, HasTraits, Integer, List, TraitError
 from traitlets.config import LoggingConfigurable
 
 from . import orm
 from .utils import utcnow
 
+
 class CustomEnvVars(HasTraits):
     bucket_sizes = List().tag(config=True)
     metrics_prefix = os.getenv('JUPYTERHUB_METRICS_PREFIX', 'jupyterhub')
-    
+
     def load_from_env(self):
-        env_var_bucket_sizes = os.getenv('JUPYTERHUB_SERVER_SPAWN_DURATION_SECONDS_BUCKET_SIZES',
-    '[0.5, 1, 2.5, 5, 10, 15, 30, 60, 120, 180, 300, 600]')
-        
+        env_var_bucket_sizes = os.getenv(
+            'JUPYTERHUB_SERVER_SPAWN_DURATION_SECONDS_BUCKET_SIZES',
+            '[0.5, 1, 2.5, 5, 10, 15, 30, 60, 120, 180, 300, 600]',
+        )
+
         try:
             # Manually convert the string to a list
             # Here we assume the string is in the format '[1, 2, 3]'
@@ -52,6 +55,7 @@ class CustomEnvVars(HasTraits):
         except (ValueError, AttributeError):
             # Handle if conversion fails
             raise TraitError("Failed to convert environment variable to list.")
+
 
 custom_env = CustomEnvVars()
 custom_env.load_from_env()
