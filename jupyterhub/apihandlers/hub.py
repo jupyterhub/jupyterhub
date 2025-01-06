@@ -6,6 +6,7 @@ import json
 import sys
 
 from tornado import web
+from tornado.httputil import HTTPHeaders
 
 from .._version import __version__
 from ..scopes import needs_scope
@@ -52,6 +53,34 @@ class ShutdownAPIHandler(APIHandler):
 
 
 class RootAPIHandler(APIHandler):
+
+    def set_default_headers(self):
+        """
+        Set any headers passed as tornado_settings['headers'].
+
+        Also responsible for setting content-type header
+        """
+        # wrap in HTTPHeaders for case-insensitivity
+        headers = HTTPHeaders(self.settings.get('headers', {}))
+        headers.setdefault("X-JupyterHub-Version", __version__)
+
+        for header_name, header_content in headers.items():
+            self.set_header(header_name, header_content)
+
+        if 'Access-Control-Allow-Headers' not in headers:
+            self.set_header(
+                'Access-Control-Allow-Headers', 'accept, content-type, authorization'
+            )
+        if 'Content-Security-Policy' not in headers:
+            self.set_header('Content-Security-Policy', self.content_security_policy)
+        self.set_header('Content-Type', self.get_content_type())
+
+        # Allow any origin to query the root handler (CORS)
+        if 'Access-Control-Allow-Origin' not in headers:
+            self.set_header(
+                'Access-Control-Allow-Origin', '*'
+            )
+
     def check_xsrf_cookie(self):
         return
 
