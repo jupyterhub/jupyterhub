@@ -246,10 +246,6 @@ class BaseHandler(RequestHandler):
             self.set_header(
                 'Access-Control-Allow-Headers', 'accept, content-type, authorization'
             )
-        if 'Access-Control-Allow-Origin' not in headers:
-            self.set_header(
-                'Access-Control-Allow-Origin', '*'
-            )
         if 'Content-Security-Policy' not in headers:
             self.set_header('Content-Security-Policy', self.content_security_policy)
         self.set_header('Content-Type', self.get_content_type())
