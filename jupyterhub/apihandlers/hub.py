@@ -58,15 +58,10 @@ class RootAPIHandler(APIHandler):
 
         Also responsible for setting content-type header
         """
-        old_headers = self.settings.get("headers", {})
-        new_headers = {**old_headers}
-        new_headers.setdefault('Access-Control-Allow-Origin', '*')
-        try:
-            self.settings['headers'] = new_headers
-            super().set_default_headers()
-        finally:
-            self.settings['headers'] = old_headers
-
+        if 'Access-Control-Allow-Origin' not in self.settings.get("headers", {}):
+            # allow CORS requests to this endpoint by default
+            self.set_header('Access-Control-Allow-Origin', '*')
+        super().set_default_headers()
     def check_xsrf_cookie(self):
         return
 
