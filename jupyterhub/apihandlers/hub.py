@@ -59,27 +59,15 @@ class RootAPIHandler(APIHandler):
         Set any headers passed as tornado_settings['headers'].
 
         Also responsible for setting content-type header
-        """
-        # wrap in HTTPHeaders for case-insensitivity
-        headers = HTTPHeaders(self.settings.get('headers', {}))
-        headers.setdefault("X-JupyterHub-Version", __version__)
-
-        for header_name, header_content in headers.items():
-            self.set_header(header_name, header_content)
-
-        if 'Access-Control-Allow-Headers' not in headers:
-            self.set_header(
-                'Access-Control-Allow-Headers', 'accept, content-type, authorization'
-            )
-        if 'Content-Security-Policy' not in headers:
-            self.set_header('Content-Security-Policy', self.content_security_policy)
-        self.set_header('Content-Type', self.get_content_type())
-
-        # Allow any origin to query the root handler (CORS)
-        if 'Access-Control-Allow-Origin' not in headers:
-            self.set_header(
-                'Access-Control-Allow-Origin', '*'
-            )
+        """    
+        old_headers = self.settings.get("headers", {})
+        new_headers = {**old_headers}
+        new_headers.setdefault('Access-Control-Allow-Origin', '*')
+        try:
+            self.settings['headers'] = new_headers
+            super().set_default_headers()
+        finally:
+            self.settings['headers'] = old_headers
 
     def check_xsrf_cookie(self):
         return
