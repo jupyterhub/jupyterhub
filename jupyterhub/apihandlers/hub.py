@@ -6,7 +6,6 @@ import json
 import sys
 
 from tornado import web
-from tornado.httputil import HTTPHeaders
 
 from .._version import __version__
 from ..scopes import needs_scope
@@ -53,13 +52,12 @@ class ShutdownAPIHandler(APIHandler):
 
 
 class RootAPIHandler(APIHandler):
-
     def set_default_headers(self):
         """
         Set any headers passed as tornado_settings['headers'].
 
         Also responsible for setting content-type header
-        """    
+        """
         old_headers = self.settings.get("headers", {})
         new_headers = {**old_headers}
         new_headers.setdefault('Access-Control-Allow-Origin', '*')
