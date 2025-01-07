@@ -62,6 +62,7 @@ class RootAPIHandler(APIHandler):
             # allow CORS requests to this endpoint by default
             self.set_header('Access-Control-Allow-Origin', '*')
         super().set_default_headers()
+
     def check_xsrf_cookie(self):
         return
 
