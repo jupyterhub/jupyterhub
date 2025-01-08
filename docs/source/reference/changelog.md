@@ -168,6 +168,7 @@ Changes that are likely to require effort to upgrade:
 - update bootstrap to v5 [#4774](https://github.com/jupyterhub/jupyterhub/pull/4774) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio), [@manics](https://github.com/manics))
 - explicitly require groups in auth model when Authenticator.manage_groups is enabled [#4645](https://github.com/jupyterhub/jupyterhub/pull/4645) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
 - add JupyterHub.subdomain_hook [#4471](https://github.com/jupyterhub/jupyterhub/pull/4471) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio), [@akhmerov](https://github.com/akhmerov))
+- Using a token as a query parameter to start a user session is disabled by default, set `JUPYTERHUB_ALLOW_TOKEN_IN_URL=true` to enable it
 
 #### New features added
 
