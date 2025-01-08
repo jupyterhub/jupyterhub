@@ -78,7 +78,7 @@ c.JupyterHub.load_roles = []
 c.JupyterHub.load_groups = {
     # collaborative accounts get added to this group
     # so it's easy to see which accounts are collaboration accounts
-    "collaborative": [],
+    "collaborative": {"users": []},
 }
 ```
 
@@ -102,12 +102,12 @@ for project_name, project in project_config["projects"].items():
     members = project.get("members", [])
     print(f"Adding project {project_name} with members {members}")
     # add them to a group for the project
-    c.JupyterHub.load_groups[project_name] = members
+    c.JupyterHub.load_groups[project_name] = {"users": members}
     # define a new user for the collaboration
     collab_user = f"{project_name}-collab"
     # add the collab user to the 'collaborative' group
     # so we can identify it as a collab account
-    c.JupyterHub.load_groups["collaborative"].append(collab_user)
+    c.JupyterHub.load_groups["collaborative"]["users"].append(collab_user)
 
     # finally, grant members of the project collaboration group
     # access to the collab user's server,
