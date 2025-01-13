@@ -52,6 +52,17 @@ class ShutdownAPIHandler(APIHandler):
 
 
 class RootAPIHandler(APIHandler):
+    def set_default_headers(self):
+        """
+        Set any headers passed as tornado_settings['headers'].
+
+        Also responsible for setting content-type header
+        """
+        if 'Access-Control-Allow-Origin' not in self.settings.get("headers", {}):
+            # allow CORS requests to this endpoint by default
+            self.set_header('Access-Control-Allow-Origin', '*')
+        super().set_default_headers()
+
     def check_xsrf_cookie(self):
         return
 
