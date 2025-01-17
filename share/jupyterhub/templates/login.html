@@ -12,7 +12,7 @@
           {{ custom_html | safe }}
         {% elif login_service %}
           <div class="service-login">
-            <p id='insecure-login-warning' class='hidden'>
+            <p id='insecure-login-warning' class='hidden alert alert-warning'>
               Warning: JupyterHub seems to be served over an unsecured HTTP connection.
               We strongly recommend enabling HTTPS for JupyterHub.
             </p>
@@ -28,7 +28,7 @@
               <h1>Sign in</h1>
             </div>
             <div class='auth-form-body m-auto'>
-              <p id='insecure-login-warning' class='hidden'>
+              <p id='insecure-login-warning' class='hidden alert alert-warning'>
                 Warning: JupyterHub seems to be served over an unsecured HTTP connection.
                 We strongly recommend enabling HTTPS for JupyterHub.
               </p>
