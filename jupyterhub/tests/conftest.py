@@ -175,7 +175,9 @@ async def io_loop(request):
     assert io_loop.asyncio_loop is event_loop
 
     def _close():
-        io_loop.close(all_fds=True)
+        # close tornado resources without closing underlying event loop
+        with mock.patch.object(event_loop, "close", return_value=None):
+            io_loop.close(all_fds=True)
 
     request.addfinalizer(_close)
     return io_loop
