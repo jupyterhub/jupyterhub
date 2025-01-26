@@ -269,15 +269,16 @@ async def wait_for_server(ip, port, timeout=10):
     """Wait for any server to show up at ip:port."""
     if ip in {'', '0.0.0.0', '::'}:
         ip = '127.0.0.1'
-    app_log.debug("Waiting %ss for server at %s:%s", timeout, ip, port)
+    display_ip = f"[{ip}]" if ":" in ip else ip
+    app_log.debug("Waiting %ss for server at %s:%s", timeout, display_ip, port)
     tic = time.perf_counter()
     await exponential_backoff(
         lambda: can_connect(ip, port),
-        f"Server at {ip}:{port} didn't respond in {timeout} seconds",
+        f"Server at {display_ip}:{port} didn't respond in {timeout} seconds",
         timeout=timeout,
     )
     toc = time.perf_counter()
-    app_log.debug("Server at %s:%s responded in %.2fs", ip, port, toc - tic)
+    app_log.debug("Server at %s:%s responded in %.2fs", display_ip, port, toc - tic)
 
 
 async def wait_for_http_server(url, timeout=10, ssl_context=None):

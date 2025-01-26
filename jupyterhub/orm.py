@@ -157,7 +157,8 @@ class Server(Base):
     spawner = relationship("Spawner", back_populates="server", uselist=False)
 
     def __repr__(self):
-        return f"<Server({self.ip}:{self.port})>"
+        ip = f"[{self.ip}]" if ":" in self.ip else self.ip
+        return f"<Server({ip}:{self.port})>"
 
 
 # lots of things have roles

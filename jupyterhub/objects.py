@@ -219,4 +219,5 @@ class Hub(Server):
         return url_path_join(self.url, 'api')
 
     def __repr__(self):
-        return f"<{self.__class__.__name__} {self.ip}:{self.port}>"
+        ip = f"[{self.ip}]" if ":" in self.ip else self.ip
+        return f"<{self.__class__.__name__} {ip}:{self.port}>"
