@@ -288,6 +288,8 @@ class SingleUserNotebookAppMixin(Configurable):
             url = urlparse(os.environ['JUPYTERHUB_SERVICE_URL'])
             if url.hostname:
                 return url.hostname
+            # All interfaces (ipv4+ipv6)
+            return ""
         return '127.0.0.1'
 
     # disable some single-user configurables
