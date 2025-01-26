@@ -49,7 +49,10 @@ class Server(HasTraits):
         Never used in APIs, only logging,
         since it can be non-connectable value, such as '', meaning all interfaces.
         """
-        if self.ip in {'', '0.0.0.0', '::'}:
+        ip = self.ip
+        if ":" in ip:
+            ip = f"[{ip}]"
+        if ip in {'', '0.0.0.0', '[::]'}:
             return self.url.replace(self._connect_ip, self.ip or '*', 1)
         return self.url
 
