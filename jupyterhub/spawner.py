@@ -1093,7 +1093,8 @@ class Spawner(LoggingConfigurable):
             base_url = '/'
 
         proto = 'https' if self.internal_ssl else 'http'
-        bind_url = f"{proto}://{self.ip}:{self.port}{base_url}"
+        ip = f"[{self.ip}]" if ":" in self.ip else self.ip
+        bind_url = f"{proto}://{ip}:{self.port}{base_url}"
         env["JUPYTERHUB_SERVICE_URL"] = bind_url
 
         # the public URLs of this server and the Hub
