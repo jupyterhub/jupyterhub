@@ -436,7 +436,10 @@ class Service(LoggingConfigurable):
             # since they are always local subprocesses
             hub = copy.deepcopy(self.hub)
             hub.connect_url = ''
-            hub.connect_ip = '127.0.0.1'
+            if self.hub.ip and ":" in self.hub.ip:
+                hub.connect_ip = "::1"
+            else:
+                hub.connect_ip = "127.0.0.1"
 
         self.spawner = _ServiceSpawner(
             cmd=self.command,
