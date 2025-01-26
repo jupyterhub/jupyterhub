@@ -483,6 +483,20 @@ class Spawner(LoggingConfigurable):
         """,
     ).tag(config=True)
 
+    @validate("ip")
+    def _strip_ipv6(self, proposal):
+        """
+        Currently (JupyterHub 5.2.1) it's necessary to use [] when specifying an
+        [ipv6] due to the IP being concatenated with the port when forming URLs
+        without [].
+
+        To avoid breaking existing workarounds strip [].
+        """
+        v = proposal["value"]
+        if v.startswith("[") and v.endswith("]"):
+            v = v[1:-1]
+        return v
+
     port = Integer(
         0,
         help="""
