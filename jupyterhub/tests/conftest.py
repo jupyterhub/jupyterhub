@@ -32,6 +32,7 @@ import os
 import sys
 from subprocess import TimeoutExpired
 from unittest import mock
+from warnings import warn
 
 import pytest_asyncio
 from packaging.version import parse as parse_version
@@ -175,9 +176,20 @@ async def io_loop(request):
     assert io_loop.asyncio_loop is event_loop
 
     def _close():
-        # close tornado resources without closing underlying event loop
-        with mock.patch.object(event_loop, "close", return_value=None):
-            io_loop.close(all_fds=True)
+        # cleanup everything
+        try:
+            event_loop.run_until_complete(event_loop.shutdown_asyncgens())
+        except (asyncio.CancelledError, RuntimeError):
+            pass
+        io_loop.close(all_fds=True)
+
+        # workaround pytest-asyncio trying to cleanup after loop is closed
+        # problem introduced in pytest-asyncio 0.25.2
+        def noop(*args, **kwargs):
+            warn("Loop used after close...", RuntimeWarning, stacklevel=2)
+            return
+
+        event_loop.run_until_complete = noop
 
     request.addfinalizer(_close)
     return io_loop
