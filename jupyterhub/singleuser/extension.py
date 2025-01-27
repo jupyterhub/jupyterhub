@@ -518,7 +518,8 @@ class JupyterHubSingleUser(ExtensionApp):
         if url.hostname:
             cfg.ip = url.hostname
         else:
-            cfg.ip = "127.0.0.1"
+            # All interfaces (ipv4+ipv6)
+            cfg.ip = ""
 
         cfg.base_url = os.environ.get('JUPYTERHUB_SERVICE_PREFIX') or '/'
 
