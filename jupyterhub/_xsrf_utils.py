@@ -10,11 +10,14 @@ in both Hub and single-user code
 
 import base64
 import hashlib
+import os
 from http.cookies import SimpleCookie
 from ipaddress import ip_address
 
 from tornado import web
 from tornado.log import app_log
+
+from jupyterhub.utils import _bool_env
 
 
 def _get_signed_value_urlsafe(handler, name, b64_value):
@@ -231,6 +234,17 @@ def check_xsrf_cookie(handler):
         )
 
 
+# allow disabling using ip in anonymous id
+_anonymous_use_ip = _bool_env("JUPYTERHUB_XSRF_ANONYMOUS_USE_IP", default=True)
+# allow specifying which headers to use for anonymous id
+# (default: User-Agent)
+# these should be stable (over a few minutes) for a single client and unlikely
+# to be shared across users
+_anonymous_id_headers = os.environ.get(
+    "JUPYTERHUB_XSRF_ANONYMOUS_ID_HEADERS", "User-Agent"
+).split(";")
+
+
 def _anonymous_xsrf_id(handler):
     """Generate an appropriate xsrf token id for an anonymous request
 
@@ -241,21 +255,24 @@ def _anonymous_xsrf_id(handler):
     (enough to submit a login form with MFA).
     """
     hasher = hashlib.sha256()
-    ip = handler.request.remote_ip
-    # if the ip is private (e.g. a cluster ip),
-    # this is almost certainly a proxy ip and not useful
-    # for distinguishing request origin.
-    # A proxy has the double downside of multiple replicas
-    # meaning the value can change from one request to the next for the
-    # same 'true' origin, resulting in unavoidable xsrf mismatch errors
-    try:
-        if ip_address(ip).is_private:
-            ip = 'private'
-    except ValueError as e:
-        # invalid ip ?!
-        app_log.warning("Error parsing remote ip %r: %s", ip, e)
-    hasher.update(ip.encode("ascii"))
-    hasher.update(
-        handler.request.headers.get("User-Agent", "").encode("utf8", "replace")
-    )
+    if _anonymous_use_ip:
+        ip = handler.request.remote_ip
+        # if the ip is private (e.g. a cluster ip),
+        # this is almost certainly a proxy ip and not useful
+        # for distinguishing request origin.
+        # A proxy has the double downside of multiple replicas
+        # meaning the value can change from one request to the next for the
+        # same 'true' origin, resulting in unavoidable xsrf mismatch errors
+        try:
+            if ip_address(ip).is_private:
+                ip = 'private'
+        except ValueError as e:
+            # invalid ip ?!
+            app_log.warning("Error parsing remote ip %r: %s", ip, e)
+        hasher.update(ip.encode("ascii"))
+    for name in _anonymous_id_headers:
+        header = handler.request.headers.get(name, "")
+        hasher.update(header.encode("utf8", "replace"))
+        # field delimiter (should be something not valid utf8)
+        hasher.update(b"\xff")
     return base64.urlsafe_b64encode(hasher.digest()).decode("ascii")
