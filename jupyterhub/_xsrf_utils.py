@@ -11,6 +11,7 @@ in both Hub and single-user code
 import base64
 import hashlib
 from http.cookies import SimpleCookie
+from ipaddress import ip_address
 
 from tornado import web
 from tornado.log import app_log
@@ -240,7 +241,20 @@ def _anonymous_xsrf_id(handler):
     (enough to submit a login form with MFA).
     """
     hasher = hashlib.sha256()
-    hasher.update(handler.request.remote_ip.encode("ascii"))
+    ip = handler.request.remote_ip
+    # if the ip is private (e.g. a cluster ip),
+    # this is almost certainly a proxy ip and not useful
+    # for distinguishing request origin.
+    # A proxy has the double downside of multiple replicas
+    # meaning the value can change from one request to the next for the
+    # same 'true' origin, resulting in unavoidable xsrf mismatch errors
+    try:
+        if ip_address(ip).is_private:
+            ip = 'private'
+    except ValueError as e:
+        # invalid ip ?!
+        app_log.warning("Error parsing remote ip %r: %s", ip, e)
+    hasher.update(ip.encode("ascii"))
     hasher.update(
         handler.request.headers.get("User-Agent", "").encode("utf8", "replace")
     )
