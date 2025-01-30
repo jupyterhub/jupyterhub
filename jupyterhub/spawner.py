@@ -470,6 +470,10 @@ class Spawner(LoggingConfigurable):
         The IP address (or hostname) the single-user server should listen on.
 
         Usually either '127.0.0.1' (default) or '0.0.0.0'.
+        On IPv6 only networks use '::1' or '::'.
+
+        If the spawned singleuser server is running JupyterHub 5.3.0 later
+        You can set this to the empty string '' to indicate both IPv4 and IPv6.
 
         The JupyterHub proxy implementation should be able to send packets to this interface.
 
@@ -477,10 +481,7 @@ class Spawner(LoggingConfigurable):
         should override the default to '0.0.0.0'.
 
         .. versionchanged:: 2.0
-            Default changed to '127.0.0.1', from ''.
-            In most cases, this does not result in a change in behavior,
-            as '' was interpreted as 'unspecified',
-            which used the subprocesses' own default, itself usually '127.0.0.1'.
+            Default changed to '127.0.0.1', from unspecified.
         """,
     ).tag(config=True)
 
