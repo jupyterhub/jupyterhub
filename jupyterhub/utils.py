@@ -273,7 +273,7 @@ async def wait_for_server(ip, port, timeout=10):
         ip = '127.0.0.1'
     elif ip == "::":
         ip = "::1"
-    display_ip = f"[{ip}]" if ":" in ip else ip
+    display_ip = fmt_ip_url(ip)
     app_log.debug("Waiting %ss for server at %s:%s", timeout, display_ip, port)
     tic = time.perf_counter()
     await exponential_backoff(
@@ -967,3 +967,13 @@ def recursive_update(target, new):
 
         else:
             target[k] = v
+
+
+def fmt_ip_url(ip):
+    """
+    Format an IP for use in URLs. IPv6 is wrapped with [], everything else is
+    unchanged
+    """
+    if ":" in ip:
+        return f"[{ip}]"
+    return ip

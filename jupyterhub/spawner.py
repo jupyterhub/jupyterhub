@@ -48,6 +48,7 @@ from .traitlets import ByteSpecification, Callable, Command
 from .utils import (
     AnyTimeoutError,
     exponential_backoff,
+    fmt_ip_url,
     maybe_future,
     random_port,
     recursive_update,
@@ -1107,8 +1108,7 @@ class Spawner(LoggingConfigurable):
             base_url = '/'
 
         proto = 'https' if self.internal_ssl else 'http'
-        ip = f"[{self.ip}]" if ":" in self.ip else self.ip
-        bind_url = f"{proto}://{ip}:{self.port}{base_url}"
+        bind_url = f"{proto}://{fmt_ip_url(self.ip)}:{self.port}{base_url}"
         env["JUPYTERHUB_SERVICE_URL"] = bind_url
 
         # the public URLs of this server and the Hub

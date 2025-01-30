@@ -12,6 +12,7 @@ from . import orm
 from .traitlets import URLPrefix
 from .utils import (
     can_connect,
+    fmt_ip_url,
     make_ssl_context,
     random_port,
     url_path_join,
@@ -49,11 +50,8 @@ class Server(HasTraits):
         Never used in APIs, only logging,
         since it can be non-connectable value, such as '', meaning all interfaces.
         """
-        ip = self.ip
-        if ":" in ip:
-            ip = f"[{ip}]"
-        if ip in {'', '0.0.0.0', '[::]'}:
-            return self.url.replace(self._connect_ip, self.ip or '*', 1)
+        if self.ip in {'', '0.0.0.0', '::'}:
+            return self.url.replace(self._connect_ip, fmt_ip_url(self.ip) or '*', 1)
         return self.url
 
     @observe('bind_url')
@@ -219,5 +217,4 @@ class Hub(Server):
         return url_path_join(self.url, 'api')
 
     def __repr__(self):
-        ip = f"[{self.ip}]" if ":" in self.ip else self.ip
-        return f"<{self.__class__.__name__} {ip}:{self.port}>"
+        return f"<{self.__class__.__name__} {fmt_ip_url(self.ip)}:{self.port}>"
