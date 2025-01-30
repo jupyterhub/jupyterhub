@@ -1922,7 +1922,11 @@ class JupyterHub(Application):
                 self.internal_ssl_components_trust
             )
 
-            default_alt_names = ["IP:127.0.0.1", "DNS:localhost"]
+            default_alt_names = [
+                "IP:127.0.0.1",
+                "IP:0:0:0:0:0:0:0:1",
+                "DNS:localhost",
+            ]
             if self.subdomain_host:
                 default_alt_names.append(
                     f"DNS:{urlparse(self.subdomain_host).hostname}"
