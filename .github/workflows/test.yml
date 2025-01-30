@@ -252,7 +252,7 @@ jobs:
 
       - name: Ensure browsers are installed for playwright
         if: matrix.browser
-        run: python -m playwright install --with-deps
+        run: python -m playwright install --with-deps firefox
 
       - name: Run pytest
         run: |
