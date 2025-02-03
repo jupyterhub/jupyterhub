@@ -74,10 +74,11 @@
                 <a role="button"
                    class="start-server btn btn-xs btn-primary {% if spawner.active %}hidden{% endif %}"
                    id="start-{{ spawner.name }}"
-                   href="{{ base_url }}spawn/{{ user.name }}/{{ spawner.name }}">start</a>
+                   href="{{ base_url }}spawn/{{ user.name }}/{{ spawner.name }}">Start</a>
                 <button role="button"
                         class="delete-server btn btn-xs btn-danger{% if spawner.active %} hidden{% endif %}"
-                        id="delete-{{ spawner.name }}">delete</button>
+                        id="delete-{{ spawner.name }}"
+                        data-server-name="{{ spawner.name }}">Delete</button>
               </td>
             </tr>
           {% endfor %}
