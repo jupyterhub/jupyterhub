@@ -70,7 +70,9 @@ require(["jquery", "moment", "jhapi"], function ($, moment, JHAPI) {
   function deleteServer() {
     var row = getRow($(this));
     var serverName = row.data("server-name");
-
+    if (!confirm('Are you sure you want to delete the server "' + serverName + '"?')) {
+      return;
+    }
     // before request
     disableRow(row);
 
