@@ -1,5 +1,5 @@
 "$id": https://schema.jupyter.org/jupyterhub/events/server-action
-version: 1
+version: "1"
 title: JupyterHub server events
 description: |
   Record actions on user servers made via JupyterHub.
