@@ -30,19 +30,35 @@ from enum import Enum
 
 from prometheus_client import Gauge, Histogram
 from tornado.ioloop import PeriodicCallback
-from traitlets import Any, Bool, Dict, Float, HasTraits, Integer, List, TraitError
+from traitlets import Any, Bool, Dict, Float, Integer
 from traitlets.config import LoggingConfigurable
 
 from . import orm
 from .utils import utcnow
 
 metrics_prefix = os.getenv('JUPYTERHUB_METRICS_PREFIX', 'jupyterhub')
-_env_buckets = os.environ.get('JUPYTERHUB_SERVER_SPAWN_DURATION_SECONDS_BUCKETS', "").strip()
+_env_buckets = os.environ.get(
+    'JUPYTERHUB_SERVER_SPAWN_DURATION_SECONDS_BUCKETS', ""
+).strip()
 
 if _env_buckets:
     spawn_duration_buckets = [float(_s) for _s in _env_buckets.split(",")]
 else:
-    spawn_duration_buckets = [0.5, 1, 2.5, 5, 10, 15, 30, 60, 120, 180, 300, 600, float("inf")]
+    spawn_duration_buckets = [
+        0.5,
+        1,
+        2.5,
+        5,
+        10,
+        15,
+        30,
+        60,
+        120,
+        180,
+        300,
+        600,
+        float("inf"),
+    ]
 
 REQUEST_DURATION_SECONDS = Histogram(
     'request_duration_seconds',
