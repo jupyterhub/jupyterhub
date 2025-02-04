@@ -36,31 +36,13 @@ from traitlets.config import LoggingConfigurable
 from . import orm
 from .utils import utcnow
 
+metrics_prefix = os.getenv('JUPYTERHUB_METRICS_PREFIX', 'jupyterhub')
+_env_buckets = os.environ.get('JUPYTERHUB_SERVER_SPAWN_DURATION_SECONDS_BUCKETS', "").strip()
 
-class CustomEnvVars(HasTraits):
-    bucket_sizes = List().tag(config=True)
-    metrics_prefix = os.getenv('JUPYTERHUB_METRICS_PREFIX', 'jupyterhub')
-
-    def load_from_env(self):
-        env_var_bucket_sizes = os.getenv(
-            'JUPYTERHUB_SERVER_SPAWN_DURATION_SECONDS_BUCKET_SIZES',
-            '[0.5, 1, 2.5, 5, 10, 15, 30, 60, 120, 180, 300, 600]',
-        )
-
-        try:
-            # Manually convert the string to a list
-            # Here we assume the string is in the format '[1, 2, 3]'
-            cleaned = env_var_bucket_sizes.strip('[]').replace(' ', '')
-            self.bucket_sizes = [str(i) for i in cleaned.split(',')]
-        except (ValueError, AttributeError):
-            # Handle if conversion fails
-            raise TraitError("Failed to convert environment variable to list.")
-
-
-custom_env = CustomEnvVars()
-custom_env.load_from_env()
-metrics_prefix = custom_env.metrics_prefix
-bucket_sizes = custom_env.bucket_sizes
+if _env_buckets:
+    spawn_duration_buckets = [float(_s) for _s in _env_buckets.split(",")]
+else:
+    spawn_duration_buckets = [0.5, 1, 2.5, 5, 10, 15, 30, 60, 120, 180, 300, 600, float("inf")]
 
 REQUEST_DURATION_SECONDS = Histogram(
     'request_duration_seconds',
@@ -75,7 +57,7 @@ SERVER_SPAWN_DURATION_SECONDS = Histogram(
     ['status'],
     # Use custom bucket sizes, since the default bucket ranges
     # are meant for quick running processes. Spawns can take a while!
-    buckets=bucket_sizes,
+    buckets=spawn_duration_buckets,
     namespace=metrics_prefix,
 )
 
