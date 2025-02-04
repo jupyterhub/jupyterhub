@@ -1646,6 +1646,11 @@ components:
         name:
           type: string
           description: The user's name
+        kind:
+          type: string
+          description: the string 'user' to distinguish from 'service'
+          enum:
+            - user
         admin:
           type: boolean
           description: Whether the user is an admin
@@ -1784,6 +1789,13 @@ components:
               service: "#/components/schemas/Service"
         - type: object
           properties:
+            kind:
+              type: string
+              description: |
+                'user' or 'service' depending on the entity which owns the token
+              enum:
+                - user
+                - service
             session_id:
               type:
                 - string
@@ -1820,6 +1832,11 @@ components:
         name:
           type: string
           description: The group's name
+        kind:
+          type: string
+          description: Always the string 'group'
+          enum:
+            - group
         users:
           type: array
           description: The names of users who are members of this group
@@ -1845,6 +1862,11 @@ components:
         name:
           type: string
           description: The service's name
+        kind:
+          type: string
+          description: the string 'service' to distinguish from 'user'
+          enum:
+            - service
         admin:
           type: boolean
           description: Whether the service is an admin
