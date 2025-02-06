@@ -34,6 +34,9 @@
               </p>
               {% if login_error %}<p class="login_error">{{ login_error }}</p>{% endif %}
               <input type="hidden" name="_xsrf" value="{{ xsrf }}" />
+
+              {# Allow full override of the "label" and "input" elements of the username and password fields. #}
+              {% block username_password_input_override %}
               <label for="username_input">Username:</label>
               <input id="username_input"
                      type="text"
@@ -56,6 +59,7 @@
                      {# allow adding extra HTML Input Attributes (pattern, placeholder, title, minlenght, maxlenght, ...) #}
                      {% block password_input_attribs %}{% endblock password_input_attribs %}
                      />
+              {% endblock username_password_input_override %}
               {% if authenticator.request_otp %}
                 <label for='otp_input'>{{ authenticator.otp_prompt }}</label>
                 <input class="form-control"
