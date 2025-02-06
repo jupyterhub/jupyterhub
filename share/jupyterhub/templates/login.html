@@ -43,13 +43,19 @@
                      class="form-control"
                      name="username"
                      val="{{ username }}"
-                     autofocus="autofocus" />
+                     autofocus="autofocus"
+                     {# allow adding extra HTML Input Attributes (pattern, placeholder, title, minlenght, maxlenght, ...) #}
+                     {% block username_input_attribs %}{% endblock username_input_attribs %}
+                     />
               <label for='password_input'>Password:</label>
               <input type="password"
                      class="form-control"
                      autocomplete="current-password"
                      name="password"
-                     id="password_input" />
+                     id="password_input"
+                     {# allow adding extra HTML Input Attributes (pattern, placeholder, title, minlenght, maxlenght, ...) #}
+                     {% block password_input_attribs %}{% endblock password_input_attribs %}
+                     />
               {% if authenticator.request_otp %}
                 <label for='otp_input'>{{ authenticator.otp_prompt }}</label>
                 <input class="form-control"
