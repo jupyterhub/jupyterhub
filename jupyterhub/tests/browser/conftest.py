@@ -9,12 +9,15 @@ from ..conftest import add_user, new_username
 
 
 @pytest.fixture
-def cmdoptions(request):
+def cmdoptions(request, pytestconfig):
     # Playwright pytest supplies some CLI arguments, but they're not always taken
     # into account so handle them ourselves
     # https://playwright.dev/python/docs/test-runners#cli-arguments
+    print(request.__dict__)
+    print(pytestconfig.__dict__)
     return dict(
-        (opt, request.config.getoption(f"--{opt}"))
+        # (opt, request.config.getoption(f"--{opt}"))
+        (opt, pytestconfig.getoption(f"--{opt}"))
         for opt in ["headed", "output", "slowmo", "video"]
     )
 
