@@ -1,29 +1,38 @@
 from collections import namedtuple
-from os import getenv
 
 import pytest
 from playwright.async_api import async_playwright
 
 from ..conftest import add_user, new_username
 
-# To debug failures set environment variables
-# TEST_HEADLESS=0 to display the browser whilst the tests are run
-# TEST_SLOWMO=<delay in milliseconds> to pause between each step
-# TEST_VIDEODIR=video-dir/ to save videos of tests
+# To debug failures you can pass --headed, --slowmo=<delay>, and --video=on
+
+
+@pytest.fixture
+def cmdoptions(request):
+    # Playwright pytest supplies some CLI arguments, but they're not always taken
+    # into account so handle them ourselves
+    # https://playwright.dev/python/docs/test-runners#cli-arguments
+    return dict(
+        (opt, request.config.getoption(f"--{opt}"))
+        for opt in ["headed", "output", "slowmo", "video"]
+    )
 
 
 @pytest.fixture()
-async def browser():
-    TEST_HEADLESS = getenv("TEST_HEADLESS", "1") == "1"
-    TEST_SLOWMO = int(getenv("TEST_SLOWMO", "0"))
-    TEST_VIDEODIR = getenv("TEST_VIDEODIR")
+async def browser(cmdoptions):
+    print(cmdoptions)
 
     # browser_type in ["chromium", "firefox", "webkit"]
     async with async_playwright() as playwright:
         browser = await playwright.firefox.launch(
-            headless=TEST_HEADLESS, slow_mo=TEST_SLOWMO
+            headless=not cmdoptions["headed"], slow_mo=cmdoptions["slowmo"]
         )
-        context = await browser.new_context(record_video_dir=TEST_VIDEODIR)
+        context = await browser.new_context(
+            record_video_dir=cmdoptions["output"]
+            if cmdoptions["video"] != "off"
+            else None
+        )
         page = await context.new_page()
         yield page
         await context.clear_cookies()
