@@ -55,6 +55,27 @@ can find them under the [jupyterhub/tests](https://github.com/jupyterhub/jupyter
 
    For more details, refer to the [pytest usage documentation](https://pytest.readthedocs.io/en/latest/usage.html).
 
+## Functional browser testing
+
+We use [Playwright for Python](https://playwright.dev/python/) to automate testing of the JupyterHub user interface.
+Playwright requires [specific versions of browsers](https://playwright.dev/python/docs/browsers), which you must download before running the tests:
+
+```bash
+playwright install firefox
+```
+
+You can run the tests by passing the `browser` Pytest marker on the command line:
+
+```bash
+pytest -v jupyterhub/tests/browser/ -mbrowser
+```
+
+You can set some of these environment variables to help investigate failing tests:
+
+- `TEST_HEADLESS=0` to show the automated browser whilst the tests are run
+- `TEST_SLOWMO=1000` to insert a 1000 millisecond delay between each step of the test, but be aware this may hide race conditions.
+- `TEST_VIDEODIR=video-dir/` to save videos of tests under the directory `video-dir/`
+
 ## Test organisation
 
 The tests live in `jupyterhub/tests` and are organized roughly into:
