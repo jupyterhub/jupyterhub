@@ -70,11 +70,11 @@ You can run the tests by passing the `browser` Pytest marker on the command line
 pytest -v jupyterhub/tests/browser/ -mbrowser
 ```
 
-You can set some of these [Playwright pytest command line arguments](https://playwright.dev/python/docs/test-runners#cli-arguments) to help investigate failing tests:
+You can set some of these custom Pytest command line arguments to help investigate failing tests:
 
 - `--headed` to show the automated browser whilst the tests are run
-- `--slowmo=1000` to insert a 1000 millisecond delay between each step of the test, but be aware this may hide race conditions
-- `--video=on` to save videos of tests under the `--output` directory
+- `--slowmo=1000` to insert a `1000` millisecond delay between each step of the test, but be aware this may hide race conditions
+- `--videodir=output-dir` to save videos of tests under the `output-dir` directory
 
 ## Test organisation
 
