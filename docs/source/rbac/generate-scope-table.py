@@ -14,26 +14,52 @@ The files are:
        scopes descriptions are updated in it.
 """
 
-import os
 from collections import defaultdict
 from pathlib import Path
-from subprocess import run
 
 from pytablewriter import MarkdownTableWriter
 from ruamel.yaml import YAML
 
-from jupyterhub import __version__
-from jupyterhub.scopes import scope_definitions
-
-HERE = os.path.abspath(os.path.dirname(__file__))
-DOCS = Path(HERE).parent.parent.absolute()
+HERE = Path(__file__).parent.absolute()
+DOCS = HERE / ".." / ".."
 REST_API_YAML = DOCS.joinpath("source", "_static", "rest-api.yml")
-SCOPE_TABLE_MD = Path(HERE).joinpath("scope-table.md")
+SCOPE_TABLE_MD = HERE.joinpath("scope-table.md")
+
+
+def _load_jupyterhub_info():
+    """
+    The equivalent of
+
+        from jupyterhub import __version__
+        from jupyterhub.scopes import scope_definitions
+
+    but without needing to install JupyterHub and dependencies
+    so that we can run this pre-commit
+    """
+    root = HERE / ".." / ".." / ".."
+    g = {}
+    exec((root / "jupyterhub" / "_version.py").read_text(), g)
+
+    # To avoid parsing the whole of scope_definitions.py just pull out
+    # the relevant lines
+    scopes_file = root / "jupyterhub" / "scopes.py"
+    scopes_lines = []
+    for line in scopes_file.read_text().splitlines():
+        if not scopes_lines and line == "scope_definitions = {":
+            scopes_lines.append(line)
+        elif scopes_lines:
+            scopes_lines.append(line)
+            if line == "}":
+                break
+
+    exec("\n".join(scopes_lines), g)
+
+    return g["__version__"], g["scope_definitions"]
 
 
 class ScopeTableGenerator:
     def __init__(self):
-        self.scopes = scope_definitions
+        self.version, self.scopes = _load_jupyterhub_info()
 
     @classmethod
     def create_writer(cls, table_name, headers, values):
@@ -131,7 +157,7 @@ class ScopeTableGenerator:
         with open(filename) as f:
             content = yaml.load(f.read())
 
-        content["info"]["version"] = __version__
+        content["info"]["version"] = self.version
         for scope in self.scopes:
             description = self.scopes[scope]['description']
             doc_description = self.scopes[scope].get('doc_description', '')
@@ -144,12 +170,6 @@ class ScopeTableGenerator:
 
         with open(filename, 'w') as f:
             yaml.dump(content, f)
-
-        run(
-            ['pre-commit', 'run', 'prettier', '--files', filename],
-            cwd=HERE,
-            check=False,
-        )
 
 
 def main():
