@@ -295,6 +295,8 @@ linkcheck_ignore = [
     r"https://linux.die.net/.*",  # linux.die.net seems to block requests from CI with 403 sometimes
     # don't check links to unpublished advisories
     r"https://github.com/jupyterhub/jupyterhub/security/advisories/.*",
+    # Occasionally blocks CI checks with 403
+    r"https://www\.mysql\.com",
 ]
 linkcheck_anchors_ignore = [
     "/#!",
