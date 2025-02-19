@@ -7,8 +7,6 @@ node_modules
 dist
 docs/_build
 docs/build
-docs/source/_static/rest-api
-docs/source/rbac/scope-table.md
 docs/source/reference/metrics.md
 
 .ipynb_checkpoints
