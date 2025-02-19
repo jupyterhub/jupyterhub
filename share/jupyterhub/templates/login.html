@@ -35,82 +35,86 @@
               {% if login_error %}<p class="login_error">{{ login_error }}</p>{% endif %}
               <input type="hidden" name="_xsrf" value="{{ xsrf }}" />
               {# Allow full override of the "label" and "input" elements of the username and password fields. #}
-              {% block username_password_input_override %}
+              {% block username_input %}
                 <label for="username_input">Username:</label>
                 <input id="username_input"
-                  type="text"
-                  autocapitalize="off"
-                  autocorrect="off"
-                  autocomplete="username"
-                  class="form-control"
-                  name="username"
-                  val="{{ username }}"
-                  autofocus="autofocus"
-                  {# allow adding extra HTML Input Attributes (pattern, placeholder, title, minlenght, maxlenght, ...) #}
-                  {% block username_input_attribs %}{% endblock username_input_attribs %}
-                  />
-                  <label for='password_input'>Password:</label>
-                  <input type="password"
-                    class="form-control"
-                    autocomplete="current-password"
-                    name="password"
-                    id="password_input"
-                    {# allow adding extra HTML Input Attributes (pattern, placeholder, title, minlenght, maxlenght, ...) #}
-                    {% block password_input_attribs %}{% endblock password_input_attribs %}
-                    />
-                  {% endblock username_password_input_override %}
-                  {% if authenticator.request_otp %}
-                    <label for='otp_input'>{{ authenticator.otp_prompt }}</label>
-                    <input class="form-control"
-                           autocomplete="one-time-password"
-                           name="otp"
-                           id="otp_input" />
-                  {% endif %}
-                  <div class="feedback-container">
-                    <input id="login_submit"
-                           type="submit"
-                           class='btn btn-jupyter form-control'
-                           value='Sign in'
-                           tabindex="3" />
-                    <div class="feedback-widget hidden">
-                      <i class="fa fa-spinner"></i>
-                    </div>
-                  </div>
-                  {% block login_terms %}
-                    {% if login_term_url %}
-                      <div id="login_terms" class="login_terms">
-                        <input type="checkbox"
-                               id="login_terms_checkbox"
-                               name="login_terms_checkbox"
-                               required />
-                        {% block login_terms_text %}
-                          {# allow overriding the text #}
-                          By logging into the platform you accept the <a href="{{ login_term_url }}">terms and conditions</a>.
-                        {% endblock login_terms_text %}
-                      </div>
-                    {% endif %}
-                  {% endblock login_terms %}
+                       {% block username_input_attrs %}
+                       type="text"
+                       autocapitalize="off"
+                       autocorrect="off"
+                       autocomplete="username"
+                       class="form-control"
+                       name="username"
+                       val="{{ username }}"
+                       autofocus="autofocus"
+                       {% endblock username_input_attrs %} />
+              {% endblock username_input %}
+              {% block password_input %}
+                <label for='password_input'>Password:</label>
+                <input id="password_input"
+                       {% block password_input_attrs %}
+                       type="password"
+                       class="form-control"
+                       autocomplete="current-password"
+                       name="password"
+                       {% endblock password_input_attrs %} />
+              {% endblock password_input %}
+              {% if authenticator.request_otp %}
+                {% block otp_input %}
+                  <label for="otp_input">{{ authenticator.otp_prompt }}</label>
+                  <input id="otp_input"
+                         {% block otp_input_attrs %}
+                         class="form-control"
+                         autocomplete="one-time-password"
+                         name="otp"
+                         {% endblock otp_input_attrs %} />
+                {% endblock otp_input %}
+              {% endif %}
+              <div class="feedback-container">
+                <input id="login_submit"
+                       type="submit"
+                       class='btn btn-jupyter form-control'
+                       value='Sign in'
+                       tabindex="3" />
+                <div class="feedback-widget hidden">
+                  <i class="fa fa-spinner"></i>
                 </div>
-              </form>
-            {% endif %}
-          {% endblock login_container %}
-        </div>
-      {% endblock login %}
-    {% endblock main %}
-    {% block script %}
-      {{ super() }}
-      <script>
-        if (!window.isSecureContext) {
-          // unhide http warning
-          var warning = document.getElementById('insecure-login-warning');
-          warning.className = warning.className.replace(/\bhidden\b/, '');
-        }
-        // setup onSubmit feedback
-        $('form').submit((e) => {
-          var form = $(e.target);
-          form.find('.feedback-container>input').attr('disabled', true);
-          form.find('.feedback-container>*').toggleClass('hidden');
-          form.find('.feedback-widget>*').toggleClass('fa-pulse');
-        });
-      </script>
-    {% endblock script %}
+              </div>
+              {% block login_terms %}
+                {% if login_term_url %}
+                  <div id="login_terms" class="login_terms">
+                    <input type="checkbox"
+                           id="login_terms_checkbox"
+                           name="login_terms_checkbox"
+                           required />
+                    {% block login_terms_text %}
+                      {# allow overriding the text #}
+                      By logging into the platform you accept the <a href="{{ login_term_url }}">terms and conditions</a>.
+                    {% endblock login_terms_text %}
+                  </div>
+                {% endif %}
+              {% endblock login_terms %}
+            </div>
+          </form>
+        {% endif %}
+      {% endblock login_container %}
+    </div>
+  {% endblock login %}
+{% endblock main %}
+{% block script %}
+  {{ super() }}
+  <script>
+    if (!window.isSecureContext) {
+      // unhide http warning
+      var warning = document.getElementById('insecure-login-warning');
+      warning.className = warning.className.replace(/\bhidden\b/, '');
+    }
+    // setup onSubmit feedback
+    $('form').submit((e) => {
+      var form = $(e.target);
+      form.find('.feedback-container>input').attr('disabled', true);
+      form.find('.feedback-container>*').toggleClass('hidden');
+      form.find('.feedback-widget>*').toggleClass('fa-pulse');
+    });
+  </script>
+{% endblock script %}
