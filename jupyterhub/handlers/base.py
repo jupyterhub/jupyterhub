@@ -1248,6 +1248,20 @@ class BaseHandler(RequestHandler):
                     status=ServerSpawnStatus.failure
                 ).observe(time.perf_counter() - spawn_start_time)
 
+                # if it stopped, give the original spawn future a second chance to raise
+                # this avoids storing the generic 500 error as the spawn failure,
+                # when the original may be more informative
+                try:
+                    await asyncio.wait_for(
+                        asyncio.shield(finish_spawn_future), timeout=1
+                    )
+                except TimeoutError:
+                    pass
+
+                if finish_spawn_future.exception():
+                    # raise original exception if it already failed
+                    await finish_spawn_future
+
                 raise web.HTTPError(
                     500,
                     f"Spawner failed to start [status={status}]. The logs for {spawner._log_name} may contain details.",
