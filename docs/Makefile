@@ -35,7 +35,7 @@ help:
 # - NOTE: If the pre-requisites for the html target is updated, also update the
 #         Read The Docs section in docs/source/conf.py.
 #
-html: metrics scopes
+html: metrics
 	$(SPHINXBUILD) -b html "$(SOURCEDIR)" "$(BUILDDIR)/html" $(SPHINXOPTS)
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
@@ -43,10 +43,6 @@ html: metrics scopes
 metrics: source/reference/metrics.md
 source/reference/metrics.md:
 	python3 generate-metrics.py
-
-scopes: source/rbac/scope-table.md
-source/rbac/scope-table.md:
-	python3 source/rbac/generate-scope-table.py
 
 
 # Manually added targets - related to development
@@ -56,7 +52,7 @@ source/rbac/scope-table.md:
 # - requires sphinx-autobuild, see
 #   https://sphinxcontrib-spelling.readthedocs.io/en/latest/
 # - builds and rebuilds html on changes to source, but does not re-generate
-#   metrics/scopes files
+#   metrics files
 # - starts a livereload enabled webserver and opens up a browser
 devenv: html
 	sphinx-autobuild -b html --open-browser "$(SOURCEDIR)" "$(BUILDDIR)/html"
