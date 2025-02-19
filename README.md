@@ -220,7 +220,7 @@ docker container or Linux VM.
 We use a shared copyright model that enables all contributors to maintain the
 copyright on their contributions.
 
-All code is licensed under the terms of the [revised BSD license](./COPYING.md).
+All code is licensed under the terms of the [revised BSD license](./LICENSE).
 
 ## Help and resources
 

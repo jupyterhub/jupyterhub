@@ -80,7 +80,7 @@ simple = "jupyterhub.spawner:SimpleLocalProcessSpawner"
 
 [tool.setuptools]
 zip-safe = false
-license-files = ["COPYING.md"]
+license-files = ["LICENSE"]
 include-package-data = true
 
 [tool.setuptools.packages.find]
