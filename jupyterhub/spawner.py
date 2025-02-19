@@ -623,7 +623,8 @@ class Spawner(LoggingConfigurable):
         though it can contain bytes in addition to standard JSON data types.
 
         This method should not have any side effects.
-        Any handling of `user_options` should be done in `.start()`
+        Any handling of `user_options` should be done in `.apply_user_options()` (JupyterHub 5.3)
+        or `.start()` (JupyterHub 5.2 or older)
         to ensure consistent behavior across servers
         spawned via the API and form submission page.
 
@@ -642,9 +643,47 @@ class Spawner(LoggingConfigurable):
 
     @default("options_from_form")
     def _options_from_form(self):
-        return self._default_options_from_form
+        return self._passthrough_options_from_form
 
-    def _default_options_from_form(self, form_data):
+    @validate("options_from_form")
+    def _validate_options_from_form(self, proposal):
+        # coerce special string values to callable
+        if proposal.value == "passthrough":
+            return self._passthrough_options_from_form
+        elif proposal.value == "simple":
+            return self._simple_options_from_form
+        else:
+            return proposal.value
+
+    def _passthrough_options_from_form(self, form_data):
+        """The longstanding default behavior for options_from_form
+
+        explicit opt-in via `options_from_form = 'passthrough'`
+
+        .. versionadded:: 5.3
+        """
+        return form_data
+
+    def _simple_options_from_form(self, form_data):
+        """Simple options_from_form
+
+        Enable via `options_from_form = 'simple'
+
+        Assumes only scalar form inputs (no multiple-choice, no numbers)
+        and default checkboxes for booleans ('on' -> True)
+
+        .. versionadded:: 5.3
+        """
+        user_options = {}
+        for key, value_list in form_data.items():
+            if len(value_list) > 1:
+                value = value_list
+            else:
+                value = value_list[0]
+                if value == "on":
+                    # default for checkbox
+                    value = True
+                user_options[key] = value
         return form_data
 
     def run_options_from_form(self, form_data):
@@ -684,6 +723,80 @@ class Spawner(LoggingConfigurable):
             if the user_options are re-used.
         """
         return self.options_from_form(query_data)
+
+    apply_user_options = Union(
+        [Callable(), Dict()],
+        config=True,
+        default_value=None,
+        allow_none=True,
+        help="""
+            Apply inputs from user_options to the Spawner
+
+            Typically takes values in user_options, validates them, and updates Spawner attributes::
+
+                def apply_user_options(spawner, user_options):
+                    if "image" in user_options and isinstance(user_options["image"], str):
+                        spawner.image = user_options["image"]
+
+                c.Spawner.apply_user_options = apply_user_options
+
+            Default: do nothing
+
+            Typically a callalble which takes `(spawner: Spawner, user_options: dict)`,
+            but for simple cases this can be a dict mapping user option fields to Spawner attribute names,
+            e.g.::
+
+                c.Spawner.apply_user_options = {"image_input": "image"}
+
+            allows users to specify the image attribute, but not any others.
+
+            .. note::
+
+                Because `user_options` is user input
+                and may be set directly via the REST API,
+                no assumptions should be made on its structure or contents.
+                An empty dict should always be supported.
+                Make sure to validate any inputs before applying them!
+        
+            .. versionadded:: 5.3
+        
+                Prior to 5.3, applying user options must be done in `Spawner.start()`.
+            """,
+    )
+
+    def _run_apply_user_options(self, user_options):
+        if isinstance(self.apply_user_options, dict):
+            return self._apply_user_options_dict(user_options)
+        elif self.apply_user_options:
+            return self.apply_user_options(self, user_options)
+        elif user_options:
+            keys = list(user_options)
+            self.log.warning(
+                f"Received unhandled user_options for {self._log_name}: {', '.join(keys)}"
+            )
+
+    def _apply_user_options_dict(self, user_options):
+        """if apply_user_options is a dict
+
+        Allows fully declarative apply_user_options configuration
+        for simple cases where users may set attributes directly
+        from values in user_options.
+        """
+        traits = self.traits()
+        for key, value in user_options.items():
+            attr = self.apply_user_options.get(key, None)
+            if attr is None:
+                self.log.warning(f"Unhandled user option {key} for {self._log_name}")
+            elif hasattr(self, attr):
+                # require traits? I think not, but we should require declaration, at least
+                # use trait from_string for string coercion, though
+                if isinstance(value, str) and attr in traits:
+                    value = traits[attr].from_string(value)
+                setattr(self, attr, value)
+            else:
+                self.log.error(
+                    f"No such Spawner attribute {attr} for user option {key} on {self._log_name}"
+                )
 
     user_options = Dict(
         help="""

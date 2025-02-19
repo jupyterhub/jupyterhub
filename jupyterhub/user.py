@@ -862,6 +862,11 @@ class User:
             db.commit()
 
         spawner.user_options = options
+        # apply user options
+        r = spawner._run_apply_user_options(spawner.user_options)
+        if inspect.isawaitable(r):
+            await r
+
         # we are starting a new server, make sure it doesn't restore state
         spawner.clear_state()
 
