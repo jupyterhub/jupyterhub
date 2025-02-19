@@ -86,6 +86,8 @@ jobs:
   publish-docker:
     runs-on: ubuntu-22.04
     timeout-minutes: 30
+    # temporarily disabled
+    if: false
 
     services:
       # So that we can test this in PRs/branches
