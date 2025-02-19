@@ -34,28 +34,41 @@
               </p>
               {% if login_error %}<p class="login_error">{{ login_error }}</p>{% endif %}
               <input type="hidden" name="_xsrf" value="{{ xsrf }}" />
-              <label for="username_input">Username:</label>
-              <input id="username_input"
-                     type="text"
-                     autocapitalize="off"
-                     autocorrect="off"
-                     autocomplete="username"
-                     class="form-control"
-                     name="username"
-                     val="{{ username }}"
-                     autofocus="autofocus" />
-              <label for='password_input'>Password:</label>
-              <input type="password"
-                     class="form-control"
-                     autocomplete="current-password"
-                     name="password"
-                     id="password_input" />
+              {# Allow full override of the "label" and "input" elements of the username and password fields. #}
+              {% block username_input %}
+                <label for="username_input">Username:</label>
+                <input id="username_input"
+                       {% block username_input_attrs %}
+                       type="text"
+                       autocapitalize="off"
+                       autocorrect="off"
+                       autocomplete="username"
+                       class="form-control"
+                       name="username"
+                       val="{{ username }}"
+                       autofocus="autofocus"
+                       {% endblock username_input_attrs %} />
+              {% endblock username_input %}
+              {% block password_input %}
+                <label for='password_input'>Password:</label>
+                <input id="password_input"
+                       {% block password_input_attrs %}
+                       type="password"
+                       class="form-control"
+                       autocomplete="current-password"
+                       name="password"
+                       {% endblock password_input_attrs %} />
+              {% endblock password_input %}
               {% if authenticator.request_otp %}
-                <label for='otp_input'>{{ authenticator.otp_prompt }}</label>
-                <input class="form-control"
-                       autocomplete="one-time-password"
-                       name="otp"
-                       id="otp_input" />
+                {% block otp_input %}
+                  <label for="otp_input">{{ authenticator.otp_prompt }}</label>
+                  <input id="otp_input"
+                         {% block otp_input_attrs %}
+                         class="form-control"
+                         autocomplete="one-time-password"
+                         name="otp"
+                         {% endblock otp_input_attrs %} />
+                {% endblock otp_input %}
               {% endif %}
               <div class="feedback-container">
                 <input id="login_submit"
