@@ -469,8 +469,19 @@ which is a list of group names the user should be a member of:
 - If `None` is returned, no changes are made to the user's group membership
 
 If authenticator-managed groups are enabled,
-all group-management via the API is disabled,
-and roles cannot be specified with `load_groups` traitlet.
+groups cannot be specified with `load_groups` traitlet.
+
+:::{warning}
+When `manage_groups` is True,
+managing groups via the API is still permitted via the `admin:groups` scope (starting with 5.3),
+but any time a user logs in their group membership is completely reset via the login process.
+So it only really makes sense to make manual changes via the API that reflect upstream changes which are not automatically propagated, such as group deletion.
+
+:::
+
+:::{versionchanged} 5.3
+Prior to JupyterHub 5.3, all group management via the API was disabled if `Authenticator.manage_groups` is True.
+:::
 
 (authenticator-roles)=
 
