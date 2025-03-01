@@ -48,6 +48,7 @@ from .traitlets import ByteSpecification, Callable, Command
 from .utils import (
     AnyTimeoutError,
     exponential_backoff,
+    fmt_ip_url,
     maybe_future,
     random_port,
     recursive_update,
@@ -469,6 +470,10 @@ class Spawner(LoggingConfigurable):
         The IP address (or hostname) the single-user server should listen on.
 
         Usually either '127.0.0.1' (default) or '0.0.0.0'.
+        On IPv6 only networks use '::1' or '::'.
+
+        If the spawned singleuser server is running JupyterHub 5.3.0 later
+        You can set this to the empty string '' to indicate both IPv4 and IPv6.
 
         The JupyterHub proxy implementation should be able to send packets to this interface.
 
@@ -476,12 +481,23 @@ class Spawner(LoggingConfigurable):
         should override the default to '0.0.0.0'.
 
         .. versionchanged:: 2.0
-            Default changed to '127.0.0.1', from ''.
-            In most cases, this does not result in a change in behavior,
-            as '' was interpreted as 'unspecified',
-            which used the subprocesses' own default, itself usually '127.0.0.1'.
+            Default changed to '127.0.0.1', from unspecified.
         """,
     ).tag(config=True)
+
+    @validate("ip")
+    def _strip_ipv6(self, proposal):
+        """
+        Currently (JupyterHub 5.2.1) it's necessary to use [] when specifying an
+        [ipv6] due to the IP being concatenated with the port when forming URLs
+        without [].
+
+        To avoid breaking existing workarounds strip [].
+        """
+        v = proposal["value"]
+        if v.startswith("[") and v.endswith("]"):
+            v = v[1:-1]
+        return v
 
     port = Integer(
         0,
@@ -1093,7 +1109,7 @@ class Spawner(LoggingConfigurable):
             base_url = '/'
 
         proto = 'https' if self.internal_ssl else 'http'
-        bind_url = f"{proto}://{self.ip}:{self.port}{base_url}"
+        bind_url = f"{proto}://{fmt_ip_url(self.ip)}:{self.port}{base_url}"
         env["JUPYTERHUB_SERVICE_URL"] = bind_url
 
         # the public URLs of this server and the Hub
