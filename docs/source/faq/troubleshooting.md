@@ -306,6 +306,52 @@ notebook servers to default to JupyterLab:
 
 Users will need a GitHub account to log in and be authenticated by the Hub.
 
+### I'm seeing "403 Forbidden XSRF cookie does not match POST" when users try to login
+
+During login, JupyterHub takes the request IP into account for CSRF protection.
+If proxies are not configured to properly set forwarded ips,
+JupyterHub will see all requests as coming from an internal ip,
+likely the ip of the proxy itself.
+You can see this in the JupyterHub logs, which log the ip address of requests.
+If most requests look like they are coming from a small number `10.0.x.x` or `172.16.x.x` ips, the proxy is not forwarding the true request ip properly.
+If the proxy has multiple replicas,
+then it is likely the ip may change from one request to the next,
+leading to this error during login:
+
+> 403 Forbidden XSRF cookie does not match POST argument
+
+The best way to fix this is to ensure your proxies set the forwarded headers, e.g. for nginx:
+
+```nginx
+proxy_set_header X-Real-IP $remote_addr;
+proxy_set_header Host $http_host;
+proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+```
+
+But if this is not available to you, you can instruct jupyterhub to ignore IPs from certain networks
+with the environment variable `$JUPYTERHUB_XSRF_ANONYMOUS_IP_CIDRS`.
+For example, to ignore the common [private networks](https://en.wikipedia.org/wiki/Private_network#Private_IPv4_addresses):
+
+```bash
+export JUPYTERHUB_XSRF_ANONYMOUS_IP_CIDRS="10.0.0.0/8;172.16.0.0/12;192.168.0.0/16"
+```
+
+The result will be that any request from an ip on one of these networks will be treated as coming from the same source.
+
+To totally disable taking the ip into consideration, set
+
+```bash
+export JUPYTERHUB_XSRF_ANONYMOUS_IP_CIDRS="0.0.0.0/0"
+```
+
+If your proxy sets its own headers to identify a browser origin, you can instruct JupyterHub to use those:
+
+```bash
+export JUPYTERHUB_XSRF_ANONYMOUS_ID_HEADERS="My-Custom-Header;User-Agent"
+```
+
+Again, these things are only used to compute the XSRF token used while a user is not logged in (i.e. during login itself).
+
 ### How do I set up rotating daily logs?
 
 You can do this with [logrotate](https://linux.die.net/man/8/logrotate),
