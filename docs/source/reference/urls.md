@@ -183,13 +183,6 @@ will send user `hortense` to `/user/hortense/notebooks/Index.ipynb`
 This will not work in general,
 unless you grant those users access to your server.
 
-**Contributions welcome:** The JupyterLab "shareable link" should share this link
-when run with JupyterHub, but it does not.
-See [jupyterlab-hub](https://github.com/jupyterhub/jupyterlab-hub)
-where this should probably be done and
-[this issue in JupyterLab](https://github.com/jupyterlab/jupyterlab/issues/5388)
-that is intended to make it possible.
-
 ## Spawning
 
 ### `/hub/spawn[/:username[/:servername]]`
