@@ -611,7 +611,8 @@ class Spawner(LoggingConfigurable):
 
         return options_form
 
-    options_from_form = Callable(
+    options_from_form = Union(
+        [Callable(), Unicode()],
         help="""
         Interpret HTTP form data
 
@@ -676,15 +677,16 @@ class Spawner(LoggingConfigurable):
         """
         user_options = {}
         for key, value_list in form_data.items():
-            if len(value_list) > 1:
-                value = value_list
-            else:
+            if len(value_list) == 1:
                 value = value_list[0]
                 if value == "on":
                     # default for checkbox
                     value = True
-                user_options[key] = value
-        return form_data
+            else:
+                value = value_list
+
+            user_options[key] = value
+        return user_options
 
     def run_options_from_form(self, form_data):
         sig = signature(self.options_from_form)
@@ -789,10 +791,23 @@ class Spawner(LoggingConfigurable):
                 self.log.warning(f"Unhandled user option {key} for {self._log_name}")
             elif hasattr(self, attr):
                 # require traits? I think not, but we should require declaration, at least
-                # use trait from_string for string coercion, though
-                if isinstance(value, str) and attr in traits:
-                    value = traits[attr].from_string(value)
-                setattr(self, attr, value)
+                # use trait from_string for string coercion if available, though
+                try:
+                    setattr(self, attr, value)
+                except Exception as e:
+                    # try coercion from string via traits
+                    # this will mostly affect numbers
+                    if attr in traits and isinstance(value, str):
+                        # try coercion, may not work
+                        try:
+                            value = traits[attr].from_string(value)
+                        except Exception:
+                            # raise original assignment error, likely more informative
+                            raise e
+                        else:
+                            setattr(self, attr, value)
+                    else:
+                        raise
             else:
                 self.log.error(
                     f"No such Spawner attribute {attr} for user option {key} on {self._log_name}"

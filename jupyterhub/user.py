@@ -4,6 +4,7 @@ import asyncio
 import json
 import warnings
 from collections import defaultdict
+from inspect import isawaitable
 from urllib.parse import quote, urlparse, urlunparse
 
 from sqlalchemy import inspect
@@ -862,10 +863,17 @@ class User:
             db.commit()
 
         spawner.user_options = options
-        # apply user options
-        r = spawner._run_apply_user_options(spawner.user_options)
-        if inspect.isawaitable(r):
-            await r
+        try:
+            # apply user options
+            r = spawner._run_apply_user_options(spawner.user_options)
+            if isawaitable(r):
+                await r
+        except Exception as e:
+            # this may not be the users' fault...
+            self.log.exception(
+                "Exception applying user_options for %s", spawner._log_name
+            )
+            raise web.HTTPError(400, f"Invalid user options: {e}")
 
         # we are starting a new server, make sure it doesn't restore state
         spawner.clear_state()
