@@ -1342,6 +1342,13 @@ async def test_share_codes_api_revoke(
         method="delete",
         name=requester.name,
     )
+    if r.status_code != status:
+        # debug intermittent failure
+        print(f"{share_code=}")
+        print(f"{code=}")
+        print(f"{url=}")
+        for sc in db.query(orm.ShareCode):
+            print(f"{sc.id=}, {sc.prefix=}, {sc.hashed=}, {sc=}")
     assert r.status_code == status
 
     # other code unaffected

@@ -945,7 +945,7 @@ class ShareCode(_Share, Hashed, Base):
         else:
             server_name = "unknown/deleted"
 
-        return f"<{self.__class__.__name__}(server={server_name}, scopes={self.scopes}, expires_at={self.expires_at})>"
+        return f"<{self.__class__.__name__}(id={self.id}, server={server_name}, scopes={self.scopes}, expires_at={self.expires_at})>"
 
     @classmethod
     def new(
