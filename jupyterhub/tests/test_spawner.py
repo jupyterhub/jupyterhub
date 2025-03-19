@@ -47,22 +47,22 @@ def setup():
 
 def new_spawner(db, **kwargs):
     user = kwargs.setdefault("user", User(db.query(orm.User).one(), {}))
-    kwargs.setdefault('cmd', [sys.executable, '-c', _echo_sleep])
-    kwargs.setdefault('hub', Hub())
-    kwargs.setdefault('notebook_dir', os.getcwd())
-    kwargs.setdefault('default_url', '/user/{username}/lab')
-    kwargs.setdefault('oauth_client_id', 'mock-client-id')
-    kwargs.setdefault('interrupt_timeout', 1)
-    kwargs.setdefault('term_timeout', 1)
-    kwargs.setdefault('kill_timeout', 1)
-    kwargs.setdefault('poll_interval', 1)
-    return user._new_spawner('', spawner_class=SimpleLocalProcessSpawner, **kwargs)
+    kwargs.setdefault("cmd", [sys.executable, "-c", _echo_sleep])
+    kwargs.setdefault("hub", Hub())
+    kwargs.setdefault("notebook_dir", os.getcwd())
+    kwargs.setdefault("default_url", "/user/{username}/lab")
+    kwargs.setdefault("oauth_client_id", "mock-client-id")
+    kwargs.setdefault("interrupt_timeout", 1)
+    kwargs.setdefault("term_timeout", 1)
+    kwargs.setdefault("kill_timeout", 1)
+    kwargs.setdefault("poll_interval", 1)
+    return user._new_spawner("", spawner_class=SimpleLocalProcessSpawner, **kwargs)
 
 
 async def test_spawner(db, request):
     spawner = new_spawner(db)
     ip, port = await spawner.start()
-    assert ip == '127.0.0.1'
+    assert ip == "127.0.0.1"
     assert isinstance(port, int)
     assert port > 0
     db.commit()
@@ -79,13 +79,13 @@ async def test_spawner(db, request):
 
 
 def test_spawner_from_db(app, user):
-    spawner = user.spawners['name']
+    spawner = user.spawners["name"]
     user_options = {"test": "value"}
     spawner.orm_spawner.user_options = user_options
     app.db.commit()
     # delete and recreate the spawner from the db
-    user.spawners.pop('name')
-    new_spawner = user.spawners['name']
+    user.spawners.pop("name")
+    new_spawner = user.spawners["name"]
     assert new_spawner.orm_spawner.user_options == user_options
     assert new_spawner.user_options == user_options
 
@@ -116,9 +116,9 @@ async def test_single_user_spawner(app, request):
     orm_user = app.db.query(orm.User).first()
     user = app.users[orm_user]
     spawner = user.spawner
-    spawner.cmd = ['jupyterhub-singleuser']
+    spawner.cmd = ["jupyterhub-singleuser"]
     await user.spawn()
-    assert spawner.server.ip == '127.0.0.1'
+    assert spawner.server.ip == "127.0.0.1"
     assert spawner.server.port > 0
     await wait_for_spawner(spawner)
     status = await spawner.poll()
@@ -129,7 +129,7 @@ async def test_single_user_spawner(app, request):
 
 
 async def test_stop_spawner_sigint_fails(db):
-    spawner = new_spawner(db, cmd=[sys.executable, '-c', _uninterruptible])
+    spawner = new_spawner(db, cmd=[sys.executable, "-c", _uninterruptible])
     await spawner.start()
 
     # wait for the process to get to the while True: loop
@@ -168,7 +168,7 @@ async def test_spawner_poll(db):
     if user.state is None:
         user.state = {}
     first_spawner.orm_spawner.state = first_spawner.get_state()
-    assert 'pid' in first_spawner.orm_spawner.state
+    assert "pid" in first_spawner.orm_spawner.state
 
     # create a new Spawner, loading from state of previous
     spawner = new_spawner(db, user=first_spawner.user)
@@ -209,19 +209,19 @@ def test_setcwd():
             raise OSError(path)
         chdir(path)
 
-    with mock.patch('os.chdir', raiser):
+    with mock.patch("os.chdir", raiser):
         spawnermod._try_setcwd(cwd)
         assert os.getcwd().startswith(temp_root)
     os.chdir(cwd)
 
 
 def test_string_formatting(db):
-    s = new_spawner(db, notebook_dir='user/%U/', default_url='/base/{username}')
+    s = new_spawner(db, notebook_dir="user/%U/", default_url="/base/{username}")
     name = s.user.name
-    assert s.notebook_dir == 'user/{username}/'
-    assert s.default_url == '/base/{username}'
-    assert s.format_string(s.notebook_dir) == f'user/{name}/'
-    assert s.format_string(s.default_url) == f'/base/{name}'
+    assert s.notebook_dir == "user/{username}/"
+    assert s.default_url == "/base/{username}"
+    assert s.format_string(s.notebook_dir) == f"user/{name}/"
+    assert s.format_string(s.default_url) == f"/base/{name}"
 
 
 async def test_popen_kwargs(db):
@@ -233,21 +233,21 @@ async def test_popen_kwargs(db):
         mock_proc.pid = 5
         return mock_proc
 
-    s = new_spawner(db, popen_kwargs={'shell': True}, cmd='jupyterhub-singleuser')
-    with mock.patch.object(spawnermod, 'Popen', mock_popen):
+    s = new_spawner(db, popen_kwargs={"shell": True}, cmd="jupyterhub-singleuser")
+    with mock.patch.object(spawnermod, "Popen", mock_popen):
         await s.start()
 
-    assert mock_proc.kwargs['shell'] == True
-    assert mock_proc.args[0][:1] == (['jupyterhub-singleuser'])
+    assert mock_proc.kwargs["shell"] == True
+    assert mock_proc.args[0][:1] == (["jupyterhub-singleuser"])
 
 
 async def test_shell_cmd(db, tmpdir, request):
-    f = tmpdir.join('bashrc')
-    f.write('export TESTVAR=foo\n')
+    f = tmpdir.join("bashrc")
+    f.write("export TESTVAR=foo\n")
     s = new_spawner(
         db,
-        cmd=[sys.executable, '-m', 'jupyterhub.tests.mocksu'],
-        shell_cmd=['bash', '--rcfile', str(f), '-i', '-c'],
+        cmd=[sys.executable, "-m", "jupyterhub.tests.mocksu"],
+        shell_cmd=["bash", "--rcfile", str(f), "-i", "-c"],
     )
     server = orm.Server()
     db.add(server)
@@ -260,10 +260,10 @@ async def test_shell_cmd(db, tmpdir, request):
     s.server.port = port
     db.commit()
     await wait_for_spawner(s)
-    r = await async_requests.get(f'http://{ip}:{port}/env')
+    r = await async_requests.get(f"http://{ip}:{port}/env")
     r.raise_for_status()
     env = r.json()
-    assert env['TESTVAR'] == 'foo'
+    assert env["TESTVAR"] == "foo"
     await s.stop()
 
 
@@ -289,7 +289,7 @@ def test_inherit_ok():
 
 async def test_spawner_reuse_api_token(db, app):
     # setup: user with no tokens, whose spawner has set the .will_resume flag
-    user = add_user(app.db, app, name='snoopy')
+    user = add_user(app.db, app, name="snoopy")
     spawner = user.spawner
     assert user.api_tokens == []
     # will_resume triggers reuse of tokens
@@ -304,7 +304,7 @@ async def test_spawner_reuse_api_token(db, app):
     await user.stop()
     # stop now deletes unused spawners.
     # put back the mock spawner!
-    user.spawners[''] = spawner
+    user.spawners[""] = spawner
     # second start: should reuse the token
     await user.spawn()
     # verify re-use of API token
@@ -319,7 +319,7 @@ async def test_spawner_insert_api_token(app):
     Insert token into db as a user-provided token.
     """
     # setup: new user, double check that they don't have any tokens registered
-    user = add_user(app.db, app, name='tonkee')
+    user = add_user(app.db, app, name="tonkee")
     spawner = user.spawner
     assert user.api_tokens == []
 
@@ -348,9 +348,9 @@ async def test_spawner_insert_api_token(app):
 async def test_spawner_bad_api_token(app):
     """Tokens are revoked when a Spawner gets another user's token"""
     # we need two users for this one
-    user = add_user(app.db, app, name='antimone')
+    user = add_user(app.db, app, name="antimone")
     spawner = user.spawner
-    other_user = add_user(app.db, app, name='alabaster')
+    other_user = add_user(app.db, app, name="alabaster")
     assert user.api_tokens == []
     assert other_user.api_tokens == []
 
@@ -429,7 +429,7 @@ async def test_spawner_delete_server(app):
     This can occur during app startup if their server has been deleted.
     """
     db = app.db
-    user = add_user(app.db, app, name='gaston')
+    user = add_user(app.db, app, name="gaston")
     spawner = user.spawner
     orm_server = orm.Server()
     db.add(orm_server)
@@ -458,15 +458,15 @@ async def test_spawner_routing(app, name):
     db = app.db
     with mock.patch.dict(
         app.config.LocalProcessSpawner,
-        {'cmd': [sys.executable, '-m', 'jupyterhub.tests.mocksu']},
+        {"cmd": [sys.executable, "-m", "jupyterhub.tests.mocksu"]},
     ):
         user = add_user(app.db, app, name=name)
         await user.spawn()
         await wait_for_spawner(user.spawner)
         await app.proxy.add_user(user)
-    kwargs = {'allow_redirects': False}
+    kwargs = {"allow_redirects": False}
     if app.internal_ssl:
-        kwargs['cert'] = (app.internal_ssl_cert, app.internal_ssl_key)
+        kwargs["cert"] = (app.internal_ssl_cert, app.internal_ssl_key)
         kwargs["verify"] = app.internal_ssl_ca
     url = url_path_join(public_url(app, user), "test/url")
     r = await async_requests.get(url, **kwargs)
@@ -501,7 +501,7 @@ async def test_hub_connect_url(db):
 
 async def test_spawner_oauth_scopes(app, user):
     allowed_scopes = ["read:users"]
-    spawner = user.spawners['']
+    spawner = user.spawners[""]
     spawner.oauth_client_allowed_scopes = allowed_scopes
     # exercise start/stop which assign roles to oauth client
     await spawner.user.spawn()
@@ -514,7 +514,7 @@ async def test_spawner_oauth_scopes(app, user):
 
 async def test_spawner_oauth_roles_bad(app, user):
     allowed_roles = ["user", "nosuchrole"]
-    spawner = user.spawners['']
+    spawner = user.spawners[""]
     spawner.oauth_roles = allowed_roles
     # exercise start/stop which assign roles
     # raises ValueError if we try to assign a role that doesn't exist
@@ -524,14 +524,53 @@ async def test_spawner_oauth_roles_bad(app, user):
 
 async def test_spawner_options_from_form(db):
     def options_from_form(form_data):
-        return form_data
+        options = {}
+        for key, value in form_data.items():
+            options[key] = value[0]
+        options["default"] = "added"
+        return options
 
     spawner = new_spawner(db, options_from_form=options_from_form)
     form_data = {"key": ["value"]}
     result = spawner.run_options_from_form(form_data)
-    for key, value in form_data.items():
-        assert key in result
-        assert result[key] == value
+    assert result == {
+        "key": "value",
+        "default": "added",
+    }
+
+
+@pytest.mark.parametrize(
+    "options_from_form, expected",
+    [
+        pytest.param(None, "unchanged", id="default"),
+        pytest.param("passthrough", "unchanged", id="passthrough"),
+        pytest.param(
+            "simple",
+            {
+                "single": "value",
+                "multiple": ["a", "b"],
+                "checkbox": True,
+                "number": "1",
+            },
+            id="simple",
+        ),
+    ],
+)
+async def test_predefined_options_from_form(db, options_from_form, expected):
+    kwargs = {}
+    if options_from_form:
+        kwargs["options_from_form"] = options_from_form
+    spawner = new_spawner(db, **kwargs)
+    form_data = {
+        "single": ["value"],
+        "multiple": ["a", "b"],
+        "checkbox": ["on"],
+        "number": ["1"],
+    }
+    if expected == "unchanged":
+        expected = form_data
+    result = spawner.run_options_from_form(form_data)
+    assert result == expected
 
 
 async def test_spawner_options_from_form_with_spawner(db):
@@ -544,6 +583,41 @@ async def test_spawner_options_from_form_with_spawner(db):
     for key, value in form_data.items():
         assert key in result
         assert result[key] == value
+
+
+def test_apply_user_options_dict(db):
+    apply_user_options = {
+        # from_string doesn't work,
+        # but string assignment does
+        "mem": "mem_limit",
+        "notebook_dir": "notebook_dir",
+        "term_timeout": "term_timeout",
+        "start_timeout": "start_timeout",
+        "environment": "environment",
+        "unsupported": "unsupported",
+    }
+    user_options = {
+        "mem": "1G",
+        "notebook_dir": "/tmp",
+        "term_timeout": 1,
+        "start_timeout": "10",
+        "environment": {
+            "key": "value",
+        },
+        # shouldn't set these values:
+        # unsupported, but declared;
+        "unsupported": 5,
+        # undeclared, but available
+        "cpu_limit": "1m",
+    }
+    spawner = new_spawner(db, apply_user_options=apply_user_options)
+    spawner._run_apply_user_options(user_options)
+    assert spawner.mem_limit == 1 << 30
+    assert spawner.notebook_dir == "/tmp"
+    assert spawner.term_timeout == 1
+    assert spawner.environment == {"key": "value"}
+    assert not hasattr(spawner, "unsupported")
+    assert spawner.cpu_limit is None
 
 
 def test_spawner_server(db):
