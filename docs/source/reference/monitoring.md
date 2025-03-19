@@ -35,7 +35,7 @@ would result in the metric `jupyterhub_prod_active_users`, etc.
 
 ## Customizing spawn bucket sizes
 
-As of JupyterHub >= 5.2.1, override `JUPYTERHUB_SERVER_SPAWN_DURATION_SECONDS_BUCKETS` env variable in Hub's environment to allow custom bucket sizes. Otherwise default to, [0.5, 1, 2.5, 5, 10, 15, 30, 60, 120, 180, 300, 600, float("inf")]
+As of JupyterHub 5.3, override `JUPYTERHUB_SERVER_SPAWN_DURATION_SECONDS_BUCKETS` env variable in Hub's environment to allow custom bucket sizes. Otherwise default to, [0.5, 1, 2.5, 5, 10, 15, 30, 60, 120, 180, 300, 600, float("inf")]
 
 For example,
 
