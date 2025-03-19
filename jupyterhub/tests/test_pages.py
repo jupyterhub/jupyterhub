@@ -2,11 +2,14 @@
 
 import asyncio
 import sys
+from contextlib import nullcontext
+from functools import partial
 from unittest import mock
 from urllib.parse import parse_qs, urlencode, urlparse
 
 import pytest
 from bs4 import BeautifulSoup
+from tornado import web
 from tornado.httputil import url_concat
 
 from .. import orm, roles, scopes
@@ -1335,3 +1338,115 @@ async def test_services_nav_links(
         assert service.href in nav_urls
     else:
         assert service.href not in nav_urls
+
+
+class TeapotError(web.HTTPError):
+    text = "I'm a <🫖>"
+    html = "<b>🕸️🫖</b>"
+
+    def __init__(self, log_msg, kind="text"):
+        super().__init__(418, log_msg)
+        self.jupyterhub_message = self.text
+        if kind == "html":
+            self.jupyterhub_html_message = self.html
+
+
+def hook_fail_fast(spawner, kind):
+    if kind == "unhandled":
+        raise RuntimeError("unhandle me!!!")
+    raise TeapotError("log_msg", kind=kind)
+
+
+async def hook_fail_slow(spawner, kind):
+    await asyncio.sleep(1)
+    hook_fail_fast(spawner, kind)
+
+
+@pytest.mark.parametrize("speed", ["fast", "slow"])
+@pytest.mark.parametrize("kind", ["text", "html", "unhandled"])
+async def test_spawn_fails_custom_message(app, user, kind, speed):
+    if speed == 'slow':
+        speed_context = mock.patch.dict(
+            app.tornado_settings, {'slow_spawn_timeout': 0.1}
+        )
+        hook = hook_fail_slow
+    else:
+        speed_context = nullcontext()
+        hook = hook_fail_fast
+    # test the response when spawn fails before redirecting to progress
+    with mock.patch.dict(
+        app.config.Spawner, {"pre_spawn_hook": partial(hook, kind=kind)}
+    ), speed_context:
+        cookies = await app.login_user(user.name)
+        assert user.spawner.pre_spawn_hook
+        r = await get_page("spawn", app, cookies=cookies)
+        if speed == "slow":
+            # go through spawn_pending, render not_running.html
+            assert r.ok
+            assert "spawn-pending" in r.url
+            # wait for ready signal before checking next redirect
+            while user.spawner.active:
+                await asyncio.sleep(0.1)
+            app.log.info(
+                f"pending {user.spawner.active=}, {user.spawner._spawn_future=}"
+            )
+            # this should fetch the not-running page
+            app.log.info("getting again")
+            r = await get_page(
+                f"spawn-pending/{user.escaped_name}", app, cookies=cookies
+            )
+            target_class = "container"
+            unhandled_text = "Spawn failed"
+        else:
+            unhandled_text = "Unhandled error"
+            target_class = "error"
+        page = BeautifulSoup(r.content)
+        if kind == "unhandled":
+            assert r.status_code == 500
+        else:
+            assert r.status_code == 418
+        error = page.find(class_=target_class)
+        # check escaping properly
+        error_html = str(error)
+        if kind == "text":
+            assert "<🫖>" in error.text
+            assert "🕸️" not in error.text
+            assert "&lt;🫖&gt;" in error_html
+        elif kind == "html":
+            assert "<🫖>" not in error.text
+            assert "🕸️" in error.text
+            assert "<b>🕸️🫖</b>" in error_html
+        elif kind == "unhandled":
+            assert unhandled_text in error.text
+            assert "unhandle me" not in error.text
+        else:
+            raise ValueError(f"unexpected {kind=}")
+
+
+#
+# async def test_spawn_fails_custom_message_slow(app, user, no_patience):
+#     # test the response when spawn has previously failed
+#     # (i.e. slow spawn, so progress is rendered)
+#     # this renders the not_running.html with the original spawn error
+#     with mock.patch.dict(app.config.Spawner, {"pre_spawn_hook": hook_fail_slow}):
+#         cookies = await app.login_user(user.name)
+#         assert user.spawner.pre_spawn_hook is hook_fail_slow
+#         r = await get_page("spawn", app, cookies=cookies)
+#         assert r.ok
+#         # wait for ready signal before checking next redirect
+#         while user.spawner.active:
+#             await asyncio.sleep(0.1)
+#         app.log.info(f"pending {user.spawner.active=}, {user.spawner._spawn_future=}")
+#         # this should fetch the not-running page
+#         app.log.info("getting again")
+#         r = await get_page(f"spawn-pending/{user.escaped_name}", app, cookies=cookies)
+#         assert r.status_code == 418
+#         page = BeautifulSoup(r.content, features="html5lib")
+#         body = page.find(class_="container")
+#         assert "Spawn failed" in body.text
+#         assert "<🫖>" in body.text
+#         assert "🕸️🫖" in body.text
+#         # check escaping properly
+#         error_html = str(body)
+#         assert "&lt;🫖&gt;" in error_html
+#         assert "<b>🕸️🫖</b>" in error_html
