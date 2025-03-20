@@ -375,7 +375,10 @@ class SpawnPendingHandler(BaseHandler):
             spawn_url = url_path_join(
                 self.hub.base_url, "spawn", user.escaped_name, escaped_server_name
             )
-            self.set_status(500)
+            status_code = 500
+            if isinstance(exc, web.HTTPError):
+                status_code = exc.status_code
+            self.set_status(status_code)
             html = await self.render_template(
                 "not_running.html",
                 user=user,

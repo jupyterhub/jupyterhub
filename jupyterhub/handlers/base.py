@@ -1487,6 +1487,7 @@ class BaseHandler(RequestHandler):
         """render custom error pages"""
         exc_info = kwargs.get('exc_info')
         message = ''
+        message_html = ''
         exception = None
         status_message = responses.get(status_code, 'Unknown HTTP Error')
         if exc_info:
@@ -1496,11 +1497,16 @@ class BaseHandler(RequestHandler):
                 message = exception.log_message % exception.args
             except Exception:
                 pass
+            # allow custom html messages
+            message_html = getattr(exception, "jupyterhub_html_message", "")
 
             # construct the custom reason, if defined
             reason = getattr(exception, 'reason', '')
             if reason:
                 message = reasons.get(reason, reason)
+
+            # get special jupyterhub_message, if defined
+            message = getattr(exception, "jupyterhub_message", message)
 
         if exception and isinstance(exception, SQLAlchemyError):
             self.log.warning("Rolling back session due to database error %s", exception)
@@ -1511,6 +1517,7 @@ class BaseHandler(RequestHandler):
             status_code=status_code,
             status_message=status_message,
             message=message,
+            message_html=message_html,
             extra_error_html=getattr(self, 'extra_error_html', ''),
             exception=exception,
         )
