@@ -1421,32 +1421,3 @@ async def test_spawn_fails_custom_message(app, user, kind, speed):
             assert "unhandle me" not in error.text
         else:
             raise ValueError(f"unexpected {kind=}")
-
-
-#
-# async def test_spawn_fails_custom_message_slow(app, user, no_patience):
-#     # test the response when spawn has previously failed
-#     # (i.e. slow spawn, so progress is rendered)
-#     # this renders the not_running.html with the original spawn error
-#     with mock.patch.dict(app.config.Spawner, {"pre_spawn_hook": hook_fail_slow}):
-#         cookies = await app.login_user(user.name)
-#         assert user.spawner.pre_spawn_hook is hook_fail_slow
-#         r = await get_page("spawn", app, cookies=cookies)
-#         assert r.ok
-#         # wait for ready signal before checking next redirect
-#         while user.spawner.active:
-#             await asyncio.sleep(0.1)
-#         app.log.info(f"pending {user.spawner.active=}, {user.spawner._spawn_future=}")
-#         # this should fetch the not-running page
-#         app.log.info("getting again")
-#         r = await get_page(f"spawn-pending/{user.escaped_name}", app, cookies=cookies)
-#         assert r.status_code == 418
-#         page = BeautifulSoup(r.content, features="html5lib")
-#         body = page.find(class_="container")
-#         assert "Spawn failed" in body.text
-#         assert "<🫖>" in body.text
-#         assert "🕸️🫖" in body.text
-#         # check escaping properly
-#         error_html = str(body)
-#         assert "&lt;🫖&gt;" in error_html
-#         assert "<b>🕸️🫖</b>" in error_html
