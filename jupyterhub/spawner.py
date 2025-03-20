@@ -762,7 +762,8 @@ class Spawner(LoggingConfigurable):
         
             .. versionadded:: 5.3
         
-                Prior to 5.3, applying user options must be done in `Spawner.start()`.
+                Prior to 5.3, applying user options must be done in `Spawner.start()`
+                or `Spawner.pre_spawn_hook()`.
             """,
     )
 
@@ -819,6 +820,19 @@ class Spawner(LoggingConfigurable):
 
         These user options are usually provided by the `options_form` displayed to the user when they start
         their server.
+        If specified via an `options_form`, form data is passed through `options_from_form` before storing
+        in `user_options`.
+        `user_options` may also be passed as the JSON body to a spawn request via the REST API,
+        in which case it is stored directly, unmodifed.
+        
+        `user_options` has no effect on its own, it must be handled by the Spawner in `spawner.start`,
+        or via deployment configuration in `apply_user_options` or `pre_spawn_hook`.
+        
+        .. seealso::
+        
+            - :attr:`options_form`
+            - :attr:`options_from_form`
+            - :attr:`apply_user_options`
         """
     )
 
