@@ -12,7 +12,7 @@ import shutil
 import signal
 import sys
 import warnings
-from inspect import signature
+from inspect import isawaitable, signature
 from subprocess import Popen
 from tempfile import mkdtemp
 from textwrap import dedent
@@ -24,6 +24,7 @@ else:
     from async_generator import aclosing
 
 from sqlalchemy import inspect
+from tornado import web
 from tornado.ioloop import PeriodicCallback
 from traitlets import (
     Any,
@@ -406,7 +407,7 @@ class Spawner(LoggingConfigurable):
             allowed_scopes = self.oauth_client_allowed_scopes
             if callable(allowed_scopes):
                 allowed_scopes = allowed_scopes(self)
-                if inspect.isawaitable(allowed_scopes):
+                if isawaitable(allowed_scopes):
                     allowed_scopes = await allowed_scopes
             scopes.extend(allowed_scopes)
 
@@ -767,16 +768,30 @@ class Spawner(LoggingConfigurable):
             """,
     )
 
-    def _run_apply_user_options(self, user_options):
-        if isinstance(self.apply_user_options, dict):
-            return self._apply_user_options_dict(user_options)
-        elif self.apply_user_options:
-            return self.apply_user_options(self, user_options)
-        elif user_options:
-            keys = list(user_options)
-            self.log.warning(
-                f"Received unhandled user_options for {self._log_name}: {', '.join(keys)}"
-            )
+    async def _run_apply_user_options(self, user_options):
+        """Run the apply_user_options hook
+
+        and turn errors into HTTP 400
+        """
+        r = None
+        try:
+            if isinstance(self.apply_user_options, dict):
+                r = self._apply_user_options_dict(user_options)
+            elif self.apply_user_options:
+                r = self.apply_user_options(self, user_options)
+            elif user_options:
+                keys = list(user_options)
+                self.log.warning(
+                    f"Received unhandled user_options for {self._log_name}: {', '.join(keys)}"
+                )
+            if isawaitable(r):
+                await r
+        except Exception as e:
+            # this may not be the users' fault...
+            # should we catch less?
+            # likely user errors are ValueError, TraitError, TypeError
+            self.log.exception("Exception applying user_options for %s", self._log_name)
+            raise web.HTTPError(400, f"Invalid user options: {e}")
 
     def _apply_user_options_dict(self, user_options):
         """if apply_user_options is a dict
