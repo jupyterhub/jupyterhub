@@ -610,6 +610,9 @@ def test_apply_user_options_dict(db):
         # undeclared, but available
         "cpu_limit": "1m",
     }
+    if sys.version_info < (3, 9):
+        # traitlets added `from_string` after requiring Python 3.9
+        user_options["start_timeout"] = int(user_options["start_timeout"])
     spawner = new_spawner(db, apply_user_options=apply_user_options)
     spawner._run_apply_user_options(user_options)
     assert spawner.mem_limit == 1 << 30
