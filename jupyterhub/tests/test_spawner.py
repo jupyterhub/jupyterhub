@@ -585,7 +585,7 @@ async def test_spawner_options_from_form_with_spawner(db):
         assert result[key] == value
 
 
-def test_apply_user_options_dict(db):
+async def test_apply_user_options_dict(db):
     apply_user_options = {
         # from_string doesn't work,
         # but string assignment does
@@ -614,7 +614,7 @@ def test_apply_user_options_dict(db):
         # traitlets added `from_string` after requiring Python 3.9
         user_options["start_timeout"] = int(user_options["start_timeout"])
     spawner = new_spawner(db, apply_user_options=apply_user_options)
-    spawner._run_apply_user_options(user_options)
+    await spawner._run_apply_user_options(user_options)
     assert spawner.mem_limit == 1 << 30
     assert spawner.notebook_dir == "/tmp"
     assert spawner.term_timeout == 1
