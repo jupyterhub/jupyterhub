@@ -725,12 +725,48 @@ async def test_page_with_token(app, user, url, token_in):
 async def test_login_fail(app):
     name = 'wash'
     base_url = public_url(app)
+    login_url = base_url + 'hub/login'
+    r = await async_requests.get(login_url)
+    r.raise_for_status()
+    xsrf = r.cookies['_xsrf']
+    r = await async_requests.get(login_url)
+    assert set(r.cookies.keys()).issubset({"_xsrf"})
+    r = await async_requests.post(
+        login_url,
+        data={'username': name, 'password': 'wrong', '_xsrf': xsrf},
+        allow_redirects=False,
+        cookies=r.cookies,
+    )
+    assert r.status_code == 403
+    assert set(r.cookies.keys()).issubset({"_xsrf"})
+    page = BeautifulSoup(r.content, "html.parser")
+    assert "Sign in" in page.text
+    login = page.find("form")
+    login_error = login.find(class_="login_error")
+    assert login_error
+    assert "Invalid user" in login_error.text
+
+
+async def test_login_fail_xsrf_expired(app):
+    name = 'wash'
+    base_url = public_url(app)
     r = await async_requests.post(
         base_url + 'hub/login',
-        data={'username': name, 'password': 'wrong'},
+        data={
+            'username': name,
+            'password': name,
+            '_xsrf': "wrong",
+        },
         allow_redirects=False,
     )
+    assert r.status_code == 403
     assert set(r.cookies.keys()).issubset({"_xsrf"})
+    page = BeautifulSoup(r.content, "html.parser")
+    assert "Sign in" in page.text
+    login = page.find("form")
+    login_error = login.find(class_="login_error")
+    assert login_error
+    assert "Try again" in login_error.text
 
 
 @pytest.mark.parametrize(
