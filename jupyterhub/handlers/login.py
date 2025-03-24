@@ -179,14 +179,18 @@ class LoginHandler(BaseHandler):
                     self.redirect(auto_login_url)
                 return
             username = self.get_argument('username', default='')
+
             # always set a fresh xsrf cookie when the login page is rendered
             # ensures we are as far from expiration as possible
+            # to restart the timer
             xsrf_token = self.xsrf_token
             if self.request.headers.get("Sec-Fetch-Mode", "navigate") == "navigate":
                 _set_xsrf_cookie(
-                    self, self._xsrf_token_id, cookie_path=self.hub.base_url
+                    self,
+                    self._xsrf_token_id,
+                    cookie_path=self.hub.base_url,
+                    xsrf_token=xsrf_token,
                 )
-            # to restart the timer
             self.finish(await self._render(username=username))
 
     async def post(self):
