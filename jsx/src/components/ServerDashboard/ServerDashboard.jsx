@@ -41,7 +41,7 @@ const ServerDashboard = (props) => {
   let user_data = useSelector((state) => state.user_data);
   const user_page = useSelector((state) => state.user_page);
 
-  const { offset, setLimit, handleLimit, limit, setPagination } =
+  const { offset, setOffset, setLimit, handleLimit, limit, setPagination } =
     usePaginationParams();
 
   const name_filter = searchParams.get("name_filter") || "";
@@ -127,35 +127,47 @@ const ServerDashboard = (props) => {
     });
   };
 
-  // the callback to update the displayed user list
-  const updateUsersWithParams = (params) => {
-    if (params) {
-      if (params.offset !== undefined && params.offset < 0) {
-        params.offset = 0;
-      }
-    }
-    return updateUsers({
-      offset: offset,
-      limit,
-      name_filter,
-      sort,
-      state: state_filter,
-      ...params,
-    });
-  };
-
   // single callback to reload the page
-  // uses current state, or params can be specified if state
-  // should be updated _after_ load, e.g. offset
-  const loadPageData = (params) => {
-    return updateUsersWithParams(params)
-      .then((data) => dispatchPageUpdate(data.items, data._pagination))
-      .catch((err) => setErrorAlert("Failed to update user list."));
+  // uses current state
+  const loadPageData = () => {
+    const abortHandle = { cancelled: false };
+    (async () => {
+      try {
+        const data = await updateUsers({
+          offset,
+          limit,
+          name_filter,
+          sort,
+          state: state_filter,
+        });
+        // cancelled (e.g. param changed while waiting for response)
+        if (abortHandle.cancelled) return;
+        if (
+          data._pagination.offset &&
+          data._pagination.total <= data._pagination.offset
+        ) {
+          // reset offset if we're out of bounds,
+          // then load again
+          setOffset(0);
+          return;
+        }
+        // actually update page data
+        dispatchPageUpdate(data.items, data._pagination);
+      } catch (e) {
+        console.error("Failed to update user list.", e);
+        setErrorAlert("Failed to update user list.");
+      }
+    })();
+    // returns cancellation callback
+    return () => {
+      // cancel stale load
+      abortHandle.cancelled = true;
+    };
   };
 
   useEffect(() => {
-    loadPageData();
-  }, [limit, name_filter, sort, state_filter]);
+    return loadPageData();
+  }, [limit, name_filter, offset, sort, state_filter]);
 
   if (!user_data || !user_page) {
     return <div data-testid="no-show"></div>;
@@ -581,16 +593,16 @@ const ServerDashboard = (props) => {
           </tbody>
         </table>
         <PaginationFooter
-          offset={offset}
+          offset={user_page.offset}
           limit={limit}
           visible={user_data.length}
           total={total}
           // don't trigger via setOffset state change,
           // which can cause infinite cycles.
           // offset state will be set upon reply via setPagination
-          next={() => loadPageData({ offset: offset + limit })}
+          next={() => setOffset(user_page.offset + limit)}
           prev={() =>
-            loadPageData({ offset: limit > offset ? 0 : offset - limit })
+            setOffset(limit > user_page.offset ? 0 : user_page.offset - limit)
           }
           handleLimit={handleLimit}
         />

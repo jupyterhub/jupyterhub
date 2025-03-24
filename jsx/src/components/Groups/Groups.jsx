@@ -14,7 +14,8 @@ const Groups = (props) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const { offset, handleLimit, limit, setPagination } = usePaginationParams();
+  const { offset, setOffset, handleLimit, limit, setPagination } =
+    usePaginationParams();
 
   const total = groups_page ? groups_page.total : undefined;
 
@@ -32,21 +33,39 @@ const Groups = (props) => {
   };
 
   // single callback to reload the page
-  // uses current state, or params can be specified if state
-  // should be updated _after_ load, e.g. offset
+  // uses current state
   const loadPageData = (params) => {
-    params = params || {};
-    return updateGroups(
-      params.offset === undefined ? offset : params.offset,
-      params.limit === undefined ? limit : params.limit,
-    )
-      .then((data) => dispatchPageUpdate(data.items, data._pagination))
-      .catch((err) => setErrorAlert("Failed to update group list."));
+    const abortHandle = { cancelled: false };
+    (async () => {
+      try {
+        const data = await updateGroups(offset, limit);
+        // cancelled (e.g. param changed while waiting for response)
+        if (abortHandle.cancelled) return;
+        if (
+          data._pagination.offset &&
+          data._pagination.total <= data._pagination.offset
+        ) {
+          // reset offset if we're out of bounds,
+          // then load again
+          setOffset(0);
+          return;
+        }
+        // actually update page data
+        dispatchPageUpdate(data.items, data._pagination);
+      } catch (e) {
+        console.error("Failed to update group list.", e);
+      }
+    })();
+    // returns cancellation callback
+    return () => {
+      // cancel stale load
+      abortHandle.cancelled = true;
+    };
   };
 
   useEffect(() => {
-    loadPageData();
-  }, [limit]);
+    return loadPageData();
+  }, [limit, offset]);
 
   if (!groups_data || !groups_page) {
     return <div data-testid="no-show"></div>;
@@ -78,13 +97,15 @@ const Groups = (props) => {
             )}
           </ul>
           <PaginationFooter
-            offset={offset}
+            offset={groups_page.offset}
             limit={limit}
             visible={groups_data.length}
             total={total}
-            next={() => loadPageData({ offset: offset + limit })}
+            next={() => setOffset(groups_page.offset + limit)}
             prev={() =>
-              loadPageData({ offset: limit > offset ? 0 : offset - limit })
+              setOffset(
+                limit > groups_page.offset ? 0 : groups_page.offset - limit,
+              )
             }
             handleLimit={handleLimit}
           />
