@@ -48,7 +48,7 @@ updates:
       # group major bumps of webpack-related dependencies
       jsx-webpack:
         patterns:
-          - "webpack*"
+          - "*webpack*"
           - "@babel/*"
           - "*-loader"
         update-types:
