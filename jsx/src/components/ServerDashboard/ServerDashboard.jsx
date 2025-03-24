@@ -41,7 +41,7 @@ const ServerDashboard = (props) => {
   let user_data = useSelector((state) => state.user_data);
   const user_page = useSelector((state) => state.user_page);
 
-  const { offset, setOffset, setLimit, handleLimit, limit, setPagination } =
+  const { offset, setOffset, setLimit, handleLimit, limit } =
     usePaginationParams();
 
   const name_filter = searchParams.get("name_filter") || "";
@@ -64,12 +64,6 @@ const ServerDashboard = (props) => {
   } = props;
 
   const dispatchPageUpdate = (data, page) => {
-    // trigger page update in state
-    // in response to fetching updated user list
-    // data is list of user records
-    // page is _pagination part of response
-    // persist page info in url query
-    setPagination(page);
     // persist user data, triggers rerender
     dispatch({
       type: "USER_PAGE",
@@ -593,13 +587,13 @@ const ServerDashboard = (props) => {
           </tbody>
         </table>
         <PaginationFooter
+          // use user_page for display, which is what's on the page
+          // setOffset immediately updates url state and _requests_ an update
+          // but takes finite time before user_page is updated
           offset={user_page.offset}
           limit={limit}
           visible={user_data.length}
           total={total}
-          // don't trigger via setOffset state change,
-          // which can cause infinite cycles.
-          // offset state will be set upon reply via setPagination
           next={() => setOffset(user_page.offset + limit)}
           prev={() =>
             setOffset(limit > user_page.offset ? 0 : user_page.offset - limit)

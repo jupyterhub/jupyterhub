@@ -14,15 +14,13 @@ const Groups = (props) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const { offset, setOffset, handleLimit, limit, setPagination } =
-    usePaginationParams();
+  const { offset, setOffset, handleLimit, limit } = usePaginationParams();
 
   const total = groups_page ? groups_page.total : undefined;
 
   const { updateGroups } = props;
 
   const dispatchPageUpdate = (data, page) => {
-    setPagination(page);
     dispatch({
       type: "GROUPS_PAGE",
       value: {
