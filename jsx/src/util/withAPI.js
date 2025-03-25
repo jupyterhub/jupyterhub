@@ -1,4 +1,4 @@
-import { withProps } from "recompose";
+import { withProps } from "./_recompose";
 import { jhapiRequest } from "./jhapiUtil";
 
 const withAPI = withProps(() => ({

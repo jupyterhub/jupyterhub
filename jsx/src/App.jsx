@@ -2,7 +2,7 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { Provider } from "react-redux";
 import { createStore } from "redux";
-import { compose } from "recompose";
+import { compose } from "./util/_recompose";
 import { initialState, reducers } from "./Store";
 import withAPI from "./util/withAPI";
 import { HashRouter, Routes, Route } from "react-router";
