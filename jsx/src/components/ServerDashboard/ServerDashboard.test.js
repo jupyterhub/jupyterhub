@@ -1,5 +1,5 @@
 import React, { act } from "react";
-import { withProps } from "recompose";
+import { withProps } from "../../util/_recompose";
 import "@testing-library/jest-dom";
 import userEvent from "@testing-library/user-event";
 import {
