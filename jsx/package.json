@@ -43,7 +43,6 @@
     "react-bootstrap": "^2.10.9",
     "react-dom": "^18.3.1",
     "react-icons": "^5.5.0",
-    "react-multi-select-component": "^4.3.4",
     "react-redux": "^9.2.0",
     "react-router": "^7.4.0",
     "recompose": "npm:react-recompose@^0.33.0",
