@@ -236,7 +236,7 @@ which would return:
 ### Applying user options
 
 The base Spawner class doesn't do anything with `user_options`, that is also up to your deployment and/or chosen Spawner.
-This is because exposing any options to users has security implications,
+This is because the users can specify arbitrary option dictionary by using the API,
 so it is part of your Spawner and/or deployment configuration to expose the options you trust your users to set.
 
 [](#Spawner.apply_user_options) is the hook for taking `user_options` and applying whatever configuration it may represent.
@@ -276,7 +276,7 @@ c.Spawner.apply_user_options = {"image_input": "image", "debug_checkbox": "debug
 
 The `simple` options_from_form does the very simplest interpretation of an html form,
 casting the lists of strings to single strings by getting the first item when there is only one.
-The only non-string handling it has is casting the checkbox value of `on` to True.
+The only extra processing it performs is casting the checkbox value of `on` to True.
 
 So it turns this formdata:
 
