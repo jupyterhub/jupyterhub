@@ -1233,18 +1233,16 @@ async def test_search_on_admin_page(
     await element_search.fill(search_value, force=True)
     await browser.wait_for_load_state("networkidle")
     # get the result of the search from db
-    users_count_db_filtered = (
+    total = (
         app.db.query(orm.User).filter(orm.User.name.like(f'%{search_value}%')).count()
     )
     # get the result of the search
     filtered_list_on_page = browser.locator('//tr[@class="user-row"]')
     displaying = browser.get_by_text("Displaying")
-    if users_count_db_filtered <= 50:
-        await expect(filtered_list_on_page).to_have_count(users_count_db_filtered)
-        start = 1 if users_count_db_filtered else 0
-        await expect(displaying).to_contain_text(
-            re.compile(f"{start}-{users_count_db_filtered}")
-        )
+    if total <= 50:
+        await expect(filtered_list_on_page).to_have_count(total)
+        start = 1 if total else 0
+        await expect(displaying).to_contain_text(f"{start}-{total}")
         # check that users names contain the search value in the filtered list
         for element in await filtered_list_on_page.get_by_test_id(
             "user-row-name"
@@ -1252,12 +1250,19 @@ async def test_search_on_admin_page(
             await expect(element).to_contain_text(re.compile(f".*{search_value}.*"))
     else:
         await expect(filtered_list_on_page).to_have_count(50)
-        await expect(displaying).to_contain_text(re.compile("1-50"))
+        # make sure we wait for 'of {total}', otherwise we might not have waited
+        # until the name filter has been applied
+        await expect(displaying).to_contain_text(f"1-50 of {total}")
+        # check that users names contain the search value in the filtered list
+        for element in await filtered_list_on_page.get_by_test_id(
+            "user-row-name"
+        ).all():
+            await expect(element).to_contain_text(re.compile(f".*{search_value}.*"))
         # click on Next button to verify that the rest part of filtered list is displayed on the next page
         await browser.get_by_role("button", name="Next").click()
         await browser.wait_for_load_state("networkidle")
         filtered_list_on_next_page = browser.locator('//tr[@class="user-row"]')
-        await expect(filtered_list_on_page).to_have_count(users_count_db_filtered - 50)
+        await expect(filtered_list_on_page).to_have_count(total - 50)
         for element in await filtered_list_on_next_page.get_by_test_id(
             "user-row-name"
         ).all():
