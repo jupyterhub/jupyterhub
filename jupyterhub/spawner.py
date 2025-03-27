@@ -480,6 +480,10 @@ class Spawner(LoggingConfigurable):
         Subclasses which launch remotely or in containers
         should override the default to '0.0.0.0'.
 
+        .. versionchanged:: 5.3
+            An empty string '' means all interfaces (IPv4 and IPv6). Prior to this
+            the behaviour of '' was not defined.
+
         .. versionchanged:: 2.0
             Default changed to '127.0.0.1', from unspecified.
         """,
