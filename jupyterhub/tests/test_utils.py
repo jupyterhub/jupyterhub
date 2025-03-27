@@ -101,6 +101,23 @@ async def test_tornado_coroutines():
 
 
 @pytest.mark.parametrize(
+    "pieces, expected",
+    [
+        (("/"), "/"),
+        (("/", "/"), "/"),
+        (("/base", ""), "/base"),
+        (("/base/", ""), "/base/"),
+        (("/base", "abc", "def"), "/base/abc/def"),
+        (("/base/", "/abc/", "/def/"), "/base/abc/def/"),
+        ((""), ""),
+        (("abc", "def"), "abc/def"),
+    ],
+)
+def test_url_path_join(pieces, expected):
+    assert utils.url_path_join(*pieces) == expected
+
+
+@pytest.mark.parametrize(
     "forwarded, x_scheme, x_forwarded_proto, expected",
     [
         ("", "", "", "_attr_"),

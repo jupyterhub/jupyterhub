@@ -466,9 +466,15 @@ def url_path_join(*pieces):
 
     Use to prevent double slash when joining subpath. This will leave the
     initial and final / in place.
+    Empty trailing items are ignored.
 
-    Copied from `notebook.utils.url_path_join`.
+    Based on `notebook.utils.url_path_join`.
     """
+    pieces = list(pieces)
+    while pieces and not pieces[-1]:
+        del pieces[-1]
+    if not pieces:
+        return ""
     initial = pieces[0].startswith('/')
     final = pieces[-1].endswith('/')
     stripped = [s.strip('/') for s in pieces]
