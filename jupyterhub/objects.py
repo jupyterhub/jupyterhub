@@ -172,11 +172,11 @@ class Server(HasTraits):
                 self.keyfile, self.certfile, cafile=self.cafile
             )
 
-            return wait_for_http_server(
-                url_path_join(self.url, extra_path),
-                timeout=timeout,
-                ssl_context=ssl_context,
-            )
+            if extra_path:
+                url = url_path_join(self.url, extra_path)
+            else:
+                url = self.url
+            return wait_for_http_server(url, timeout=timeout, ssl_context=ssl_context)
         else:
             return wait_for_server(
                 self._connect_ip, self._connect_port, timeout=timeout
