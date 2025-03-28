@@ -1579,7 +1579,10 @@ class DummyAuthenticator(Authenticator):
             if data['password'] == self.password:
                 # Anyone logging in with the standard password is *never* admin
                 return {"name": data['username'], "admin": False}
-            if data['username'] in self.admin_users and data['password'] == self.admin_password:
+            if (
+                data['username'] in self.admin_users
+                and data['password'] == self.admin_password
+            ):
                 return {"name": data["username"], "admin": True}
             return None
         return data['username']
