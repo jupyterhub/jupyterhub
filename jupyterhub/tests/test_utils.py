@@ -109,7 +109,13 @@ async def test_tornado_coroutines():
         (("/base/", ""), "/base/"),
         (("/base", "abc", "def"), "/base/abc/def"),
         (("/base/", "/abc/", "/def/"), "/base/abc/def/"),
+        (("/base", "", "/", ""), "/base/"),
         ((""), ""),
+        (("", ""), ""),
+        (("", "part", ""), "part"),
+        (("", "/part"), "part"),
+        (("", "part", "", "after"), "part/after"),
+        (("", "part", "", "after/", "", ""), "part/after/"),
         (("abc", "def"), "abc/def"),
     ],
 )
