@@ -1692,7 +1692,11 @@ class JupyterHub(Application):
         """add a url prefix to handlers"""
         for i, tup in enumerate(handlers):
             lis = list(tup)
-            lis[0] = url_path_join(prefix, tup[0])
+            if tup[0]:
+                lis[0] = url_path_join(prefix, tup[0])
+            else:
+                # the '' route should match /prefix not /prefix/
+                lis[0] = prefix.rstrip("/")
             handlers[i] = tuple(lis)
         return handlers
 

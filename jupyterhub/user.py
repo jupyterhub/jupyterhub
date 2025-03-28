@@ -786,7 +786,7 @@ class User:
         if handler:
             await self.refresh_auth(handler)
 
-        base_url = url_path_join(self.base_url, url_escape_path(server_name)) + '/'
+        base_url = url_path_join(self.base_url, url_escape_path(server_name), "/")
 
         orm_server = orm.Server(base_url=base_url)
         db.add(orm_server)
@@ -877,8 +877,7 @@ class User:
                 api_token,
                 url_path_join(self.url, url_escape_path(server_name), 'oauth_callback'),
                 allowed_scopes=allowed_scopes,
-                description="Server at %s"
-                % (url_path_join(self.base_url, server_name) + '/'),
+                description=f"Server at {url_path_join(self.base_url, server_name, '/')}",
             )
             spawner.orm_spawner.oauth_client = oauth_client
         db.commit()
