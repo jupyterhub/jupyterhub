@@ -106,9 +106,12 @@ def _get_xsrf_token_cookie(handler):
     return (None, None)
 
 
-def _set_xsrf_cookie(handler, xsrf_id, *, cookie_path="", authenticated=None):
+def _set_xsrf_cookie(
+    handler, xsrf_id, *, cookie_path="", authenticated=None, xsrf_token=None
+):
     """Set xsrf token cookie"""
-    xsrf_token = _create_signed_value_urlsafe(handler, "_xsrf", xsrf_id)
+    if xsrf_token is None:
+        xsrf_token = _create_signed_value_urlsafe(handler, "_xsrf", xsrf_id)
     xsrf_cookie_kwargs = {}
     xsrf_cookie_kwargs.update(handler.settings.get('xsrf_cookie_kwargs', {}))
     xsrf_cookie_kwargs.setdefault("path", cookie_path)
@@ -130,6 +133,7 @@ def _set_xsrf_cookie(handler, xsrf_id, *, cookie_path="", authenticated=None):
         xsrf_cookie_kwargs,
     )
     handler.set_cookie("_xsrf", xsrf_token, **xsrf_cookie_kwargs)
+    return xsrf_token
 
 
 def get_xsrf_token(handler, cookie_path=""):
@@ -175,7 +179,9 @@ def get_xsrf_token(handler, cookie_path=""):
             )
 
     if _set_cookie:
-        _set_xsrf_cookie(handler, xsrf_id, cookie_path=cookie_path)
+        _set_xsrf_cookie(
+            handler, xsrf_id, cookie_path=cookie_path, xsrf_token=xsrf_token
+        )
     handler._xsrf_token = xsrf_token
     return xsrf_token
 

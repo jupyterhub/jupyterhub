@@ -103,7 +103,7 @@ async def test_singleuser_auth(
     assert r.status_code == 200
 
     # logout
-    r = await s.get(url_path_join(url, 'logout'))
+    r = await s.get(url_path_join(url, 'logout'), allow_redirects=False)
     assert len(r.cookies) == 0
 
     # accessing another user's server hits the oauth confirmation page

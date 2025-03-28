@@ -9,6 +9,7 @@ from tornado import web
 from tornado.escape import url_escape
 from tornado.httputil import url_concat
 
+from .._xsrf_utils import _set_xsrf_cookie
 from ..utils import maybe_future
 from .base import BaseHandler
 
@@ -94,7 +95,37 @@ class LogoutHandler(BaseHandler):
 class LoginHandler(BaseHandler):
     """Render the login page."""
 
-    def _render(self, login_error=None, username=None):
+    def render_template(self, name, **ns):
+        # intercept error page rendering for form submissions
+        if (
+            name == "error.html"
+            and self.request.method.lower() == "post"
+            and self.request.headers.get("Sec-Fetch-Mode", "navigate") == "navigate"
+        ):
+            # regular login form submission
+            # render login form with error message
+            ns["login_error"] = ns.get("message") or ns.get("status_message", "")
+            ns["username"] = self.get_argument("username", strip=True, default="")
+            return self._render(**ns)
+        else:
+            return super().render_template(name, **ns)
+
+    def check_xsrf_cookie(self):
+        try:
+            return super().check_xsrf_cookie()
+        except web.HTTPError as e:
+            # rewrite xsrf error on login form for nicer message
+            # suggest retry, which is likely to succeed
+            # log the original error so admins can debug
+            self.log.error("XSRF error on login form: %s", e)
+            if self.request.headers.get("Sec-Fetch-Mode", "navigate") == "navigate":
+                raise web.HTTPError(
+                    e.status_code, "Login form invalid or expired. Try again."
+                )
+            else:
+                raise
+
+    def _render(self, login_error=None, username=None, **kwargs):
         context = {
             "next": url_escape(self.get_argument('next', default='')),
             "username": username,
@@ -116,6 +147,7 @@ class LoginHandler(BaseHandler):
             'login.html',
             **context,
             custom_html=custom_html,
+            **kwargs,
         )
 
     async def get(self):
@@ -147,6 +179,18 @@ class LoginHandler(BaseHandler):
                     self.redirect(auto_login_url)
                 return
             username = self.get_argument('username', default='')
+
+            # always set a fresh xsrf cookie when the login page is rendered
+            # ensures we are as far from expiration as possible
+            # to restart the timer
+            xsrf_token = self.xsrf_token
+            if self.request.headers.get("Sec-Fetch-Mode", "navigate") == "navigate":
+                _set_xsrf_cookie(
+                    self,
+                    self._xsrf_token_id,
+                    cookie_path=self.hub.base_url,
+                    xsrf_token=xsrf_token,
+                )
             self.finish(await self._render(username=username))
 
     async def post(self):
@@ -169,6 +213,7 @@ class LoginHandler(BaseHandler):
             self._jupyterhub_user = user
             self.redirect(self.get_next_url(user))
         else:
+            self.set_status(403)
             html = await self._render(
                 login_error='Invalid username or password', username=data['username']
             )
