@@ -10,7 +10,7 @@
 
 ```{eval-rst}
 .. autoconfigurable:: Spawner
-   :members: options_from_form, poll, start, stop, get_args, get_env, get_state, template_namespace, format_string, create_certs, move_certs
+   :members: options_from_form, user_options, poll, start, stop, get_args, get_env, get_state, template_namespace, format_string, create_certs, move_certs
 ```
 
 ### {class}`LocalProcessSpawner`
