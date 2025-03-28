@@ -46,7 +46,7 @@ from sqlalchemy.pool import StaticPool
 from sqlalchemy.types import LargeBinary, Text, TypeDecorator
 from tornado.log import app_log
 
-from .utils import compare_token, hash_token, new_token, random_port, utcnow
+from .utils import compare_token, fmt_ip_url, hash_token, new_token, random_port, utcnow
 
 # top-level variable for easier mocking in tests
 utcnow = partial(utcnow, with_tz=False)
@@ -157,7 +157,7 @@ class Server(Base):
     spawner = relationship("Spawner", back_populates="server", uselist=False)
 
     def __repr__(self):
-        return f"<Server({self.ip}:{self.port})>"
+        return f"<Server({fmt_ip_url(self.ip)}:{self.port})>"
 
 
 # lots of things have roles
