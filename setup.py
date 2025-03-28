@@ -172,10 +172,6 @@ class JSX(BaseCommand):
     js_target = pjoin(static, 'js', 'admin-react.js')
 
     def should_run(self):
-        if os.getenv('READTHEDOCS'):
-            # yarn not available on RTD
-            return False
-
         if not os.path.exists(self.js_target):
             return True
 
@@ -213,6 +209,10 @@ class JSX(BaseCommand):
 
 
 def js_css_first(cls, strict=True):
+    if os.getenv('READTHEDOCS'):
+        # don't need to build frontend for the docs
+        return cls
+
     class Command(cls):
         def run(self):
             try:
