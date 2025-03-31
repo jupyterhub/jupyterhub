@@ -1420,15 +1420,31 @@ async def test_login_xsrf_initial_cookies(app, browser, case, username):
     # after visiting page, cookies get re-established
     await browser.goto(login_url)
     cookies = await browser.context.cookies()
+    cookies = sorted(cookies, key=lambda cookie: len(cookie['path'] or ''))
     print(cookies)
-    cookie = cookies[0]
+    cookie = cookies[-1]
     assert cookie['name'] == '_xsrf'
     assert cookie["path"] == app.hub.base_url
+    # make sure cookie matches form input
+    xsrf_input = browser.locator('//input[@name="_xsrf"]')
+    await expect(xsrf_input).to_have_value(cookie["value"])
 
-    # next page visit, cookies don't change
+    # every visit to login page resets the xsrf cookie
+    # value will only change if timestamp advances
+    await asyncio.sleep(1.5)
     await browser.goto(login_url)
     cookies_2 = await browser.context.cookies()
-    assert cookies == cookies_2
+    cookies_2 = sorted(cookies_2, key=lambda cookie: len(cookie['path'] or ''))
+    print(cookies_2)
+    new_cookie = cookies_2[-1]
+    # xsrf cookie reset
+    assert new_cookie['name'] == "_xsrf"
+    assert new_cookie != cookie
+    assert new_cookie["expires"] > cookie["expires"]
+    # make sure cookie matches form input
+    xsrf_input = browser.locator('//input[@name="_xsrf"]')
+    await expect(xsrf_input).to_have_value(new_cookie["value"])
+
     # login is successful
     await login(browser, username, username)
 
