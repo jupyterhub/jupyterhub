@@ -1,10 +1,13 @@
+from traitlets import Unicode, default, validate
+
 from ..auth import Authenticator
-from traitlets import TraitError, default, Unicode, validate
+
 
 class SharedPasswordAuthenticator(Authenticator):
     """
     Authenticator with static shared passwords.
     """
+
     @default("allow_all")
     def _allow_all_default(self):
         if self.allowed_users:
@@ -15,7 +18,7 @@ class SharedPasswordAuthenticator(Authenticator):
 
     global_password = Unicode(
         None,
-        allow_none=True, # Allow None here, so we can provide a better error message in our validation
+        allow_none=True,  # Allow None here, so we can provide a better error message in our validation
         config=True,
         help="""
         Set a global password for all *non admin* users wanting to log in.
@@ -98,7 +101,6 @@ class SharedPasswordAuthenticator(Authenticator):
             )
 
         return new
-
 
     async def authenticate(self, handler, data):
         """Checks against a global password if it's been set. If not, allow any user/pass combo"""

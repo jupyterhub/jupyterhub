@@ -20,7 +20,7 @@ except Exception as e:
     _pamela_error = e
 
 from tornado.concurrent import run_on_executor
-from traitlets import Any, Bool, Dict, Integer, Set, Unicode, default, observe, validate
+from traitlets import Any, Bool, Dict, Integer, Set, Unicode, default, observe
 from traitlets.config import LoggingConfigurable
 
 from .handlers.login import LoginHandler
