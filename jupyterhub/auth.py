@@ -1510,63 +1510,6 @@ class DummyAuthenticator(Authenticator):
         """,
     )
 
-    admin_password = Unicode(
-        None,
-        allow_none=True,
-        config=True,
-        help="""
-        Set a global password that grants *admin* privileges to users logging in with this password.
-
-        Must meet the following requirements:
-        - Be 32 characters or longer
-        - password for regular users must also be set
-        - Not be the same as the password
-        """,
-    )
-
-    @validate("admin_password")
-    def _validate_admin_password(self, proposal):
-        new = proposal.value
-        if new is None:
-            # Don't do anything if we're None
-            return None
-        if len(new) < 32:
-            raise ValueError(
-                f"{self.__class__.__name__}.admin_password must be at least 32 characters"
-            )
-        if not self.password:
-            # Checked here and in validating password, to ensure we don't miss issues due to ordering
-            raise ValueError(
-                f"{self.__class__.__name__}.password must be set if admin_password is set"
-            )
-        if self.password == new:
-            # Checked here and in validating password, to ensure we don't miss issues due to ordering
-            raise ValueError(
-                f"{self.__class__.__name__}.password and {self.__class__.__name__}.admin_password can not be the same"
-            )
-        return new
-
-    @validate("password")
-    def _validate_password(self, proposal):
-        new = proposal.value
-        if self.admin_password and not new:
-            # Checked here and in validating admin_password, to ensure we don't miss issues due to ordering
-            raise ValueError(
-                f"{self.__class__.__name__}.password must be set if admin_password is set"
-            )
-
-        if not new:
-            # If unset, let it be
-            return new
-
-        if self.admin_password == new:
-            # Checked here and in validating password, to ensure we don't miss issues due to ordering
-            raise ValueError(
-                f"{self.__class__.__name__}.password and {self.__class__.__name__}.admin_password can not be the same"
-            )
-
-        return new
-
     def check_allow_config(self):
         super().check_allow_config()
         self.log.warning(
@@ -1577,10 +1520,7 @@ class DummyAuthenticator(Authenticator):
         """Checks against a global password if it's been set. If not, allow any user/pass combo"""
         if self.password:
             if data['password'] == self.password:
-                # Anyone logging in with the standard password is *never* admin
-                return {"name": data['username'], "admin": False}
-            if data['username'] in self.admin_users and data['password'] == self.admin_password:
-                return {"name": data["username"], "admin": True}
+                return data["username"]
             return None
         return data['username']
 

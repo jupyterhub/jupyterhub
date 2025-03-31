@@ -67,6 +67,7 @@ jupyterhub-singleuser = "jupyterhub.singleuser:main"
 default = "jupyterhub.auth:PAMAuthenticator"
 pam = "jupyterhub.auth:PAMAuthenticator"
 dummy = "jupyterhub.auth:DummyAuthenticator"
+sharedpassword = "jupyterhub.authenticators.shared:SharedPasswordAuthenticator"
 null = "jupyterhub.auth:NullAuthenticator"
 
 [project.entry-points."jupyterhub.proxies"]
