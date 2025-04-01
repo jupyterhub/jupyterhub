@@ -1,4 +1,4 @@
-"$id": https://schema.jupyter.org/jupyterhub/events/server-action
+"$id": https://schema.jupyter.org/jupyterhub/events/server_action
 version: 1
 title: JupyterHub server events
 description: |
@@ -32,7 +32,7 @@ properties:
 
       This is a required field.
 
-      Possibl Values:
+      Possible Values:
 
       1. start
          A user's server was successfully started

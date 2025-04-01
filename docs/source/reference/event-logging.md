@@ -38,7 +38,7 @@ JupyterHub 5.0 changes from the deprecated jupyter-telemetry to jupyter-events.
 The main changes are:
 
 - `EventLog` configuration is now called `EventLogger`
-- The `hub.jupyter.org/server-action` schema is now called `https://schema.jupyter.org/jupyterhub/events/server-action`
+- The `hub.jupyter.org/server-action` schema is now called `https://schema.jupyter.org/jupyterhub/events/server_action`
   :::
 
 [json schemas]: https://json-schema.org/
