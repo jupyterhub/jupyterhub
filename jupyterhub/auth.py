@@ -1504,11 +1504,18 @@ class DummyAuthenticator(Authenticator):
     password = Unicode(
         config=True,
         help="""
-        Set a global password for all users wanting to log in.
-
-        This allows users with any username to log in with the same static password.
+        .. deprecated:: 5.3
+        
+            Setting a password in DummyAuthenticator is deprecated.
+            Use `SharedPasswordAuthenticator` instead.
         """,
     )
+
+    @observe("password")
+    def _password_changed(self, change):
+        msg = "DummyAuthenticator.password is deprecated in JupyterHub 5.3. Use SharedPasswordAuthenticator.user_password instead."
+        warnings.warn(msg, DeprecationWarning)
+        self.log.warning(msg)
 
     def check_allow_config(self):
         super().check_allow_config()
