@@ -199,17 +199,17 @@ formdata = {
 When `formdata` arrives, it is passed through [](#Spawner.options_from_form):
 
 ```python
-spawner.user_options = [await] spawner.options_from_form(formdata[, spawner=spawner])
+spawner.user_options = spawner.options_from_form(formdata, spawner=spawner)
 ```
 
 to create `spawner.user_options`.
 
 [](#Spawner.options_from_form) is a configurable function to turn the HTTP form data into the correct structure for [](#Spawner.user_options).
-`options_from_form` must return a dictionary, and is meant to interpret the lists-of-strings a web form produces into the correct types.
+`options_from_form` must return a dictionary, _may_ be async, and is meant to interpret the lists-of-strings a web form produces into the correct types.
 For example, the `options_from_form` for the above form might look like:
 
 ```python
-def options_from_form(formdata):
+def options_from_form(formdata, spawner=None):
     options = {}
     options['integer'] = int(formdata['integer'][0]) # single integer value
     options['checkbox'] = formdata['checkbox'] == ['on']

@@ -640,6 +640,36 @@ class Spawner(LoggingConfigurable):
             (with additional support for bytes in case of uploaded file data),
             and any non-bytes non-jsonable values will be replaced with None
             if the user_options are re-used.
+
+        .. versionadded:: 5.3
+            The strings `'simple'` and `'passthrough'` may be specified to select some predefined behavior.
+            These are the only string values accepted.
+            
+            `'passthrough'` is the longstanding default behavior,
+            where form data is stored in `user_options` without modification.
+            With `'passthrough'`, `user_options` from a form will always be a dict of lists of strings.
+
+            `'simple'` applies some minimal processing that works for most simple forms:
+
+            - Single-value fields get unpacked from lists.
+              They are still always strings, no attempt is made to parse numbers, etc..
+            - Multi-value fields are left alone.
+            - The default checked value of "on" for a checkbox is converted to True.
+              This is the only non-string value that can be produced.
+
+            Example for `'simple'`::
+
+                {
+                    "image": ["myimage"],
+                    "checked": ["on"], # checkbox
+                    "multi-select": ["a", "b"],
+                }
+                # becomes
+                {
+                    "image": "myimage",
+                    "checked": True,
+                    "multi-select": ["a", "b"],
+                }
         """,
     ).tag(config=True)
 
@@ -657,24 +687,27 @@ class Spawner(LoggingConfigurable):
         else:
             return proposal.value
 
-    def _passthrough_options_from_form(self, form_data):
+    @staticmethod
+    def _passthrough_options_from_form(form_data):
         """The longstanding default behavior for options_from_form
 
         explicit opt-in via `options_from_form = 'passthrough'`
-
-        .. versionadded:: 5.3
         """
         return form_data
 
-    def _simple_options_from_form(self, form_data):
+    @staticmethod
+    def _simple_options_from_form(form_data):
         """Simple options_from_form
 
         Enable via `options_from_form = 'simple'
 
-        Assumes only scalar form inputs (no multiple-choice, no numbers)
-        and default checkboxes for booleans ('on' -> True)
+        Transforms simple single-value string inputs to actual strings,
+        when they arrive as length-1 lists.
 
-        .. versionadded:: 5.3
+        The default "checked" value of "on" for checkboxes is converted to True.
+        Note: when a checkbox is unchecked in a form, its value is generally omitted, not set to any false value.
+
+        Multi-value inputs are left unmodifed as lists of strings.
         """
         user_options = {}
         for key, value_list in form_data.items():
@@ -733,7 +766,7 @@ class Spawner(LoggingConfigurable):
         default_value=None,
         allow_none=True,
         help="""
-            Apply inputs from user_options to the Spawner
+            Hook to apply inputs from user_options to the Spawner.
 
             Typically takes values in user_options, validates them, and updates Spawner attributes::
 
@@ -743,15 +776,22 @@ class Spawner(LoggingConfigurable):
 
                 c.Spawner.apply_user_options = apply_user_options
 
-            Default: do nothing
+            `apply_user_options` *may* be async.
+
+            Default: do nothing.
 
             Typically a callable which takes `(spawner: Spawner, user_options: dict)`,
             but for simple cases this can be a dict mapping user option fields to Spawner attribute names,
             e.g.::
 
                 c.Spawner.apply_user_options = {"image_input": "image"}
+                c.Spawner.options_from_form = "simple"
 
             allows users to specify the image attribute, but not any others.
+            Because `user_options` generally comes in as strings in form data,
+            the dictionary mode uses traitlets `from_string` to coerce strings to values,
+            which allows setting simple values from strings (e.g. numbers)
+            without needing to implement callable hooks.
 
             .. note::
 
