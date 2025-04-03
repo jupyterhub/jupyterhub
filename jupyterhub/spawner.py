@@ -793,7 +793,11 @@ class Spawner(LoggingConfigurable):
             # should we catch less?
             # likely user errors are ValueError, TraitError, TypeError
             self.log.exception("Exception applying user_options for %s", self._log_name)
-            raise web.HTTPError(400, f"Invalid user options: {e}")
+            if isinstance(e, web.HTTPError):
+                # passthrough hook's HTTPError, so it can display a custom message
+                raise
+            else:
+                raise web.HTTPError(400, "Invalid user options")
 
     def _apply_user_options_dict(self, user_options):
         """if apply_user_options is a dict
