@@ -240,6 +240,7 @@ This is because the users can specify arbitrary option dictionary by using the A
 so it is part of your Spawner and/or deployment configuration to expose the options you trust your users to set.
 
 [](#Spawner.apply_user_options) is the hook for taking `user_options` and applying whatever configuration it may represent.
+It is critical that `apply_user_options` validates all input, since these are provided by the user.
 
 ```python
 def apply_user_options(spawner, user_options):
@@ -274,7 +275,7 @@ c.Spawner.options_from_form = "simple"
 c.Spawner.apply_user_options = {"image_input": "image", "debug_checkbox": "debug"}
 ```
 
-The `simple` options_from_form does the very simplest interpretation of an html form,
+`options_from_form = "simple"` uses a built-in method to do the very simplest interpretation of an html form,
 casting the lists of strings to single strings by getting the first item when there is only one.
 The only extra processing it performs is casting the checkbox value of `on` to True.
 
@@ -287,7 +288,7 @@ So it turns this formdata:
 }
 ```
 
-into this `.user_options`
+into this `user_options`
 
 ```python
 {
@@ -303,7 +304,7 @@ which means you can set numbers and things this way as well,
 even though `options_from_form` leaves these as strings.
 
 So in the above configuration, we have exposed `Spawner.debug` and `Spawner.image` without needing to write any functions.
-In jupyterhub helm chart yaml, this would look like:
+In the JupyterHub helm chart YAML, this would look like:
 
 ```yaml
 hub:

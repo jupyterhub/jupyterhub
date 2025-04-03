@@ -745,7 +745,7 @@ class Spawner(LoggingConfigurable):
 
             Default: do nothing
 
-            Typically a callalble which takes `(spawner: Spawner, user_options: dict)`,
+            Typically a callable which takes `(spawner: Spawner, user_options: dict)`,
             but for simple cases this can be a dict mapping user option fields to Spawner attribute names,
             e.g.::
 
@@ -759,7 +759,9 @@ class Spawner(LoggingConfigurable):
                 and may be set directly via the REST API,
                 no assumptions should be made on its structure or contents.
                 An empty dict should always be supported.
-                Make sure to validate any inputs before applying them!
+                Make sure to validate any inputs before applying them,
+                either in this callable, or in whatever is consuming the value
+                if this is a dict.
         
             .. versionadded:: 5.3
         
