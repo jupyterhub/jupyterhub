@@ -42,6 +42,7 @@ password unless a global password has been set. Once set, any username will
 still be accepted but the correct password will need to be provided.
 
 To use, specify
+
 ```python
 c.JupyterHub.authenticator_class = "dummy"
 ```
