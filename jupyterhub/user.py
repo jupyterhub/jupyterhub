@@ -904,6 +904,7 @@ class User:
             # wait for spawner.start to return
             # run optional preparation work to bootstrap the notebook
             await spawner.apply_group_overrides()
+            await spawner._run_apply_user_options(spawner.user_options)
             await maybe_future(spawner.run_pre_spawn_hook())
             if self.settings.get('internal_ssl'):
                 self.log.debug("Creating internal SSL certs for %s", spawner._log_name)

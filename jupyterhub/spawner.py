@@ -12,7 +12,7 @@ import shutil
 import signal
 import sys
 import warnings
-from inspect import signature
+from inspect import isawaitable, signature
 from subprocess import Popen
 from tempfile import mkdtemp
 from textwrap import dedent
@@ -24,6 +24,7 @@ else:
     from async_generator import aclosing
 
 from sqlalchemy import inspect
+from tornado import web
 from tornado.ioloop import PeriodicCallback
 from traitlets import (
     Any,
@@ -407,7 +408,7 @@ class Spawner(LoggingConfigurable):
             allowed_scopes = self.oauth_client_allowed_scopes
             if callable(allowed_scopes):
                 allowed_scopes = allowed_scopes(self)
-                if inspect.isawaitable(allowed_scopes):
+                if isawaitable(allowed_scopes):
                     allowed_scopes = await allowed_scopes
             scopes.extend(allowed_scopes)
 
@@ -632,7 +633,8 @@ class Spawner(LoggingConfigurable):
 
         return options_form
 
-    options_from_form = Callable(
+    options_from_form = Union(
+        [Callable(), Unicode()],
         help="""
         Interpret HTTP form data
 
@@ -644,7 +646,8 @@ class Spawner(LoggingConfigurable):
         though it can contain bytes in addition to standard JSON data types.
 
         This method should not have any side effects.
-        Any handling of `user_options` should be done in `.start()`
+        Any handling of `user_options` should be done in `.apply_user_options()` (JupyterHub 5.3)
+        or `.start()` (JupyterHub 5.2 or older)
         to ensure consistent behavior across servers
         spawned via the API and form submission page.
 
@@ -658,15 +661,87 @@ class Spawner(LoggingConfigurable):
             (with additional support for bytes in case of uploaded file data),
             and any non-bytes non-jsonable values will be replaced with None
             if the user_options are re-used.
+
+        .. versionadded:: 5.3
+            The strings `'simple'` and `'passthrough'` may be specified to select some predefined behavior.
+            These are the only string values accepted.
+            
+            `'passthrough'` is the longstanding default behavior,
+            where form data is stored in `user_options` without modification.
+            With `'passthrough'`, `user_options` from a form will always be a dict of lists of strings.
+
+            `'simple'` applies some minimal processing that works for most simple forms:
+
+            - Single-value fields get unpacked from lists.
+              They are still always strings, no attempt is made to parse numbers, etc..
+            - Multi-value fields are left alone.
+            - The default checked value of "on" for a checkbox is converted to True.
+              This is the only non-string value that can be produced.
+
+            Example for `'simple'`::
+
+                {
+                    "image": ["myimage"],
+                    "checked": ["on"], # checkbox
+                    "multi-select": ["a", "b"],
+                }
+                # becomes
+                {
+                    "image": "myimage",
+                    "checked": True,
+                    "multi-select": ["a", "b"],
+                }
         """,
     ).tag(config=True)
 
     @default("options_from_form")
     def _options_from_form(self):
-        return self._default_options_from_form
+        return self._passthrough_options_from_form
 
-    def _default_options_from_form(self, form_data):
+    @validate("options_from_form")
+    def _validate_options_from_form(self, proposal):
+        # coerce special string values to callable
+        if proposal.value == "passthrough":
+            return self._passthrough_options_from_form
+        elif proposal.value == "simple":
+            return self._simple_options_from_form
+        else:
+            return proposal.value
+
+    @staticmethod
+    def _passthrough_options_from_form(form_data):
+        """The longstanding default behavior for options_from_form
+
+        explicit opt-in via `options_from_form = 'passthrough'`
+        """
         return form_data
+
+    @staticmethod
+    def _simple_options_from_form(form_data):
+        """Simple options_from_form
+
+        Enable via `options_from_form = 'simple'
+
+        Transforms simple single-value string inputs to actual strings,
+        when they arrive as length-1 lists.
+
+        The default "checked" value of "on" for checkboxes is converted to True.
+        Note: when a checkbox is unchecked in a form, its value is generally omitted, not set to any false value.
+
+        Multi-value inputs are left unmodifed as lists of strings.
+        """
+        user_options = {}
+        for key, value_list in form_data.items():
+            if len(value_list) == 1:
+                value = value_list[0]
+                if value == "on":
+                    # default for checkbox
+                    value = True
+            else:
+                value = value_list
+
+            user_options[key] = value
+        return user_options
 
     def run_options_from_form(self, form_data):
         sig = signature(self.options_from_form)
@@ -706,12 +781,140 @@ class Spawner(LoggingConfigurable):
         """
         return self.options_from_form(query_data)
 
+    apply_user_options = Union(
+        [Callable(), Dict()],
+        config=True,
+        default_value=None,
+        allow_none=True,
+        help="""
+            Hook to apply inputs from user_options to the Spawner.
+
+            Typically takes values in user_options, validates them, and updates Spawner attributes::
+
+                def apply_user_options(spawner, user_options):
+                    if "image" in user_options and isinstance(user_options["image"], str):
+                        spawner.image = user_options["image"]
+
+                c.Spawner.apply_user_options = apply_user_options
+
+            `apply_user_options` *may* be async.
+
+            Default: do nothing.
+
+            Typically a callable which takes `(spawner: Spawner, user_options: dict)`,
+            but for simple cases this can be a dict mapping user option fields to Spawner attribute names,
+            e.g.::
+
+                c.Spawner.apply_user_options = {"image_input": "image"}
+                c.Spawner.options_from_form = "simple"
+
+            allows users to specify the image attribute, but not any others.
+            Because `user_options` generally comes in as strings in form data,
+            the dictionary mode uses traitlets `from_string` to coerce strings to values,
+            which allows setting simple values from strings (e.g. numbers)
+            without needing to implement callable hooks.
+
+            .. note::
+
+                Because `user_options` is user input
+                and may be set directly via the REST API,
+                no assumptions should be made on its structure or contents.
+                An empty dict should always be supported.
+                Make sure to validate any inputs before applying them,
+                either in this callable, or in whatever is consuming the value
+                if this is a dict.
+        
+            .. versionadded:: 5.3
+        
+                Prior to 5.3, applying user options must be done in `Spawner.start()`
+                or `Spawner.pre_spawn_hook()`.
+            """,
+    )
+
+    async def _run_apply_user_options(self, user_options):
+        """Run the apply_user_options hook
+
+        and turn errors into HTTP 400
+        """
+        r = None
+        try:
+            if isinstance(self.apply_user_options, dict):
+                r = self._apply_user_options_dict(user_options)
+            elif self.apply_user_options:
+                r = self.apply_user_options(self, user_options)
+            elif user_options:
+                keys = list(user_options)
+                self.log.warning(
+                    f"Received unhandled user_options for {self._log_name}: {', '.join(keys)}"
+                )
+            if isawaitable(r):
+                await r
+        except Exception as e:
+            # this may not be the users' fault...
+            # should we catch less?
+            # likely user errors are ValueError, TraitError, TypeError
+            self.log.exception("Exception applying user_options for %s", self._log_name)
+            if isinstance(e, web.HTTPError):
+                # passthrough hook's HTTPError, so it can display a custom message
+                raise
+            else:
+                raise web.HTTPError(400, "Invalid user options")
+
+    def _apply_user_options_dict(self, user_options):
+        """if apply_user_options is a dict
+
+        Allows fully declarative apply_user_options configuration
+        for simple cases where users may set attributes directly
+        from values in user_options.
+        """
+        traits = self.traits()
+        for key, value in user_options.items():
+            attr = self.apply_user_options.get(key, None)
+            if attr is None:
+                self.log.warning(f"Unhandled user option {key} for {self._log_name}")
+            elif hasattr(self, attr):
+                # require traits? I think not, but we should require declaration, at least
+                # use trait from_string for string coercion if available, though
+                try:
+                    setattr(self, attr, value)
+                except Exception as e:
+                    # try coercion from string via traits
+                    # this will mostly affect numbers
+                    if attr in traits and isinstance(value, str):
+                        # try coercion, may not work
+                        try:
+                            value = traits[attr].from_string(value)
+                        except Exception:
+                            # raise original assignment error, likely more informative
+                            raise e
+                        else:
+                            setattr(self, attr, value)
+                    else:
+                        raise
+            else:
+                self.log.error(
+                    f"No such Spawner attribute {attr} for user option {key} on {self._log_name}"
+                )
+
     user_options = Dict(
         help="""
         Dict of user specified options for the user's spawned instance of a single-user server.
 
         These user options are usually provided by the `options_form` displayed to the user when they start
         their server.
+        If specified via an `options_form`, form data is passed through `options_from_form` before storing
+        in `user_options`.
+        `user_options` may also be passed as the JSON body to a spawn request via the REST API,
+        in which case it is stored directly, unmodifed.
+        
+        `user_options` has no effect on its own, it must be handled by the Spawner in `spawner.start`,
+        or via deployment configuration in `apply_user_options` or `pre_spawn_hook`.
+        
+        .. seealso::
+        
+            - :attr:`options_form`
+            - :attr:`options_from_form`
+            - :attr:`apply_user_options`
         """
     )
 
