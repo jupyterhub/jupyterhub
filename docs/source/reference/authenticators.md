@@ -41,6 +41,12 @@ When testing, it may be helpful to use the
 password unless a global password has been set. Once set, any username will
 still be accepted but the correct password will need to be provided.
 
+To use, specify
+
+```python
+c.JupyterHub.authenticator_class = "dummy"
+```
+
 :::{versionadded} 5.0
 The DummyAuthenticator's default `allow_all` is True,
 unlike most other Authenticators.
