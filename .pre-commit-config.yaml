@@ -81,3 +81,6 @@ repos:
         pass_filenames: false
         language: node
         files: "jsx/.*"
+        # can't run on pre-commit; hangs, for some reason
+        stages:
+          - manual
