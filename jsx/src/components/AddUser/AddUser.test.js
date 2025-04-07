@@ -1,7 +1,6 @@
 import React, { act } from "react";
 import "@testing-library/jest-dom";
 import { render, screen, fireEvent } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { Provider, useDispatch, useSelector } from "react-redux";
 import { createStore } from "redux";
 import { HashRouter } from "react-router";

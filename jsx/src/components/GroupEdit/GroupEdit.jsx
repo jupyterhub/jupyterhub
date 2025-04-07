@@ -179,6 +179,7 @@ GroupEdit.propTypes = {
   removeFromGroup: PropTypes.func,
   deleteGroup: PropTypes.func,
   updateGroups: PropTypes.func,
+  updateProp: PropTypes.func,
   validateUser: PropTypes.func,
 };
 

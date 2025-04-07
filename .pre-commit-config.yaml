@@ -69,3 +69,18 @@ repos:
           - --update
         files: jupyterhub/scopes.py
         pass_filenames: false
+
+      # run eslint in the jsx directory
+      # need to pass through 'jsx:install-run' hook in
+      # top-level package.json to ensure dependencies are installed
+      # eslint pre-commit hook doesn't really work with eslint 9,
+      # so use `npm run lint:fix`
+      - id: jsx-eslint
+        name: eslint in jsx/
+        entry: npm run jsx:install-run lint:fix
+        pass_filenames: false
+        language: node
+        files: "jsx/.*"
+        # can't run on pre-commit; hangs, for some reason
+        stages:
+          - manual
