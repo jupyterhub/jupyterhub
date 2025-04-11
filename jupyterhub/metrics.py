@@ -46,7 +46,9 @@ _env_stop_duration_buckets = os.environ.get(
 ).strip()
 
 if _env_spawn_duration_buckets:
-    spawn_duration_buckets = [float(_s) for _s in _env_spawn_duration_buckets.split(",")]
+    spawn_duration_buckets = [
+        float(_s) for _s in _env_spawn_duration_buckets.split(",")
+    ]
 else:
     spawn_duration_buckets = [
         0.5,
