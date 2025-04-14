@@ -111,7 +111,7 @@ Visit `http://localhost:8000` in your browser, and sign in with your system user
 
 _Note_: To allow multiple users to sign in to the server, you will need to
 run the `jupyterhub` command as a _privileged user_, such as root.
-The [Run JupyterHub without root privileges using sudo](https://jupyterhub.readthedocs.io/en/latest/howto/configuration/config-sudo.html)
+The [documentation](https://jupyterhub.readthedocs.io/en/latest/howto/configuration/config-sudo.html)
 describes how to run the server as a _less privileged user_, which requires
 more configuration of the system.
 
