@@ -125,7 +125,7 @@ the shadow password database.
 **Note:** On [Fedora based distributions](https://fedoraproject.org/wiki/List_of_Fedora_remixes) there is no clear way to configure
 the PAM database to allow sufficient access for authenticating with the target user's password
 from JupyterHub. As a workaround we recommend use an
-[alternative authentication method](https://github.com/jupyterhub/jupyterhub/wiki/Authenticators).
+[alternative authentication method](authenticators-reference).
 
 ```bash
 $ ls -l /etc/shadow
