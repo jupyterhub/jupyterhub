@@ -90,6 +90,6 @@ To **allow multiple users to sign in** to the Hub server, you must start
 sudo jupyterhub
 ```
 
-[Run JupyterHub without root privileges using sudo](https://jupyterhub.readthedocs.io/en/latest/howto/configuration/config-sudo.html)
+[](howto:config:no-sudo)
 describes how to run the server as a _less privileged user_. This requires
 additional configuration of the system.
