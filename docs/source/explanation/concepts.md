@@ -88,7 +88,7 @@ The following authenticators are included with JupyterHub:
   of a ssh server, but providing a web-browser based way to access the
   machine.
 
-There are [plenty of others to choose from](https://github.com/jupyterhub/jupyterhub/wiki/Authenticators).
+There are [plenty of others to choose from](authenticators-reference).
 You can connect to almost any other existing service to manage your
 users. You either use all users from this other service (e.g. your
 company), or enable only the allowed users (e.g. your group's
