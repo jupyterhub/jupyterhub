@@ -33,6 +33,8 @@ export JUPYTERHUB_METRICS_PREFIX=jupyterhub_prod
 
 would result in the metric `jupyterhub_prod_active_users`, etc.
 
+(monitoring_bucket_sizes)=
+
 ## Customizing bucket sizes
 
 As of JupyterHub 5.3, the following environment variables in the Hub's environment can be overridden to support custom bucket sizes - below are the defaults:

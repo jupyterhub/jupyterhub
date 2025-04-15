@@ -166,6 +166,8 @@ def clear_state(self):
     self.pid = 0
 ```
 
+(sparmer_user_options)=
+
 ## Spawner options form
 
 Some deployments may want to offer options to users to influence how their servers are started.

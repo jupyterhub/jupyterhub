@@ -24,6 +24,23 @@ Contributors to major version bumps in JupyterHub include:
 
 ### 5.3.0 - 2025-04-15
 
+5.3.0 is a small release with lots of bugfixes and a few new features, including more configuration options for:
+
+- [User options for Spawners](#sparmer_user_options)
+- [Prometheus bucket sizes](#monitoring_bucket_sizes)
+- A new [SharedPasswordAuthenticator](#SharedPasswordAuthenticator)
+
+We have also changed how we build the `jupyterhub` container images.
+Images are now built from [](https://github.com/jupyterhub/jupyterhub-container-images) instead of the JupyterHub repo.
+The main user-facing implication of this is that image for a given JupyterHub version will be rebuilt,
+which has the following consequences:
+
+1. `quay.io/jupyterhub/jupyterhub:5.3.0` will get security and dependency updates, which has the possibility of breaking things.
+2. Version tags are now also published with a build number that is incremented on each build of a given version.
+   So if you use a tag like `quay.io/jupyterhub/jupyterhub:5.3.0-1`, that image will not get updates.
+3. `jupyterhub-onbuild` images will no longer be published.
+   This image only saved one `COPY` line in your Dockerfile, so is replaced with the base `jupyterhub` image.
+
 ([full changelog](https://github.com/jupyterhub/jupyterhub/compare/5.2.1...5.3.0))
 
 #### New features added
