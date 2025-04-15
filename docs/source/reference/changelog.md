@@ -22,16 +22,34 @@ Contributors to major version bumps in JupyterHub include:
 
 ## 5.3
 
-### 5.3.0 - 2025-04
+### 5.3.0 - 2025-04-15
 
-([full changelog](https://github.com/jupyterhub/jupyterhub/compare/5.2.1...HEAD))
+5.3.0 is a small release with lots of bugfixes and a few new features, including more configuration options for:
+
+- [User options for Spawners](#spawner_user_options)
+- [Prometheus bucket sizes](#monitoring_bucket_sizes)
+- A new [SharedPasswordAuthenticator](#SharedPasswordAuthenticator)
+
+We have also changed how we build the `jupyterhub` container images.
+Images are now built from [](https://github.com/jupyterhub/jupyterhub-container-images) instead of the JupyterHub repo.
+The main user-facing implication of this is that image for a given JupyterHub version will be rebuilt,
+which has the following consequences:
+
+1. `quay.io/jupyterhub/jupyterhub:5.3.0` will get security and dependency updates, which has the possibility of breaking things.
+2. Version tags are now also published with a build number that is incremented on each build of a given version.
+   So if you use a tag like `quay.io/jupyterhub/jupyterhub:5.3.0-1`, that image will not get updates.
+3. `jupyterhub-onbuild` images will no longer be published.
+   This image only saved one `COPY` line in your Dockerfile, so is replaced with the base `jupyterhub` image.
+
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/5.2.1...5.3.0))
 
 #### New features added
 
+- Allow configuration of stop duration metric buckets [#5045](https://github.com/jupyterhub/jupyterhub/pull/5045) ([@srikanthchelluri](https://github.com/srikanthchelluri), [@minrk](https://github.com/minrk))
 - Add SharedPasswordAuthenticator [#5037](https://github.com/jupyterhub/jupyterhub/pull/5037) ([@yuvipanda](https://github.com/yuvipanda), [@minrk](https://github.com/minrk), [@jules32](https://github.com/jules32), [@manics](https://github.com/manics), [@ateucher](https://github.com/ateucher))
 - add apply_user_options hook [#5012](https://github.com/jupyterhub/jupyterhub/pull/5012) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics), [@akhmerov](https://github.com/akhmerov))
 - allow group management API when managed_groups is True [#5004](https://github.com/jupyterhub/jupyterhub/pull/5004) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics))
-- Add `$JUPYTERHUB_XSRF_ANONYMOUS{IP_CIDRS|HEADERS}` config for managing anonymous xsrf ids [#4991](https://github.com/jupyterhub/jupyterhub/pull/4991) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics), [@samyuh](https://github.com/samyuh))
+- Add `$JUPYTERHUB_XSRF_ANONYMOUS_{IP_CIDRS|HEADERS}` config for managing anonymous xsrf ids [#4991](https://github.com/jupyterhub/jupyterhub/pull/4991) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics), [@samyuh](https://github.com/samyuh))
 - Allow custom login input validation [#4979](https://github.com/jupyterhub/jupyterhub/pull/4979) ([@tlvu](https://github.com/tlvu), [@minrk](https://github.com/minrk))
 - Allow configuration of bucket sizes in metrics - #4833 [#4967](https://github.com/jupyterhub/jupyterhub/pull/4967) ([@kireetb](https://github.com/kireetb), [@minrk](https://github.com/minrk), [@manics](https://github.com/manics))
 
@@ -55,6 +73,7 @@ Contributors to major version bumps in JupyterHub include:
 
 #### Maintenance and upkeep improvements
 
+- set default permissions on workflows [#5049](https://github.com/jupyterhub/jupyterhub/pull/5049) ([@minrk](https://github.com/minrk))
 - skip js build on readthedocs [#5036](https://github.com/jupyterhub/jupyterhub/pull/5036) ([@minrk](https://github.com/minrk))
 - jsx: update and address eslint [#5030](https://github.com/jupyterhub/jupyterhub/pull/5030) ([@minrk](https://github.com/minrk))
 - stop publishing images from jupyterhub/jupyterhub [#5024](https://github.com/jupyterhub/jupyterhub/pull/5024) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio), [@manics](https://github.com/manics))
@@ -70,6 +89,9 @@ Contributors to major version bumps in JupyterHub include:
 
 #### Documentation improvements
 
+- Fix outdated GitHub Wiki links in documentation [#5047](https://github.com/jupyterhub/jupyterhub/pull/5047) ([@chilin0525](https://github.com/chilin0525), [@minrk](https://github.com/minrk))
+- Fix broken link to `idleness` section in capacity-planning.md [#5046](https://github.com/jupyterhub/jupyterhub/pull/5046) ([@chilin0525](https://github.com/chilin0525), [@consideRatio](https://github.com/consideRatio))
+- changelog for 5.3.0 (RC) [#5042](https://github.com/jupyterhub/jupyterhub/pull/5042) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
 - Add instruction on how to select dummy authenticator [#5041](https://github.com/jupyterhub/jupyterhub/pull/5041) ([@ktaletsk](https://github.com/ktaletsk), [@GeorgianaElena](https://github.com/GeorgianaElena), [@minrk](https://github.com/minrk))
 - rm outdated claim that "copy shareable link" does not work in JupyterHub [#5018](https://github.com/jupyterhub/jupyterhub/pull/5018) ([@ctcjab](https://github.com/ctcjab), [@manics](https://github.com/manics))
 - Automatically generate rest-api.yml and scopes.md using pre-commit [#5009](https://github.com/jupyterhub/jupyterhub/pull/5009) ([@manics](https://github.com/manics), [@minrk](https://github.com/minrk))
@@ -86,9 +108,9 @@ Contributors to major version bumps in JupyterHub include:
 The following people contributed discussions, new ideas, code and documentation contributions, and review.
 See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/#how-does-this-tool-define-contributions-in-the-reports).
 
-([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2024-10-21&to=2025-04-07&type=c))
+([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2024-10-21&to=2025-04-15&type=c))
 
-@agoose77 ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aagoose77+updated%3A2024-10-21..2025-04-07&type=Issues)) | @akhmerov ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aakhmerov+updated%3A2024-10-21..2025-04-07&type=Issues)) | @ateucher ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aateucher+updated%3A2024-10-21..2025-04-07&type=Issues)) | @Carreau ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3ACarreau+updated%3A2024-10-21..2025-04-07&type=Issues)) | @consideRatio ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3AconsideRatio+updated%3A2024-10-21..2025-04-07&type=Issues)) | @ctcjab ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Actcjab+updated%3A2024-10-21..2025-04-07&type=Issues)) | @davidbrochart ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Adavidbrochart+updated%3A2024-10-21..2025-04-07&type=Issues)) | @GeorgianaElena ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3AGeorgianaElena+updated%3A2024-10-21..2025-04-07&type=Issues)) | @jrdnbradford ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ajrdnbradford+updated%3A2024-10-21..2025-04-07&type=Issues)) | @jules32 ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ajules32+updated%3A2024-10-21..2025-04-07&type=Issues)) | @kellyrowland ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Akellyrowland+updated%3A2024-10-21..2025-04-07&type=Issues)) | @kireetb ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Akireetb+updated%3A2024-10-21..2025-04-07&type=Issues)) | @ktaletsk ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aktaletsk+updated%3A2024-10-21..2025-04-07&type=Issues)) | @manics ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amanics+updated%3A2024-10-21..2025-04-07&type=Issues)) | @millenniumhand ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amillenniumhand+updated%3A2024-10-21..2025-04-07&type=Issues)) | @minrk ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk+updated%3A2024-10-21..2025-04-07&type=Issues)) | @mishaschwartz ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amishaschwartz+updated%3A2024-10-21..2025-04-07&type=Issues)) | @oboki ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aoboki+updated%3A2024-10-21..2025-04-07&type=Issues)) | @SamuelMarks ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3ASamuelMarks+updated%3A2024-10-21..2025-04-07&type=Issues)) | @samyuh ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Asamyuh+updated%3A2024-10-21..2025-04-07&type=Issues)) | @tlvu ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Atlvu+updated%3A2024-10-21..2025-04-07&type=Issues)) | @yuvipanda ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ayuvipanda+updated%3A2024-10-21..2025-04-07&type=Issues))
+@adsche ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aadsche+updated%3A2024-10-21..2025-04-15&type=Issues)) | @agoose77 ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aagoose77+updated%3A2024-10-21..2025-04-15&type=Issues)) | @akhmerov ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aakhmerov+updated%3A2024-10-21..2025-04-15&type=Issues)) | @ateucher ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aateucher+updated%3A2024-10-21..2025-04-15&type=Issues)) | @Carreau ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3ACarreau+updated%3A2024-10-21..2025-04-15&type=Issues)) | @chilin0525 ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Achilin0525+updated%3A2024-10-21..2025-04-15&type=Issues)) | @consideRatio ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3AconsideRatio+updated%3A2024-10-21..2025-04-15&type=Issues)) | @ctcjab ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Actcjab+updated%3A2024-10-21..2025-04-15&type=Issues)) | @davidbrochart ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Adavidbrochart+updated%3A2024-10-21..2025-04-15&type=Issues)) | @GeorgianaElena ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3AGeorgianaElena+updated%3A2024-10-21..2025-04-15&type=Issues)) | @jrdnbradford ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ajrdnbradford+updated%3A2024-10-21..2025-04-15&type=Issues)) | @jules32 ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ajules32+updated%3A2024-10-21..2025-04-15&type=Issues)) | @kellyrowland ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Akellyrowland+updated%3A2024-10-21..2025-04-15&type=Issues)) | @kireetb ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Akireetb+updated%3A2024-10-21..2025-04-15&type=Issues)) | @ktaletsk ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aktaletsk+updated%3A2024-10-21..2025-04-15&type=Issues)) | @manics ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amanics+updated%3A2024-10-21..2025-04-15&type=Issues)) | @millenniumhand ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amillenniumhand+updated%3A2024-10-21..2025-04-15&type=Issues)) | @minrk ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk+updated%3A2024-10-21..2025-04-15&type=Issues)) | @mishaschwartz ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amishaschwartz+updated%3A2024-10-21..2025-04-15&type=Issues)) | @oboki ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aoboki+updated%3A2024-10-21..2025-04-15&type=Issues)) | @SamuelMarks ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3ASamuelMarks+updated%3A2024-10-21..2025-04-15&type=Issues)) | @samyuh ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Asamyuh+updated%3A2024-10-21..2025-04-15&type=Issues)) | @srikanthchelluri ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Asrikanthchelluri+updated%3A2024-10-21..2025-04-15&type=Issues)) | @tlvu ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Atlvu+updated%3A2024-10-21..2025-04-15&type=Issues)) | @yuvipanda ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ayuvipanda+updated%3A2024-10-21..2025-04-15&type=Issues))
 
 ## 5.2
 
