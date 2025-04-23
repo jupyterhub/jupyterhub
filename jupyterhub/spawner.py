@@ -1657,12 +1657,13 @@ class Spawner(LoggingConfigurable):
         raise NotImplementedError("Override in subclass. Must be a coroutine.")
 
     def delete_forever(self):
-        """Called when a user or server is deleted.
+        """Called when a user or named server is deleted.
 
         This can do things like request removal of resources such as persistent storage.
-        Only called on stopped spawners, and is usually the last action ever taken for the user.
+        Spawners must already be stopped before this method can be called.
 
         Will only be called once on each Spawner, immediately prior to removal.
+        Can be async.
 
         Stopping a server does *not* call this method.
         """
