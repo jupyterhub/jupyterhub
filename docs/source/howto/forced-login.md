@@ -55,7 +55,8 @@ But what _actually_ happens is quite a series of redirects, state checks, and co
    3. redirects back to `/hub/oauth_callback` to complete login
    4. redirects back to `/hub/user-redirect/...`
 2. once authenticated, checks that the user's server is running
-   a. if not running, begins launch of the server and redirects to `/hub/spawn-pending/?next=...`
+   1. if not running, begins launch of the server
+   2. redirects to `/hub/spawn-pending/?next=...`
 3. once the server is running, redirects to the actual user server `/users/username/some/path`
 
 Now we're done, right? Actually, no, because the browser doesn't have credentials for their user server!
