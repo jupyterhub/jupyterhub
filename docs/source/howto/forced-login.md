@@ -59,7 +59,7 @@ But what _actually_ happens is quite a series of redirects, state checks, and co
 3. once the server is running, redirects to the actual user server `/users/username/some/path`
 
 Now we're done, right? Actually, no, because the browser doesn't have credentials for their user server!
-This sequence of redirects happens all the time in JpuyterHub launch, and is usually totally transparent.
+This sequence of redirects happens all the time in JupyterHub launch, and is usually totally transparent.
 
 4. at the user server, check for a token in cookie
    1. if not present or not valid, begin oauth with the Hub (redirect to `/hub/api/oauth2/authorize/...`)

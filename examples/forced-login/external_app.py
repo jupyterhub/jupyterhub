@@ -3,7 +3,7 @@
 This one serves a form with a single username input field
 
 After entering the username, generate a token and redirect to hub login with that token,
-which is then exchaned for a username.
+which is then exchanged for a username.
 
 Users cannot login to JupyterHub directly, only via this app.
 """
