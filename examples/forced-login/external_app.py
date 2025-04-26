@@ -81,7 +81,7 @@ async def login(token: Annotated[str, Body(embed=True)]):
             status_code=status.HTTP_404_NOT_FOUND, content={"message": "invalid token"}
         )
     username, expires_at = _tokens_to_username.pop(hashed_token)
-    if expires_at > now:
+    if expires_at < now:
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
             content={"message": "token expired"},
