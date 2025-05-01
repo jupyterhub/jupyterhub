@@ -60,7 +60,7 @@ sudo docker build . -t service-fastapi
 sudo docker run -it -p 8000:8000 service-fastapi
 ```
 
-2. Visit http://127.0.0.1:8000/services/fastapi/docs. When going through the OAuth flow or getting a token from the control panel, you can log in with `testuser` / `passwd`.
+2. Visit http://127.0.0.1:8000/services/fastapi/docs. When going through the OAuth flow or getting a token from the control panel, you can log in with 'test-user' and any password.
 
 # PUBLIC_HOST
 
