@@ -1326,6 +1326,14 @@ class BaseHandler(RequestHandler):
         spawner = user.spawners[server_name]
         if spawner.pending:
             raise RuntimeError(f"{spawner._log_name} pending {spawner.pending}")
+
+        if self.authenticator.refresh_pre_stop:
+            auth_user = await self.refresh_auth(user, force=True)
+            if auth_user is None:
+                raise web.HTTPError(
+                    403, "auth has expired for %s, login again", user.name
+                )
+
         # set user._stop_pending before doing anything async
         # to avoid races
         spawner._stop_pending = True
