@@ -37,4 +37,4 @@ The Jupyter Development Team is the set of all contributors to the Jupyter proje
 This includes all of the Jupyter subprojects.
 
 The team that coordinates JupyterHub subproject can be found here:
-https://jupyterhub-team-compass.readthedocs.io/en/latest/governance.html
+https://compass.hub.jupyter.org/page/governance.html
