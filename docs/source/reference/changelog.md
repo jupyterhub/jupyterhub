@@ -31,7 +31,7 @@ Contributors to major version bumps in JupyterHub include:
 - A new [SharedPasswordAuthenticator](#SharedPasswordAuthenticator)
 
 We have also changed how we build the `jupyterhub` container images.
-Images are now built from [](https://github.com/jupyterhub/jupyterhub-container-images) instead of the JupyterHub repo.
+Images are now built from [jupyterhub-container-images](https://github.com/jupyterhub/jupyterhub-container-images) instead of the JupyterHub repo.
 The main user-facing implication of this is that image for a given JupyterHub version will be rebuilt,
 which has the following consequences:
 
