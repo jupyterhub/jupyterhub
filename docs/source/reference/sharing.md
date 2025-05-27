@@ -201,13 +201,13 @@ To revoke sharing permissions from the perspective of the user or group being sh
 you need the permissions `users:shares` or `groups:shares` with the appropriate _user_ or _group_ filter.
 This allows users to 'leave' shared servers, without needing permission to manage the server's sharing permissions.
 
-```
+```{parsed-literal}
 [DELETE /api/users/:username/shared/:ownername/:servername](rest-api-delete-user-shared-server)
 ```
 
 or
 
-```
+```{parsed-literal}
 [DELETE /api/groups/:groupname/shared/:ownername/:servername](rest-api-delete-group-shared-server)
 ```
 
