@@ -170,7 +170,8 @@ def make_ssl_context(
     ssl_context.load_default_certs()
 
     ssl_context.load_cert_chain(certfile, keyfile)
-    ssl_context.check_hostname = check_hostname
+    if check_hostname is not None:
+        ssl_context.check_hostname = check_hostname
     return ssl_context
 
 
