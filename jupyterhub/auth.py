@@ -86,7 +86,7 @@ class Authenticator(LoggingConfigurable):
         auth info will never be considered stale.
 
         Set `auth_refresh_age = 0` to disable time-based calls to `refresh_user`.
-        You can still use :attr:`refresh_pre_spawn` if `auth_refresh_age` is disabled.
+        You can still use :attr:`refresh_pre_spawn` or :attr:`refresh_pre_stop` if `auth_refresh_age` is disabled.
         """,
     )
 
@@ -103,6 +103,22 @@ class Authenticator(LoggingConfigurable):
 
         If refresh_user cannot refresh the user auth data,
         launch will fail until the user logs in again.
+        """,
+    )
+
+    refresh_pre_stop = Bool(
+        False,
+        config=True,
+        help="""Force refresh of auth prior to stop.
+
+        This forces :meth:`.refresh_user` to be called prior to stopping
+        a server, to ensure that auth state is up-to-date.
+
+        This can be important when e.g. auth tokens that may have expired
+        are passed to the spawner via environment variables from auth_state.
+
+        If refresh_user cannot refresh the user auth data,
+        stop will fail until the user logs in again.
         """,
     )
 
