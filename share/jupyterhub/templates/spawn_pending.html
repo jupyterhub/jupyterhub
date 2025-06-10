@@ -18,12 +18,9 @@
           </div>
         </div>
         <p id="progress-message"></p>
-        
         <!-- Stop Server Button -->
         <div class="mt-3">
-          <button id="stop-server-btn" class="btn btn-danger btn-sm">
-            Stop Server
-          </button>
+          <button id="stop-server-btn" class="btn btn-danger btn-sm">Stop Server</button>
           <div id="stop-server-status" class="mt-2" style="display: none;"></div>
         </div>
       </div>
@@ -54,21 +51,21 @@
       $("#stop-server-btn").click(function() {
         var button = $(this);
         var statusDiv = $("#stop-server-status");
-        
+
         // Disable button and show loading state
         button.prop('disabled', true).text('Stopping...');
         statusDiv.show().removeClass('alert-success alert-danger').addClass('alert alert-info').text('Stopping server...');
-        
+
         // Use JHAPI to stop server
         api.stop_server(user, {
-          success: function () {
+          success: function() {
             statusDiv.removeClass('alert-info alert-danger').addClass('alert-success').text('Server stopped successfully!');
             // Redirect or reload after successful stop
             setTimeout(function() {
               window.location.reload();
             }, 2000);
           },
-          error: function (xhr, status, error) {
+          error: function(xhr, status, error) {
             console.error('Error stopping server:', error);
             var errorMessage = 'Error stopping server';
             if (xhr.responseJSON && xhr.responseJSON.message) {
