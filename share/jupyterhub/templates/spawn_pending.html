@@ -17,15 +17,12 @@
             <span class="sr-only"><span id="sr-progress">0%</span> Complete</span>
           </div>
         </div>
-
         <!-- Stop Server Button -->
         <div class="mt-3">
           <button id="stop-server-btn" class="btn btn-danger btn-sm">Stop Server</button>
           <div id="stop-server-status" class="mt-2" style="display: none;"></div>
         </div>
-
         <p id="progress-message"></p>
-
       </div>
     </div>
     <div class="row justify-content-center">
@@ -52,7 +49,7 @@
       // Try to load JHAPI for stop server functionality
       require(["jhapi"], function(JHAPI) {
         var api = new JHAPI(base_url);
-        
+
         // Stop Server Button Handler
         $("#stop-server-btn").click(function() {
           var button = $(this);
