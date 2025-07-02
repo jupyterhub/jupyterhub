@@ -11,7 +11,6 @@ Before installing JupyterHub, you will need:
   installing Python packages is helpful.
 - [Node.js {{node_min}}](https://www.npmjs.com/) or greater, along with npm. [Install Node.js/npm](https://docs.npmjs.com/getting-started/installing-node),
   using your operating system's package manager.
-
   - If you are using **`conda`**, the nodejs and npm dependencies will be installed for
     you by conda.
 
