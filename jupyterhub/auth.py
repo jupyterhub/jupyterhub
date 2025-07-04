@@ -114,11 +114,13 @@ class Authenticator(LoggingConfigurable):
         This forces :meth:`.refresh_user` to be called prior to stopping
         a server, to ensure that auth state is up-to-date.
 
-        This can be important when e.g. auth tokens that may have expired
-        are passed to the spawner via environment variables from auth_state.
+        This can be important when e.g. auth tokens stored in auth_state may have expired,
+        but are a required part of the Spawner's shutdown steps.
 
         If refresh_user cannot refresh the user auth data,
         stop will fail until the user logs in again.
+
+        .. versionadded:: 5.4
         """,
     )
 

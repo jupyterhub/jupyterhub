@@ -41,10 +41,8 @@ def refresh_pre_spawn(app):
 def refresh_pre_stop(app):
     """Fixture enabling auth refresh pre stop"""
     app.authenticator.refresh_pre_stop = True
-    try:
-        yield
-    finally:
-        app.authenticator.refresh_pre_stop = False
+    yield
+    app.authenticator.refresh_pre_stop = False
 
 
 async def test_auth_refresh_at_login(app, user):
