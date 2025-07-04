@@ -22,9 +22,6 @@ Please submit pull requests to update information or to add new institutions or 
 
 - [NERSC](https://www.nersc.gov/)
 
-  - [Press release on Jupyter and Cori](https://www.nersc.gov/news-publications/nersc-news/nersc-center-news/2016/jupyter-notebooks-will-open-up-new-possibilities-on-nerscs-cori-supercomputer/)
-  - [Moving and sharing data](https://www.nersc.gov/assets/Uploads/03-MovingAndSharingData-Cholia.pdf)
-
 - [Research IT](https://research-it.berkeley.edu)
   - [JupyterHub server supports campus research computation](https://research-it.berkeley.edu/blog/17/01/24/free-fully-loaded-jupyterhub-server-supports-campus-research-computation)
 
