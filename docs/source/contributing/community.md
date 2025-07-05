@@ -12,9 +12,9 @@ Everyone in the Jupyter community is welcome to bring ideas and questions there.
 
 We recommend that you first use our Discourse as all past and current discussions on it are archived and searchable. Thus, all discussions remain useful and accessible to the whole community.
 
-## Gitter
+## Zulip
 
-We use [our Gitter channel](https://gitter.im/jupyterhub/jupyterhub) for online, real-time text chat; a place for more ephemeral discussions. When you're not on Discourse, you can stop here to have other discussions on the fly.
+We use [Jupyter instance](https://jupyter.zulipchat.com/) of [Zulip](https://zulip.com/) for online, real-time text chat; a place for more ephemeral discussions. When you're not on Discourse, you can stop at Zulip to have other discussions on the fly.
 
 ## Github Issues
 
