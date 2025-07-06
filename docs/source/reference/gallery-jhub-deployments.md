@@ -17,7 +17,6 @@ Please submit pull requests to update information or to add new institutions or 
 - [BIDS - Berkeley Institute for Data Science](https://bids.berkeley.edu/)
 
 - [Data 8](http://data8.org/)
-
   - [GitHub organization](https://github.com/data-8)
 
 - [NERSC](https://www.nersc.gov/)
@@ -131,7 +130,6 @@ The [Educational Development and Technology](https://ethz.ch/en/the-eth-zurich/o
 ### University of California San Diego
 
 - San Diego Supercomputer Center - Andrea Zonca
-
   - [Deploy JupyterHub on a Supercomputer with SSH](https://zonca.github.io/2017/05/jupyterhub-hpc-batchspawner-ssh.html)
   - [Run Jupyterhub on a Supercomputer](https://zonca.github.io/2015/04/jupyterhub-hpc.html)
   - [Deploy JupyterHub on a VM for a Workshop](https://zonca.github.io/2016/04/jupyterhub-sdsc-cloud.html)

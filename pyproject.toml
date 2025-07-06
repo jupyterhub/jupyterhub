@@ -51,7 +51,7 @@ test = [
   # the test test_nbclassic_control_panel.
   "nbclassic",
   "pytest>=3.3",
-  "pytest-asyncio>=0.17,!=0.23.*",
+  "pytest-asyncio>=0.17,!=0.23.*,<1.0.0",
   "pytest-cov",
   "pytest-rerunfailures",
   "requests-mock",
