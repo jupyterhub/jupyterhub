@@ -1034,7 +1034,7 @@ class ActivityAPIHandler(APIHandler):
                         user.name,
                         server_name,
                         isoformat(last_activity),
-                        isoformat(user.last_activity),
+                        isoformat(spawner.last_activity),
                     )
 
         self.db.commit()
