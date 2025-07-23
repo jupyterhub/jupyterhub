@@ -32,7 +32,7 @@ from dateutil.parser import parse as parse_date
 from jinja2 import ChoiceLoader, Environment, FileSystemLoader, PrefixLoader
 from jupyter_events.logger import EventLogger
 from sqlalchemy.exc import OperationalError, SQLAlchemyError
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import contains_eager, selectinload
 from tornado import gen, web
 from tornado.httpclient import AsyncHTTPClient
 from tornado.ioloop import IOLoop, PeriodicCallback
@@ -3097,9 +3097,10 @@ class JupyterHub(Application):
             .filter(orm.Spawner.server != None)
             # pre-load relationships to avoid O(N active servers) queries
             .options(
-                joinedload(orm.User._orm_spawners),
-                joinedload(orm.Spawner.server),
+                contains_eager(orm.User._orm_spawners),
+                selectinload(orm.Spawner.server),
             )
+            .populate_existing()
         ):
             # instantiate Spawner wrapper and check if it's still alive
             # spawner should be running
