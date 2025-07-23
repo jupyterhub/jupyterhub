@@ -162,12 +162,15 @@ class UserListAPIHandler(APIHandler):
             )
         elif state_filter:
             raise web.HTTPError(400, f"Unrecognized state filter: {state_filter!r}")
+        else:
+            # need a join on Spawner for contains_eager below
+            query = query.outerjoin(orm.Spawner, orm.User._orm_spawners)
 
         # apply eager load options
         query = query.options(
             selectinload(orm.User.roles),
             selectinload(orm.User.groups),
-            contains_eager(orm.User._orm_spawners).joinedload(orm.Spawner.user),
+            contains_eager(orm.User._orm_spawners).contains_eager(orm.Spawner.user),
             # raiseload here helps us make sure we've loaded everything in one query
             # but since we share a single db session, we can't do this for real
             # but it's useful in testing
