@@ -15,7 +15,7 @@ else:
 
 from dateutil.parser import parse as parse_date
 from sqlalchemy import func, or_
-from sqlalchemy.orm import contains_eager, joinedload, raiseload, selectinload  # noqa
+from sqlalchemy.orm import contains_eager, raiseload, selectinload  # noqa
 from tornado import web
 from tornado.iostream import StreamClosedError
 
@@ -170,7 +170,7 @@ class UserListAPIHandler(APIHandler):
         query = query.options(
             selectinload(orm.User.roles),
             selectinload(orm.User.groups),
-            contains_eager(orm.User._orm_spawners).contains_eager(orm.Spawner.user),
+            contains_eager(orm.User._orm_spawners).selectinload(orm.Spawner.user),
             # raiseload here helps us make sure we've loaded everything in one query
             # but since we share a single db session, we can't do this for real
             # but it's useful in testing
