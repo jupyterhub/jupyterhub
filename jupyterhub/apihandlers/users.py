@@ -175,7 +175,7 @@ class UserListAPIHandler(APIHandler):
             # but since we share a single db session, we can't do this for real
             # but it's useful in testing
             # raiseload("*"),
-        )
+        ).populate_existing()
 
         sub_scope = self.parsed_scopes['list:users']
         if sub_scope != scopes.Scope.ALL:

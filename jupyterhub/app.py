@@ -3100,6 +3100,7 @@ class JupyterHub(Application):
                 contains_eager(orm.User._orm_spawners),
                 selectinload(orm.Spawner.server),
             )
+            .populate_existing()
         ):
             # instantiate Spawner wrapper and check if it's still alive
             # spawner should be running
