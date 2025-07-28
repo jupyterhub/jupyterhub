@@ -15,7 +15,7 @@ else:
 
 from dateutil.parser import parse as parse_date
 from sqlalchemy import func, or_
-from sqlalchemy.orm import contains_eager, raiseload, selectinload  # noqa
+from sqlalchemy.orm import joinedload, raiseload, selectinload  # noqa
 from tornado import web
 from tornado.iostream import StreamClosedError
 
@@ -162,20 +162,17 @@ class UserListAPIHandler(APIHandler):
             )
         elif state_filter:
             raise web.HTTPError(400, f"Unrecognized state filter: {state_filter!r}")
-        else:
-            # need a join on Spawner for contains_eager below
-            query = query.outerjoin(orm.Spawner, orm.User._orm_spawners)
 
         # apply eager load options
         query = query.options(
             selectinload(orm.User.roles),
             selectinload(orm.User.groups),
-            selectinload(orm.User._orm_spawners).selectinload(orm.Spawner.user),
+            joinedload(orm.User._orm_spawners).joinedload(orm.Spawner.user),
             # raiseload here helps us make sure we've loaded everything in one query
             # but since we share a single db session, we can't do this for real
             # but it's useful in testing
             # raiseload("*"),
-        ).populate_existing()
+        )
 
         sub_scope = self.parsed_scopes['list:users']
         if sub_scope != scopes.Scope.ALL:
