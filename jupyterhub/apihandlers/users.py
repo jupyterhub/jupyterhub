@@ -141,6 +141,8 @@ class UserListAPIHandler(APIHandler):
                 .join(orm.Spawner, orm.User._orm_spawners)
                 # this implicitly gets Users with *any* active server
                 .filter(orm.Spawner.server != None)
+                # group-by ensures the count is correct
+                .group_by(orm.User.id)
             )
             if state_filter == "ready":
                 # have to post-process query results because active vs ready
@@ -155,6 +157,7 @@ class UserListAPIHandler(APIHandler):
             query = (
                 query.outerjoin(orm.Spawner, orm.User._orm_spawners)
                 .outerjoin(orm.Server, orm.Spawner.server)
+                .group_by(orm.User.id)
                 .having(func.count(orm.Server.id) == 0)
             )
         elif state_filter:
