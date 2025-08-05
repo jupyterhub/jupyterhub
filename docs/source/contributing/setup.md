@@ -16,7 +16,7 @@ requires you have at least version {{python_min}} installed locally. If you have
 installed Python before, the recommended way to install it is to use
 [Miniforge](https://github.com/conda-forge/miniforge#download).
 
-### Install nodejs
+### Install NodeJS
 
 [NodeJS {{node_min}}+](https://nodejs.org/en/) is required for building some JavaScript components.
 `configurable-http-proxy`, the default proxy implementation for JupyterHub, is written in Javascript.
@@ -26,7 +26,7 @@ You can do so with `conda install nodejs`.
 Many in the Jupyter community use [`nvm`](https://github.com/nvm-sh/nvm) to
 managing node dependencies.
 
-### Install git
+### Install Git
 
 JupyterHub uses [Git](https://git-scm.com) & [GitHub](https://github.com)
 for development & collaboration. You need to [install git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) to work on
