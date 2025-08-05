@@ -28,8 +28,8 @@ managing node dependencies.
 
 ### Install Git
 
-JupyterHub uses [Git](https://git-scm.com) & [GitHub](https://github.com)
-for development & collaboration. You need to [install git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) to work on
+JupyterHub uses [Git](https://git-scm.com) and [GitHub](https://github.com)
+for development and collaboration. You need to [install git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) to work on
 JupyterHub. We also recommend getting a free account on GitHub.com.
 
 ## Setting up a development install
@@ -92,7 +92,7 @@ a more detailed discussion.
 
 4. Install an editable version of JupyterHub and its requirements for
    development and testing. This lets you edit JupyterHub code in a text editor
-   & restart the JupyterHub process to see your code changes immediately.
+   and restart the JupyterHub process to see your code changes immediately.
 
    ```bash
    python3 -m pip install --editable ".[test]"
@@ -109,7 +109,7 @@ a more detailed discussion.
 
 Happy developing!
 
-## Using DummyAuthenticator & SimpleLocalProcessSpawner
+## Using DummyAuthenticator and SimpleLocalProcessSpawner
 
 To simplify testing of JupyterHub, it is helpful to use
 {class}`~jupyterhub.auth.DummyAuthenticator` instead of the default JupyterHub
@@ -132,17 +132,17 @@ The test configuration enables a few things to make testing easier:
 - disable caching of static files
 
 The default JupyterHub [authenticator](PAMAuthenticator)
-& [spawner](LocalProcessSpawner)
+and [spawner](LocalProcessSpawner)
 require your system to have user accounts for each user you want to log in to
 JupyterHub as.
 
-DummyAuthenticator allows you to log in with any username & password,
+DummyAuthenticator allows you to log in with any username and password,
 while SimpleLocalProcessSpawner allows you to start servers without having to
 create a Unix user for each JupyterHub user. Together, these make it
 much easier to test JupyterHub.
 
 Tip: If you are working on parts of JupyterHub that are common to all
-authenticators & spawners, we recommend using both DummyAuthenticator &
+authenticators and spawners, we recommend using both DummyAuthenticator and
 SimpleLocalProcessSpawner. If you are working on just authenticator-related
 parts, use only SimpleLocalProcessSpawner. Similarly, if you are working on
 just spawner-related parts, use only DummyAuthenticator.
