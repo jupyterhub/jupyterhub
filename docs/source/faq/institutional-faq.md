@@ -142,7 +142,7 @@ in a variety of deployment setups. This often entails connecting your JupyterHub
 in these cases, and the security of your JupyterHub deployment will often depend on these decisions.
 
 If you are worried about security, don't hesitate to reach out to the JupyterHub community in the
-[Jupyter Community Forum](https://discourse.jupyter.org/c/jupyterhub). This community of practice has many
+[Jupyter Community Forum](https://discourse.jupyter.org/c/jupyterhub/10). This community of practice has many
 individuals with experience running secure JupyterHub deployments and will be very glad to help you out.
 
 ### Does JupyterHub provide computing or data infrastructure?

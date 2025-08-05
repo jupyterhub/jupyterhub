@@ -98,7 +98,7 @@ the OAuth callback request.
   to retrieve information about the owner of the token (the user).
   This is the step where behavior diverges for different OAuth providers.
   Up to this point, all OAuth providers are the same, following the OAuth specification.
-  However, OAuth does not define a standard for issuing tokens in exchange for information about their owner or permissions ([OpenID Connect](https://openid.net/connect/) does that),
+  However, OAuth does not define a standard for issuing tokens in exchange for information about their owner or permissions ([OpenID Connect](https://openid.net/developers/how-connect-works/) does that),
   so this step may be different for each OAuth provider.
 - Finally, the OAuth client stores its own record that the user is authorized in a cookie.
   This could be the token itself, or any other appropriate representation of successful authentication.

@@ -17,7 +17,7 @@ It has two main distributions which are developed to serve the needs of each of 
 
 1. [The Littlest JupyterHub](https://github.com/jupyterhub/the-littlest-jupyterhub) distribution is suitable if you need a small number of users (1-100) and a single server with a simple environment.
 2. [Zero to JupyterHub with Kubernetes](https://github.com/jupyterhub/zero-to-jupyterhub-k8s) allows you to deploy dynamic servers on the cloud if you need even more users.
-   This distribution runs JupyterHub on top of [Kubernetes](https://k8s.io).
+   This distribution runs JupyterHub on top of [Kubernetes](https://kubernetes.io/).
 
 ```{note}
 It is important to evaluate these distributions before you can continue with the
