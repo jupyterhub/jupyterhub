@@ -18,7 +18,7 @@ installed Python before, the recommended way to install it is to use
 
 ### Install NodeJS
 
-[NodeJS {{node_min}}+](https://nodejs.org/en/) is required for building some JavaScript components.
+Some JavaScript components require you have at least version {{node_min}} of [NodeJS](https://nodejs.org/en/) installed locally.
 `configurable-http-proxy`, the default proxy implementation for JupyterHub, is written in JavaScript.
 If you have not installed NodeJS before, we recommend installing it in the `miniconda` environment you set up for Python.
 You can do so with `conda install nodejs`.
@@ -29,10 +29,10 @@ managing node dependencies.
 ### Install Git
 
 JupyterHub uses [Git](https://git-scm.com) and [GitHub](https://github.com)
-for development and collaboration. You need to [install git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) to work on
-JupyterHub. We also recommend getting a free account on GitHub.com.
+for development and collaboration. You need to [install Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) to work on
+JupyterHub. We also recommend getting a free account on GitHub.
 
-## Setting up a development install
+## Install JupyterHub for development
 
 When developing JupyterHub, you would need to make changes and be able to instantly view the results of the changes. To achieve that, a developer install is required.
 
@@ -44,7 +44,7 @@ be achieved in many ways, for example, `tox`, `conda`, `docker`, etc. See this
 a more detailed discussion.
 :::
 
-1. Clone the [JupyterHub git repository](https://github.com/jupyterhub/jupyterhub)
+1. Clone the [JupyterHub Git repository](https://github.com/jupyterhub/jupyterhub)
    to your computer.
 
    ```bash
@@ -65,7 +65,7 @@ a more detailed discussion.
    npm -v
    ```
 
-   This should return a version number greater than or equal to 5.0.
+   This should return a version number greater than or equal to {{node_min}}.
 
 3. Install `configurable-http-proxy` (required to run and test the default JupyterHub configuration):
 
