@@ -3,7 +3,7 @@
 # Contributing
 
 We want you to contribute to JupyterHub in ways that are most exciting
-and useful to you. We value documentation, testing, bug reporting & code equally,
+and useful to you. We value documentation, testing, bug reporting and code equally,
 and are glad to have your contributions in whatever form you wish.
 
 Be sure to first check our [Code of Conduct](https://github.com/jupyter/governance/blob/HEAD/conduct/code_of_conduct.md)

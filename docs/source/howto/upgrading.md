@@ -27,7 +27,7 @@ For specific version migrations:
 The [changelog](changelog) contains information on what has
 changed with the new JupyterHub release and any deprecation warnings.
 Read these notes to familiarize yourself with the coming changes. There
-might be new releases of the authenticators & spawners you use, so
+might be new releases of the authenticators and spawners you use, so
 read the changelogs for those too!
 
 ## Notify your users
@@ -41,7 +41,7 @@ If you use a different proxy or run `configurable-http-proxy`
 independent of JupyterHub, your users will be able to continue using notebook
 servers they had already launched, but will not be able to launch new servers or sign in.
 
-## Backup database & config
+## Backup database and config
 
 Before doing an upgrade, it is critical to back up:
 
@@ -90,7 +90,7 @@ with:
 conda install -c conda-forge jupyterhub==<version>
 ```
 
-You should also check for new releases of the authenticator & spawner you
+You should also check for new releases of the authenticator and spawner you
 are using. You might wish to upgrade those packages, too, along with JupyterHub
 or upgrade them separately.
 

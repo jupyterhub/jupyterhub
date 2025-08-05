@@ -467,7 +467,7 @@ spawner, does not support limits and guarantees. One of the spawners
 that supports limits and guarantees is the
 [`systemdspawner`](https://github.com/jupyterhub/systemdspawner).
 
-### Memory Limits & Guarantees
+### Memory Limits and Guarantees
 
 `c.Spawner.mem_limit`: A **limit** specifies the _maximum amount of memory_
 that may be allocated, though there is no promise that the maximum amount will
@@ -487,7 +487,7 @@ available for the single-user notebook server to use. The environment variable
 limits and providing these guarantees.** If these values are set to `None`, no
 limits or guarantees are provided, and no environment values are set.
 
-### CPU Limits & Guarantees
+### CPU Limits and Guarantees
 
 `c.Spawner.cpu_limit`: In supported spawners, you can set
 `c.Spawner.cpu_limit` to limit the total number of cpu-cores that a
