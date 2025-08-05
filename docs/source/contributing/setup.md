@@ -19,7 +19,7 @@ installed Python before, the recommended way to install it is to use
 ### Install NodeJS
 
 [NodeJS {{node_min}}+](https://nodejs.org/en/) is required for building some JavaScript components.
-`configurable-http-proxy`, the default proxy implementation for JupyterHub, is written in Javascript.
+`configurable-http-proxy`, the default proxy implementation for JupyterHub, is written in JavaScript.
 If you have not installed NodeJS before, we recommend installing it in the `miniconda` environment you set up for Python.
 You can do so with `conda install nodejs`.
 
