@@ -53,5 +53,12 @@ updates:
           - "*-loader"
         update-types:
           - major
+      # group major bumps of jest-related dependencies
+      jsx-jest:
+        patterns:
+          - "*jest*"
+          - "*test*"
+        update-types:
+          - major
     schedule:
       interval: monthly
