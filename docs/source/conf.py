@@ -262,6 +262,7 @@ html_static_path = ["_static"]
 
 html_theme = "jupyterhub_sphinx_theme"
 html_theme_options = {
+    "header_links_before_dropdown": 6,
     "icon_links": [
         {
             "name": "GitHub",
