@@ -1831,7 +1831,7 @@ Highlights:
 - More configuration of page templates and service display
 - Pagination of the admin page improving performance with large numbers of users
 - Improved control of user redirect
-- Support for [jupyter-server](https://jupyter-server.readthedocs.io/en/latest/)-based single-user servers, such as [Voilà](https://voila-gallery.org) and latest JupyterLab.
+- Support for [jupyter-server](https://jupyter-server.readthedocs.io/en/latest/)-based single-user servers, such as [Voilà](https://voila.readthedocs.io) and latest JupyterLab.
 - Lots more improvements to documentation, HTML pages, and customizations
 
 ([full changelog](https://github.com/jupyterhub/jupyterhub/compare/1.1.0...1.2.0))

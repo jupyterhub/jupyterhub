@@ -5,13 +5,13 @@
 ## System requirements
 
 JupyterHub can only run on macOS or Linux operating systems. If you are
-using Windows, we recommend using [VirtualBox](https://virtualbox.org)
+using Windows, we recommend using [VirtualBox](https://www.virtualbox.org)
 or a similar system to run [Ubuntu Linux](https://ubuntu.com) for
 development.
 
 ### Install Python
 
-JupyterHub is written in the [Python](https://python.org) programming language and
+JupyterHub is written in the [Python](https://www.python.org) programming language and
 requires you have at least version {{python_min}} installed locally. If you haven’t
 installed Python before, the recommended way to install it is to use
 [Miniforge](https://github.com/conda-forge/miniforge#download).

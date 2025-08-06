@@ -298,9 +298,10 @@ linkcheck_ignore = [
     r"https://github.com/jupyterhub/jupyterhub/security/advisories/.*",
     # Occasionally blocks CI checks with 403
     r"https://www\.mysql\.com",
-    # Does this still exist? https://github.com/jupyterhub/jupyterhub/blob/01a43f41f8b1554f2de659104284f6345d76636d/docs/source/reference/changelog.md?plain=1#L1834
-    r" https://voila-gallery\.org",
+    # Occasionally blocks CI checks with SSL error
+    r"https://mediaspace\.msu\.edu/.*",
 ]
+
 linkcheck_anchors_ignore = [
     "/#!",
     "/#%21",
