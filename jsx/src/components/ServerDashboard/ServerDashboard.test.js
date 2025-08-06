@@ -591,14 +591,14 @@ test("Search for user calls updateUsers with name filter", async () => {
   expect(searchParams.get("offset")).toEqual(null);
   // FIXME: useSelector mocks prevent updateUsers from being called
   // expect(mockUpdateUsers.mock.calls).toHaveLength(2);
-  // expect(mockUpdateUsers).toBeCalledWith(0, 100, "a");
+  // expect(mockUpdateUsers).toHaveBeenCalledWith(0, 100, "a");
   await user.type(search, "b");
   expect(search.value).toEqual("ab");
   await act(async () => {
     jest.runAllTimers();
   });
   expect(searchParams.get("name_filter")).toEqual("ab");
-  // expect(mockUpdateUsers).toBeCalledWith(0, 100, "ab");
+  // expect(mockUpdateUsers).toHaveBeenCalledWith(0, 100, "ab");
 });
 
 test("Interacting with PaginationFooter requests page update", async () => {
@@ -606,7 +606,7 @@ test("Interacting with PaginationFooter requests page update", async () => {
     render(serverDashboardJsx());
   });
 
-  expect(mockUpdateUsers).toBeCalledWith(defaultUpdateUsersParams);
+  expect(mockUpdateUsers).toHaveBeenCalledWith(defaultUpdateUsersParams);
 
   var n = 3;
   expect(searchParams.get("offset")).toEqual(null);
@@ -619,7 +619,7 @@ test("Interacting with PaginationFooter requests page update", async () => {
   });
   expect(searchParams.get("offset")).toEqual("2");
   // FIXME: useSelector mocks prevent updateUsers from being called
-  // expect(mockUpdateUsers).toBeCalledWith({
+  // expect(mockUpdateUsers).toHaveBeenCalledWith({
   //   ...defaultUpdateUsersParams,
   //   offset: 2,
   // });
