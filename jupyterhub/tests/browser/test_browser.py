@@ -62,7 +62,7 @@ async def test_submit_login_form(app, browser, user_special_chars):
     await browser.goto(login_url)
     await login(browser, user.name, password=user.name)
     expected_url = public_url(app, user)
-    await expect(browser).to_have_url(expected_url)
+    await browser.wait_for_url(expected_url)
 
 
 @pytest.mark.parametrize(
@@ -143,7 +143,7 @@ async def test_open_url_login(
         await expect(browser).to_have_url(re.compile(pattern))
         await expect(browser).not_to_have_url(re.compile(".*/user/.*"))
     else:
-        await expect(browser).to_have_url(
+        await browser.wait_for_url(
             re.compile(".*/user/" + f"{user_special_chars.urlname}/")
         )
 
@@ -883,17 +883,15 @@ async def test_menu_bar(app, browser, page, logged_in, user_special_chars):
                 expected_url = f"hub/login?next={url_escape(app.base_url)}"
                 assert expected_url in browser.url
             else:
-                await expect(browser).to_have_url(
+                await browser.wait_for_url(
                     re.compile(f".*/user/{user_special_chars.urlname}/")
                 )
                 await browser.go_back()
-                await expect(browser).to_have_url(re.compile(".*" + page))
+                await browser.wait_for_url(re.compile(".*" + page))
         elif index == 3:
-            await expect(browser).to_have_url(re.compile(".*/login"))
+            await browser.wait_for_url(re.compile(".*/login"))
         else:
-            await expect(browser).to_have_url(
-                re.compile(".*" + expected_link_bar_url[index])
-            )
+            await browser.wait_for_url(re.compile(".*" + expected_link_bar_url[index]))
 
 
 # LOGOUT
@@ -924,8 +922,8 @@ async def test_user_logout(app, browser, url, user_special_chars):
 
     # verify that user can login after logout
     await login(browser, user.name, password=user.name)
-    await expect(browser).to_have_url(
-        re.compile(".*/user/" + f"{user_special_chars.urlname}/")
+    await browser.wait_for_url(
+        re.compile(".*/user/" + f"{user_special_chars.urlname}/"),
     )
 
 
@@ -1016,7 +1014,7 @@ async def test_oauth_page(
         await expect(scopes_element).not_to_be_visible()
         for scopes_element in scopes_elements
     ]
-    # checking that all scopes granded to user are presented in POST form (scope_list)
+    # checking that all scopes granted to user are presented in POST form (scope_list)
     scope_list_oauth_page = [
         await scopes_element.get_attribute("value")
         for scopes_element in scopes_elements
@@ -1288,8 +1286,8 @@ async def test_start_stop_server_on_admin_page(
         spawn_btn_xpath = f'//a[contains(@href, "spawn/{username}")]/button[contains(@class, "btn-light")]'
         spawn_btn = browser.locator(spawn_btn_xpath)
         await expect(spawn_btn).to_be_enabled()
-        async with browser.expect_navigation(url=f"**/user/{username}/"):
-            await spawn_btn.click()
+        await spawn_btn.click()
+        await browser.wait_for_url(url=f"**/user/{username}/")
 
     async def click_access_server(browser, username):
         """access to the server for users via the Access Server button"""
@@ -1337,7 +1335,7 @@ async def test_start_stop_server_on_admin_page(
 
     # click on Spawn page button
     await click_spawn_page(browser, user2.name)
-    await expect(browser).to_have_url(re.compile(".*" + f"/user/{user2.name}/"))
+    await browser.wait_for_url(re.compile(".*" + f"/user/{user2.name}/"))
 
     # open/return to the Admin page
     admin_page = url_path_join(public_host(app), app.hub.base_url, "admin")
@@ -1491,18 +1489,18 @@ async def test_singleuser_xsrf(
     await browser.goto(login_url)
     await login(browser, browser_user.name, browser_user.name)
     # end up at single-user
-    await expect(browser).to_have_url(re.compile(rf".*/user/{browser_user.name}/.*"))
+    await browser.wait_for_url(re.compile(rf".*/user/{browser_user.name}/.*"))
     # wait for target user to start, too
     await target_start
     await app.proxy.add_user(target_user)
 
     # visit target user, sets credentials for second server
     await browser.goto(public_url(app, target_user))
-    await expect(browser).to_have_url(re.compile(r".*/oauth2/authorize"))
+    await browser.wait_for_url(re.compile(r".*/oauth2/authorize"))
     auth_button = browser.locator('//button[@type="submit"]')
     await expect(auth_button).to_be_enabled()
     await auth_button.click()
-    await expect(browser).to_have_url(re.compile(rf".*/user/{target_user.name}/.*"))
+    await browser.wait_for_url(re.compile(rf".*/user/{target_user.name}/.*"))
 
     # at this point, we are on a page served by target_user,
     # logged in as browser_user
@@ -1644,8 +1642,8 @@ async def test_singleuser_xsrf(
         url_path_join(app.base_url, f"hub/spawn/{browser_user.name}/{server_name}"),
     )
     await browser.goto(url)
-    await expect(browser).to_have_url(
-        re.compile(rf".*/user/{browser_user.name}/{server_name}/.*")
+    await browser.wait_for_url(
+        re.compile(rf".*/user/{browser_user.name}/{server_name}/.*"),
     )
     # from named server URL, make sure we can talk to a kernel
     token = browser_user.new_api_token(scopes=["access:servers!user"])
