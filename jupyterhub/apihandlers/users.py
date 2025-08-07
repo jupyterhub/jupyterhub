@@ -870,10 +870,10 @@ class SpawnProgressAPIHandler(APIHandler):
                 html_message = getattr(exc, "jupyterhub_html_message", "")
                 if html_message:
                     failed_event['html_message'] = html_message
-                await self.send_event(failed_event)
-                return
             else:
                 raise web.HTTPError(400, "%s is not starting...", spawner._log_name)
+            await self.send_event(failed_event)
+            return
 
         # retrieve progress events from the Spawner
         async with aclosing(
@@ -1034,7 +1034,7 @@ class ActivityAPIHandler(APIHandler):
                         user.name,
                         server_name,
                         isoformat(last_activity),
-                        isoformat(user.last_activity),
+                        isoformat(spawner.last_activity),
                     )
 
         self.db.commit()

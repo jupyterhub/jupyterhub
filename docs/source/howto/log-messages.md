@@ -71,4 +71,4 @@ aligned, rather than as an indicator of an existing problem.
 Upgrade the version of the `jupyterhub` package in your user environment or image
 so that it matches the version of JupyterHub running your JupyterHub server! If you
 are using the [zero-to-jupyterhub](https://z2jh.jupyter.org) helm chart, you can find the appropriate
-version of the `jupyterhub` package to install in your user image [here](https://jupyterhub.github.io/helm-chart/)
+version of the `jupyterhub` package to install in your user image [here](https://hub.jupyter.org/helm-chart/)

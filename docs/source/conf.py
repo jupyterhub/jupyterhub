@@ -262,6 +262,7 @@ html_static_path = ["_static"]
 
 html_theme = "jupyterhub_sphinx_theme"
 html_theme_options = {
+    "header_links_before_dropdown": 6,
     "icon_links": [
         {
             "name": "GitHub",
@@ -297,7 +298,10 @@ linkcheck_ignore = [
     r"https://github.com/jupyterhub/jupyterhub/security/advisories/.*",
     # Occasionally blocks CI checks with 403
     r"https://www\.mysql\.com",
+    # Occasionally blocks CI checks with SSL error
+    r"https://mediaspace\.msu\.edu/.*",
 ]
+
 linkcheck_anchors_ignore = [
     "/#!",
     "/#%21",

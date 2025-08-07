@@ -16,17 +16,13 @@ Please submit pull requests to update information or to add new institutions or 
 
 - [BIDS - Berkeley Institute for Data Science](https://bids.berkeley.edu/)
 
-- [Data 8](http://data8.org/)
-
+- [Data 8](https://www.data8.org/)
   - [GitHub organization](https://github.com/data-8)
 
 - [NERSC](https://www.nersc.gov/)
 
-  - [Press release on Jupyter and Cori](https://www.nersc.gov/news-publications/nersc-news/nersc-center-news/2016/jupyter-notebooks-will-open-up-new-possibilities-on-nerscs-cori-supercomputer/)
-  - [Moving and sharing data](https://www.nersc.gov/assets/Uploads/03-MovingAndSharingData-Cholia.pdf)
-
 - [Research IT](https://research-it.berkeley.edu)
-  - [JupyterHub server supports campus research computation](https://research-it.berkeley.edu/blog/17/01/24/free-fully-loaded-jupyterhub-server-supports-campus-research-computation)
+  - [JupyterHub server supports campus research computation](https://research-it.berkeley.edu/news/free-fully-loaded-jupyterhub-server-supports-campus-research-computation)
 
 ### University of California Davis
 
@@ -86,7 +82,7 @@ Within CERN, there are two noteworthy JupyterHub deployments in operation:
 
 [ETH Zurich](https://ethz.ch/en.html), (Federal Institute of Technology Zurich), is a public research university in Zürich, Switzerland, with focus on science, technology, engineering, and mathematics, although its 16 departments span a variety of disciplines and subjects.
 
-The [Educational Development and Technology](https://ethz.ch/en/the-eth-zurich/organisation/departments/educational-development-and-technology.html) unit provides JupyterHub exclusively for teaching and learning, integrated in the learning management system [Moodle](https://ethz.ch/staffnet/en/teaching/academic-support/it-services-teaching/teaching-applications/moodle-service.html). Each course gets its individually configured JupyterHub environment deployed on a on-premise Kubernetes cluster.
+The [Educational Development and Technology](https://ethz.ch/en/the-eth-zurich/organisation/departments/teaching-and-learning.html) unit provides JupyterHub exclusively for teaching and learning, integrated in the learning management system [Moodle](https://ethz.ch/staffnet/en/teaching/academic-support/it-services-teaching/teaching-applications/moodle-service.html). Each course gets its individually configured JupyterHub environment deployed on a on-premise Kubernetes cluster.
 
 - [ETH JupyterHub](https://ethz.ch/staffnet/en/teaching/academic-support/it-services-teaching/teaching-applications/jupyterhub.html) for teaching and learning
 
@@ -125,16 +121,15 @@ The [Educational Development and Technology](https://ethz.ch/en/the-eth-zurich/o
 ### Paderborn University
 
 - [Data Science (DICE) group](https://dice-research.org)
-  - [nbgraderutils](https://github.com/dice-group/nbgraderutils): Use JupyterHub + nbgrader + iJava kernel for online Java exercises. Used in lecture Statistical Natural Language Processing.
+  - [JavaOnlineExercises](https://github.com/dice-group/JavaOnlineExercises): Use JupyterHub + nbgrader + iJava kernel for online Java exercises. Used in lecture Statistical Natural Language Processing.
 
 ### Penn State University
 
-- [Press release](https://news.psu.edu/story/523093/2018/05/24/new-open-source-web-apps-available-students-and-faculty): "New open-source web apps available for students and faculty"
+- [Press release](https://www.psu.edu/news/academics/story/new-open-source-web-apps-available-students-and-faculty): "New open-source web apps available for students and faculty"
 
 ### University of California San Diego
 
 - San Diego Supercomputer Center - Andrea Zonca
-
   - [Deploy JupyterHub on a Supercomputer with SSH](https://zonca.github.io/2017/05/jupyterhub-hpc-batchspawner-ssh.html)
   - [Run Jupyterhub on a Supercomputer](https://zonca.github.io/2015/04/jupyterhub-hpc.html)
   - [Deploy JupyterHub on a VM for a Workshop](https://zonca.github.io/2016/04/jupyterhub-sdsc-cloud.html)
@@ -154,7 +149,7 @@ The [Educational Development and Technology](https://ethz.ch/en/the-eth-zurich/o
 
 ### Elucidata
 
-- What's new in Jupyter Notebooks @[Elucidata](https://elucidata.io/):
+- What's new in Jupyter Notebooks @[Elucidata](https://www.elucidata.io/):
   - [Using Jupyter Notebooks with Jupyterhub on GCP, managed by GKE](https://medium.com/elucidata/why-you-should-be-using-a-jupyter-notebook-8385a4ccd93d)
 
 ## Service Providers
@@ -174,7 +169,7 @@ The [Educational Development and Technology](https://ethz.ch/en/the-eth-zurich/o
 
 ### Microsoft Azure
 
-- [Azure Data Science Virtual Machine release notes](https://docs.microsoft.com/en-us/azure/machine-learning/machine-learning-data-science-linux-dsvm-intro)
+- [Azure Data Science Virtual Machine release notes](https://learn.microsoft.com/en-us/azure/machine-learning/machine-learning-data-science-linux-dsvm-intro)
 
 ### Rackspace Carina
 
@@ -202,5 +197,5 @@ The [Educational Development and Technology](https://ethz.ch/en/the-eth-zurich/o
 - https://www.walkingrandomly.com/?p=5734
 - https://wrdrd.com/docs/consulting/education-technology
 - https://bitbucket.org/jackhale/fenics-jupyter
-- [LinuxCluster blog](https://linuxcluster.wordpress.com/category/application/jupyterhub/)
+- [LinuxCluster blog](https://thelinuxcluster.com/category/application/jupyterhub/)
 - [Spark Cluster on OpenStack with Multi-User Jupyter Notebook](https://arnesund.com/2015/09/21/spark-cluster-on-openstack-with-multi-user-jupyter-notebook/)

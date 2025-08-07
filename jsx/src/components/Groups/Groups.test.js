@@ -139,7 +139,7 @@ test("Interacting with PaginationFooter causes page refresh", async () => {
     render(groupsJsx(updateGroupsSpy));
   });
 
-  expect(updateGroupsSpy).toBeCalledWith(0, 2);
+  expect(updateGroupsSpy).toHaveBeenCalledWith(0, 2);
 
   var lastState =
     mockReducers.mock.results[mockReducers.mock.results.length - 1].value;
@@ -153,5 +153,5 @@ test("Interacting with PaginationFooter causes page refresh", async () => {
   });
   expect(searchParams.get("offset")).toEqual("2");
   // FIXME: useSelector mocks prevent updateGroups from being called
-  // expect(updateGroupsSpy).toBeCalledWith(2, 2);
+  // expect(updateGroupsSpy).toHaveBeenCalledWith(2, 2);
 });
