@@ -107,17 +107,6 @@ jupyterhub upgrade-db
 This should find the location of your database, and run the necessary upgrades
 for it.
 
-### SQLite database disadvantages
-
-SQLite has some disadvantages when it comes to upgrading JupyterHub. These
-are:
-
-- `upgrade-db` may not work, and you may need to delete your database
-  and start with a fresh one.
-- `downgrade-db` **will not** work if you want to rollback to an
-  earlier version, so backup the `jupyterhub.sqlite` file before
-  upgrading.
-
 ### What happens if I delete my database?
 
 Losing the Hub database is often not a big deal. Information that

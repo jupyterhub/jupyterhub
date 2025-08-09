@@ -108,25 +108,28 @@ Doing so generally involves:
 ### Default backend: SQLite
 
 The default database backend for JupyterHub is [SQLite](https://sqlite.org).
-We have chosen SQLite as JupyterHub's default because it's simple (the 'database' is a single file) and ubiquitous (it is in the Python standard library).
-It works very well for testing, small deployments, and workshops.
+We have chosen SQLite as JupyterHub's default because it's simple (the 'database' is a single file), ubiquitous (it is in the Python standard library), and it does not require maintaining a separate database server.
 
-For production systems, SQLite has some disadvantages when used with JupyterHub:
+The main disadvantage of SQLite is it does not support remote backup tools or replication.
+You should backup your database by taking snapshots of the file (`jupyterhub.sqlite`).
 
-- `upgrade-db` may not always work, and you may need to start with a fresh database
-- `downgrade-db` **will not** work if you want to rollback to an earlier
-  version, so backup the `jupyterhub.sqlite` file before upgrading (JupyterHub automatically creates a date-stamped backup file when upgrading sqlite)
+SQLite is ideal for testing, small deployments, workshops, and production servers where you do not require remote backup or replication.
+
+### Picking your database backend (PostgreSQL, MySQL)
 
 The sqlite documentation provides a helpful page about [when to use SQLite and
 where traditional RDBMS may be a better choice](https://sqlite.org/whentouse.html).
 
-### Picking your database backend (PostgreSQL, MySQL)
-
-When running a long term deployment or a production system, we recommend using a full-fledged relational database, such as [PostgreSQL](https://www.postgresql.org) or [MySQL](https://www.mysql.com), that supports the SQL `ALTER TABLE` statement, which is used in some database upgrade steps.
-
 In general, you select your database backend with [](JupyterHub.db_url), and can further configure it (usually not necessary) with [](JupyterHub.db_kwargs).
 
 ## Notes and Tips
+
+### Upgrading the JupyterHub database
+
+[Upgrading JupyterHub to a new major release](howto:upgrading-jupyterhub) often requires an upgrade to the database schema.
+
+- `jupyterhub upgrade-db` will execute a schema upgrade. You should backup your database before running this.
+- `jupyterhub downgrade-db` may be able to revert a schema upgrade on PostgreSQL and MySQL, but this is not guaranteed to work, and is not supported.
 
 ### SQLite
 
