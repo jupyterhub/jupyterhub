@@ -258,11 +258,10 @@ async def test_refresh_pre_stop_expired_admin_request(
     )
     assert 200 <= r.status_code < 300
 
-    # auth needs refresh but can't without a new login; spawn should fail
+    # auth needs refresh but can't without a new login; stop should be forced
     user._auth_refreshed -= app.authenticator.auth_refresh_age
     r = await api_request(
         app, 'users', user.name, 'server', method='delete', name=admin_user.name
     )
 
-    # api requests can't do login redirects
-    assert r.status_code == 403
+    assert 200 <= r.status_code < 300

@@ -1330,9 +1330,14 @@ class BaseHandler(RequestHandler):
         if self.authenticator.refresh_pre_stop:
             auth_user = await self.refresh_auth(user, force=True)
             if auth_user is None:
-                raise web.HTTPError(
-                    403, "auth has expired for %s, login again", user.name
-                )
+                if self.current_user.name == user.name:
+                    raise web.HTTPError(
+                        403, "auth has expired for %s, login again", user.name
+                    )
+                else:
+                    self.log.warning(
+                        "User %s may have stale auth info. Stopping anyway.", user.name
+                    )
 
         # set user._stop_pending before doing anything async
         # to avoid races

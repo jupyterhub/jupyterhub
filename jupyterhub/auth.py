@@ -119,6 +119,7 @@ class Authenticator(LoggingConfigurable):
 
         If refresh_user cannot refresh the user auth data,
         stop will fail until the user logs in again.
+        If an admin initiates the stop, it will proceed regardless.
 
         .. versionadded:: 5.4
         """,
