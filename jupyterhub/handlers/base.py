@@ -1330,7 +1330,7 @@ class BaseHandler(RequestHandler):
         if self.authenticator.refresh_pre_stop:
             auth_user = await self.refresh_auth(user, force=True)
             if auth_user is None:
-                if self.current_user.name == user.name:
+                if self.current_user.kind == "user" and self.current_user.name == user.name:
                     raise web.HTTPError(
                         403, "auth has expired for %s, login again", user.name
                     )
