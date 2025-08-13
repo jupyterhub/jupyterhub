@@ -37,6 +37,14 @@ def refresh_pre_spawn(app):
         app.authenticator.refresh_pre_spawn = False
 
 
+@pytest.fixture
+def refresh_pre_stop(app):
+    """Fixture enabling auth refresh pre stop"""
+    app.authenticator.refresh_pre_stop = True
+    yield
+    app.authenticator.refresh_pre_stop = False
+
+
 async def test_auth_refresh_at_login(app, user):
     # auth_refreshed starts unset:
     assert not user._auth_refreshed
@@ -175,3 +183,85 @@ async def test_refresh_pre_spawn_expired_admin_request(
     )
     # api requests can't do login redirects
     assert r.status_code == 403
+
+
+async def test_refresh_pre_stop(app, user, refresh_pre_stop):
+    cookies = await app.login_user(user.name)
+    assert user._auth_refreshed
+    user._auth_refreshed -= 10
+    before = user._auth_refreshed
+
+    r = await api_request(
+        app, f'users/{user.name}/server', method='post', name=user.name
+    )
+
+    assert user._auth_refreshed == before
+    assert 200 <= r.status_code < 300
+
+    # auth is fresh, but should be forced to refresh by stop
+    r = await api_request(
+        app, f'users/{user.name}/server', method='delete', name=user.name
+    )
+    assert 200 <= r.status_code < 300
+    assert user._auth_refreshed > before
+
+
+async def test_refresh_pre_stop_expired(app, user, refresh_pre_stop, disable_refresh):
+    cookies = await app.login_user(user.name)
+    assert user._auth_refreshed
+    user._auth_refreshed -= 10
+    before = user._auth_refreshed
+
+    r = await api_request(
+        app, f'users/{user.name}/server', method='post', name=user.name
+    )
+    assert user._auth_refreshed == before
+    assert 200 <= r.status_code < 300
+
+    # auth is fresh, doesn't trigger expiry
+    r = await api_request(
+        app, f'users/{user.name}/server', method='delete', name=user.name
+    )
+    assert r.status_code == 403
+    assert user._auth_refreshed == before
+
+
+async def test_refresh_pre_stop_admin_request(app, user, admin_user, refresh_pre_stop):
+    await app.login_user(user.name)
+    await app.login_user(admin_user.name)
+    user._auth_refreshed -= 10
+    before = user._auth_refreshed
+
+    r = await api_request(
+        app, 'users', user.name, 'server', method='post', name=admin_user.name
+    )
+    assert user._auth_refreshed == before
+    assert 200 <= r.status_code < 300
+
+    # admin request, auth is fresh. Should still refresh user auth.
+    r = await api_request(
+        app, 'users', user.name, 'server', method='delete', name=admin_user.name
+    )
+    assert 200 <= r.status_code < 300
+    assert user._auth_refreshed > before
+
+
+async def test_refresh_pre_stop_expired_admin_request(
+    app, user, admin_user, refresh_pre_stop, disable_refresh
+):
+    await app.login_user(user.name)
+    await app.login_user(admin_user.name)
+    user._auth_refreshed -= 10
+
+    r = await api_request(
+        app, 'users', user.name, 'server', method='post', name=admin_user.name
+    )
+    assert 200 <= r.status_code < 300
+
+    # auth needs refresh but can't without a new login; stop should be forced
+    user._auth_refreshed -= app.authenticator.auth_refresh_age
+    r = await api_request(
+        app, 'users', user.name, 'server', method='delete', name=admin_user.name
+    )
+
+    assert 200 <= r.status_code < 300
