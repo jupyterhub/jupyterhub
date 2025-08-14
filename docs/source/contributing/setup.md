@@ -2,12 +2,29 @@
 
 # Setting up a development install
 
+JupyterHub is currently only tested on [Ubuntu](https://ubuntu.com/) [22.04 LTS (Jammy Jellyfish)](https://releases.ubuntu.com/jammy/).
+
+While we'd love it if JupyterHub would work perfectly on other platforms, our small team doesn't have the bandwidth to test every possible platforms.
+
+Feel free to try it on your platform, and be sure to {ref}`let us know <contributing:community>` about any issues you encounter.
+
 ## System requirements
 
-JupyterHub can only run on macOS or Linux operating systems. If you are
-using Windows, we recommend using [VirtualBox](https://www.virtualbox.org)
-or a similar system to run [Ubuntu Linux](https://ubuntu.com) for
-development.
+Your system **must** be able to run
+
+- Python
+- NodeJS
+- Git
+
+Our small team knows JupyterHub to work perfectly on macOS or Linux operating systems.
+
+```{note} What about Windows?
+Some users have reported that JupyterHub runs successfully on [Windows Subsystem for Linux (WSL)](https://learn.microsoft.com/en-us/windows/wsl/). We have no plans to support Windows outside of the WSL. 
+```
+
+```{note} What about virtualization?
+Using any form of virtualization (for example, [VirtualBox](https://www.virtualbox.org/), [Docker](https://www.docker.com/), [Podman](https://podman.io/), [WSL](https://learn.microsoft.com/en-us/windows/wsl/)) is a good way to get up and running quickly, though properly configuring the networking settings can be a bit tricky.
+```
 
 ### Install Python
 
