@@ -2,19 +2,31 @@
 
 # Community communication channels
 
+```{note}
+Our community is distributed across the world in various timezones, so please be patient if you do not get a response immediately!
+```
+
 We use different channels of communication for different purposes. Whichever one you use will depend on what kind of communication you want to engage in.
 
 ## Discourse (recommended)
 
-We use [Discourse](https://discourse.jupyter.org) for online discussions and support questions.
-You can ask questions here if you are a first-time contributor to the JupyterHub project.
-Everyone in the Jupyter community is welcome to bring ideas and questions there.
+```{note}
+[Discourse] is open source.
+```
 
-We recommend that you first use our Discourse as all past and current discussions on it are archived and searchable. Thus, all discussions remain useful and accessible to the whole community.
+We use [Jupyter instance of Discourse] for online discussions and support questions.
+You can ask questions at [Jupyter instance of Discourse] if you are a first-time contributor to the JupyterHub project.
+Everyone is welcome to bring ideas and questions at [Jupyter instance of Discourse].
+
+We recommend that you first use [Jupyter instance of Discourse] as all past and current discussions on it are archived and searchable. Thus, all discussions remain useful and accessible to the whole community.
 
 ## Zulip
 
-We use [Jupyter instance](https://jupyter.zulipchat.com/) of [Zulip](https://zulip.com/) for online, real-time text chat; a place for more ephemeral discussions. When you're not on Discourse, you can stop at Zulip to have other discussions on the fly.
+```{note}
+[Zulip] is open source.
+```
+
+We use [Jupyter instance of Zulip] for online, real-time text chat; a place for more ephemeral discussions. When you're not on [Jupyter instance of Discourse], you can stop at [Jupyter instance of Zulip] to have other discussions on the fly.
 
 ## Github Issues
 
@@ -24,6 +36,7 @@ We use [Jupyter instance](https://jupyter.zulipchat.com/) of [Zulip](https://zul
 - If you are using a specific JupyterHub distribution (such as [Zero to JupyterHub on Kubernetes](https://github.com/jupyterhub/zero-to-jupyterhub-k8s) or [The Littlest JupyterHub](https://github.com/jupyterhub/the-littlest-jupyterhub/)), you should open issues directly in their repository.
 - If you cannot find a repository to open your issue in, do not worry! Open the issue in the [main JupyterHub repository](https://github.com/jupyterhub/jupyterhub/) and our community will help you figure it out.
 
-```{note}
-Our community is distributed across the world in various timezones, so please be patient if you do not get a response immediately!
-```
+[Discourse]: https://www.discourse.org/
+[Jupyter instance of Discourse]: https://discourse.jupyter.org
+[Jupyter instance of Zulip]: https://jupyter.zulipchat.com/
+[Zulip]: https://zulip.com/
