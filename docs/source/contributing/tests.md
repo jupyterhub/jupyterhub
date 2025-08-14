@@ -61,7 +61,7 @@ you would run:
 
 ```bash
 pytest -v jupyterhub/tests/test_api.py::test_shutdown
-``` 
+```
 
 ## Test organisation
 

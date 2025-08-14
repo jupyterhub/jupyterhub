@@ -38,7 +38,7 @@ You will need Python and Git installed. Installation details are avaiable at {re
    along with the filename / line number in which they occurred. Fix them,
    and the HTML will be re-render automatically.
 
-4. View the rendered documentation by opening <http://127.0.0.1:8000> in
+3. View the rendered documentation by opening <http://127.0.0.1:8000> in
    a web browser.
 
 (contributing-docs-conventions)=
