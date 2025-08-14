@@ -19,7 +19,7 @@ Your system **must** be able to run
 Our small team knows JupyterHub to work perfectly on macOS or Linux operating systems.
 
 ```{note} What about Windows?
-Some users have reported that JupyterHub runs successfully on [Windows Subsystem for Linux (WSL)](https://learn.microsoft.com/en-us/windows/wsl/). We have no plans to support Windows outside of the WSL. 
+Some users have reported that JupyterHub runs successfully on [Windows Subsystem for Linux (WSL)](https://learn.microsoft.com/en-us/windows/wsl/). We have no plans to support Windows outside of the WSL.
 ```
 
 ```{note} What about virtualization?
