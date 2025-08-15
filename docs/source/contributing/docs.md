@@ -5,48 +5,41 @@
 Documentation is often more important than code. This page helps
 you get set up on how to contribute to JupyterHub's documentation.
 
+We use [Sphinx](https://www.sphinx-doc.org) to build our documentation. It takes
+our documentation source files (written in [Markedly Structured Text (MyST)](https://mystmd.org/) and
+stored under the `docs/source` directory) and converts it into various
+formats for people to read.
+
 ## Building documentation locally
 
-We use [sphinx](https://www.sphinx-doc.org) to build our documentation. It takes
-our documentation source files (written in [markdown](https://daringfireball.net/projects/markdown/) or [reStructuredText](https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html) and
-stored under the `docs/source` directory) and converts it into various
-formats for people to read. To make sure the documentation you write or
+To make sure the documentation you write or
 change renders correctly, it is good practice to test it locally.
 
-1. Make sure you have successfully completed {ref}`contributing:setup`.
+```{note}
+You will need Python and Git installed. Installation details are avaiable at {ref}`contributing:setup`.
+```
 
-2. Install the packages required to build the docs.
+1. Install the packages required to build the docs.
 
    ```bash
    python3 -m pip install -r docs/requirements.txt
+   python3 -m pip install sphinx-autobuild
    ```
 
-3. Build the html version of the docs. This is the most commonly used
+2. Build the HTML version of the docs. This is the most commonly used
    output format, so verifying it renders correctly is usually good
    enough.
 
    ```bash
-   cd docs
-   make html
+   sphinx-autobuild docs/source/ docs/_build/html
    ```
 
    This step will display any syntax or formatting errors in the documentation,
    along with the filename / line number in which they occurred. Fix them,
-   and re-run the `make html` command to re-render the documentation.
+   and the HTML will be re-render automatically.
 
-4. View the rendered documentation by opening `_build/html/index.html` in
+3. View the rendered documentation by opening <http://127.0.0.1:8000> in
    a web browser.
-
-   :::{tip}
-   **On Windows**, you can open a file from the terminal with `start <path-to-file>`.
-
-   **On macOS**, you can do the same with `open <path-to-file>`.
-
-   **On Linux**, you can do the same with `xdg-open <path-to-file>`.
-
-   After opening index.html in your browser you can just refresh the page whenever
-   you rebuild the docs via `make html`
-   :::
 
 (contributing-docs-conventions)=
 
@@ -67,10 +60,10 @@ approach:
 python3 -m pip
 ```
 
-This invokes pip explicitly using the python3 binary that you are
+This invokes `pip` explicitly using the `python3` binary that you are
 currently using. This is the **recommended way** to invoke pip
 in our documentation, since it is least likely to cause problems
-with python3 and pip being from different environments.
+with `python3` and `pip` being from different environments.
 
 For more information on how to invoke `pip` commands, see
-[the pip documentation](https://pip.pypa.io/en/stable/).
+[the `pip` documentation](https://pip.pypa.io/en/stable/).
