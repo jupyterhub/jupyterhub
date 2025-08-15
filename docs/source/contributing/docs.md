@@ -15,7 +15,7 @@ formats for people to read.
 To make sure the documentation you write or
 change renders correctly, it is good practice to test it locally.
 
-```note
+```{note}
 You will need Python and Git installed. Installation details are avaiable at {ref}`contributing:setup`.
 ```
 
