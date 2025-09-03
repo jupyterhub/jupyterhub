@@ -51,25 +51,31 @@ Any shared permissions previously granted by a user will remain and must be revo
 if desired.
 :::
 
-### Grant servers permission to share themselves (optional, admin)
+### Grant servers permission to share themselves (admin)
 
-The most natural place to want to grant access to a server is when viewing that server.
-By default, the tokens used when talking to a server have extremely limited permissions.
-You can grant sharing permissions to servers themselves in one of two ways.
+When you want users to be able to share access while viewing a server, grant the appropriate
+sharing scopes so the server or the browser token can manage sharing. By default, tokens used
+to talk to a server have limited permissions.
 
-The first is to grant sharing permission to the tokens used by browser requests.
-This is what you would do if you had a JupyterLab extension that presented UI for managing shares
-(this should exist! We haven't made it yet).
-To grant these tokens sharing permissions:
+Granting browser-originating tokens the sharing scopes is the recommended approach when using
+JupyterLab with the `jupyter-collaboration` extension, which provides a UI for managing shares.
+The minimal permissions required to allow browser tokens to request sharing-related scopes are:
 
 ```python
 c.Spawner.oauth_client_allowed_scopes = ["access:servers!server", "shares!server"]
 ```
 
 JupyterHub's `user-sharing` example does it this way.
+The `jupyter-collaboration` UI requires additional Hub scopes to share their server with specific users on the Hub:
+
+```python
+c.Spawner.oauth_client_allowed_scopes = [
+  "read:users:name", "shares!user", "list:users", "servers!user"
+]
+```
+
 The nice thing about this approach is that only users who already have those permissions will get a token which can take these actions.
-The downside (in terms of convenience) is that the browser token is only accessible to the javascript (e.g. JupyterLab) and/or jupyter-server request handlers,
-but not notebooks or terminals.
+The downside is that the browser token is only accessible to the javascript (e.g. JupyterLab) and/or jupyter-server request handlers, but not notebooks or terminals.
 
 The second way, which is less secure, but perhaps more convenient for demonstration purposes,
 is to grant the _server itself_ permission to grant access to itself.
