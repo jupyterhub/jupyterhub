@@ -2,9 +2,15 @@
 
 # Authentication and User Basics
 
-The default Authenticator uses [PAM][] (Pluggable Authentication Module) to authenticate system users with
-their usernames and passwords. With the default Authenticator, any user
-with an account and password on the system will be allowed to login.
+The default Authenticator uses [PAM][] (Pluggable Authentication Module) to authenticate users already defined on the system with their usernames and passwords.
+With the default Authenticator,
+any user with an account and password on the system will be able to login.
+But that does not mean they will be **allowed** to access JupyterHub.
+
+:::{important}
+Only _explicitly allowed_ users can login to JupyterHub
+(a user who can login but is not allowed will see a permission error after successful login).
+:::
 
 ## Deciding who is allowed
 
