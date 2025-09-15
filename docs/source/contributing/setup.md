@@ -2,7 +2,7 @@
 
 # Setting up a development install
 
-JupyterHub is currently only tested on [Ubuntu](https://ubuntu.com/) [22.04 LTS (Jammy Jellyfish)](https://releases.ubuntu.com/jammy/).
+JupyterHub's continuous integration runs on [Ubuntu LTS](https://ubuntu.com/).
 
 While we'd love it if JupyterHub would work perfectly on other platforms, our small team doesn't have the bandwidth to test every possible platforms.
 
