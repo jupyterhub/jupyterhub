@@ -231,7 +231,6 @@ def setup(app):
     app.add_css_file("https://docs.jupyter.org/en/latest/_static/jupyter.css")
 
 
-
 # -- Read The Docs -----------------------------------------------------------
 #
 # Since RTD runs sphinx-build directly without running "make html", we run the
