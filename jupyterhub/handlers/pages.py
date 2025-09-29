@@ -177,13 +177,14 @@ class SpawnHandler(BaseHandler):
         await spawner.run_auth_state_hook(auth_state)
 
         # Try to start server directly when query arguments are passed.
-        error_message = ''
         query_options = {}
         for key, byte_list in self.request.query_arguments.items():
             query_options[key] = [bs.decode('utf8') for bs in byte_list]
 
         # 'next' is reserved argument for redirect after spawn
         query_options.pop('next', None)
+
+        spawn_exc = None
 
         if len(query_options) > 0:
             try:
@@ -200,12 +201,21 @@ class SpawnHandler(BaseHandler):
                     "Failed to spawn single-user server with query arguments",
                     exc_info=True,
                 )
-                error_message = str(e)
+                spawn_exc = e
                 # fallback to behavior without failing query arguments
 
         spawner_options_form = await spawner.get_options_form()
         if spawner_options_form:
             self.log.debug("Serving options form for %s", spawner._log_name)
+
+            # Explicitly catch 429 errors and report them to the client
+            if isinstance(spawn_exc, web.HTTPError) and spawn_exc.status_code == 429:
+                self.set_status(spawn_exc.status_code)
+
+                for name, value in spawn_exc.headers.items():
+                    self.set_header(name, value)
+            error_message = '' if spawn_exc is None else str(spawn_exc)
+
             form = await self._render_form(
                 for_user=user,
                 spawner_options_form=spawner_options_form,
@@ -265,6 +275,14 @@ class SpawnHandler(BaseHandler):
             self.log.error(
                 "Failed to spawn single-user server with form", exc_info=True
             )
+
+            # Explicitly catch 429 errors and report them to the client
+            if isinstance(e, web.HTTPError) and e.status_code == 429:
+                self.set_status(e.status_code)
+
+                for name, value in e.headers.items():
+                    self.set_header(name, value)
+
             spawner_options_form = await user.spawner.get_options_form()
             form = await self._render_form(
                 for_user=user, spawner_options_form=spawner_options_form, message=str(e)
