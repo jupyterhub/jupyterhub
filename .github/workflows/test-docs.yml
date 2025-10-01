@@ -41,7 +41,7 @@ jobs:
   validate-rest-api-definition:
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: actions/setup-node@v4
         with:
@@ -55,7 +55,7 @@ jobs:
   test-docs:
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           # make rediraffecheckdiff requires git history to compare current
           # commit with the main branch and previous releases.
