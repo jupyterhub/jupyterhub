@@ -61,7 +61,7 @@ jobs:
           # commit with the main branch and previous releases.
           fetch-depth: 0
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
           cache: pip
