@@ -3887,6 +3887,10 @@ class JupyterHub(Application):
             tasks = [t for t in asyncio.all_tasks()]
             for t in tasks:
                 self.log.debug("Task status: %s", t)
+        self._stop_event_loop()
+
+    def _stop_event_loop(self):
+        """In a method to allow tests to not do this"""
         asyncio.get_event_loop().stop()
 
     def stop(self):

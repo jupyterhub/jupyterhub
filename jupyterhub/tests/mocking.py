@@ -382,6 +382,10 @@ class MockHub(JupyterHub):
         super().stop()
         self.db_file.close()
 
+    def _stop_event_loop(self):
+        # leave it to pytest-asyncio to stop the loop
+        pass
+
     async def login_user(self, name):
         """Login a user by name, returning her cookies."""
         base_url = public_url(self)
