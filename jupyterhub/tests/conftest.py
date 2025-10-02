@@ -102,7 +102,7 @@ def ssl_tmpdir(tmpdir_factory):
 
 
 @fixture(scope='module')
-async def app(request, io_loop, ssl_tmpdir):
+async def app(request, ssl_tmpdir):
     """Mock a jupyterhub app for testing"""
     mocked_app = None
     ssl_enabled = getattr(
@@ -170,39 +170,23 @@ async def io_loop(request):
     The main reason to depend on this fixture is to ensure your cleanup
     happens before the io_loop is closed.
     """
+    warn(
+        "jupyterhub's io_loop fixture is deprecated. Use async fixtures to get the event loop.",
+        DeprecationWarning,
+    )
     io_loop = AsyncIOMainLoop()
     event_loop = asyncio.get_running_loop()
     assert asyncio.get_event_loop() is event_loop
     assert io_loop.asyncio_loop is event_loop
-
-    def _close():
-        # cleanup everything
-        try:
-            event_loop.run_until_complete(event_loop.shutdown_asyncgens())
-        except (asyncio.CancelledError, RuntimeError):
-            pass
-        io_loop.close(all_fds=True)
-
-        # workaround pytest-asyncio trying to cleanup after loop is closed
-        # problem introduced in pytest-asyncio 0.25.2
-        def noop(*args, **kwargs):
-            warn("Loop used after close...", RuntimeWarning, stacklevel=2)
-            return
-
-        event_loop.run_until_complete = noop
-
-    request.addfinalizer(_close)
     return io_loop
 
 
 @fixture(autouse=True)
-async def cleanup_after(request, io_loop):
+async def cleanup_after(request):
     """function-scoped fixture to shutdown user servers
 
     allows cleanup of servers between tests
     without having to launch a whole new app
-
-    depends on io_loop to ensure it runs before things are closed.
     """
 
     try:
