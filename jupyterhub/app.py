@@ -1989,7 +1989,10 @@ class JupyterHub(Application):
                 self.internal_ssl_cert,
                 cafile=self.internal_ssl_ca,
             )
-            AsyncHTTPClient.configure(None, defaults={"ssl_options": ssl_context})
+            AsyncHTTPClient.configure(
+                AsyncHTTPClient.configured_class(),
+                defaults={"ssl_options": ssl_context},
+            )
 
     def init_db(self):
         """Create the database connection"""

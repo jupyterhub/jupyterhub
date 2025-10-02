@@ -406,7 +406,9 @@ class SingleUserNotebookAppMixin(Configurable):
         ssl_context = make_ssl_context(
             self.keyfile, self.certfile, cafile=self.client_ca
         )
-        AsyncHTTPClient.configure(None, defaults={"ssl_options": ssl_context})
+        AsyncHTTPClient.configure(
+            AsyncHTTPClient.configured_class(), defaults={"ssl_options": ssl_context}
+        )
         return AsyncHTTPClient()
 
     async def check_hub_version(self):

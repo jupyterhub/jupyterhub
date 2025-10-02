@@ -330,7 +330,9 @@ class JupyterHubSingleUser(ExtensionApp):
             self.hub_auth.certfile,
             cafile=self.hub_auth.client_ca,
         )
-        AsyncHTTPClient.configure(None, defaults={"ssl_options": ssl_context})
+        AsyncHTTPClient.configure(
+            AsyncHTTPClient.configured_class(), defaults={"ssl_options": ssl_context}
+        )
         return AsyncHTTPClient()
 
     async def check_hub_version(self):
