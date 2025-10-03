@@ -986,7 +986,7 @@ def fmt_ip_url(ip):
     return ip
 
 
-def format_exception(exc, *, only_jupyterhub):
+def format_exception(exc, *, only_jupyterhub=False):
     """
     Format an exception into a text string and HTML pair.
     """
