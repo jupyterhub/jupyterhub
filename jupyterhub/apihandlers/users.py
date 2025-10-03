@@ -24,6 +24,7 @@ from ..roles import assign_default_roles
 from ..scopes import needs_scope
 from ..user import User
 from ..utils import (
+    format_exception,
     isoformat,
     iterate_until,
     maybe_future,
@@ -865,9 +866,8 @@ class SpawnProgressAPIHandler(APIHandler):
                 failed_event['message'] = "Spawn cancelled"
             elif f and f.done() and f.exception():
                 exc = f.exception()
-                message = getattr(exc, "jupyterhub_message", str(exc))
+                message, html_message = format_exception(exc)
                 failed_event['message'] = f"Spawn failed: {message}"
-                html_message = getattr(exc, "jupyterhub_html_message", "")
                 if html_message:
                     failed_event['html_message'] = html_message
             else:
@@ -906,9 +906,8 @@ class SpawnProgressAPIHandler(APIHandler):
                 failed_event['message'] = "Spawn cancelled"
             elif f and f.done() and f.exception():
                 exc = f.exception()
-                message = getattr(exc, "jupyterhub_message", str(exc))
+                message, html_message = format_exception(exc)
                 failed_event['message'] = f"Spawn failed: {message}"
-                html_message = getattr(exc, "jupyterhub_html_message", "")
                 if html_message:
                     failed_event['html_message'] = html_message
             else:

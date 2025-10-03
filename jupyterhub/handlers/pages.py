@@ -15,7 +15,13 @@ from tornado.httputil import url_concat
 from .. import __version__, orm
 from ..metrics import SERVER_POLL_DURATION_SECONDS, ServerPollStatus
 from ..scopes import describe_raw_scopes, needs_scope
-from ..utils import maybe_future, url_escape_path, url_path_join, utcnow
+from ..utils import (
+    maybe_future,
+    url_escape_path,
+    url_path_join,
+    utcnow,
+    format_exception,
+)
 from .base import BaseHandler
 
 
@@ -208,18 +214,24 @@ class SpawnHandler(BaseHandler):
         if spawner_options_form:
             self.log.debug("Serving options form for %s", spawner._log_name)
 
-            # Explicitly catch 429 errors and report them to the client
-            if isinstance(spawn_exc, web.HTTPError) and spawn_exc.status_code == 429:
+            # Explicitly catch HTTPError and report them to the client
+            # This may need scoping to particular error codes.
+            if isinstance(spawn_exc, web.HTTPError):
                 self.set_status(spawn_exc.status_code)
 
                 for name, value in spawn_exc.headers.items():
                     self.set_header(name, value)
-            error_message = '' if spawn_exc is None else str(spawn_exc)
+
+            if spawn_exc:
+                error_message, error_html_message = format_exception(spawn_exc)
+            else:
+                error_message = error_html_message = None
 
             form = await self._render_form(
                 for_user=user,
                 spawner_options_form=spawner_options_form,
                 message=error_message,
+                html_message=error_html_message,
             )
             self.finish(form)
         else:
@@ -276,16 +288,22 @@ class SpawnHandler(BaseHandler):
                 "Failed to spawn single-user server with form", exc_info=True
             )
 
-            # Explicitly catch 429 errors and report them to the client
-            if isinstance(e, web.HTTPError) and e.status_code == 429:
+            # Explicitly catch HTTPError and report them to the client
+            # This may need scoping to particular error codes.
+            if isinstance(e, web.HTTPError):
                 self.set_status(e.status_code)
 
                 for name, value in e.headers.items():
                     self.set_header(name, value)
 
+            error_message, error_html_message = format_exception(e)
+
             spawner_options_form = await user.spawner.get_options_form()
             form = await self._render_form(
-                for_user=user, spawner_options_form=spawner_options_form, message=str(e)
+                for_user=user,
+                spawner_options_form=spawner_options_form,
+                message=error_message,
+                html_message=error_html_message,
             )
             self.finish(form)
             return
@@ -397,6 +415,8 @@ class SpawnPendingHandler(BaseHandler):
             if isinstance(exc, web.HTTPError):
                 status_code = exc.status_code
             self.set_status(status_code)
+
+            message, html_message = format_exception(exc, only_jupyterhub=True)
             html = await self.render_template(
                 "not_running.html",
                 user=user,
@@ -404,8 +424,8 @@ class SpawnPendingHandler(BaseHandler):
                 server_name=server_name,
                 spawn_url=spawn_url,
                 failed=True,
-                failed_html_message=getattr(exc, 'jupyterhub_html_message', ''),
-                failed_message=getattr(exc, 'jupyterhub_message', ''),
+                failed_html_message=html_message,
+                failed_message=message,
                 exception=exc,
             )
             self.finish(html)
