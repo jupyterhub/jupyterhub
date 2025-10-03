@@ -992,5 +992,5 @@ def format_exception(exc, *, only_jupyterhub=False):
     """
     default_message = None if only_jupyterhub else str(exc)
     return getattr(exc, "jupyterhub_message", default_message), getattr(
-        exc, "jupyterhub_html_message"
+        exc, "jupyterhub_html_message", None
     )
