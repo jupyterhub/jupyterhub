@@ -29,11 +29,12 @@ async def yield_n(n, delay=0.01):
         yield i
 
 
-def schedule_future(io_loop, *, delay, result=None):
+def schedule_future(*, delay, result=None):
     """Construct a Future that will resolve after a delay"""
     f = asyncio.Future()
+
     if delay:
-        io_loop.call_later(delay, lambda: f.set_result(result))
+        asyncio.get_running_loop().call_later(delay, lambda: f.set_result(result))
     else:
         f.set_result(result)
     return f
@@ -48,8 +49,8 @@ def schedule_future(io_loop, *, delay, result=None):
         (0.5, 10, 0.2, [0, 1]),
     ],
 )
-async def test_iterate_until(io_loop, deadline, n, delay, expected):
-    f = schedule_future(io_loop, delay=deadline)
+async def test_iterate_until(deadline, n, delay, expected):
+    f = schedule_future(delay=deadline)
 
     yielded = []
     async with aclosing(iterate_until(f, yield_n(n, delay=delay))) as items:
@@ -58,8 +59,8 @@ async def test_iterate_until(io_loop, deadline, n, delay, expected):
     assert yielded == expected
 
 
-async def test_iterate_until_ready_after_deadline(io_loop):
-    f = schedule_future(io_loop, delay=0)
+async def test_iterate_until_ready_after_deadline():
+    f = schedule_future(delay=0)
 
     async def gen():
         for i in range(5):
