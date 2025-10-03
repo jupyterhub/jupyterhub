@@ -15,7 +15,7 @@ authors = [
 ]
 keywords = ["Interactive", "Interpreter", "Shell", "Web", "Jupyter"]
 license = { text = "BSD-3-Clause" }
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "Intended Audience :: Developers",
