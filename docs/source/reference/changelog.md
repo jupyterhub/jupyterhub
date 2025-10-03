@@ -22,7 +22,7 @@ Contributors to major version bumps in JupyterHub include:
 
 ## 5.4
 
-### 5.4.0 - DATE
+### 5.4.0 - 2025-10-06
 
 JupyterHub 5.4 is a small release with a few new features and several nice bugfixes.
 No special upgrade steps should be required.
