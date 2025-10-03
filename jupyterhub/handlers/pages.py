@@ -16,11 +16,11 @@ from .. import __version__, orm
 from ..metrics import SERVER_POLL_DURATION_SECONDS, ServerPollStatus
 from ..scopes import describe_raw_scopes, needs_scope
 from ..utils import (
+    format_exception,
     maybe_future,
     url_escape_path,
     url_path_join,
     utcnow,
-    format_exception,
 )
 from .base import BaseHandler
 
