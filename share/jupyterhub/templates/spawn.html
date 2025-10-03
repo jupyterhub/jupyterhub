@@ -14,7 +14,11 @@
         {% if for_user and user.name != for_user.name -%}
           <p>Spawning server for {{ for_user.name }}</p>
         {% endif -%}
-        {% if error_message -%}<p class="spawn-error-msg alert alert-danger">Error: {{ error_message }}</p>{% endif %}
+        {% if error_message %}
+          <p class="spawn-error-msg alert alert-danger">Error: {{ error_message }}</p>
+        {% elif error_html_message %}
+          <p class="spawn-error-msg alert alert-danger">{{ error_html_message | safe }}</p>
+        {% endif %}
         <form enctype="multipart/form-data"
               id="spawn_form"
               action="{{ url | safe }}"
