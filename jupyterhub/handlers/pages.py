@@ -98,7 +98,9 @@ class SpawnHandler(BaseHandler):
 
     default_url = None
 
-    async def _render_form(self, for_user, spawner_options_form, message=''):
+    async def _render_form(
+        self, for_user, spawner_options_form, message='', html_message=''
+    ):
         auth_state = await for_user.get_auth_state()
         return await self.render_template(
             'spawn.html',
@@ -106,6 +108,7 @@ class SpawnHandler(BaseHandler):
             auth_state=auth_state,
             spawner_options_form=spawner_options_form,
             error_message=message,
+            html_error_message=html_message,
             url=url_concat(
                 self.request.uri, {"_xsrf": self.xsrf_token.decode('ascii')}
             ),
