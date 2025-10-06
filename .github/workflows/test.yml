@@ -173,7 +173,7 @@ jobs:
             # make sure our `>=` pins really do express our minimum supported versions
             pip install -r ci/oldest-dependencies/requirements.old -e .
           else
-            pip install --pre -e ".[test]" pycurl
+            pip install --pre -e ".[test]" "pycurl; python_version >= '3.10'"
           fi
 
           if [ "${{ matrix.main_dependencies }}" != "" ]; then
