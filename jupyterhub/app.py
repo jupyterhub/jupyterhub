@@ -1984,14 +1984,15 @@ class JupyterHub(Application):
 
             # Configure the AsyncHTTPClient. This will affect anything using
             # AsyncHTTPClient.
-            ssl_context = make_ssl_context(
-                self.internal_ssl_key,
-                self.internal_ssl_cert,
-                cafile=self.internal_ssl_ca,
-            )
+            # can't use ssl_options in case of pycurl
             AsyncHTTPClient.configure(
                 AsyncHTTPClient.configured_class(),
-                defaults={"ssl_options": ssl_context},
+                defaults=dict(
+                    ca_certs=self.internal_ssl_ca,
+                    client_key=self.internal_ssl_key,
+                    client_cert=self.internal_ssl_cert,
+                    validate_cert=True,
+                ),
             )
 
     def init_db(self):
