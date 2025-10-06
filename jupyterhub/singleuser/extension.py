@@ -328,9 +328,9 @@ class JupyterHubSingleUser(ExtensionApp):
         AsyncHTTPClient.configure(
             AsyncHTTPClient.configured_class(),
             defaults=dict(
-                ca_certs=self.client_ca,
-                client_key=self.keyfile,
-                client_cert=self.certfile,
+                ca_certs=self.hub_auth.client_ca,
+                client_key=self.hub_auth.keyfile,
+                client_cert=self.hub_auth.certfile,
                 validate_cert=True,
             ),
         )
