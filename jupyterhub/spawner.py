@@ -1425,8 +1425,8 @@ class Spawner(LoggingConfigurable):
 
     trusted_alt_names = List(Unicode())
 
-    ssl_alt_names = List(
-        Unicode(),
+    ssl_alt_names = Union(
+        [List(Unicode()), Callable()],
         config=True,
         help="""List of SSL alt names
 
@@ -1479,7 +1479,13 @@ class Spawner(LoggingConfigurable):
 
         default_names = ["DNS:localhost", "IP:127.0.0.1"]
         alt_names = []
-        alt_names.extend(self.ssl_alt_names)
+
+        ssl_alt_names = self.ssl_alt_names
+        if callable(ssl_alt_names):
+            ssl_alt_names = ssl_alt_names(self)
+            if isawaitable(ssl_alt_names):
+                ssl_alt_names = await ssl_alt_names
+        alt_names.extend(ssl_alt_names)
 
         if self.ssl_alt_names_include_local:
             alt_names = default_names + alt_names
