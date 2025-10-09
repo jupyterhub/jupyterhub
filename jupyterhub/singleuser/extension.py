@@ -147,10 +147,20 @@ class JupyterHubIdentityProvider(IdentityProvider):
             # add state argument to OAuth url
             # must do this _after_ allowing get_login_url to raise
             # so we don't set unused cookies
-            state = self.hub_auth.set_state_cookie(
-                handler, next_url=handler.request.uri
+            code_verifier, code_challenge, code_challenge_method = (
+                self.hub_auth.generate_pkce_code_challenge()
             )
-            _hub_login_url = url_concat(login_url, {'state': state})
+            state = self.hub_auth.set_state_cookie(
+                self, next_url=self.request.uri, code_verifier=code_verifier
+            )
+            _hub_login_url = url_concat(
+                login_url,
+                {
+                    'state': state,
+                    'code_challenge': code_challenge,
+                    'code_challenge_method': code_challenge_method,
+                },
+            )
             return _hub_login_url
 
         handler.get_login_url = get_login_url
