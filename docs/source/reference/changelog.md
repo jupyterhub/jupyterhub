@@ -22,6 +22,38 @@ Contributors to major version bumps in JupyterHub include:
 
 ## 5.4
 
+### 5.4.1
+
+5.4.1 fixes some small regressions in 5.4.0.
+
+Notably:
+
+- with new stricter internal_ssl checking, [](Spawner.ssl_alt_names) may now be callable, giving an easier path to setting the alt names of SSL destinations.
+- fixes the visibility of headings meant only for assistive technologies.
+
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/5.4.0...5.4.1))
+
+#### New features added
+
+- allow ssl_alt_names to be callable [#5171](https://github.com/jupyterhub/jupyterhub/pull/5171) ([@kreuzert](https://github.com/kreuzert), [@minrk](https://github.com/minrk))
+
+#### Enhancements made
+
+- demote failing API request log level to debug [#5167](https://github.com/jupyterhub/jupyterhub/pull/5167) ([@kreuzert](https://github.com/kreuzert), [@minrk](https://github.com/minrk))
+
+#### Bugs fixed
+
+- fix sr-only -> visually hidden [#5169](https://github.com/jupyterhub/jupyterhub/pull/5169) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics))
+
+#### Contributors to this release
+
+The following people contributed discussions, new ideas, code and documentation contributions, and review.
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/#how-does-this-tool-define-contributions-in-the-reports).
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2025-10-06&to=2025-10-10&type=c))
+
+@choldgraf ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Acholdgraf+updated%3A2025-10-06..2025-10-10&type=Issues)) | @krassowski ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Akrassowski+updated%3A2025-10-06..2025-10-10&type=Issues)) | @kreuzert ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Akreuzert+updated%3A2025-10-06..2025-10-10&type=Issues)) | @manics ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amanics+updated%3A2025-10-06..2025-10-10&type=Issues)) | @minrk ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk+updated%3A2025-10-06..2025-10-10&type=Issues))
+
 ### 5.4.0 - 2025-10-06
 
 JupyterHub 5.4 is a small release with a few new features and several nice bugfixes.
