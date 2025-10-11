@@ -286,9 +286,8 @@ const ServerDashboard = (props) => {
     }
     return (
       <a
-        href={`${base_url}spawn/${user.name}${
-          server.name ? "/" + server.name : ""
-        }`}
+        href={`${base_url}spawn/${user.name}${server.name ? "/" + server.name : ""
+          }`}
       >
         <Button variant="light" size="xs">
           Spawn Page
@@ -433,6 +432,12 @@ const ServerDashboard = (props) => {
           <td data-testid="user-row-last-activity">
             {server.last_activity ? timeSince(server.last_activity) : "Never"}
           </td>
+          <td data-testid="user-row-server-start-time">
+            {server.started ? timeSince(server.started) : "Never"}
+          </td>
+          <td data-testid="user-row-profile-used">
+            {server.user_options?.profile || "Default"}
+          </td>
           <td data-testid="user-row-server-activity" className="actions">
             <StartServerButton server={server} user={user} />
             <StopServerButton server={server} user={user} />
@@ -444,7 +449,7 @@ const ServerDashboard = (props) => {
         </tr>
         <tr key={`${userServerName}-detail`}>
           <td
-            colSpan={6}
+            colSpan={8}
             style={{ padding: 0 }}
             data-testid={`${userServerName}-td`}
           >
@@ -550,6 +555,16 @@ const ServerDashboard = (props) => {
                   testid="last-activity-sort"
                 />
               </th>
+              <th id="server-start-time-header">
+                Server Start Time{" "}
+                <SortHandler
+                  currentSort={sort}
+                  setSort={setSort}
+                  sortKey="started"
+                  testid="server-start-time-sort"
+                />
+              </th>
+              <th id="profile-used-header">Profile Used</th>
               <th id="actions-header">Actions</th>
             </tr>
           </thead>
@@ -562,7 +577,7 @@ const ServerDashboard = (props) => {
                   </Button>
                 </Link>
               </td>
-              <td colSpan={4} className="admin-header-buttons">
+              <td colSpan={6} className="admin-header-buttons">
                 {/* Start all servers */}
                 <Button
                   variant="primary"
@@ -575,10 +590,8 @@ const ServerDashboard = (props) => {
                         let failedServers = res.filter((e) => !e.ok);
                         if (failedServers.length > 0) {
                           setErrorAlert(
-                            `Failed to start ${failedServers.length} ${
-                              failedServers.length > 1 ? "servers" : "server"
-                            }. ${
-                              failedServers.length > 1 ? "Are they " : "Is it "
+                            `Failed to start ${failedServers.length} ${failedServers.length > 1 ? "servers" : "server"
+                            }. ${failedServers.length > 1 ? "Are they " : "Is it "
                             } already running?`,
                           );
                         }
@@ -607,10 +620,8 @@ const ServerDashboard = (props) => {
                         let failedServers = res.flat().filter((e) => !e.ok);
                         if (failedServers.length > 0) {
                           setErrorAlert(
-                            `Failed to stop ${failedServers.length} ${
-                              failedServers.length > 1 ? "servers" : "server"
-                            }. ${
-                              failedServers.length > 1 ? "Are they " : "Is it "
+                            `Failed to stop ${failedServers.length} ${failedServers.length > 1 ? "servers" : "server"
+                            }. ${failedServers.length > 1 ? "Are they " : "Is it "
                             } already stopped?`,
                           );
                         }
