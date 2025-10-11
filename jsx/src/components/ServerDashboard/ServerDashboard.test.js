@@ -711,9 +711,9 @@ test("Displays server start time data correctly", async () => {
   // Check that server start time cells are rendered
   let startTimeCells = screen.getAllByTestId(/user-row-server-start-time/);
   expect(startTimeCells.length).toBeGreaterThan(0);
-  
+
   // All test servers have start times, so none should show "Never"
-  startTimeCells.forEach(cell => {
+  startTimeCells.forEach((cell) => {
     expect(cell.textContent).not.toBe("Never");
     expect(cell.textContent).toBeTruthy();
   });
@@ -741,8 +741,8 @@ test("Shows 'Default' when no profile is specified", async () => {
         url: "/user/testuser/",
         user_options: {}, // No profile specified
         progress_url: "/hub/api/users/testuser/progress",
-      }
-    }
+      },
+    },
   };
 
   useSelector.mockImplementation((callback) => {
@@ -787,8 +787,8 @@ test("Shows 'Never' for server start time when server never started", async () =
         url: "/user/testuser/",
         user_options: { profile: "test" },
         progress_url: "/hub/api/users/testuser/progress",
-      }
-    }
+      },
+    },
   };
 
   useSelector.mockImplementation((callback) => {
@@ -814,22 +814,19 @@ test("Shows 'Never' for server start time when server never started", async () =
 test("Sorts by server start time when clicking the sort button", async () => {
   let mockUpdateUsersSpy = jest.fn().mockResolvedValue({
     items: [],
-    _pagination: { offset: 0, limit: 2, total: 0 }
+    _pagination: { offset: 0, limit: 2, total: 0 },
   });
 
   // Mock useSearchParams to track URL parameter changes
   const mockSetSearchParams = jest.fn();
-  useSearchParams.mockReturnValue([
-    new URLSearchParams(),
-    mockSetSearchParams
-  ]);
+  useSearchParams.mockReturnValue([new URLSearchParams(), mockSetSearchParams]);
 
   await act(async () => {
     render(serverDashboardJsx({ updateUsers: mockUpdateUsersSpy }));
   });
 
   let sortButton = screen.getByTestId("server-start-time-sort");
-  
+
   await act(async () => {
     fireEvent.click(sortButton);
   });
@@ -846,9 +843,9 @@ test("Displays profile information correctly", async () => {
   // Check that profile cells are rendered
   let profileCells = screen.getAllByTestId(/user-row-profile-used/);
   expect(profileCells.length).toBeGreaterThan(0);
-  
+
   // Should find our test profiles in the rendered cells
-  let profileTexts = profileCells.map(cell => cell.textContent);
+  let profileTexts = profileCells.map((cell) => cell.textContent);
   expect(profileTexts).toContain("datascience");
   expect(profileTexts).toContain("minimal");
   expect(profileTexts).toContain("gpu-enabled");
