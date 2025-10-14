@@ -82,12 +82,12 @@ jobs:
             subset: singleuser
           - python: "3.9"
             db: mysql
-          - python: "3.10"
-            db: postgres
           - python: "3.12"
+            db: postgres
+          - python: "3.13"
             subdomain: subdomain
             serverextension: serverextension
-          - python: "3.11"
+          - python: "3.13"
             ssl: ssl
             serverextension: serverextension
           - python: "3.11"
@@ -101,12 +101,14 @@ jobs:
             ssl: ssl
             noextension: noextension
             subset: singleuser
-          - python: "3.11"
+          - python: "3.13"
             browser: browser
           - python: "3.11"
             subdomain: subdomain
             browser: browser
-          - python: "3.12"
+          - python: "3.14"
+            main_dependencies: main_dependencies
+          - python: "3.14t"
             main_dependencies: main_dependencies
 
     steps:
