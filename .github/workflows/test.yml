@@ -82,9 +82,9 @@ jobs:
             subset: singleuser
           - python: "3.9"
             db: mysql
-          - python: "3.14"
-            db: postgres
           - python: "3.12"
+            db: postgres
+          - python: "3.13"
             subdomain: subdomain
             serverextension: serverextension
           - python: "3.13"
