@@ -22,7 +22,7 @@ Contributors to major version bumps in JupyterHub include:
 
 ## 5.4
 
-### 5.4.1
+### 5.4.1 - 2025-10-17
 
 5.4.1 fixes some small regressions in 5.4.0.
 
@@ -45,14 +45,18 @@ Notably:
 
 - fix sr-only -> visually hidden [#5169](https://github.com/jupyterhub/jupyterhub/pull/5169) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics))
 
+#### Maintenance and upkeep improvements
+
+- test with 3.14 (and 3.14t) [#5176](https://github.com/jupyterhub/jupyterhub/pull/5176) ([@minrk](https://github.com/minrk))
+
 #### Contributors to this release
 
 The following people contributed discussions, new ideas, code and documentation contributions, and review.
 See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/#how-does-this-tool-define-contributions-in-the-reports).
 
-([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2025-10-06&to=2025-10-10&type=c))
+([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2025-10-06&to=2025-10-17&type=c))
 
-@choldgraf ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Acholdgraf+updated%3A2025-10-06..2025-10-10&type=Issues)) | @krassowski ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Akrassowski+updated%3A2025-10-06..2025-10-10&type=Issues)) | @kreuzert ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Akreuzert+updated%3A2025-10-06..2025-10-10&type=Issues)) | @manics ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amanics+updated%3A2025-10-06..2025-10-10&type=Issues)) | @minrk ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk+updated%3A2025-10-06..2025-10-10&type=Issues))
+@choldgraf ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Acholdgraf+updated%3A2025-10-06..2025-10-17&type=Issues)) | @krassowski ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Akrassowski+updated%3A2025-10-06..2025-10-17&type=Issues)) | @kreuzert ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Akreuzert+updated%3A2025-10-06..2025-10-17&type=Issues)) | @manics ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amanics+updated%3A2025-10-06..2025-10-17&type=Issues)) | @minrk ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk+updated%3A2025-10-06..2025-10-17&type=Issues))
 
 ### 5.4.0 - 2025-10-06
 
