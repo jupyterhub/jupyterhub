@@ -20,6 +20,110 @@ Contributors to major version bumps in JupyterHub include:
 
 ## [Unreleased]
 
+## 5.4
+
+### 5.4.1 - 2025-10-17
+
+5.4.1 fixes some small regressions in 5.4.0.
+
+Notably:
+
+- with new stricter internal_ssl checking, [](Spawner.ssl_alt_names) may now be callable, giving an easier path to setting the alt names of SSL destinations.
+- fixes the visibility of headings meant only for assistive technologies.
+
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/5.4.0...5.4.1))
+
+#### New features added
+
+- allow ssl_alt_names to be callable [#5171](https://github.com/jupyterhub/jupyterhub/pull/5171) ([@kreuzert](https://github.com/kreuzert), [@minrk](https://github.com/minrk))
+
+#### Enhancements made
+
+- demote failing API request log level to debug [#5167](https://github.com/jupyterhub/jupyterhub/pull/5167) ([@kreuzert](https://github.com/kreuzert), [@minrk](https://github.com/minrk))
+
+#### Bugs fixed
+
+- fix sr-only -> visually hidden [#5169](https://github.com/jupyterhub/jupyterhub/pull/5169) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics))
+
+#### Maintenance and upkeep improvements
+
+- test with 3.14 (and 3.14t) [#5176](https://github.com/jupyterhub/jupyterhub/pull/5176) ([@minrk](https://github.com/minrk))
+
+#### Contributors to this release
+
+The following people contributed discussions, new ideas, code and documentation contributions, and review.
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/#how-does-this-tool-define-contributions-in-the-reports).
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2025-10-06&to=2025-10-17&type=c))
+
+@choldgraf ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Acholdgraf+updated%3A2025-10-06..2025-10-17&type=Issues)) | @krassowski ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Akrassowski+updated%3A2025-10-06..2025-10-17&type=Issues)) | @kreuzert ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Akreuzert+updated%3A2025-10-06..2025-10-17&type=Issues)) | @manics ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amanics+updated%3A2025-10-06..2025-10-17&type=Issues)) | @minrk ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk+updated%3A2025-10-06..2025-10-17&type=Issues))
+
+### 5.4.0 - 2025-10-06
+
+JupyterHub 5.4 is a small release with a few new features and several nice bugfixes.
+No special upgrade steps should be required.
+
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/5.3.0...5.4.0))
+
+#### New features added
+
+- Add Authenticator.refresh_pre_stop option [#5067](https://github.com/jupyterhub/jupyterhub/pull/5067) ([@kreuzert](https://github.com/kreuzert), [@manics](https://github.com/manics), [@minrk](https://github.com/minrk))
+
+#### Enhancements made
+
+- Add confirmation dialog for named server deletion [#5093](https://github.com/jupyterhub/jupyterhub/pull/5093) ([@kateryna-tarelkina-dd](https://github.com/kateryna-tarelkina-dd), [@minrk](https://github.com/minrk))
+
+#### Bugs fixed
+
+- make sure internal ssl works with pycurl [#5164](https://github.com/jupyterhub/jupyterhub/pull/5164) ([@minrk](https://github.com/minrk), [@kreuzert](https://github.com/kreuzert))
+- don't revert asynchttp class when setting up internal ssl [#5159](https://github.com/jupyterhub/jupyterhub/pull/5159) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio), [@kreuzert](https://github.com/kreuzert))
+- set HTTP status when spawn via GET params fails [#5146](https://github.com/jupyterhub/jupyterhub/pull/5146) ([@agoose77](https://github.com/agoose77), [@manics](https://github.com/manics), [@minrk](https://github.com/minrk))
+- fix: use `contains_eager` instead of O(N²) `joinedload` in `init_spawners` [#5109](https://github.com/jupyterhub/jupyterhub/pull/5109) ([@agoose77](https://github.com/agoose77), [@minrk](https://github.com/minrk), [@yuvipanda](https://github.com/yuvipanda))
+- Fix hub activity log to use spawner.last_activity [#5102](https://github.com/jupyterhub/jupyterhub/pull/5102) ([@joeyutong](https://github.com/joeyutong), [@minrk](https://github.com/minrk))
+- send event if spawn_future was cancelled and spawner not pending [#5091](https://github.com/jupyterhub/jupyterhub/pull/5091) ([@kreuzert](https://github.com/kreuzert), [@manics](https://github.com/manics))
+- Fix internal ssl: do not disable hostname verification by default [#5076](https://github.com/jupyterhub/jupyterhub/pull/5076) ([@grios-stratio](https://github.com/grios-stratio), [@consideRatio](https://github.com/consideRatio), [@minrk](https://github.com/minrk))
+
+#### Maintenance and upkeep improvements
+
+- linkcheck: npmjs 403s from CI [#5162](https://github.com/jupyterhub/jupyterhub/pull/5162) ([@minrk](https://github.com/minrk))
+- unpin pytest-asyncio [#5161](https://github.com/jupyterhub/jupyterhub/pull/5161) ([@minrk](https://github.com/minrk))
+- Upgrade to font-awesome 7 [#5130](https://github.com/jupyterhub/jupyterhub/pull/5130) ([@yuvipanda](https://github.com/yuvipanda), [@minrk](https://github.com/minrk))
+- use browser.wait_for_url instead of expect(browser).to_have_url [#5120](https://github.com/jupyterhub/jupyterhub/pull/5120) ([@minrk](https://github.com/minrk))
+- jsx: add dependabot group for jest, update everything [#5119](https://github.com/jupyterhub/jupyterhub/pull/5119) ([@minrk](https://github.com/minrk))
+- Avoid double `//` in `test_proxy_service` [#5105](https://github.com/jupyterhub/jupyterhub/pull/5105) ([@manics](https://github.com/manics), [@minrk](https://github.com/minrk))
+- pytest-asyncio <1.0.0 [#5094](https://github.com/jupyterhub/jupyterhub/pull/5094) ([@manics](https://github.com/manics), [@minrk](https://github.com/minrk))
+- Switch to rbubley/mirrors-prettier, downgrade prettier to last proper release v3.6.2 [#5092](https://github.com/jupyterhub/jupyterhub/pull/5092) ([@manics](https://github.com/manics), [@minrk](https://github.com/minrk))
+
+#### Documentation improvements
+
+- update quickstart, authenticator doc with 5.0 allow changes [#5140](https://github.com/jupyterhub/jupyterhub/pull/5140) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics))
+- update the status of access sharing UI [#5137](https://github.com/jupyterhub/jupyterhub/pull/5137) ([@akhmerov](https://github.com/akhmerov), [@krassowski](https://github.com/krassowski), [@minrk](https://github.com/minrk))
+- Add note about Windows Subsystem for Linux [#5129](https://github.com/jupyterhub/jupyterhub/pull/5129) ([@rgaiacs](https://github.com/rgaiacs), [@manics](https://github.com/manics), [@minrk](https://github.com/minrk))
+- Review contributing section from documentation [#5128](https://github.com/jupyterhub/jupyterhub/pull/5128) ([@rgaiacs](https://github.com/rgaiacs), [@yuvipanda](https://github.com/yuvipanda))
+- Remove warnings about sqlite in production [#5124](https://github.com/jupyterhub/jupyterhub/pull/5124) ([@manics](https://github.com/manics), [@consideRatio](https://github.com/consideRatio))
+- allow 6 items in header drop-down [#5123](https://github.com/jupyterhub/jupyterhub/pull/5123) ([@minrk](https://github.com/minrk), [@rgaiacs](https://github.com/rgaiacs))
+- update doc links with permanent redirects [#5118](https://github.com/jupyterhub/jupyterhub/pull/5118) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics), [@rgaiacs](https://github.com/rgaiacs))
+- Collection of small improvements to contributor documentation [#5116](https://github.com/jupyterhub/jupyterhub/pull/5116) ([@rgaiacs](https://github.com/rgaiacs), [@choldgraf](https://github.com/choldgraf), [@consideRatio](https://github.com/consideRatio))
+- Docs: fix broken linkcheck [#5097](https://github.com/jupyterhub/jupyterhub/pull/5097) ([@manics](https://github.com/manics), [@consideRatio](https://github.com/consideRatio))
+- Replace Gitter with Zulip in Documentation [#5096](https://github.com/jupyterhub/jupyterhub/pull/5096) ([@rgaiacs](https://github.com/rgaiacs), [@manics](https://github.com/manics))
+- update security.md, security doc to point to GitHub vulnerability reporting [#5072](https://github.com/jupyterhub/jupyterhub/pull/5072) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio), [@mathbunnyru](https://github.com/mathbunnyru))
+- Update docs to point to `/hub/user-redirect/` instead of `/user-redirect/` [#5071](https://github.com/jupyterhub/jupyterhub/pull/5071) ([@agoose77](https://github.com/agoose77), [@consideRatio](https://github.com/consideRatio))
+- Add missing literal to code tags [#5070](https://github.com/jupyterhub/jupyterhub/pull/5070) ([@Paul2708](https://github.com/Paul2708), [@consideRatio](https://github.com/consideRatio))
+- Fix link in changelog [#5069](https://github.com/jupyterhub/jupyterhub/pull/5069) ([@krassowski](https://github.com/krassowski), [@minrk](https://github.com/minrk))
+- Update team compass URL [#5068](https://github.com/jupyterhub/jupyterhub/pull/5068) ([@choldgraf](https://github.com/choldgraf), [@minrk](https://github.com/minrk))
+- Fix incorrect login username in service-fastapi README.md [#5064](https://github.com/jupyterhub/jupyterhub/pull/5064) ([@chilin0525](https://github.com/chilin0525), [@manics](https://github.com/manics))
+- add forced login example [#5056](https://github.com/jupyterhub/jupyterhub/pull/5056) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics))
+- doc: spawner.delete_forever applies to users and named servers [#5052](https://github.com/jupyterhub/jupyterhub/pull/5052) ([@manics](https://github.com/manics), [@minrk](https://github.com/minrk))
+
+#### Contributors to this release
+
+The following people contributed discussions, new ideas, code and documentation contributions, and review.
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/#how-does-this-tool-define-contributions-in-the-reports).
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2025-04-15&to=2025-10-06&type=c))
+
+@abuettner93 ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aabuettner93+updated%3A2025-04-15..2025-10-06&type=Issues)) | @agoose77 ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aagoose77+updated%3A2025-04-15..2025-10-06&type=Issues)) | @akhmerov ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aakhmerov+updated%3A2025-04-15..2025-10-06&type=Issues)) | @chilin0525 ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Achilin0525+updated%3A2025-04-15..2025-10-06&type=Issues)) | @choldgraf ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Acholdgraf+updated%3A2025-04-15..2025-10-06&type=Issues)) | @clhedrick ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aclhedrick+updated%3A2025-04-15..2025-10-06&type=Issues)) | @consideRatio ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3AconsideRatio+updated%3A2025-04-15..2025-10-06&type=Issues)) | @grios-stratio ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Agrios-stratio+updated%3A2025-04-15..2025-10-06&type=Issues)) | @joeyutong ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ajoeyutong+updated%3A2025-04-15..2025-10-06&type=Issues)) | @kateryna-tarelkina-dd ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Akateryna-tarelkina-dd+updated%3A2025-04-15..2025-10-06&type=Issues)) | @krassowski ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Akrassowski+updated%3A2025-04-15..2025-10-06&type=Issues)) | @kreuzert ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Akreuzert+updated%3A2025-04-15..2025-10-06&type=Issues)) | @manics ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amanics+updated%3A2025-04-15..2025-10-06&type=Issues)) | @mathbunnyru ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amathbunnyru+updated%3A2025-04-15..2025-10-06&type=Issues)) | @minrk ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk+updated%3A2025-04-15..2025-10-06&type=Issues)) | @Paul2708 ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3APaul2708+updated%3A2025-04-15..2025-10-06&type=Issues)) | @rgaiacs ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Argaiacs+updated%3A2025-04-15..2025-10-06&type=Issues)) | @ryanlovett ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aryanlovett+updated%3A2025-04-15..2025-10-06&type=Issues)) | @tbizouerne ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Atbizouerne+updated%3A2025-04-15..2025-10-06&type=Issues)) | @yuvipanda ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ayuvipanda+updated%3A2025-04-15..2025-10-06&type=Issues))
+
 ## 5.3
 
 ### 5.3.0 - 2025-04-15

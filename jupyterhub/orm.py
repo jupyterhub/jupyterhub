@@ -547,7 +547,7 @@ class Expiring:
     which should be unix timestamp or datetime object
     """
 
-    now = utcnow  # function, must return float timestamp or datetime
+    now = staticmethod(utcnow)  # function, must return float timestamp or datetime
     expires_at = None  # must be defined
 
     @property
@@ -1078,7 +1078,7 @@ class APIToken(Hashed, Base):
     session_id = Column(Unicode(255), nullable=True)
 
     # token metadata for bookkeeping
-    now = utcnow  # for expiry
+    now = staticmethod(utcnow)  # for expiry
     created = Column(DateTime, default=utcnow)
     expires_at = Column(DateTime, default=None, nullable=True)
     last_activity = Column(DateTime)

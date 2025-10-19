@@ -27,7 +27,7 @@
   cursor: pointer;
 }
 
-tr.noborder>td {
+tr.noborder > td {
   border: none !important;
 }
 
@@ -39,7 +39,7 @@ tr.noborder>td {
   border-radius: 2px;
 }
 
-.table>tbody>tr.user-row>td {
+.table > tbody > tr.user-row > td {
   vertical-align: inherit;
 }
 

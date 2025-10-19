@@ -1650,7 +1650,7 @@ class UserUrlHandler(BaseHandler):
 
     def _fail_api_request(self, user_name='', server_name=''):
         """Fail an API request to a not-running server"""
-        self.log.warning(
+        self.log.debug(
             "Failing suspected API request to not-running server: %s", self.request.path
         )
 

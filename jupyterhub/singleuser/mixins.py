@@ -49,7 +49,6 @@ from ..utils import (
     _bool_env,
     exponential_backoff,
     isoformat,
-    make_ssl_context,
     url_path_join,
 )
 from ._decorator import allow_unauthenticated
@@ -403,10 +402,16 @@ class SingleUserNotebookAppMixin(Configurable):
 
     @default('hub_http_client')
     def _default_client(self):
-        ssl_context = make_ssl_context(
-            self.keyfile, self.certfile, cafile=self.client_ca
+        # can't use ssl_options in case of pycurl
+        AsyncHTTPClient.configure(
+            AsyncHTTPClient.configured_class(),
+            defaults=dict(
+                ca_certs=self.client_ca,
+                client_key=self.keyfile,
+                client_cert=self.certfile,
+                validate_cert=True,
+            ),
         )
-        AsyncHTTPClient.configure(None, defaults={"ssl_options": ssl_context})
         return AsyncHTTPClient()
 
     async def check_hub_version(self):
