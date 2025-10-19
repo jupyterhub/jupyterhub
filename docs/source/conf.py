@@ -228,6 +228,7 @@ def setup(app):
     app.add_directive("jupyterhub-generate-config", ConfigDirective)
     app.add_directive("jupyterhub-help-all", HelpAllDirective)
     app.add_directive("jupyterhub-rest-api-links", RestAPILinksDirective)
+    app.add_css_file("https://docs.jupyter.org/en/latest/_static/jupyter.css")
 
 
 # -- Read The Docs -----------------------------------------------------------
@@ -262,6 +263,7 @@ html_static_path = ["_static"]
 
 html_theme = "jupyterhub_sphinx_theme"
 html_theme_options = {
+    # "announcement": "🚀 Join us in San Diego · JupyterCon 2025 · Nov 4-5 · <a href=\"https://events.linuxfoundation.org/jupytercon/program/schedule/\">SCHEDULE</a> · <a href=\"https://events.linuxfoundation.org/jupytercon/register/\">REGISTER NOW</a>",
     "header_links_before_dropdown": 6,
     "icon_links": [
         {
@@ -298,6 +300,7 @@ linkcheck_ignore = [
     r"https://github.com/jupyterhub/jupyterhub/security/advisories/.*",
     # Occasionally blocks CI checks with 403
     r"https://www\.mysql\.com",
+    r"https://www\.npmjs\.com",
     # Occasionally blocks CI checks with SSL error
     r"https://mediaspace\.msu\.edu/.*",
 ]

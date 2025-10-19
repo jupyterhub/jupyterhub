@@ -1425,13 +1425,19 @@ class Spawner(LoggingConfigurable):
 
     trusted_alt_names = List(Unicode())
 
-    ssl_alt_names = List(
-        Unicode(),
+    ssl_alt_names = Union(
+        [List(Unicode()), Callable()],
         config=True,
-        help="""List of SSL alt names
+        help="""List of SSL alt names (list of strings).
 
         May be set in config if all spawners should have the same value(s),
         or set at runtime by Spawner that know their names.
+
+        .. versionchanged:: 5.4.1
+            May now be a callable.
+            The callable will receive the Spawner as its only argument,
+            and must return a list of strings.
+            It may be async.
         """,
     )
 
@@ -1479,7 +1485,13 @@ class Spawner(LoggingConfigurable):
 
         default_names = ["DNS:localhost", "IP:127.0.0.1"]
         alt_names = []
-        alt_names.extend(self.ssl_alt_names)
+
+        ssl_alt_names = self.ssl_alt_names
+        if callable(ssl_alt_names):
+            ssl_alt_names = ssl_alt_names(self)
+            if isawaitable(ssl_alt_names):
+                ssl_alt_names = await ssl_alt_names
+        alt_names.extend(ssl_alt_names)
 
         if self.ssl_alt_names_include_local:
             alt_names = default_names + alt_names

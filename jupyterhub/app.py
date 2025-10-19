@@ -1984,12 +1984,16 @@ class JupyterHub(Application):
 
             # Configure the AsyncHTTPClient. This will affect anything using
             # AsyncHTTPClient.
-            ssl_context = make_ssl_context(
-                self.internal_ssl_key,
-                self.internal_ssl_cert,
-                cafile=self.internal_ssl_ca,
+            # can't use ssl_options in case of pycurl
+            AsyncHTTPClient.configure(
+                AsyncHTTPClient.configured_class(),
+                defaults=dict(
+                    ca_certs=self.internal_ssl_ca,
+                    client_key=self.internal_ssl_key,
+                    client_cert=self.internal_ssl_cert,
+                    validate_cert=True,
+                ),
             )
-            AsyncHTTPClient.configure(None, defaults={"ssl_options": ssl_context})
 
     def init_db(self):
         """Create the database connection"""
@@ -3887,6 +3891,10 @@ class JupyterHub(Application):
             tasks = [t for t in asyncio.all_tasks()]
             for t in tasks:
                 self.log.debug("Task status: %s", t)
+        self._stop_event_loop()
+
+    def _stop_event_loop(self):
+        """In a method to allow tests to not do this"""
         asyncio.get_event_loop().stop()
 
     def stop(self):
