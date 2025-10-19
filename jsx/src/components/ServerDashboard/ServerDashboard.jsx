@@ -286,8 +286,9 @@ const ServerDashboard = (props) => {
     }
     return (
       <a
-        href={`${base_url}spawn/${user.name}${server.name ? "/" + server.name : ""
-          }`}
+        href={`${base_url}spawn/${user.name}${
+          server.name ? "/" + server.name : ""
+        }`}
       >
         <Button variant="light" size="xs">
           Spawn Page
@@ -606,9 +607,13 @@ const ServerDashboard = (props) => {
                             if (failedServers.length > 0) {
                               setErrorAlert(
                                 `Failed to start ${failedServers.length} ${
-                                  failedServers.length > 1 ? "servers" : "server"
+                                  failedServers.length > 1
+                                    ? "servers"
+                                    : "server"
                                 }. ${
-                                  failedServers.length > 1 ? "Are they " : "Is it "
+                                  failedServers.length > 1
+                                    ? "Are they "
+                                    : "Is it "
                                 } already running?`,
                               );
                             }
@@ -618,7 +623,9 @@ const ServerDashboard = (props) => {
                             loadPageData();
                             return res;
                           })
-                          .catch(() => setErrorAlert(`Failed to start servers.`));
+                          .catch(() =>
+                            setErrorAlert(`Failed to start servers.`),
+                          );
                       }}
                     >
                       Start All
@@ -637,9 +644,13 @@ const ServerDashboard = (props) => {
                             if (failedServers.length > 0) {
                               setErrorAlert(
                                 `Failed to stop ${failedServers.length} ${
-                                  failedServers.length > 1 ? "servers" : "server"
+                                  failedServers.length > 1
+                                    ? "servers"
+                                    : "server"
                                 }. ${
-                                  failedServers.length > 1 ? "Are they " : "Is it "
+                                  failedServers.length > 1
+                                    ? "Are they "
+                                    : "Is it "
                                 } already stopped?`,
                               );
                             }
@@ -649,7 +660,9 @@ const ServerDashboard = (props) => {
                             loadPageData();
                             return res;
                           })
-                          .catch(() => setErrorAlert(`Failed to stop servers.`));
+                          .catch(() =>
+                            setErrorAlert(`Failed to stop servers.`),
+                          );
                       }}
                     >
                       Stop All
