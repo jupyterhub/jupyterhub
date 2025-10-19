@@ -286,9 +286,8 @@ const ServerDashboard = (props) => {
     }
     return (
       <a
-        href={`${base_url}spawn/${user.name}${
-          server.name ? "/" + server.name : ""
-        }`}
+        href={`${base_url}spawn/${user.name}${server.name ? "/" + server.name : ""
+          }`}
       >
         <Button variant="light" size="xs">
           Spawn Page
@@ -494,39 +493,9 @@ const ServerDashboard = (props) => {
     <div className="container" data-testid="container">
       <ErrorAlert errorAlert={errorAlert} setErrorAlert={setErrorAlert} />
       <div className="server-dashboard-container">
-        {/* Admin Action Buttons */}
-        <Row className="mb-3 admin-actions-row">
-          <Col>
-            <div className="d-flex justify-content-between align-items-center">
-              <div>
-                <Link to="/add-users">
-                  <Button variant="light" className="add-users-button me-2">
-                    Add Users
-                  </Button>
-                </Link>
-                <Link to="/groups">
-                  <Button variant="light" className="me-2">
-                    Manage Groups
-                  </Button>
-                </Link>
-              </div>
-              <div className="admin-header-buttons">
-                {/* Shutdown Jupyterhub */}
-                <Button
-                  variant="danger"
-                  id="shutdown-button"
-                  onClick={shutdownHub}
-                >
-                  Shutdown Hub
-                </Button>
-              </div>
-            </div>
-          </Col>
-        </Row>
-
-        {/* Search and Filter Row */}
-        <Row className="mb-3 align-items-center">
-          <Col md={4}>
+        {/* Admin Action Buttons, Search and Filter Row */}
+        <Row className="mb-3 admin-actions-row align-items-center">
+          <Col md={3}>
             <FormControl
               type="text"
               name="user_search"
@@ -536,7 +505,7 @@ const ServerDashboard = (props) => {
               onChange={handleSearch}
             />
           </Col>
-          <Col md={4}>
+          <Col md={3}>
             <Form.Check
               inline
               title="check to only show running servers, otherwise show all"
@@ -554,6 +523,29 @@ const ServerDashboard = (props) => {
                 {"only active servers"}
               </Form.Check.Label>
             </Form.Check>
+          </Col>
+          <Col md={4}>
+            <div className="d-flex align-items-center">
+              <Link to="/add-users">
+                <Button variant="light" className="add-users-button me-2">
+                  Add Users
+                </Button>
+              </Link>
+              <Link to="/groups">
+                <Button variant="light" className="me-2">
+                  Manage Groups
+                </Button>
+              </Link>
+            </div>
+          </Col>
+          <Col md={2} className="text-end">
+            <Button
+              variant="danger"
+              id="shutdown-button"
+              onClick={shutdownHub}
+            >
+              Shutdown Hub
+            </Button>
           </Col>
         </Row>
 
@@ -606,14 +598,12 @@ const ServerDashboard = (props) => {
                             let failedServers = res.filter((e) => !e.ok);
                             if (failedServers.length > 0) {
                               setErrorAlert(
-                                `Failed to start ${failedServers.length} ${
-                                  failedServers.length > 1
-                                    ? "servers"
-                                    : "server"
-                                }. ${
-                                  failedServers.length > 1
-                                    ? "Are they "
-                                    : "Is it "
+                                `Failed to start ${failedServers.length} ${failedServers.length > 1
+                                  ? "servers"
+                                  : "server"
+                                }. ${failedServers.length > 1
+                                  ? "Are they "
+                                  : "Is it "
                                 } already running?`,
                               );
                             }
@@ -643,14 +633,12 @@ const ServerDashboard = (props) => {
                             let failedServers = res.flat().filter((e) => !e.ok);
                             if (failedServers.length > 0) {
                               setErrorAlert(
-                                `Failed to stop ${failedServers.length} ${
-                                  failedServers.length > 1
-                                    ? "servers"
-                                    : "server"
-                                }. ${
-                                  failedServers.length > 1
-                                    ? "Are they "
-                                    : "Is it "
+                                `Failed to stop ${failedServers.length} ${failedServers.length > 1
+                                  ? "servers"
+                                  : "server"
+                                }. ${failedServers.length > 1
+                                  ? "Are they "
+                                  : "Is it "
                                 } already stopped?`,
                               );
                             }
