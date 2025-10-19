@@ -52,6 +52,17 @@ tr.noborder > td {
   text-align: right;
 }
 
+.admin-actions-row {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 15px;
+  background-color: #f8f9fa;
+}
+
+.admin-actions-row .admin-header-buttons button {
+  margin-left: 8px;
+}
+
 /* column widths for dashboard
 
 goals:

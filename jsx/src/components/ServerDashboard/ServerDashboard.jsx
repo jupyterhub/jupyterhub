@@ -533,6 +533,93 @@ const ServerDashboard = (props) => {
             </Link>
           </Col>
         </Row>
+        
+        {/* Admin Action Buttons */}
+        <Row className="mb-3 admin-actions-row">
+          <Col>
+            <div className="d-flex justify-content-between align-items-center">
+              <div>
+                <Link to="/add-users">
+                  <Button variant="light" className="add-users-button me-2">
+                    Add Users
+                  </Button>
+                </Link>
+              </div>
+              <div className="admin-header-buttons">
+                {/* Start all servers */}
+                <Button
+                  variant="primary"
+                  className="start-all me-2"
+                  data-testid="start-all"
+                  title="Start all default servers on the current page"
+                  onClick={() => {
+                    Promise.all(startAll(user_data.map((e) => e.name)))
+                      .then((res) => {
+                        let failedServers = res.filter((e) => !e.ok);
+                        if (failedServers.length > 0) {
+                          setErrorAlert(
+                            `Failed to start ${failedServers.length} ${
+                              failedServers.length > 1 ? "servers" : "server"
+                            }. ${
+                              failedServers.length > 1 ? "Are they " : "Is it "
+                            } already running?`,
+                          );
+                        }
+                        return res;
+                      })
+                      .then((res) => {
+                        loadPageData();
+                        return res;
+                      })
+                      .catch(() => setErrorAlert(`Failed to start servers.`));
+                  }}
+                >
+                  Start All
+                </Button>
+                {/* Stop all servers */}
+                <Button
+                  variant="danger"
+                  className="stop-all me-3"
+                  data-testid="stop-all"
+                  title="Stop all servers including named servers on the current page"
+                  onClick={() => {
+                    Promise.all(stopAll(user_data.map((e) => e.name)))
+                      .then((res) => {
+                        // Array of arrays of servers for each user
+                        let failedServers = res.flat().filter((e) => !e.ok);
+                        if (failedServers.length > 0) {
+                          setErrorAlert(
+                            `Failed to stop ${failedServers.length} ${
+                              failedServers.length > 1 ? "servers" : "server"
+                            }. ${
+                              failedServers.length > 1 ? "Are they " : "Is it "
+                            } already stopped?`,
+                          );
+                        }
+                        return res;
+                      })
+                      .then((res) => {
+                        loadPageData();
+                        return res;
+                      })
+                      .catch(() => setErrorAlert(`Failed to stop servers.`));
+                  }}
+                >
+                  Stop All
+                </Button>
+                {/* Shutdown Jupyterhub */}
+                <Button
+                  variant="danger"
+                  id="shutdown-button"
+                  onClick={shutdownHub}
+                >
+                  Shutdown Hub
+                </Button>
+              </div>
+            </div>
+          </Col>
+        </Row>
+        
         <table className="table table-bordered table-hover">
           <thead className="admin-table-head">
             <tr>
@@ -570,89 +657,6 @@ const ServerDashboard = (props) => {
             </tr>
           </thead>
           <tbody>
-            <tr className="noborder">
-              <td>
-                <Link to="/add-users">
-                  <Button variant="light" className="add-users-button">
-                    Add Users
-                  </Button>
-                </Link>
-              </td>
-              <td colSpan={6} className="admin-header-buttons">
-                {/* Start all servers */}
-                <Button
-                  variant="primary"
-                  className="start-all"
-                  data-testid="start-all"
-                  title="Start all default servers on the current page"
-                  onClick={() => {
-                    Promise.all(startAll(user_data.map((e) => e.name)))
-                      .then((res) => {
-                        let failedServers = res.filter((e) => !e.ok);
-                        if (failedServers.length > 0) {
-                          setErrorAlert(
-                            `Failed to start ${failedServers.length} ${
-                              failedServers.length > 1 ? "servers" : "server"
-                            }. ${
-                              failedServers.length > 1 ? "Are they " : "Is it "
-                            } already running?`,
-                          );
-                        }
-                        return res;
-                      })
-                      .then((res) => {
-                        loadPageData();
-                        return res;
-                      })
-                      .catch(() => setErrorAlert(`Failed to start servers.`));
-                  }}
-                >
-                  Start All
-                </Button>
-                <span> </span>
-                {/* Stop all servers */}
-                <Button
-                  variant="danger"
-                  className="stop-all"
-                  data-testid="stop-all"
-                  title="Stop all servers including named servers on the current page"
-                  onClick={() => {
-                    Promise.all(stopAll(user_data.map((e) => e.name)))
-                      .then((res) => {
-                        // Array of arrays of servers for each user
-                        let failedServers = res.flat().filter((e) => !e.ok);
-                        if (failedServers.length > 0) {
-                          setErrorAlert(
-                            `Failed to stop ${failedServers.length} ${
-                              failedServers.length > 1 ? "servers" : "server"
-                            }. ${
-                              failedServers.length > 1 ? "Are they " : "Is it "
-                            } already stopped?`,
-                          );
-                        }
-                        return res;
-                      })
-                      .then((res) => {
-                        loadPageData();
-                        return res;
-                      })
-                      .catch(() => setErrorAlert(`Failed to stop servers.`));
-                  }}
-                >
-                  Stop All
-                </Button>
-                {/* spacing between start/stop and Shutdown */}
-                <span style={{ marginLeft: "30px" }}> </span>
-                {/* Shutdown Jupyterhub */}
-                <Button
-                  variant="danger"
-                  id="shutdown-button"
-                  onClick={shutdownHub}
-                >
-                  Shutdown Hub
-                </Button>
-              </td>
-            </tr>
             {serverRows}
           </tbody>
         </table>
