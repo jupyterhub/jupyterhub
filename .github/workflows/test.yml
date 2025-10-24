@@ -74,13 +74,13 @@ jobs:
         # Python versions available at:
         #   https://github.com/actions/python-versions/blob/HEAD/versions-manifest.json
         include:
-          - python: "3.8"
+          - python: "3.10"
             oldest_dependencies: oldest_dependencies
             legacy_notebook: legacy_notebook
-          - python: "3.8"
+          - python: "3.11"
             jupyter_server: "1.*"
             subset: singleuser
-          - python: "3.9"
+          - python: "3.12"
             db: mysql
           - python: "3.12"
             db: postgres
@@ -90,10 +90,10 @@ jobs:
           - python: "3.13"
             ssl: ssl
             serverextension: serverextension
-          - python: "3.11"
+          - python: "3.13"
             jupyverse: jupyverse
             subset: singleuser
-          - python: "3.11"
+          - python: "3.13"
             subdomain: subdomain
             noextension: noextension
             subset: singleuser
@@ -103,7 +103,7 @@ jobs:
             subset: singleuser
           - python: "3.13"
             browser: browser
-          - python: "3.11"
+          - python: "3.12"
             subdomain: subdomain
             browser: browser
           - python: "3.14"
