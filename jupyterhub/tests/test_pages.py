@@ -1327,9 +1327,10 @@ async def test_pre_spawn_start_exc_options_form(app):
     async def mock_pre_spawn_start(user, spawner):
         raise Exception(exc)
 
-    with mock.patch.dict(
-        app.users.settings, {'spawner_class': FormSpawner}
-    ), mock.patch.object(app.authenticator, 'pre_spawn_start', mock_pre_spawn_start):
+    with (
+        mock.patch.dict(app.users.settings, {'spawner_class': FormSpawner}),
+        mock.patch.object(app.authenticator, 'pre_spawn_start', mock_pre_spawn_start),
+    ):
         cookies = await app.login_user('spring')
         user = app.users['spring']
         # spawn page shouldn't throw any error until the spawn is started
@@ -1410,9 +1411,12 @@ async def test_spawn_fails_custom_message(app, user, kind, speed):
         speed_context = nullcontext()
         hook = hook_fail_fast
     # test the response when spawn fails before redirecting to progress
-    with mock.patch.dict(
-        app.config.Spawner, {"pre_spawn_hook": partial(hook, kind=kind)}
-    ), speed_context:
+    with (
+        mock.patch.dict(
+            app.config.Spawner, {"pre_spawn_hook": partial(hook, kind=kind)}
+        ),
+        speed_context,
+    ):
         cookies = await app.login_user(user.name)
         assert user.spawner.pre_spawn_hook
         r = await get_page("spawn", app, cookies=cookies)

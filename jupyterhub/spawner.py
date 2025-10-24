@@ -12,16 +12,12 @@ import shutil
 import signal
 import sys
 import warnings
+from contextlib import aclosing
 from inspect import isawaitable, signature
 from subprocess import Popen
 from tempfile import mkdtemp
 from textwrap import dedent
 from urllib.parse import urlparse
-
-if sys.version_info >= (3, 10):
-    from contextlib import aclosing
-else:
-    from async_generator import aclosing
 
 from sqlalchemy import inspect
 from tornado import web

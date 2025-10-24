@@ -145,9 +145,10 @@ async def test_external_services_without_api_token_set(app):
     """
     name_1 = 'external_1'
     name_2 = 'external_2'
-    async with external_service(app, name=name_1) as env_1, external_service(
-        app, name=name_2
-    ) as env_2:
+    async with (
+        external_service(app, name=name_1) as env_1,
+        external_service(app, name=name_2) as env_2,
+    ):
         app.services = [
             {
                 'name': name_1,
