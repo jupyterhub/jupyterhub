@@ -4,7 +4,6 @@
 # Distributed under the terms of the Modified BSD License.
 import json
 import re
-from typing import List, Optional
 from urllib.parse import urlunparse
 
 from pydantic import (
@@ -31,7 +30,7 @@ _share_code_id_pat = re.compile(r"sc_(\d+)")
 
 class BaseShareRequest(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    scopes: Optional[List[str]] = None
+    scopes: list[str] | None = None
 
     @field_validator("scopes")
     @classmethod
@@ -51,8 +50,8 @@ class ShareGrantRequest(BaseShareRequest):
     # if it's going to expire, it must expire in
     # at least one minute and at most 10 years (avoids nonsense values)
     # expires_in: conint(ge=60, le=10 * 525600 * 60) | None = None
-    user: Optional[str] = None
-    group: Optional[str] = None
+    user: str | None = None
+    group: str | None = None
 
     @model_validator(mode='after')
     def user_group_exclusive(self):

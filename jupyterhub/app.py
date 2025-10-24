@@ -23,7 +23,6 @@ from getpass import getuser
 from operator import itemgetter
 from pathlib import Path
 from textwrap import dedent
-from typing import Optional
 from urllib.parse import unquote, urlparse, urlunparse
 
 import tornado.httpserver
@@ -2774,7 +2773,7 @@ class JupyterHub(Application):
         self,
         spec: Dict,
         from_config=True,
-    ) -> Optional[Service]:
+    ) -> Service | None:
         """Create the service instance and related objects from
         config data.
 
@@ -3603,7 +3602,7 @@ class JupyterHub(Application):
         self,
         service_name: str,
         service: Service,
-        ssl_context: Optional[ssl.SSLContext] = None,
+        ssl_context: ssl.SSLContext | None = None,
     ) -> bool:
         """Start a managed service or poll for external service
 
@@ -3837,7 +3836,7 @@ class JupyterHub(Application):
         FIXME: If/when tornado supports the defaults in asyncio,
                remove and bump tornado requirement for py38.
         """
-        if sys.platform.startswith("win") and sys.version_info >= (3, 8):
+        if sys.platform.startswith("win"):
             try:
                 from asyncio import (
                     WindowsProactorEventLoopPolicy,

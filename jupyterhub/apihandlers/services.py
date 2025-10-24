@@ -6,7 +6,6 @@ Currently GET-only, no actions can be taken to modify services.
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import json
-from typing import Optional, Tuple
 
 from tornado import web
 
@@ -178,15 +177,13 @@ class ServiceAPIHandler(APIHandler):
         self.db.delete(orm_service)
         self.db.commit()
 
-    def service_from_spec(self, spec) -> Optional[Service]:
+    def service_from_spec(self, spec) -> Service | None:
         """Create service from api request"""
         service = self.app.service_from_spec(spec, from_config=False)
         self.db.commit()
         return service
 
-    def find_service(
-        self, name: str
-    ) -> Tuple[Optional[Service], Optional[orm.Service]]:
+    def find_service(self, name: str) -> tuple[Service | None, orm.Service | None]:
         """Get a service by name
         return None if no such service
         """

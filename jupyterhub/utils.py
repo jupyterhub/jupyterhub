@@ -21,16 +21,12 @@ import time
 import uuid
 import warnings
 from binascii import b2a_hex
+from contextlib import aclosing
 from datetime import datetime, timezone
 from functools import lru_cache
 from hmac import compare_digest
 from operator import itemgetter
 from urllib.parse import quote
-
-if sys.version_info >= (3, 10):
-    from contextlib import aclosing
-else:
-    from async_generator import aclosing
 
 import idna
 from sqlalchemy.exc import SQLAlchemyError
