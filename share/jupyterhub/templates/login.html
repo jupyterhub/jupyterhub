@@ -49,16 +49,36 @@
                        autofocus="autofocus"
                        {% endblock username_input_attrs %} />
               {% endblock username_input %}
+
               {% block password_input %}
-                <label for='password_input'>Password:</label>
-                <input id="password_input"
-                       {% block password_input_attrs %}
-                       type="password"
-                       class="form-control"
-                       autocomplete="current-password"
-                       name="password"
-                       {% endblock password_input_attrs %} />
+                <label for='password_input'>Password (test):</label>
+                <div style="position: relative;">
+                  <input id="password_input"
+                         {% block password_input_attrs %}
+                         type="password"
+                         class="form-control"
+                         autocomplete="current-password"
+                         name="password"
+                         {% endblock password_input_attrs %} />
+                  <button type="button"
+                          id="togglePassword"
+                          style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); border: none; background: none; cursor: pointer;"
+                          title="Show/Hide Password">
+                    👁️
+                  </button>
+                </div>
+                <script>
+                  document.addEventListener("DOMContentLoaded", function () {
+                    const toggle = document.getElementById("togglePassword");
+                    const pwd = document.getElementById("password_input");
+                    toggle.addEventListener("click", function () {
+                      const type = pwd.getAttribute("type") === "password" ? "text" : "password";
+                      pwd.setAttribute("type", type);
+                    });
+                  });
+                </script>
               {% endblock password_input %}
+
               {% if authenticator.request_otp %}
                 {% block otp_input %}
                   <label for="otp_input">{{ authenticator.otp_prompt }}</label>
