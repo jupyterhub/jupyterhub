@@ -34,7 +34,7 @@
               </p>
               {% if login_error %}<p class="login_error">{{ login_error }}</p>{% endif %}
               <input type="hidden" name="_xsrf" value="{{ xsrf }}" />
-              {# Allow full override of the "label" and "input" elements of the username and password fields. #}
+
               {% block username_input %}
                 <label for="username_input">Username:</label>
                 <input id="username_input"
@@ -49,6 +49,7 @@
                        autofocus="autofocus"
                        {% endblock username_input_attrs %} />
               {% endblock username_input %}
+
               {% block password_input %}
                 <label for="password_input">Password:</label>
                 <div style="position: relative;">
@@ -60,37 +61,36 @@
                          name="password"
                          aria-describedby="toggle_password_visibility"
                          {% endblock password_input_attrs %} />
-                  <button type="button"
-                          id="toggle_password_visibility"
-                          style="position: absolute;
-                                 right: 10px;
-                                 top: 50%;
-                                 transform: translateY(-50%);
-                                 border: none;
-                                 background: none;
-                                 cursor: pointer"
-                          aria-label="Show password"
-                          aria-controls="password_input"
-                          aria-pressed="false"
-                          title="Show password">Show</button>
+                  <button
+                      type="button"
+                      id="toggle_password_visibility"
+                      style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); border: none; background: none; cursor: pointer;"
+                      aria-label="Show password"
+                      aria-controls="password_input"
+                      aria-pressed="false"
+                      title="Show password">
+                    <i class="fa fa-eye" aria-hidden="true"></i>
+                  </button>
                 </div>
+
                 <script>
-                  document.addEventListener("DOMContentLoaded", function() {
+                  document.addEventListener("DOMContentLoaded", function () {
                     const toggle = document.getElementById("toggle_password_visibility");
                     const pwd = document.getElementById("password_input");
-                    if (!toggle || !pwd) return;
+                    const icon = toggle.querySelector("i");
 
-                    toggle.addEventListener("click", function() {
-                      const isPassword = pwd.getAttribute("type") === "password";
-                      pwd.setAttribute("type", isPassword ? "text" : "password");
-                      toggle.textContent = isPassword ? "Hide" : "Show";
-                      toggle.setAttribute("aria-pressed", isPassword ? "true" : "false");
-                      toggle.setAttribute("aria-label", isPassword ? "Hide password" : "Show password");
-                      toggle.setAttribute("title", isPassword ? "Hide password" : "Show password");
+                    toggle.addEventListener("click", function () {
+                      const show = pwd.getAttribute("type") === "password";
+                      pwd.setAttribute("type", show ? "text" : "password");
+                      icon.className = show ? "fa fa-eye-slash" : "fa fa-eye";
+                      toggle.setAttribute("aria-label", show ? "Hide password" : "Show password");
+                      toggle.setAttribute("aria-pressed", show ? "true" : "false");
+                      toggle.setAttribute("title", show ? "Hide password" : "Show password");
                     });
                   });
                 </script>
               {% endblock password_input %}
+
               {% if authenticator.request_otp %}
                 {% block otp_input %}
                   <label for="otp_input">{{ authenticator.otp_prompt }}</label>
@@ -120,7 +120,6 @@
                            name="login_terms_checkbox"
                            required />
                     {% block login_terms_text %}
-                      {# allow overriding the text #}
                       By logging into the platform you accept the <a href="{{ login_term_url }}">terms and conditions</a>.
                     {% endblock login_terms_text %}
                   </div>
@@ -137,11 +136,9 @@
   {{ super() }}
   <script>
     if (!window.isSecureContext) {
-      // unhide http warning
       var warning = document.getElementById('insecure-login-warning');
       warning.className = warning.className.replace(/\bhidden\b/, '');
     }
-    // setup onSubmit feedback
     $('form').submit((e) => {
       var form = $(e.target);
       form.find('.feedback-container>input').attr('disabled', true);
