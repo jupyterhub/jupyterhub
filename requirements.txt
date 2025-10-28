@@ -13,4 +13,4 @@ python-dateutil
 requests
 SQLAlchemy>=1.4.1
 tornado>=6.1
-traitlets>=4.3.2
+traitlets>=5.4
