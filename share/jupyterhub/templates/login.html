@@ -34,7 +34,6 @@
               </p>
               {% if login_error %}<p class="login_error">{{ login_error }}</p>{% endif %}
               <input type="hidden" name="_xsrf" value="{{ xsrf }}" />
-
               {% block username_input %}
                 <label for="username_input">Username:</label>
                 <input id="username_input"
@@ -49,7 +48,6 @@
                        autofocus="autofocus"
                        {% endblock username_input_attrs %} />
               {% endblock username_input %}
-
               {% block password_input %}
                 <label for="password_input">Password:</label>
                 <div style="position: relative;">
@@ -61,25 +59,29 @@
                          name="password"
                          aria-describedby="toggle_password_visibility"
                          {% endblock password_input_attrs %} />
-                  <button
-                      type="button"
-                      id="toggle_password_visibility"
-                      style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); border: none; background: none; cursor: pointer;"
-                      aria-label="Show password"
-                      aria-controls="password_input"
-                      aria-pressed="false"
-                      title="Show password">
+                  <button type="button"
+                          id="toggle_password_visibility"
+                          style="position: absolute;
+                                 right: 10px;
+                                 top: 50%;
+                                 transform: translateY(-50%);
+                                 border: none;
+                                 background: none;
+                                 cursor: pointer"
+                          aria-label="Show password"
+                          aria-controls="password_input"
+                          aria-pressed="false"
+                          title="Show password">
                     <i class="fa fa-eye" aria-hidden="true"></i>
                   </button>
                 </div>
-
                 <script>
-                  document.addEventListener("DOMContentLoaded", function () {
+                  document.addEventListener("DOMContentLoaded", function() {
                     const toggle = document.getElementById("toggle_password_visibility");
                     const pwd = document.getElementById("password_input");
                     const icon = toggle.querySelector("i");
 
-                    toggle.addEventListener("click", function () {
+                    toggle.addEventListener("click", function() {
                       const show = pwd.getAttribute("type") === "password";
                       pwd.setAttribute("type", show ? "text" : "password");
                       icon.className = show ? "fa fa-eye-slash" : "fa fa-eye";
@@ -90,7 +92,6 @@
                   });
                 </script>
               {% endblock password_input %}
-
               {% if authenticator.request_otp %}
                 {% block otp_input %}
                   <label for="otp_input">{{ authenticator.otp_prompt }}</label>
