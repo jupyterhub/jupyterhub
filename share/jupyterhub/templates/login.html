@@ -32,9 +32,7 @@
                 Warning: JupyterHub seems to be served over an unsecured HTTP connection.
                 We strongly recommend enabling HTTPS for JupyterHub.
               </p>
-              {% if login_error %}
-                <p class="login_error">{{ login_error }}</p>
-              {% endif %}
+              {% if login_error %}<p class="login_error">{{ login_error }}</p>{% endif %}
               <input type="hidden" name="_xsrf" value="{{ xsrf }}" />
               {% block username_input %}
                 <label for="username_input">Username:</label>
