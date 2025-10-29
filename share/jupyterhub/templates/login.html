@@ -32,10 +32,8 @@
                 Warning: JupyterHub seems to be served over an unsecured HTTP connection.
                 We strongly recommend enabling HTTPS for JupyterHub.
               </p>
-
               {% if login_error %}<p class="login_error">{{ login_error }}</p>{% endif %}
               <input type="hidden" name="_xsrf" value="{{ xsrf }}" />
-
               {% block username_input %}
                 <label for="username_input">Username:</label>
                 <input id="username_input"
@@ -50,11 +48,9 @@
                        autofocus="autofocus"
                        {% endblock username_input_attrs %} />
               {% endblock username_input %}
-
               {% block password_input %}
                 {# Allow full override of the "label" and "input" elements of the username and password fields. #}
                 <label for="password_input">Password:</label>
-
                 {# Use Bootstrap input-group for consistent layout and to avoid overlay issues with autofill or password managers #}
                 <div class="input-group">
                   <input id="password_input"
@@ -65,7 +61,6 @@
                          name="password"
                          aria-label="Password hidden"
                          {% endblock password_input_attrs %} />
-
                   {# Toggle button for showing/hiding password visibility #}
                   <button type="button"
                           id="toggle_password_visibility"
@@ -77,7 +72,6 @@
                     <i class="fa fa-eye" aria-hidden="true"></i>
                   </button>
                 </div>
-
                 <script>
                   document.addEventListener("DOMContentLoaded", function() {
                     const toggle = document.getElementById("toggle_password_visibility");
@@ -98,7 +92,6 @@
                   });
                 </script>
               {% endblock password_input %}
-
               {% if authenticator.request_otp %}
                 {% block otp_input %}
                   <label for="otp_input">{{ authenticator.otp_prompt }}</label>
@@ -110,7 +103,6 @@
                          {% endblock otp_input_attrs %} />
                 {% endblock otp_input %}
               {% endif %}
-
               <div class="feedback-container">
                 <input id="login_submit"
                        type="submit"
@@ -121,7 +113,6 @@
                   <i class="fa fa-spinner"></i>
                 </div>
               </div>
-
               {% block login_terms %}
                 {% if login_term_url %}
                   <div id="login_terms" class="login_terms">
@@ -143,7 +134,6 @@
     </div>
   {% endblock login %}
 {% endblock main %}
-
 {% block script %}
   {{ super() }}
   <script>
