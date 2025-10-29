@@ -10,7 +10,7 @@ coverage
 playwright
 pytest
 pytest-cov
-pytest-asyncio==1.0.*
+pytest-asyncio==1.1.*
 requests-mock
 virtualenv
 

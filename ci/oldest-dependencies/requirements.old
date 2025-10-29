@@ -18,6 +18,8 @@ attrs==25.3.0
     #   referencing
 backcall==0.2.0
     # via ipython
+backports-asyncio-runner==1.2.0
+    # via pytest-asyncio
 beautifulsoup4==4.14.2
     # via -r requirements.in
 bleach==6.2.0
@@ -41,9 +43,7 @@ cryptography==46.0.2
 debugpy==1.8.17
     # via ipykernel
 decorator==5.2.1
-    # via
-    #   ipython
-    #   traitlets
+    # via ipython
 defusedxml==0.7.1
     # via nbconvert
 distlib==0.4.0
@@ -74,7 +74,6 @@ ipython-genutils==0.2.0
     # via
     #   ipykernel
     #   notebook
-    #   traitlets
 jedi==0.19.2
     # via ipython
 jinja2==2.11.0
@@ -125,7 +124,6 @@ nest-asyncio==1.6.0
     # via
     #   jupyter-client
     #   nbclient
-    #   notebook
 notebook==6.1.6
     # via -r requirements.in
 oauthlib==3.0.0
@@ -182,7 +180,7 @@ pytest==8.4.2
     #   -r requirements.in
     #   pytest-asyncio
     #   pytest-cov
-pytest-asyncio==1.0.0
+pytest-asyncio==1.1.1
     # via -r requirements.in
 pytest-cov==7.0.0
     # via -r requirements.in
@@ -211,9 +209,7 @@ rpds-py==0.27.1
 send2trash==1.8.3
     # via notebook
 six==1.17.0
-    # via
-    #   python-dateutil
-    #   traitlets
+    # via python-dateutil
 soupsieve==2.8
     # via beautifulsoup4
 sqlalchemy==1.4.1
@@ -228,14 +224,14 @@ tomli==2.2.1
     # via
     #   coverage
     #   pytest
-tornado==5.1
+tornado==6.1
     # via
     #   -r oldest-dependencies.txt
     #   ipykernel
     #   jupyter-client
     #   notebook
     #   terminado
-traitlets==4.3.2
+traitlets==5.4.0
     # via
     #   -r oldest-dependencies.txt
     #   ipykernel
