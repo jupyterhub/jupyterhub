@@ -32,7 +32,9 @@
                 Warning: JupyterHub seems to be served over an unsecured HTTP connection.
                 We strongly recommend enabling HTTPS for JupyterHub.
               </p>
-              {% if login_error %}<p class="login_error">{{ login_error }}</p>{% endif %}
+              {% if login_error %}
+                <p class="login_error">{{ login_error }}</p>
+              {% endif %}
               <input type="hidden" name="_xsrf" value="{{ xsrf }}" />
               {% block username_input %}
                 <label for="username_input">Username:</label>
@@ -59,13 +61,11 @@
                          class="form-control"
                          autocomplete="current-password"
                          name="password"
-                         aria-label="Password hidden"
                          {% endblock password_input_attrs %} />
                   {# Toggle button for showing/hiding password visibility #}
                   <button type="button"
                           id="toggle_password_visibility"
                           class="btn btn-outline-secondary"
-                          aria-label="Show password"
                           aria-controls="password_input"
                           aria-pressed="false"
                           title="Show password">
@@ -83,9 +83,7 @@
                       pwd.type = isHidden ? "text" : "password";
                       icon.className = isHidden ? "fa fa-eye-slash" : "fa fa-eye";
 
-                      // Update accessibility attributes dynamically
-                      toggle.setAttribute("aria-label", isHidden ? "Hide password" : "Show password");
-                      pwd.setAttribute("aria-label", isHidden ? "Password visible" : "Password hidden");
+                      // Update accessibility attributes dynamically (per @minrk)
                       toggle.setAttribute("aria-pressed", isHidden ? "true" : "false");
                       toggle.setAttribute("title", isHidden ? "Hide password" : "Show password");
                     });
