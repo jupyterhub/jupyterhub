@@ -1,7 +1,6 @@
 {% block password_input %}
   {# Allow full override of the "label" and "input" elements of the username and password fields. #}
   <label for="password_input">Password:</label>
-
   {# Use Bootstrap input-group for consistent layout and to avoid overlay issues with autofill or password managers #}
   <div class="input-group">
     <input id="password_input"
@@ -12,7 +11,6 @@
            name="password"
            aria-label="Password hidden"
            {% endblock password_input_attrs %} />
-
     {# Toggle button for showing/hiding password visibility #}
     <button type="button"
             id="toggle_password_visibility"
@@ -24,7 +22,6 @@
       <i class="fa fa-eye" aria-hidden="true"></i>
     </button>
   </div>
-
   <script>
     document.addEventListener("DOMContentLoaded", function() {
       const toggle = document.getElementById("toggle_password_visibility");
