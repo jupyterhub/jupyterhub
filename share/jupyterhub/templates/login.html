@@ -1,7 +1,6 @@
 {% if login_error %}<p class="login_error">{{ login_error }}</p>{% endif %}
 <input type="hidden" name="_xsrf" value="{{ xsrf }}" />
 {# Allow full override of the "label" and "input" elements of the username and password fields. #}
-
 {% block username_input %}
   <label for="username_input">Username:</label>
   <input id="username_input"
