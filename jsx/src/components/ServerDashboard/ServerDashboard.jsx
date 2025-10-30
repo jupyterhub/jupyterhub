@@ -425,7 +425,6 @@ const ServerDashboard = (props) => {
               {user.name}
             </span>
           </td>
-          <td data-testid="user-row-admin">{user.admin ? "admin" : ""}</td>
 
           <td data-testid="user-row-server">
             <p className="text-secondary">{server.name}</p>
@@ -450,7 +449,7 @@ const ServerDashboard = (props) => {
         </tr>
         <tr key={`${userServerName}-detail`}>
           <td
-            colSpan={8}
+            colSpan={7}
             style={{ padding: 0 }}
             data-testid={`${userServerName}-td`}
           >
@@ -558,7 +557,6 @@ const ServerDashboard = (props) => {
                   testid="user-sort"
                 />
               </th>
-              <th id="admin-header">Admin</th>
               <th id="server-header">Server</th>
               <th id="last-activity-header">
                 Last Activity{" "}
@@ -570,13 +568,7 @@ const ServerDashboard = (props) => {
                 />
               </th>
               <th id="server-start-time-header">
-                Server Start Time{" "}
-                <SortHandler
-                  currentSort={sort}
-                  setSort={setSort}
-                  sortKey="started"
-                  testid="server-start-time-sort"
-                />
+                Server Start Time
               </th>
               <th id="profile-used-header">Profile Used</th>
               <th id="actions-header">
