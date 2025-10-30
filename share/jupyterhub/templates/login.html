@@ -1,3 +1,81 @@
+jupyterhub
+jupyterhub
+
+Type / to search
+Code
+Issues
+185
+Pull requests
+14
+Actions
+Projects
+Security
+3
+Insights
+Files
+Go to file
+t
+.github
+ci
+docs
+examples
+jsx
+jupyterhub
+share/jupyterhub
+static
+templates
+404.html
+accept-share.html
+admin.html
+error.html
+home.html
+login.html
+logout.html
+not_running.html
+oauth.html
+page.html
+spawn.html
+spawn_pending.html
+stop_pending.html
+token.html
+testing
+.coveragerc
+.dockerignore
+.flake8
+.gitignore
+.pre-commit-config.yaml
+.prettierignore
+.readthedocs.yaml
+CODE_OF_CONDUCT.md
+CONTRIBUTING.md
+LICENSE
+MANIFEST.in
+README.md
+RELEASE.md
+SECURITY.md
+bower-lite
+package-lock.json
+package.json
+pyproject.toml
+pytest.ini
+redocly.yaml
+requirements.txt
+setup.py
+jupyterhub/share/jupyterhub/templates
+/login.html
+minrk
+minrk
+fix pre-filled username on failed login
+6619524
+ · 
+7 months ago
+jupyterhub/share/jupyterhub/templates
+/login.html
+
+Code
+
+Blame
+120 lines (120 loc) · 5.06 KB
 {% extends "page.html" %}
 {% if announcement_login is string %}
   {% set announcement = announcement_login %}
@@ -50,41 +128,14 @@
                        {% endblock username_input_attrs %} />
               {% endblock username_input %}
               {% block password_input %}
-                <label for="password_input">Password:</label>
-                {# Use Bootstrap input-group for consistent layout and to avoid overlay issues with autofill or password managers #}
-                <div class="input-group">
-                  <input id="password_input"
-                         {% block password_input_attrs %}
-                         type="password"
-                         class="form-control"
-                         autocomplete="current-password"
-                         name="password"
-                         {% endblock password_input_attrs %} />
-                  {# Toggle button for showing/hiding password visibility #}
-                  <button type="button"
-                          id="toggle_password_visibility"
-                          class="input-group-text"
-                          aria-controls="password_input"
-                          aria-pressed="false"
-                          title="Show password">
-                    <i class="fa fa-eye" aria-hidden="true"></i>
-                  </button>
-                </div>
-                <script>
-                  document.addEventListener("DOMContentLoaded", function() {
-                    const toggle = document.getElementById("toggle_password_visibility");
-                    const pwd = document.getElementById("password_input");
-                    const icon = toggle.querySelector("i");
-
-                    toggle.addEventListener("click", function() {
-                      const isHidden = pwd.type === "password";
-                      pwd.type = isHidden ? "text" : "password";
-                      icon.className = isHidden ? "fa fa-eye-slash" : "fa fa-eye";
-                      toggle.setAttribute("aria-pressed", isHidden ? "true" : "false");
-                      toggle.setAttribute("title", isHidden ? "Hide password" : "Show password");
-                    });
-                  });
-                </script>
+                <label for='password_input'>Password:</label>
+                <input id="password_input"
+                       {% block password_input_attrs %}
+                       type="password"
+                       class="form-control"
+                       autocomplete="current-password"
+                       name="password"
+                       {% endblock password_input_attrs %} />
               {% endblock password_input %}
               {% if authenticator.request_otp %}
                 {% block otp_input %}
@@ -136,7 +187,6 @@
       var warning = document.getElementById('insecure-login-warning');
       warning.className = warning.className.replace(/\bhidden\b/, '');
     }
-
     // setup onSubmit feedback
     $('form').submit((e) => {
       var form = $(e.target);
