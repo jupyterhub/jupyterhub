@@ -682,7 +682,7 @@ test("Start server and confirm pending state", async () => {
   expect(mockUpdateUsers.mock.calls).toHaveLength(2);
 });
 
-test("Renders Server Start Time column header with sorting", async () => {
+test("Renders Server Start Time column header", async () => {
   await act(async () => {
     render(serverDashboardJsx());
   });
@@ -690,8 +690,9 @@ test("Renders Server Start Time column header with sorting", async () => {
   let serverStartTimeHeader = screen.getByText("Server Start Time");
   expect(serverStartTimeHeader).toBeVisible();
 
-  let sortButton = screen.getByTestId("server-start-time-sort");
-  expect(sortButton).toBeVisible();
+  // Server Start Time column should NOT have a sort button
+  let sortButton = screen.queryByTestId("server-start-time-sort");
+  expect(sortButton).toBeNull();
 });
 
 test("Renders Profile Used column header", async () => {
@@ -809,30 +810,6 @@ test("Shows 'Never' for server start time when server never started", async () =
 
   let startTimeCell = screen.getByTestId("user-row-server-start-time");
   expect(startTimeCell.textContent).toBe("Never");
-});
-
-test("Sorts by server start time when clicking the sort button", async () => {
-  let mockUpdateUsersSpy = jest.fn().mockResolvedValue({
-    items: [],
-    _pagination: { offset: 0, limit: 2, total: 0 },
-  });
-
-  // Mock useSearchParams to track URL parameter changes
-  const mockSetSearchParams = jest.fn();
-  useSearchParams.mockReturnValue([new URLSearchParams(), mockSetSearchParams]);
-
-  await act(async () => {
-    render(serverDashboardJsx({ updateUsers: mockUpdateUsersSpy }));
-  });
-
-  let sortButton = screen.getByTestId("server-start-time-sort");
-
-  await act(async () => {
-    fireEvent.click(sortButton);
-  });
-
-  // Should call setSearchParams to update the sort parameter
-  expect(mockSetSearchParams).toHaveBeenCalled();
 });
 
 test("Displays profile information correctly", async () => {
