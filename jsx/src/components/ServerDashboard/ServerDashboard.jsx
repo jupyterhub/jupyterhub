@@ -286,9 +286,8 @@ const ServerDashboard = (props) => {
     }
     return (
       <a
-        href={`${base_url}spawn/${user.name}${
-          server.name ? "/" + server.name : ""
-        }`}
+        href={`${base_url}spawn/${user.name}${server.name ? "/" + server.name : ""
+          }`}
       >
         <Button variant="light" size="xs">
           Spawn Page
@@ -587,14 +586,12 @@ const ServerDashboard = (props) => {
                             let failedServers = res.filter((e) => !e.ok);
                             if (failedServers.length > 0) {
                               setErrorAlert(
-                                `Failed to start ${failedServers.length} ${
-                                  failedServers.length > 1
-                                    ? "servers"
-                                    : "server"
-                                }. ${
-                                  failedServers.length > 1
-                                    ? "Are they "
-                                    : "Is it "
+                                `Failed to start ${failedServers.length} ${failedServers.length > 1
+                                  ? "servers"
+                                  : "server"
+                                }. ${failedServers.length > 1
+                                  ? "Are they "
+                                  : "Is it "
                                 } already running?`,
                               );
                             }
@@ -624,14 +621,12 @@ const ServerDashboard = (props) => {
                             let failedServers = res.flat().filter((e) => !e.ok);
                             if (failedServers.length > 0) {
                               setErrorAlert(
-                                `Failed to stop ${failedServers.length} ${
-                                  failedServers.length > 1
-                                    ? "servers"
-                                    : "server"
-                                }. ${
-                                  failedServers.length > 1
-                                    ? "Are they "
-                                    : "Is it "
+                                `Failed to stop ${failedServers.length} ${failedServers.length > 1
+                                  ? "servers"
+                                  : "server"
+                                }. ${failedServers.length > 1
+                                  ? "Are they "
+                                  : "Is it "
                                 } already stopped?`,
                               );
                             }
