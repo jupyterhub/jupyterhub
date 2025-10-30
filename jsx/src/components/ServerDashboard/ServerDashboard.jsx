@@ -567,9 +567,7 @@ const ServerDashboard = (props) => {
                   testid="last-activity-sort"
                 />
               </th>
-              <th id="server-start-time-header">
-                Server Start Time
-              </th>
+              <th id="server-start-time-header">Server Start Time</th>
               <th id="profile-used-header">Profile Used</th>
               <th id="actions-header">
                 <div className="d-flex justify-content-between align-items-center">
