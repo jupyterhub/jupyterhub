@@ -17,6 +17,12 @@ from ruamel.yaml import YAML
 from sphinx.directives.other import SphinxDirective
 from sphinx.util import logging
 
+try:
+    import tomllib
+except ImportError:
+    # Before Python 3.11
+    import tomli as tomllib
+
 import jupyterhub
 from jupyterhub.app import JupyterHub
 
@@ -50,8 +56,13 @@ source_suffix = [".md"]
 default_role = "literal"
 
 docs = Path(__file__).parent.parent.absolute()
+repo_root = docs.parent
 docs_source = docs / "source"
 rest_api_yaml = docs_source / "_static" / "rest-api.yml"
+
+pyproject_toml = repo_root / "pyproject.toml"
+with pyproject_toml.open("rb") as f:
+    pyproject = tomllib.load(f)
 
 
 # -- MyST configuration ------------------------------------------------------
@@ -72,7 +83,7 @@ myst_substitutions = {
     # date example: Dev 07, 2022
     "date": datetime.date.today().strftime("%b %d, %Y").title(),
     "node_min": "12",
-    "python_min": "3.8",
+    "python_min": pyproject["project"]["requires-python"].strip(">="),
     "version": jupyterhub.__version__,
 }
 

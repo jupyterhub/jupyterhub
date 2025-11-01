@@ -68,7 +68,7 @@ jobs:
 
       - name: verify sdist can be installed without npm/yarn
         run: |
-          docker run --rm -v $PWD/dist:/dist:ro docker.io/library/python:3.9-slim-bullseye bash -c 'pip install /dist/jupyterhub-*.tar.gz'
+          docker run --rm -v $PWD/dist:/dist:ro docker.io/library/python:3.13-slim-bullseye bash -c 'pip install /dist/jupyterhub-*.tar.gz'
 
       # ref: https://github.com/actions/upload-artifact#readme
       - uses: actions/upload-artifact@v5
