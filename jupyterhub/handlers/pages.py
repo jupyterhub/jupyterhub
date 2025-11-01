@@ -222,9 +222,6 @@ class SpawnHandler(BaseHandler):
             if isinstance(spawn_exc, web.HTTPError):
                 self.set_status(spawn_exc.status_code)
 
-                for name, value in spawn_exc.headers.items():
-                    self.set_header(name, value)
-
             if spawn_exc:
                 error_message, error_html_message = format_exception(spawn_exc)
             else:
@@ -295,9 +292,6 @@ class SpawnHandler(BaseHandler):
             # This may need scoping to particular error codes.
             if isinstance(e, web.HTTPError):
                 self.set_status(e.status_code)
-
-                for name, value in e.headers.items():
-                    self.set_header(name, value)
 
             error_message, error_html_message = format_exception(e)
 
