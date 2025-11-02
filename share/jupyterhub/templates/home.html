@@ -26,6 +26,13 @@
         server(s) with names.
         This allows you to have more than one server running at the same time.
       </p>
+      {% if invalid_server_names %}
+        <p class="alert alert-warning">
+          JupyterHub 6 has <a href="https://jupyterhub.readthedocs.io/en/6.0.0/<TODO>">new restrictions on servernames</a>.
+          Consider migrating named servers:
+          {{ invalid_server_names | join(", ") }}
+        </p>
+      {% endif %}
       {% set named_spawners = user.all_spawners(include_default=False)|list %}
       <table class="server-table table table-striped">
         <thead>

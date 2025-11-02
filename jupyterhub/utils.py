@@ -18,6 +18,7 @@ import string
 import sys
 import threading
 import time
+import unicodedata
 import uuid
 import warnings
 from binascii import b2a_hex
@@ -950,6 +951,24 @@ def subdomain_hook_idna(name, domain, kind):
     else:
         suffix = f"--{kind}"
     return f"{safe_name}{suffix}.{domain}"
+
+
+# A URL safe identifier can be used in URL paths without escaping:
+# Unicode letters, digits, _, -
+_safe_unicode_identifier_re = re.compile(r'^[\w-]{1,63}$')
+
+
+# https://docs.python.org/3.10/library/unicodedata.html#unicodedata.normalize
+# https://www.w3.org/TR/charmod-norm/#normalizationChoice
+# Normalise using NFC (Canonical Decomposition followed by Canonical Composition)
+def normalise_unicode(s):
+    return unicodedata.normalize("NFC", s)
+
+
+def is_safe_unicode_label(label):
+    return (normalise_unicode(label) == label) and bool(
+        _safe_unicode_identifier_re.match(label)
+    )
 
 
 # From https://github.com/jupyter-server/jupyter_server/blob/fc0ac3236fdd92778ea765db6e8982212c8389ee/jupyter_server/config_manager.py#L14
