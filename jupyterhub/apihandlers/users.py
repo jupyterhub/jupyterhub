@@ -20,6 +20,7 @@ from ..scopes import needs_scope
 from ..user import User
 from ..utils import (
     format_exception,
+    is_safe_unicode_label,
     isoformat,
     iterate_until,
     maybe_future,
@@ -638,6 +639,13 @@ class UserServerAPIHandler(APIHandler):
                         f"User {user_name} already has the maximum of {named_server_limit_per_user} named servers."
                         "  One must be deleted before a new server can be created",
                     )
+
+                # Prevent creation of new invalid server names
+                if not is_safe_unicode_label(server_name):
+                    error_message = f"Invalid server_name. Allowed characters are letters, digits, underscore and hyphen: {server_name}"
+                    self.log.error(error_message)
+                    raise web.HTTPError(400, error_message)
+
         spawner = user.get_spawner(server_name, replace_failed=True)
         pending = spawner.pending
         if pending == 'spawn':

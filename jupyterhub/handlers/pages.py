@@ -17,6 +17,7 @@ from ..metrics import SERVER_POLL_DURATION_SECONDS, ServerPollStatus
 from ..scopes import describe_raw_scopes, needs_scope
 from ..utils import (
     format_exception,
+    is_safe_unicode_label,
     maybe_future,
     url_escape_path,
     url_path_join,
@@ -82,6 +83,13 @@ class HomeHandler(BaseHandler):
             url = url_path_join(self.hub.base_url, 'spawn', user.escaped_name)
 
         auth_state = await user.get_auth_state()
+        # can't use user.spawners because the stop method of User pops named servers from user.spawners when they're stopped
+        spawners = user.orm_user._orm_spawners
+
+        invalid_server_names = [
+            s.name for s in spawners if s.name and not is_safe_unicode_label(s.name)
+        ]
+
         html = await self.render_template(
             'home.html',
             auth_state=auth_state,
@@ -90,9 +98,9 @@ class HomeHandler(BaseHandler):
             allow_named_servers=self.allow_named_servers,
             named_server_limit_per_user=await self.get_current_user_named_server_limit(),
             url_path_join=url_path_join,
-            # can't use user.spawners because the stop method of User pops named servers from user.spawners when they're stopped
-            spawners=user.orm_user._orm_spawners,
+            spawners=spawners,
             default_server=user.spawner,
+            invalid_server_names=invalid_server_names,
         )
         self.finish(html)
 
@@ -163,6 +171,12 @@ class SpawnHandler(BaseHandler):
                         f"User {user.name} already has the maximum of {named_server_limit_per_user} named servers."
                         "  One must be deleted before a new server can be created",
                     )
+
+                # Prevent creation of new invalid server names
+                if not is_safe_unicode_label(server_name):
+                    error_message = f"Invalid server_name. Allowed characters are letters, digits, underscore and hyphen: {server_name}"
+                    self.log.error(error_message)
+                    raise web.HTTPError(400, error_message)
 
         if not self.allow_named_servers and user.running:
             url = self.get_next_url(user, default=user.server_url(""))
