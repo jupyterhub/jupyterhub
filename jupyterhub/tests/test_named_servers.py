@@ -116,16 +116,27 @@ async def test_default_server(app, named_servers):
 
 
 @pytest.mark.parametrize(
-    'servername,escapedname,caller_escape',
+    'servername,escapedname,caller_escape,start_only',
     [
-        ('trevor', 'trevor', False),
-        ('$p~c|a! ch@rs', '%24p~c%7Ca%21%20ch@rs', False),
-        ('$p~c|a! ch@rs', '%24p~c%7Ca%21%20ch@rs', True),
-        ('hash#?question', 'hash%23%3Fquestion', True),
+        ('trevor', 'trevor', False, False),
+        ('$p~c|a! ch@rs', '%24p~c%7Ca%21%20ch@rs', True, True),
+        ('hash#?question', 'hash%23%3Fquestion', True, True),
+        (
+            "e_êẹèêéøßæṣ-",
+            "e_%C3%AA%E1%BA%B9%C3%A8%C3%AA%C3%A9%C3%B8%C3%9F%C3%A6%E1%B9%A3-",
+            False,
+            False,
+        ),
+        (
+            "e_êẹèêéøßæṣ-",
+            "e_%C3%AA%E1%BA%B9%C3%A8%C3%AA%C3%A9%C3%B8%C3%9F%C3%A6%E1%B9%A3-",
+            True,
+            False,
+        ),
     ],
 )
-async def test_create_named_server(
-    app, named_servers, servername, escapedname, caller_escape
+async def test_create_or_start_named_server(
+    app, named_servers, servername, escapedname, caller_escape, start_only
 ):
     username = 'walnut'
     user = add_user(app.db, app, name=username)
@@ -134,6 +145,11 @@ async def test_create_named_server(
     request_servername = servername
     if caller_escape:
         request_servername = url_escape_path(servername)
+
+    # servername is invalid for creating a new server, but valid for
+    # starting existing servers
+    if start_only:
+        user._new_orm_spawner(servername)
 
     r = await api_request(
         app, 'users', username, 'servers', request_servername, method='post'
@@ -200,13 +216,13 @@ async def test_create_named_server(
     )
 
 
-async def test_create_invalid_named_server(app, named_servers):
+@pytest.mark.parametrize("servername", ["a$/b", "$p~c|a! ch@rs", "hash#?question"])
+async def test_create_invalid_named_server(app, named_servers, servername):
     username = 'walnut'
     user = add_user(app.db, app, name=username)
     # assert user.allow_named_servers == True
     cookies = await app.login_user(username)
-    server_name = "a$/b"
-    request_servername = 'a%24%2fb'
+    request_servername = url_escape_path(servername)
 
     r = await api_request(
         app, 'users', username, 'servers', request_servername, method='post'
@@ -216,7 +232,7 @@ async def test_create_invalid_named_server(app, named_servers):
         r.raise_for_status()
     assert exc.value.response.json() == {
         'status': 400,
-        'message': "Invalid server_name (may not contain '/'): a$/b",
+        'message': f"Invalid server_name. Allowed characters are letters, digits, underscore and hyphen: {servername}",
     }
 
 

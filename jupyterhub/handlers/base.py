@@ -50,6 +50,7 @@ from ..utils import (
     AnyTimeoutError,
     get_accepted_mimetype,
     get_browser_protocol,
+    is_safe_unicode_label,
     maybe_future,
     url_escape_path,
     url_path_join,
@@ -1025,6 +1026,18 @@ class BaseHandler(RequestHandler):
                 )
                 self.log.error(error_message)
                 raise web.HTTPError(400, error_message)
+
+            # Prevent creation of new invalid server names, but allow
+            # management of existing servers
+            if not is_safe_unicode_label(server_name):
+                self.log.warning(
+                    "JupyterHub 6 has new restrictions on servernames. "
+                    "Allowed characters are letters, digits, underscore and hyphen. "
+                    "See https://jupyterhub.readthedocs.io/en/6.0.0/<TODO> "
+                    "for advice on migrating named servers (%s)",
+                    server_name,
+                )
+
             user_server_name = f'{user.name}:{server_name}'
 
         if server_name in user.spawners and user.spawners[server_name].pending:
