@@ -32,7 +32,7 @@ popular services:
 - MediaWiki
 - OpenShift
 
-A [generic implementation](https://github.com/jupyterhub/oauthenticator/blob/master/oauthenticator/generic.py), which you can use for OAuth authentication with any provider, is also available.
+A [generic implementation](https://github.com/jupyterhub/oauthenticator/blob/main/oauthenticator/generic.py), which you can use for OAuth authentication with any provider, is also available.
 
 ## The Dummy Authenticator
 
