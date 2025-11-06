@@ -389,7 +389,7 @@ test("Filter according to server status (running/not running)", async () => {
   await act(async () => {
     rerender = render(serverDashboardJsx()).rerender;
   });
-  const label = "only active servers";
+  const label = "Only Active Servers";
   let handler = screen.getByLabelText(label);
   expect(handler.checked).toEqual(false);
   await fireEvent.click(handler);
@@ -700,7 +700,7 @@ test("Renders Profile Used column header", async () => {
     render(serverDashboardJsx());
   });
 
-  let profileHeader = screen.getByText("Profile Used");
+  let profileHeader = screen.getByText("Profile");
   expect(profileHeader).toBeVisible();
 });
 

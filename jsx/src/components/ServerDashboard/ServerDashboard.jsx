@@ -14,6 +14,7 @@ import {
   Card,
   CardGroup,
   Collapse,
+  Stack
 } from "react-bootstrap";
 import ReactObjectTableViewer from "../ReactObjectTableViewer/ReactObjectTableViewer";
 
@@ -286,9 +287,8 @@ const ServerDashboard = (props) => {
     }
     return (
       <a
-        href={`${base_url}spawn/${user.name}${
-          server.name ? "/" + server.name : ""
-        }`}
+        href={`${base_url}spawn/${user.name}${server.name ? "/" + server.name : ""
+          }`}
       >
         <Button variant="light" size="xs">
           Spawn Page
@@ -493,19 +493,94 @@ const ServerDashboard = (props) => {
     <div className="container" data-testid="container">
       <ErrorAlert errorAlert={errorAlert} setErrorAlert={setErrorAlert} />
       <div className="server-dashboard-container">
-        {/* Admin Action Buttons, Search and Filter Row */}
-        <Row className="mb-3 admin-actions-row align-items-center">
-          <Col md={3}>
+        <Stack direction="horizontal" className="pb-3 mb-2" gap={3}>
+          <Button
+            variant="primary"
+            className="start-all"
+            data-testid="start-all"
+            title="Start all default servers on the current page"
+            onClick={() => {
+              Promise.all(startAll(user_data.map((e) => e.name)))
+                .then((res) => {
+                  let failedServers = res.filter((e) => !e.ok);
+                  if (failedServers.length > 0) {
+                    setErrorAlert(
+                      `Failed to start ${failedServers.length} ${failedServers.length > 1
+                        ? "servers"
+                        : "server"
+                      }. ${failedServers.length > 1
+                        ? "Are they "
+                        : "Is it "
+                      } already running?`,
+                    );
+                  }
+                  return res;
+                })
+                .then((res) => {
+                  loadPageData();
+                  return res;
+                })
+                .catch(() =>
+                  setErrorAlert(`Failed to start servers.`),
+                );
+            }}
+          >
+            Start All
+          </Button>
+
+          <Button
+            variant="danger"
+            className="stop-all"
+            data-testid="stop-all"
+            title="Stop all servers including named servers on the current page"
+            onClick={() => {
+              Promise.all(stopAll(user_data.map((e) => e.name)))
+                .then((res) => {
+                  // Array of arrays of servers for each user
+                  let failedServers = res.flat().filter((e) => !e.ok);
+                  if (failedServers.length > 0) {
+                    setErrorAlert(
+                      `Failed to stop ${failedServers.length} ${failedServers.length > 1
+                        ? "servers"
+                        : "server"
+                      }. ${failedServers.length > 1
+                        ? "Are they "
+                        : "Is it "
+                      } already stopped?`,
+                    );
+                  }
+                  return res;
+                })
+                .then((res) => {
+                  loadPageData();
+                  return res;
+                })
+                .catch(() =>
+                  setErrorAlert(`Failed to stop servers.`),
+                );
+            }}
+          >
+            Stop All
+          </Button>
+          <div className="ms-auto">
+            <Button className="" variant="danger" id="shutdown-button" onClick={shutdownHub}>
+              Shutdown Hub
+            </Button>
+          </div>
+        </Stack>
+
+        <Stack direction="horizontal" className="pb-1 " gap={3}>
+          <div>
             <FormControl
               type="text"
               name="user_search"
-              placeholder="Search users"
+              placeholder="Search Users"
               aria-label="user-search"
               defaultValue={name_filter}
               onChange={handleSearch}
             />
-          </Col>
-          <Col md={3}>
+          </div>
+          <div className="me-auto">
             <Form.Check
               inline
               title="check to only show running servers, otherwise show all"
@@ -520,30 +595,21 @@ const ServerDashboard = (props) => {
                 }}
               />
               <Form.Check.Label htmlFor="active-servers-filter">
-                {"only active servers"}
+                Only Active Servers
               </Form.Check.Label>
             </Form.Check>
-          </Col>
-          <Col md={4}>
-            <div className="d-flex align-items-center">
-              <Link to="/add-users">
-                <Button variant="light" className="add-users-button me-2">
-                  Add Users
-                </Button>
-              </Link>
-              <Link to="/groups">
-                <Button variant="light" className="me-2">
-                  Manage Groups
-                </Button>
-              </Link>
-            </div>
-          </Col>
-          <Col md={2} className="text-end">
-            <Button variant="danger" id="shutdown-button" onClick={shutdownHub}>
-              Shutdown Hub
+          </div>
+          <Link to="/add-users">
+            <Button variant="light" className="add-users-button">
+              Add Users
             </Button>
-          </Col>
-        </Row>
+          </Link>
+          <Link to="/groups">
+            <Button variant="light">
+              Manage Groups
+            </Button>
+          </Link>
+        </Stack>
 
         <table className="table table-bordered table-hover">
           <thead className="admin-table-head">
@@ -568,87 +634,8 @@ const ServerDashboard = (props) => {
                 />
               </th>
               <th id="server-start-time-header">Server Start Time</th>
-              <th id="profile-used-header">Profile Used</th>
-              <th id="actions-header">
-                <div className="d-flex justify-content-between align-items-center">
-                  <span>Actions</span>
-                  <div>
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      className="start-all me-2"
-                      data-testid="start-all"
-                      title="Start all default servers on the current page"
-                      onClick={() => {
-                        Promise.all(startAll(user_data.map((e) => e.name)))
-                          .then((res) => {
-                            let failedServers = res.filter((e) => !e.ok);
-                            if (failedServers.length > 0) {
-                              setErrorAlert(
-                                `Failed to start ${failedServers.length} ${
-                                  failedServers.length > 1
-                                    ? "servers"
-                                    : "server"
-                                }. ${
-                                  failedServers.length > 1
-                                    ? "Are they "
-                                    : "Is it "
-                                } already running?`,
-                              );
-                            }
-                            return res;
-                          })
-                          .then((res) => {
-                            loadPageData();
-                            return res;
-                          })
-                          .catch(() =>
-                            setErrorAlert(`Failed to start servers.`),
-                          );
-                      }}
-                    >
-                      Start All
-                    </Button>
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      className="stop-all"
-                      data-testid="stop-all"
-                      title="Stop all servers including named servers on the current page"
-                      onClick={() => {
-                        Promise.all(stopAll(user_data.map((e) => e.name)))
-                          .then((res) => {
-                            // Array of arrays of servers for each user
-                            let failedServers = res.flat().filter((e) => !e.ok);
-                            if (failedServers.length > 0) {
-                              setErrorAlert(
-                                `Failed to stop ${failedServers.length} ${
-                                  failedServers.length > 1
-                                    ? "servers"
-                                    : "server"
-                                }. ${
-                                  failedServers.length > 1
-                                    ? "Are they "
-                                    : "Is it "
-                                } already stopped?`,
-                              );
-                            }
-                            return res;
-                          })
-                          .then((res) => {
-                            loadPageData();
-                            return res;
-                          })
-                          .catch(() =>
-                            setErrorAlert(`Failed to stop servers.`),
-                          );
-                      }}
-                    >
-                      Stop All
-                    </Button>
-                  </div>
-                </div>
-              </th>
+              <th id="profile-used-header">Profile</th>
+              <th id="actions-header">Actions</th>
             </tr>
           </thead>
           <tbody>{serverRows}</tbody>
