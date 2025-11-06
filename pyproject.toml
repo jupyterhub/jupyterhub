@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 # ref: https://setuptools.pypa.io/en/latest/userguide/pyproject_config.html
 [project]
 name = "jupyterhub"
-version = "5.4.1"
+version = "6.0.0.dev"
 dynamic = ["readme", "dependencies"]
 description = "JupyterHub: A multi-user server for Jupyter notebooks"
 authors = [
@@ -147,7 +147,7 @@ indent_size = 2
 github_url = "https://github.com/jupyterhub/jupyterhub"
 
 [tool.tbump.version]
-current = "5.4.1"
+current = "6.0.0.dev"
 
 # Example of a semver regexp.
 # Make sure this matches current_version before

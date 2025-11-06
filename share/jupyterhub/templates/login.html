@@ -50,14 +50,41 @@
                        {% endblock username_input_attrs %} />
               {% endblock username_input %}
               {% block password_input %}
-                <label for='password_input'>Password:</label>
-                <input id="password_input"
-                       {% block password_input_attrs %}
-                       type="password"
-                       class="form-control"
-                       autocomplete="current-password"
-                       name="password"
-                       {% endblock password_input_attrs %} />
+                <label for="password_input">Password:</label>
+                {# Use Bootstrap input-group for consistent layout and to avoid overlay issues with autofill or password managers #}
+                <div class="input-group">
+                  <input id="password_input"
+                         {% block password_input_attrs %}
+                         type="password"
+                         class="form-control"
+                         autocomplete="current-password"
+                         name="password"
+                         {% endblock password_input_attrs %} />
+                  {# Toggle button for showing/hiding password visibility #}
+                  <button type="button"
+                          id="toggle_password_visibility"
+                          class="input-group-text"
+                          aria-controls="password_input"
+                          aria-pressed="false"
+                          title="Show password">
+                    <i class="fa fa-eye" aria-hidden="true"></i>
+                  </button>
+                </div>
+                <script>
+                  document.addEventListener("DOMContentLoaded", function() {
+                    const toggle = document.getElementById("toggle_password_visibility");
+                    const pwd = document.getElementById("password_input");
+                    const icon = toggle.querySelector("i");
+
+                    toggle.addEventListener("click", function() {
+                      const isHidden = pwd.type === "password";
+                      pwd.type = isHidden ? "text" : "password";
+                      icon.className = isHidden ? "fa fa-eye-slash" : "fa fa-eye";
+                      toggle.setAttribute("aria-pressed", isHidden ? "true" : "false");
+                      toggle.setAttribute("title", isHidden ? "Hide password" : "Show password");
+                    });
+                  });
+                </script>
               {% endblock password_input %}
               {% if authenticator.request_otp %}
                 {% block otp_input %}
@@ -109,6 +136,7 @@
       var warning = document.getElementById('insecure-login-warning');
       warning.className = warning.className.replace(/\bhidden\b/, '');
     }
+
     // setup onSubmit feedback
     $('form').submit((e) => {
       var form = $(e.target);

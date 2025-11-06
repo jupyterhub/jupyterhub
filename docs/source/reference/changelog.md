@@ -22,6 +22,26 @@ Contributors to major version bumps in JupyterHub include:
 
 ## 5.4
 
+### 5.4.2 - 2025-10-24
+
+5.4.2 fixes a regression in 5.4.1 when not using internal SSL,
+but still accessing the hub over https.
+
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/5.4.1...5.4.2))
+
+#### Bugs fixed
+
+- avoid setting ssl config when there isn't any [#5180](https://github.com/jupyterhub/jupyterhub/pull/5180) ([@minrk](https://github.com/minrk), [@CarlosDominguezBecerril](https://github.com/CarlosDominguezBecerril))
+
+#### Contributors to this release
+
+The following people contributed discussions, new ideas, code and documentation contributions, and review.
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/#how-does-this-tool-define-contributions-in-the-reports).
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2025-10-17&to=2025-10-24&type=c))
+
+@CarlosDominguezBecerril ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3ACarlosDominguezBecerril+updated%3A2025-10-17..2025-10-24&type=Issues)) | @minrk ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk+updated%3A2025-10-17..2025-10-24&type=Issues))
+
 ### 5.4.1 - 2025-10-17
 
 5.4.1 fixes some small regressions in 5.4.0.
