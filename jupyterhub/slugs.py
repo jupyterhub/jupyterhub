@@ -10,12 +10,9 @@ import hashlib
 import re
 import string
 
-import escapism
-
 _alphanum = tuple(string.ascii_letters + string.digits)
 _alpha_lower = tuple(string.ascii_lowercase)
 _alphanum_lower = tuple(string.ascii_lowercase + string.digits)
-_lower_plus_hyphen = _alphanum_lower + ('-',)
 
 # patterns _do not_ need to cover length or start/end conditions,
 # which are handled separately
@@ -27,19 +24,6 @@ _non_alphanum_pattern = re.compile(r'[^a-z0-9]+')
 
 # length of hash suffix
 _hash_length = 8
-
-# Make sure username and servername match the restrictions for DNS labels
-# Note: '-' is not in safe_chars, as it is being used as escape character
-_escape_slug_safe_chars = set(string.ascii_lowercase + string.digits)
-
-
-def escape_slug(name):
-    """Generate a slug with the legacy system, safe_slug is preferred."""
-    return escapism.escape(
-        name,
-        safe=_escape_slug_safe_chars,
-        escape_char='-',
-    ).lower()
 
 
 def _is_valid_general(
