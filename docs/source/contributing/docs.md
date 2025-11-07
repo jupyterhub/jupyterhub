@@ -19,27 +19,28 @@ change renders correctly, it is good practice to test it locally.
 You will need Python and Git installed. Installation details are avaiable at {ref}`contributing:setup`.
 ```
 
-1. Install the packages required to build the docs.
+### Building with `nox`
 
-   ```bash
-   python3 -m pip install -r docs/requirements.txt
-   python3 -m pip install sphinx-autobuild
-   ```
+We use [the `nox` command line tool](https://nox.thea.codes/en/stable/) to automate the build documentation locally across all JupyterHub projects.
 
-2. Build the HTML version of the docs. This is the most commonly used
-   output format, so verifying it renders correctly is usually good
-   enough.
+**To install the requirements for documentation, build them locally, and have a live preview**, run
 
-   ```bash
-   sphinx-autobuild docs/source/ docs/_build/html
-   ```
+```bash
+nox -s docs -- live
+```
 
-   This step will display any syntax or formatting errors in the documentation,
-   along with the filename / line number in which they occurred. Fix them,
-   and the HTML will be re-render automatically.
+For other use cases, visit [Building with nox](https://compass.hub.jupyter.org/contribute/documentation/#building-with-nox) from [JupyterHub Team Compass].
 
-3. View the rendered documentation by opening <http://127.0.0.1:8000> in
-   a web browser.
+### Building without `nox`
+
+First, install the packages required to build the documentation:
+
+```bash
+python3 -m pip install --editable .
+python3 -m pip install -r docs/requirements.txt
+```
+
+Visit [Building with `Makefile`s](https://compass.hub.jupyter.org/contribute/documentation/#building-with-makefiles) and [Building with `sphinx-build`](https://compass.hub.jupyter.org/contribute/documentation/#building-with-sphinx-build) from [JupyterHub Team Compass].
 
 (contributing-docs-conventions)=
 
@@ -67,3 +68,5 @@ with `python3` and `pip` being from different environments.
 
 For more information on how to invoke `pip` commands, see
 [the `pip` documentation](https://pip.pypa.io/en/stable/).
+
+[JupyterHub Team Compass]: https://compass.hub.jupyter.org/contribute/documentation/
