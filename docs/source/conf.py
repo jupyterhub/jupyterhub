@@ -225,10 +225,11 @@ def stage_redoc_js(app, exception):
 def setup(app):
     app.connect("build-finished", stage_redoc_js)
     app.add_css_file("custom.css")
+    # vendored from https://docs.jupyter.org/en/latest/_static/jupyter.css
+    app.add_css_file("jupyter.css")
     app.add_directive("jupyterhub-generate-config", ConfigDirective)
     app.add_directive("jupyterhub-help-all", HelpAllDirective)
     app.add_directive("jupyterhub-rest-api-links", RestAPILinksDirective)
-    app.add_css_file("https://docs.jupyter.org/en/latest/_static/jupyter.css")
 
 
 # -- Read The Docs -----------------------------------------------------------
