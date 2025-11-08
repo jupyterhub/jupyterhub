@@ -184,7 +184,7 @@ class SpawnHandler(BaseHandler):
             self.redirect(url)
             return
 
-        spawner = user.get_spawner(server_name, replace_failed=True)
+        spawner = user.get_or_create_spawner(server_name, replace_failed=True)
 
         pending_url = self._get_pending_url(user, server_name)
 
@@ -289,7 +289,7 @@ class SpawnHandler(BaseHandler):
             if user is None:
                 raise web.HTTPError(404, f"No such user: {for_user}")
 
-        spawner = user.get_spawner(server_name, replace_failed=True)
+        spawner = user.get_or_create_spawner(server_name, replace_failed=True)
 
         if spawner.ready:
             raise web.HTTPError(400, f"{spawner._log_name} is already running")
