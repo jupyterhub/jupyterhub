@@ -1687,6 +1687,9 @@ components:
           type: string
           description: The server's name. The user's default server has an empty
             name ('')
+        display_name:
+          type: string
+          description: The server's display name. Added in JupyterHub 6.0.
         ready:
           type: boolean
           description: |

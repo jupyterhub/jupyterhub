@@ -19,11 +19,15 @@ _alphanum_lower = tuple(string.ascii_lowercase + string.digits)
 _object_pattern = re.compile(r'^[a-z0-9\-]+$')
 _label_pattern = re.compile(r'^[a-z0-9\.\-_]+$', flags=re.IGNORECASE)
 
+_alphanum_pattern = re.compile(r'^[a-z0-9]+$')
+
 # match anything that's not lowercase alphanumeric (will be stripped, replaced with '-')
 _non_alphanum_pattern = re.compile(r'[^a-z0-9]+')
 
 # length of hash suffix
 _hash_length = 8
+# all hash suffixes should match this pattern
+_hash_pattern = re.compile(rf'^[a-f0-9]{{{_hash_length}}}$')
 
 
 def _is_valid_general(
@@ -42,6 +46,23 @@ def _is_valid_general(
     if ends_with and not s.endswith(ends_with):
         return False
     if pattern and not pattern.match(s):
+        return False
+    return True
+
+
+def is_valid_safe_slug(s):
+    """Checks if this is a safe slug
+
+    Either alphanumeric only, or a single '-' followed by a hash
+    """
+    if len(s) > 32:
+        return False
+    name, sep, suffix = s.partition("-")
+    if not name or (sep and not suffix):
+        return False
+    if not _alphanum_pattern.match(name):
+        return False
+    if suffix and not _hash_pattern.match(suffix):
         return False
     return True
 
@@ -101,20 +122,20 @@ def _extract_safe_name(name, max_length):
 
     - always starts with a lowercase letter
     - always ends with a lowercase letter or number
-    - never more than one hyphen in a row (no '--')
-    - only contains lowercase letters, numbers, and hyphens
+    - no hyphens (so clients are free to use hyphens for other purposes)
+    - only contains lowercase letters, numbers
     - length at least 1 ('x' if other rules strips down to empty string)
     - max length not exceeded
     """
     # compute safe slug from name (don't worry about collisions, hash handles that)
     # cast to lowercase
-    # replace any sequence of non-alphanumeric characters with a single '-'
-    safe_name = _non_alphanum_pattern.sub("-", name.lower())
-    # truncate to max_length chars, strip '-' off ends
-    safe_name = safe_name.lstrip("-")[:max_length].rstrip("-")
+    # replace all non-alphanumeric characters
+    safe_name = _non_alphanum_pattern.sub("", name.lower())
+    # truncate to max_length chars
+    safe_name = safe_name[:max_length]
     # ensure starts with lowercase letter
     if safe_name and not safe_name.startswith(_alpha_lower):
-        safe_name = "x-" + safe_name[: max_length - 2]
+        safe_name = "x" + safe_name[: max_length - 1]
     if not safe_name:
         # make sure it's non-empty
         safe_name = 'x'
@@ -127,16 +148,14 @@ def strip_and_hash(name, max_length=32):
     truncates name to max_length - len(hash_suffix) to fit in max_length
     after adding hash suffix
     """
-    name_length = max_length - (_hash_length + 3)
+    name_length = max_length - (_hash_length + 1)
     if name_length < 1:
-        raise ValueError(f"Cannot make safe names shorter than {_hash_length + 4}")
+        raise ValueError(f"Cannot make safe names shorter than {_hash_length + 2}")
     # quick, short hash to avoid name collisions
     name_hash = hashlib.sha256(name.encode("utf8")).hexdigest()[:_hash_length]
     safe_name = _extract_safe_name(name, name_length)
-    # due to stripping of '-' in _extract_safe_name,
-    # the result will always have _exactly_ '---', never '--' nor '----'
-    # use '---' to avoid colliding with `{username}--{servername}` template join
-    return f"{safe_name}---{name_hash}"
+    # the result will always have _exactly_ one '-'
+    return f"{safe_name}-{name_hash}"
 
 
 def safe_slug(name, is_valid=is_valid_default, max_length=32):
@@ -151,7 +170,7 @@ def safe_slug(name, is_valid=is_valid_default, max_length=32):
     1. validity, and
     2. no collisions
     """
-    if '--' in name:
+    if '-' in name:
         # don't accept any names that could collide with the safe slug
         return strip_and_hash(name, max_length=max_length)
     # allow max_length override for truncated sub-strings
