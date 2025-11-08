@@ -59,7 +59,9 @@
           {% for spawner in named_spawners %}
             <tr class="home-server-row" data-server-name="{{ spawner.name }}">
               {# name #}
-              <td>{{ spawner.name }}</td>
+              <td>
+                {% if spawner.display_name %}{{ spawner.display_name }}{% else %}{{ spawner.name }}{% endif %}
+              </td>
               {# url #}
               <td>
                 <a class="server-link {% if not spawner.ready %}hidden{% endif %}"

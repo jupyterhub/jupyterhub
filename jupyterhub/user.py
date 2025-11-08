@@ -16,6 +16,7 @@ from ._version import __version__, _check_version
 from .crypto import CryptKeeper, EncryptionUnavailable, InvalidToken, decrypt, encrypt
 from .metrics import RUNNING_SERVERS, TOTAL_USERS
 from .objects import Server
+from .slugs import is_valid_safe_slug
 from .spawner import LocalProcessSpawner
 from .utils import (
     AnyTimeoutError,
@@ -229,7 +230,7 @@ class User:
 
         # ensure default spawner exists in the database
         if '' not in self.orm_user.orm_spawners:
-            self._new_orm_spawner('')
+            self._new_orm_spawner('', '')
 
     @property
     def authenticator(self):
@@ -247,7 +248,6 @@ class User:
         """
         return self.get_or_create_spawner(server_name, replace_failed=replace_failed)
 
-
     def get_or_create_spawner(
         self, server_name="", display_name="", replace_failed=False
     ):
@@ -264,12 +264,12 @@ class User:
         """
         spawner = self.spawners.get(server_name)
         if not spawner:
-            spawner = self._new_spawner(server_name)
+            spawner = self._new_spawner(server_name, display_name)
         elif replace_failed and spawner._failed:
             self.log.debug(f"Discarding failed spawner {spawner._log_name}")
             # remove failed spawner, create a new one
             old = self.spawners.pop(server_name)
-            spawner = self._new_spawner(server_name)
+            spawner = self._new_spawner(server_name, old.display_name)
         return spawner
 
     def sync_groups(self, group_names):
@@ -487,24 +487,55 @@ class User:
                 # otherwise, yield low-level ORM object (server is not active)
                 yield orm_spawner
 
-    def _new_orm_spawner(self, server_name):
+    def _new_orm_spawner(self, server_name, server_displayname):
         """Create the low-level orm Spawner object"""
-        orm_spawner = orm.Spawner(name=server_name)
+        orm_spawner = orm.Spawner(name=server_name, display_name=server_displayname)
         self.db.add(orm_spawner)
         orm_spawner.user = self.orm_user
         self.db.commit()
         assert server_name in self.orm_spawners
         return orm_spawner
 
-    def _new_spawner(self, server_name, spawner_class=None, **kwargs):
+    def _new_spawner(
+        self, server_name, server_displayname=None, spawner_class=None, **kwargs
+    ):
         """Create a new spawner"""
         if spawner_class is None:
             spawner_class = self.spawner_class
-        self.log.debug("Creating %s for %s:%s", spawner_class, self.name, server_name)
 
+        # If the spawner exists in the DB then allow invalid names since this
+        # must've been created by an older version of JupyterHub
         orm_spawner = self.orm_spawners.get(server_name)
-        if orm_spawner is None:
-            orm_spawner = self._new_orm_spawner(server_name)
+        if orm_spawner:
+            if server_name and not is_valid_safe_slug(server_name):
+                self.log.warning(
+                    "JupyterHub 6 has new restrictions on servernames. "
+                    "See https://jupyterhub.readthedocs.io/en/6.0.0/<TODO> "
+                    "for advice on migrating named servers (%s)",
+                    server_name,
+                )
+            server_displayname = orm_spawner.display_name
+            self.log.debug(
+                "Creating %s for existing server %s:%s (%s)",
+                spawner_class,
+                self.name,
+                server_name,
+                server_displayname,
+            )
+        else:
+            if server_name and not is_valid_safe_slug(server_name):
+                raise ValueError(f"Invalid server_name: {server_name}")
+            if server_displayname is None:
+                server_displayname = server_name
+            self.log.debug(
+                "Creating %s for new server %s:%s (%s)",
+                spawner_class,
+                self.name,
+                server_name,
+                server_displayname,
+            )
+            orm_spawner = self._new_orm_spawner(server_name, server_displayname)
+
         if server_name == '' and self.state:
             # migrate user.state to spawner.state
             orm_spawner.state = self.state
@@ -777,7 +808,7 @@ class User:
             # nothing we can do here but fail
             raise web.HTTPError(400, f"{self.name}'s authentication has expired")
 
-    async def spawn(self, server_name='', options=None, handler=None):
+    async def spawn(self, server_name='', display_name='', options=None, handler=None):
         """Start the user's spawner
 
         depending from the value of JupyterHub.allow_named_servers
@@ -802,7 +833,9 @@ class User:
         note = f"Server at {base_url}"
         db.commit()
 
-        spawner = self.get_or_create_spawner(server_name, replace_failed=True)
+        spawner = self.get_or_create_spawner(
+            server_name, display_name, replace_failed=True
+        )
         spawner.server = server = Server(orm_server=orm_server)
         assert spawner.orm_spawner.server is orm_server
 
