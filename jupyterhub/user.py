@@ -203,16 +203,6 @@ class UserDict(dict):
         return counts
 
 
-class _SpawnerDict(dict):
-    def __init__(self, spawner_factory):
-        self.spawner_factory = spawner_factory
-
-    def __getitem__(self, key):
-        if key not in self:
-            self[key] = self.spawner_factory(key)
-        return super().__getitem__(key)
-
-
 class User:
     """High-level wrapper around an orm.User object"""
 
@@ -235,7 +225,7 @@ class User:
             + '/'
         )
 
-        self.spawners = _SpawnerDict(self._new_spawner)
+        self.spawners = {}
 
         # ensure default spawner exists in the database
         if '' not in self.orm_user.orm_spawners:
@@ -250,19 +240,36 @@ class User:
         return self.settings.get('spawner_class', LocalProcessSpawner)
 
     def get_spawner(self, server_name="", replace_failed=False):
+        """
+        .. deprecated:: 6.0
+
+            Use get_or_create_spawner instead.
+        """
+        return self.get_or_create_spawner(server_name, replace_failed=replace_failed)
+
+
+    def get_or_create_spawner(
+        self, server_name="", display_name="", replace_failed=False
+    ):
         """Get a spawner by name
+
+        Creates a new Spawner if it doesn't exist.
 
         replace_failed governs whether a failed spawner should be replaced
         or returned (default: returned).
 
-        .. versionadded:: 2.2
+        .. versionchanged:: 6.0
+
+        Renamed from get_spawner, and added display_name parameter
         """
-        spawner = self.spawners[server_name]
-        if replace_failed and spawner._failed:
+        spawner = self.spawners.get(server_name)
+        if not spawner:
+            spawner = self._new_spawner(server_name)
+        elif replace_failed and spawner._failed:
             self.log.debug(f"Discarding failed spawner {spawner._log_name}")
             # remove failed spawner, create a new one
-            self.spawners.pop(server_name)
-            spawner = self.spawners[server_name]
+            old = self.spawners.pop(server_name)
+            spawner = self._new_spawner(server_name)
         return spawner
 
     def sync_groups(self, group_names):
@@ -559,12 +566,14 @@ class User:
         spawn_kwargs.update(kwargs)
         spawner = spawner_class(**spawn_kwargs)
         spawner.load_state(orm_spawner.state or {})
+
+        self.spawners[server_name] = spawner
         return spawner
 
     # singleton property, self.spawner maps onto spawner with empty server_name
     @property
     def spawner(self):
-        return self.spawners['']
+        return self.get_or_create_spawner('')
 
     @spawner.setter
     def spawner(self, spawner):
@@ -793,7 +802,7 @@ class User:
         note = f"Server at {base_url}"
         db.commit()
 
-        spawner = self.get_spawner(server_name, replace_failed=True)
+        spawner = self.get_or_create_spawner(server_name, replace_failed=True)
         spawner.server = server = Server(orm_server=orm_server)
         assert spawner.orm_spawner.server is orm_server
 
