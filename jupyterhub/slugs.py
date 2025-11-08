@@ -139,7 +139,7 @@ def strip_and_hash(name, max_length=32):
     return f"{safe_name}---{name_hash}"
 
 
-def safe_slug(name, is_valid=is_valid_default, max_length=None):
+def safe_slug(name, is_valid=is_valid_default, max_length=32):
     """Always generate a safe slug
 
     is_valid should be a callable that returns True if a given string follows appropriate rules,
@@ -153,12 +153,12 @@ def safe_slug(name, is_valid=is_valid_default, max_length=None):
     """
     if '--' in name:
         # don't accept any names that could collide with the safe slug
-        return strip_and_hash(name, max_length=max_length or 32)
+        return strip_and_hash(name, max_length=max_length)
     # allow max_length override for truncated sub-strings
     if is_valid(name) and (max_length is None or len(name) <= max_length):
         return name
     else:
-        return strip_and_hash(name, max_length=max_length or 32)
+        return strip_and_hash(name, max_length=max_length)
 
 
 def multi_slug(names, max_length=48):
