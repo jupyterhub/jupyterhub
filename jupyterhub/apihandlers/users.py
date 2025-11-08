@@ -646,7 +646,7 @@ class UserServerAPIHandler(APIHandler):
                     self.log.error(error_message)
                     raise web.HTTPError(400, error_message)
 
-        spawner = user.get_spawner(server_name, replace_failed=True)
+        spawner = user.get_or_create_spawner(server_name, replace_failed=True)
         pending = spawner.pending
         if pending == 'spawn':
             self.set_header('Content-Type', 'text/plain')

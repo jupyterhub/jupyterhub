@@ -3115,7 +3115,7 @@ class JupyterHub(Application):
             # instantiate Spawner wrapper and check if it's still alive
             # spawner should be running
             user = self.users[orm_user]
-            spawner = user.spawners[orm_spawner.name]
+            spawner = user.get_or_create_spawner(orm_spawner.name)
             self.log.debug("Loading state for %s from db", spawner._log_name)
             # signal that check is pending to avoid race conditions
             spawner._check_pending = True
