@@ -143,6 +143,9 @@ class SpawnHandler(BaseHandler):
             user_name = self.current_user.name
         if server_name:
             server_displayname = server_name
+            # The current form is used to manage existing servers as well as create
+            # new ones so look for this parameter to indicate it's a new spawner
+            # TODO: Have a different endpoint for creating new servers?
             convertname = self.request.arguments.get("convertname")
             if convertname and convertname[0].decode() == "1":
                 # User submitted this from the UI, so treat as a user-friendly
