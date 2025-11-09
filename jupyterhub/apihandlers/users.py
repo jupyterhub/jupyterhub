@@ -651,7 +651,7 @@ class UserServerAPIHandler(APIHandler):
                     self.log.error(error_message)
                     raise web.HTTPError(400, error_message)
         else:
-            display_name = server_name
+            display_name = ''
 
         spawner = user.get_or_create_spawner(
             server_name, display_name, replace_failed=True
@@ -713,7 +713,7 @@ class UserServerAPIHandler(APIHandler):
         elif remove:
             raise web.HTTPError(400, "Cannot delete the default server")
 
-        spawner = user.get_or_create_spawner(server_name)
+        spawner = user.spawners[server_name]
 
         if spawner.pending == 'stop':
             self.log.debug("%s already stopping", spawner._log_name)

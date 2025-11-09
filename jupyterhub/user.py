@@ -204,6 +204,16 @@ class UserDict(dict):
         return counts
 
 
+class _SpawnerDict(dict):
+    def __init__(self, spawner_factory):
+        self.spawner_factory = spawner_factory
+
+    def __getitem__(self, key):
+        if key not in self:
+            self[key] = self.spawner_factory(key)
+        return super().__getitem__(key)
+
+
 class User:
     """High-level wrapper around an orm.User object"""
 
@@ -226,7 +236,7 @@ class User:
             + '/'
         )
 
-        self.spawners = {}
+        self.spawners = _SpawnerDict(self._new_spawner)
 
         # ensure default spawner exists in the database
         if '' not in self.orm_user.orm_spawners:
@@ -241,35 +251,42 @@ class User:
         return self.settings.get('spawner_class', LocalProcessSpawner)
 
     def get_spawner(self, server_name="", replace_failed=False):
-        """
-        .. deprecated:: 6.0
-
-            Use get_or_create_spawner instead.
-        """
-        return self.get_or_create_spawner(server_name, replace_failed=replace_failed)
-
-    def get_or_create_spawner(
-        self, server_name="", display_name="", replace_failed=False
-    ):
         """Get a spawner by name
 
-        Creates a new Spawner if it doesn't exist.
+        orm_spawner must already exist
 
         replace_failed governs whether a failed spawner should be replaced
         or returned (default: returned).
 
-        .. versionchanged:: 6.0
-
-        Renamed from get_spawner, and added display_name parameter
+        .. versionadded:: 2.2
         """
-        spawner = self.spawners.get(server_name)
-        if not spawner:
-            spawner = self._new_spawner(server_name, display_name)
-        elif replace_failed and spawner._failed:
+        # This should throw an exception if the orm_spawner doesn't exist
+        spawner = self.spawners[server_name]
+        if replace_failed and spawner._failed:
             self.log.debug(f"Discarding failed spawner {spawner._log_name}")
             # remove failed spawner, create a new one
             old = self.spawners.pop(server_name)
             spawner = self._new_spawner(server_name, old.display_name)
+        return spawner
+
+    def get_or_create_spawner(self, server_name, display_name, replace_failed=False):
+        """Get a spawner, or create a new spawner if it doesn't exist
+
+        Since this may create a new spawner all parameters needed to create it
+        must be passed to this method.
+
+        .. versionadded:: 6.0
+        """
+        if self.orm_spawners.get(server_name):
+            return self.get_spawner(server_name, replace_failed)
+
+        if server_name and not is_valid_safe_slug(server_name):
+            raise ValueError(f"Invalid server_name: {server_name}")
+        if display_name is None:
+            display_name = server_name
+
+        self._new_orm_spawner(server_name, display_name)
+        spawner = self._new_spawner(server_name)
         return spawner
 
     def sync_groups(self, group_names):
@@ -489,6 +506,14 @@ class User:
 
     def _new_orm_spawner(self, server_name, server_displayname):
         """Create the low-level orm Spawner object"""
+
+        self.log.debug(
+            "Creating orm_spawner for new server %s:%s (%s)",
+            self.name,
+            server_name,
+            server_displayname,
+        )
+
         orm_spawner = orm.Spawner(name=server_name, display_name=server_displayname)
         self.db.add(orm_spawner)
         orm_spawner.user = self.orm_user
@@ -496,45 +521,32 @@ class User:
         assert server_name in self.orm_spawners
         return orm_spawner
 
-    def _new_spawner(
-        self, server_name, server_displayname=None, spawner_class=None, **kwargs
-    ):
-        """Create a new spawner"""
+    def _new_spawner(self, server_name, spawner_class=None, **kwargs):
+        """Create a new spawner for an existing orm_spawner"""
         if spawner_class is None:
             spawner_class = self.spawner_class
 
         # If the spawner exists in the DB then allow invalid names since this
         # must've been created by an older version of JupyterHub
         orm_spawner = self.orm_spawners.get(server_name)
-        if orm_spawner:
-            if server_name and not is_valid_safe_slug(server_name):
-                self.log.warning(
-                    "JupyterHub 6 has new restrictions on servernames. "
-                    "See https://jupyterhub.readthedocs.io/en/6.0.0/<TODO> "
-                    "for advice on migrating named servers (%s)",
-                    server_name,
-                )
-            server_displayname = orm_spawner.display_name
-            self.log.debug(
-                "Creating %s for existing server %s:%s (%s)",
-                spawner_class,
-                self.name,
+        if not orm_spawner:
+            raise ValueError(f"orm_spawner not found for {server_name}")
+
+        if server_name and not is_valid_safe_slug(server_name):
+            self.log.warning(
+                "JupyterHub 6 has new restrictions on servernames. "
+                "See https://jupyterhub.readthedocs.io/en/6.0.0/<TODO> "
+                "for advice on migrating named servers (%s)",
                 server_name,
-                server_displayname,
             )
-        else:
-            if server_name and not is_valid_safe_slug(server_name):
-                raise ValueError(f"Invalid server_name: {server_name}")
-            if server_displayname is None:
-                server_displayname = server_name
-            self.log.debug(
-                "Creating %s for new server %s:%s (%s)",
-                spawner_class,
-                self.name,
-                server_name,
-                server_displayname,
-            )
-            orm_spawner = self._new_orm_spawner(server_name, server_displayname)
+        server_displayname = orm_spawner.display_name
+        self.log.debug(
+            "Creating %s for existing server %s:%s (%s)",
+            spawner_class,
+            self.name,
+            server_name,
+            server_displayname,
+        )
 
         if server_name == '' and self.state:
             # migrate user.state to spawner.state
@@ -597,14 +609,12 @@ class User:
         spawn_kwargs.update(kwargs)
         spawner = spawner_class(**spawn_kwargs)
         spawner.load_state(orm_spawner.state or {})
-
-        self.spawners[server_name] = spawner
         return spawner
 
     # singleton property, self.spawner maps onto spawner with empty server_name
     @property
     def spawner(self):
-        return self.get_or_create_spawner('')
+        return self.spawners['']
 
     @spawner.setter
     def spawner(self, spawner):
