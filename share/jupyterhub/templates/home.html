@@ -60,7 +60,11 @@
             <tr class="home-server-row" data-server-name="{{ spawner.name }}">
               {# name #}
               <td>
-                {% if spawner.display_name %}{{ spawner.display_name }}{% else %}{{ spawner.name }}{% endif %}
+                {% if spawner.display_name %}
+                  {{ spawner.display_name }}
+                {% else %}
+                  {{ spawner.name }}
+                {% endif %}
               </td>
               {# url #}
               <td>
