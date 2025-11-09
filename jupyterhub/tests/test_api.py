@@ -437,7 +437,7 @@ async def test_get_users_state_filter(app, state):
         If active and ready, should turn up in a ready query
         If not active, should turn up in an inactive query
         """
-        spawner = user.spawners[name]
+        spawner = user.get_or_create_spawner(name, name)
         db.commit()
         if active:
             orm_server = orm.Server()
@@ -2669,7 +2669,7 @@ async def test_update_server_activity(app, user, server_name, fresh):
     # we use naive utc internally
     # initialize last_activity for one named and the default server
     for name in ("", "exists"):
-        user.spawners[name].orm_spawner.last_activity = internal_now
+        user.get_or_create_spawner(name, name).orm_spawner.last_activity = internal_now
     app.db.commit()
 
     td = timedelta(minutes=1)

@@ -79,13 +79,13 @@ async def test_spawner(db, request):
 
 
 def test_spawner_from_db(app, user):
-    spawner = user.spawners['name']
+    spawner = user.get_or_create_spawner('name', 'name')
     user_options = {"test": "value"}
     spawner.orm_spawner.user_options = user_options
     app.db.commit()
     # delete and recreate the spawner from the db
     user.spawners.pop('name')
-    new_spawner = user.spawners['name']
+    new_spawner = user.get_or_create_spawner('name', 'name')
     assert new_spawner.orm_spawner.user_options == user_options
     assert new_spawner.user_options == user_options
 
