@@ -624,10 +624,9 @@ class UserServerAPIHandler(APIHandler):
             raise web.HTTPError(404)
 
         if server_name:
-            display_name = self.request.body_arguments.get("display_name")
-            if display_name:
-                display_name = display_name[0].decode()
-            else:
+            body = self.get_json_body() or {}
+            display_name = body.get("display_name")
+            if not display_name:
                 display_name = server_name
 
             if not self.allow_named_servers:
@@ -651,6 +650,8 @@ class UserServerAPIHandler(APIHandler):
                     error_message = f"Invalid server_name: {server_name}"
                     self.log.error(error_message)
                     raise web.HTTPError(400, error_message)
+        else:
+            display_name = server_name
 
         spawner = user.get_or_create_spawner(
             server_name, display_name, replace_failed=True
