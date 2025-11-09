@@ -85,6 +85,7 @@ async def test_default_server(app, named_servers):
                 '': {
                     'full_name': f"{username}/",
                     'name': '',
+                    'display_name': '',
                     'started': TIMESTAMP,
                     'last_activity': TIMESTAMP,
                     'url': user.url,
@@ -116,27 +117,36 @@ async def test_default_server(app, named_servers):
 
 
 @pytest.mark.parametrize(
-    'servername,escapedname,caller_escape,start_only',
+    'servername,displayname,escapedname,caller_escape,start_only',
     [
-        ('trevor', 'trevor', False, False),
-        ('$p~c|a! ch@rs', '%24p~c%7Ca%21%20ch@rs', True, True),
-        ('hash#?question', 'hash%23%3Fquestion', True, True),
+        # Servers with a non-compliant name can be started but not created
+        ('$p~c|a! ch@rs', '', '%24p~c%7Ca%21%20ch@rs', True, True),
+        ('hash#?question', '', 'hash%23%3Fquestion', True, True),
+        # New servers can have an optional displayname, defaults to servername
+        ('trevor', None, 'trevor', False, False),
+        ('trevor', 'My name is Trevor', 'trevor', False, False),
+        # Valid server names are alphanumeric, or alphanumeric-HASH8
         (
+            'server1',
             "e_êẹèêéøßæṣ-",
-            "e_%C3%AA%E1%BA%B9%C3%A8%C3%AA%C3%A9%C3%B8%C3%9F%C3%A6%E1%B9%A3-",
+            "server1",
             False,
             False,
         ),
         (
+            'server-abcdef12',
             "e_êẹèêéøßæṣ-",
-            "e_%C3%AA%E1%BA%B9%C3%A8%C3%AA%C3%A9%C3%B8%C3%9F%C3%A6%E1%B9%A3-",
-            True,
+            "server-abcdef12",
+            False,
             False,
         ),
+        # TODO: this only tests the API. We should also test the spawn UI where
+        # the user supplies only a displayname, and the servername is generated
+        # automatically
     ],
 )
 async def test_create_or_start_named_server(
-    app, named_servers, servername, escapedname, caller_escape, start_only
+    app, named_servers, servername, displayname, escapedname, caller_escape, start_only
 ):
     username = 'walnut'
     user = add_user(app.db, app, name=username)
@@ -149,10 +159,18 @@ async def test_create_or_start_named_server(
     # servername is invalid for creating a new server, but valid for
     # starting existing servers
     if start_only:
-        user._new_orm_spawner(servername)
+        user._new_orm_spawner(servername, displayname)
+
+    kwargs = {}
+    user_options = {}
+    expected_displayname = servername
+    if displayname is not None:
+        expected_displayname = displayname
+        user_options = {"display_name": displayname}
+        kwargs["json"] = user_options
 
     r = await api_request(
-        app, 'users', username, 'servers', request_servername, method='post'
+        app, 'users', username, 'servers', request_servername, method='post', **kwargs
     )
     r.raise_for_status()
     assert r.status_code == 201
@@ -197,7 +215,8 @@ async def test_create_or_start_named_server(
             'servers': {
                 servername: {
                     'full_name': f"{username}/{servername}",
-                    'name': name,
+                    'name': servername,
+                    'display_name': expected_displayname,
                     'started': TIMESTAMP,
                     'last_activity': TIMESTAMP,
                     'url': url_path_join(user.url, escapedname, '/'),
@@ -206,17 +225,18 @@ async def test_create_or_start_named_server(
                     'stopped': False,
                     'progress_url': f'PREFIX/hub/api/users/{username}/servers/{escapedname}/progress',
                     'state': {'pid': 0},
-                    'user_options': {},
-                    'full_url': user.public_url(name) or None,
+                    'user_options': user_options,
+                    'full_url': user.public_url(servername) or None,
                     'full_progress_url': full_progress_url,
                 }
-                for name in [servername]
             },
         }
     )
 
 
-@pytest.mark.parametrize("servername", ["a$/b", "$p~c|a! ch@rs", "hash#?question"])
+@pytest.mark.parametrize(
+    "servername", ["a$/b", "$p~c|a! ch@rs", "hash#?question", "server-abcdef123"]
+)
 async def test_create_invalid_named_server(app, named_servers, servername):
     username = 'walnut'
     user = add_user(app.db, app, name=username)
@@ -232,7 +252,7 @@ async def test_create_invalid_named_server(app, named_servers, servername):
         r.raise_for_status()
     assert exc.value.response.json() == {
         'status': 400,
-        'message': f"Invalid server_name. Allowed characters are letters, digits, underscore and hyphen: {servername}",
+        'message': f"Invalid server_name: {servername}",
     }
 
 
@@ -298,21 +318,21 @@ async def test_named_server_limit(app, named_servers):
     cookies = await app.login_user(username)
 
     # Create 1st named server
-    servername1 = 'bar-1'
+    servername1 = 'bar-00000001'
     r = await api_request(app, 'users', username, 'servers', servername1, method='post')
     r.raise_for_status()
     assert r.status_code == 201
     assert r.text == ''
 
     # Create 2nd named server
-    servername2 = 'bar-2'
+    servername2 = 'bar-00000002'
     r = await api_request(app, 'users', username, 'servers', servername2, method='post')
     r.raise_for_status()
     assert r.status_code == 201
     assert r.text == ''
 
     # Create 3rd named server
-    servername3 = 'bar-3'
+    servername3 = 'bar-00000003'
     r = await api_request(app, 'users', username, 'servers', servername3, method='post')
     assert r.status_code == 400
     assert r.json() == {
@@ -360,7 +380,7 @@ async def test_named_server_limit_as_callable(
     cookies = await app.login_user(username)
 
     # Create 1st named server
-    servername1 = 'bar-1'
+    servername1 = 'bar-00000001'
     r = await api_request(
         app, 'users', username, 'servers', servername1, method='post', cookies=cookies
     )
@@ -369,7 +389,7 @@ async def test_named_server_limit_as_callable(
     assert r.text == ''
 
     # Create 2nd named server
-    servername2 = 'bar-2'
+    servername2 = 'bar-00000002'
     r = await api_request(
         app, 'users', username, 'servers', servername2, method='post', cookies=cookies
     )
@@ -378,7 +398,7 @@ async def test_named_server_limit_as_callable(
     assert r.text == ''
 
     # Create 3rd named server
-    servername3 = 'bar-3'
+    servername3 = 'bar-00000003'
     r = await api_request(
         app, 'users', username, 'servers', servername3, method='post', cookies=cookies
     )
