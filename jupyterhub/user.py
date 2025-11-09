@@ -266,7 +266,7 @@ class User:
             self.log.debug(f"Discarding failed spawner {spawner._log_name}")
             # remove failed spawner, create a new one
             old = self.spawners.pop(server_name)
-            spawner = self._new_spawner(server_name, old.display_name)
+            spawner = self._new_spawner(server_name)
         return spawner
 
     def get_or_create_spawner(self, server_name, display_name, replace_failed=False):
@@ -287,6 +287,7 @@ class User:
 
         self._new_orm_spawner(server_name, display_name)
         spawner = self._new_spawner(server_name)
+        self.spawners[server_name] = spawner
         return spawner
 
     def sync_groups(self, group_names):
