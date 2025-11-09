@@ -235,7 +235,7 @@ async def test_create_or_start_named_server(
 
 
 @pytest.mark.parametrize(
-    "servername", ["a$/b", "$p~c|a! ch@rs", "hash#?question", "server-abcdef123"]
+    "servername", ["a$/b", "$p~c|a! ch@rs", "hash#?question", "server-abc-def"]
 )
 async def test_create_invalid_named_server(app, named_servers, servername):
     username = 'walnut'
@@ -318,21 +318,21 @@ async def test_named_server_limit(app, named_servers):
     cookies = await app.login_user(username)
 
     # Create 1st named server
-    servername1 = 'bar-00000001'
+    servername1 = 'bar-1'
     r = await api_request(app, 'users', username, 'servers', servername1, method='post')
     r.raise_for_status()
     assert r.status_code == 201
     assert r.text == ''
 
     # Create 2nd named server
-    servername2 = 'bar-00000002'
+    servername2 = 'bar-2'
     r = await api_request(app, 'users', username, 'servers', servername2, method='post')
     r.raise_for_status()
     assert r.status_code == 201
     assert r.text == ''
 
     # Create 3rd named server
-    servername3 = 'bar-00000003'
+    servername3 = 'bar-3'
     r = await api_request(app, 'users', username, 'servers', servername3, method='post')
     assert r.status_code == 400
     assert r.json() == {
@@ -380,7 +380,7 @@ async def test_named_server_limit_as_callable(
     cookies = await app.login_user(username)
 
     # Create 1st named server
-    servername1 = 'bar-00000001'
+    servername1 = 'bar-1'
     r = await api_request(
         app, 'users', username, 'servers', servername1, method='post', cookies=cookies
     )
@@ -389,7 +389,7 @@ async def test_named_server_limit_as_callable(
     assert r.text == ''
 
     # Create 2nd named server
-    servername2 = 'bar-00000002'
+    servername2 = 'bar-2'
     r = await api_request(
         app, 'users', username, 'servers', servername2, method='post', cookies=cookies
     )
@@ -398,7 +398,7 @@ async def test_named_server_limit_as_callable(
     assert r.text == ''
 
     # Create 3rd named server
-    servername3 = 'bar-00000003'
+    servername3 = 'bar-3'
     r = await api_request(
         app, 'users', username, 'servers', servername3, method='post', cookies=cookies
     )
