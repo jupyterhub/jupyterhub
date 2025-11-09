@@ -26,8 +26,6 @@ _non_alphanum_pattern = re.compile(r'[^a-z0-9]+')
 
 # length of hash suffix
 _hash_length = 8
-# all hash suffixes should match this pattern
-_hash_pattern = re.compile(rf'^[a-f0-9]{{{_hash_length}}}$')
 
 
 def _is_valid_general(
@@ -53,7 +51,7 @@ def _is_valid_general(
 def is_valid_safe_slug(s):
     """Checks if this is a safe slug
 
-    Either alphanumeric only, or a single '-' followed by a hash
+    alphanumeric, with an optional '-' in the middle
     """
     if len(s) > 32:
         return False
@@ -62,7 +60,7 @@ def is_valid_safe_slug(s):
         return False
     if not _alphanum_pattern.match(name):
         return False
-    if suffix and not _hash_pattern.match(suffix):
+    if suffix and not _alphanum_pattern.match(suffix):
         return False
     return True
 
