@@ -102,7 +102,7 @@ class UserDict(dict):
 
         it does not check if the user is in the database
         """
-        if isinstance(key, (User, orm.User)):
+        if isinstance(key, User | orm.User):
             key = key.id
         elif isinstance(key, str):
             # username lookup, O(N)

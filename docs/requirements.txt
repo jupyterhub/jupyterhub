@@ -13,3 +13,4 @@ sphinx-copybutton
 sphinx-jsonschema
 sphinxext-opengraph
 sphinxext-rediraffe
+tomli; python_version < '3.11'

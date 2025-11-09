@@ -108,7 +108,7 @@ class JSONList(JSONDict):
     """
 
     def process_bind_param(self, value, dialect):
-        if isinstance(value, (list, tuple)):
+        if isinstance(value, list | tuple):
             value = json.dumps(value)
         if isinstance(value, set):
             # serialize sets as ordered lists

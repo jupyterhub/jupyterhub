@@ -4,13 +4,9 @@ Traitlets that are used in JupyterHub
 
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
-import sys
 
 # See compatibility note on `group` keyword in https://docs.python.org/3/library/importlib.metadata.html#entry-points
-if sys.version_info < (3, 10):
-    from importlib_metadata import entry_points
-else:
-    from importlib.metadata import entry_points
+from importlib.metadata import entry_points
 
 from traitlets import Integer, List, TraitError, TraitType, Type, Undefined, Unicode
 
@@ -75,7 +71,7 @@ class ByteSpecification(Integer):
         If it has one of the suffixes, it is converted into the appropriate
         pure byte value.
         """
-        if isinstance(value, (int, float)):
+        if isinstance(value, int | float):
             return int(value)
 
         try:
