@@ -403,14 +403,18 @@ class SingleUserNotebookAppMixin(Configurable):
     @default('hub_http_client')
     def _default_client(self):
         # can't use ssl_options in case of pycurl
+        defaults = dict(validate_cert=True)
+        # don't set falsy empty strings,
+        # which tornado interprets as paths
+        if self.client_ca:
+            defaults["ca_certs"] = self.client_ca
+        if self.keyfile:
+            defaults["client_key"] = self.keyfile
+        if self.certfile:
+            defaults["client_cert"] = self.certfile
         AsyncHTTPClient.configure(
             AsyncHTTPClient.configured_class(),
-            defaults=dict(
-                ca_certs=self.client_ca,
-                client_key=self.keyfile,
-                client_cert=self.certfile,
-                validate_cert=True,
-            ),
+            defaults=defaults,
         )
         return AsyncHTTPClient()
 

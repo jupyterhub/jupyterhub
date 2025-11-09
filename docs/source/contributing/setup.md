@@ -160,11 +160,13 @@ while SimpleLocalProcessSpawner allows you to start servers without having to
 create a Unix user for each JupyterHub user. Together, these make it
 much easier to test JupyterHub.
 
-Tip: If you are working on parts of JupyterHub that are common to all
+:::{tip}
+If you are working on parts of JupyterHub that are common to all
 authenticators and spawners, we recommend using both DummyAuthenticator and
 SimpleLocalProcessSpawner. If you are working on just authenticator-related
 parts, use only SimpleLocalProcessSpawner. Similarly, if you are working on
 just spawner-related parts, use only DummyAuthenticator.
+:::
 
 ## Building frontend components
 

@@ -3,7 +3,7 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 # version_info updated by running `tbump`
-version_info = (5, 4, 0, "", "")
+version_info = (6, 0, 0, "", "dev")
 
 # pep 440 version: no dot before beta/rc, but before .dev
 # 0.1.0rc1

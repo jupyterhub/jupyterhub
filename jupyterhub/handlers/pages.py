@@ -41,16 +41,25 @@ class RootHandler(BaseHandler):
 
     def get(self):
         user = self.current_user
+        url = ''
         if self.default_url:
             # As set in jupyterhub_config.py
             if callable(self.default_url):
+                # callable default_url may be falsy,
+                # in which case we should take the same
+                # default path below
+                # (e.g. only custom default for _some_ users)
                 url = self.default_url(self)
             else:
                 url = self.default_url
-        elif user:
-            url = self.get_next_url(user)
-        else:
-            url = url_concat(self.settings["login_url"], dict(next=self.request.uri))
+
+        if not url:
+            if user:
+                url = self.get_next_url(user)
+            else:
+                url = url_concat(
+                    self.settings["login_url"], dict(next=self.request.uri)
+                )
         self.redirect(url)
 
 

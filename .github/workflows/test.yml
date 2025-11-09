@@ -82,12 +82,12 @@ jobs:
             subset: singleuser
           - python: "3.9"
             db: mysql
-          - python: "3.10"
-            db: postgres
           - python: "3.12"
+            db: postgres
+          - python: "3.13"
             subdomain: subdomain
             serverextension: serverextension
-          - python: "3.11"
+          - python: "3.13"
             ssl: ssl
             serverextension: serverextension
           - python: "3.11"
@@ -101,12 +101,14 @@ jobs:
             ssl: ssl
             noextension: noextension
             subset: singleuser
-          - python: "3.11"
+          - python: "3.13"
             browser: browser
           - python: "3.11"
             subdomain: subdomain
             browser: browser
-          - python: "3.12"
+          - python: "3.14"
+            main_dependencies: main_dependencies
+          - python: "3.14t"
             main_dependencies: main_dependencies
 
     steps:
@@ -140,10 +142,10 @@ jobs:
               echo "JUPYTERHUB_SINGLEUSER_APP=jupyverse" >> $GITHUB_ENV
           fi
       - uses: actions/checkout@v5
-      # NOTE: actions/setup-node@v5 make use of a cache within the GitHub base
+      # NOTE: actions/setup-node@v6 make use of a cache within the GitHub base
       #       environment and setup in a fraction of a second.
       - name: Install Node
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
         with:
           node-version: "20"
       - name: Install Javascript dependencies

@@ -45,9 +45,11 @@ def generate_old_db(env_dir, hub_version, db_url):
 # changes to this version list must also be reflected
 # in ci/init-db.sh
 @pytest.mark.parametrize(
-    'hub_version', ['1.1.0', '1.2.2', '1.3.0', '1.5.0', '2.1.1', '3.1.1']
+    'hub_version', ['1.1.0', '1.2.2', '1.3.0', '1.5.0', '2.1.1', '3.1.1', '4.1.6']
 )
 async def test_upgrade(tmpdir, hub_version):
+    if sys.version_info >= (3, 13) and V(hub_version) < V("4"):
+        pytest.skip("jupyterhub < 4 needs Python 3.12 or earlier")
     db_url = os.getenv('JUPYTERHUB_TEST_DB_URL')
     if db_url:
         db_url += '_upgrade_' + hub_version.replace('.', '')

@@ -325,14 +325,18 @@ class JupyterHubSingleUser(ExtensionApp):
     @default('hub_http_client')
     def _default_client(self):
         # can't use ssl_options in case of pycurl
+        defaults = dict(validate_cert=True)
+        # don't set falsy empty strings,
+        # which tornado interprets as paths
+        if self.hub_auth.client_ca:
+            defaults["ca_certs"] = self.hub_auth.client_ca
+        if self.hub_auth.keyfile:
+            defaults["client_key"] = self.hub_auth.keyfile
+        if self.hub_auth.certfile:
+            defaults["client_cert"] = self.hub_auth.certfile
         AsyncHTTPClient.configure(
             AsyncHTTPClient.configured_class(),
-            defaults=dict(
-                ca_certs=self.hub_auth.client_ca,
-                client_key=self.hub_auth.keyfile,
-                client_cert=self.hub_auth.certfile,
-                validate_cert=True,
-            ),
+            defaults=defaults,
         )
         return AsyncHTTPClient()
 

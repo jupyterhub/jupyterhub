@@ -41,7 +41,7 @@ jobs:
           python-version: "3.11"
           cache: pip
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v6
         with:
           node-version: "20"
 
@@ -71,7 +71,7 @@ jobs:
           docker run --rm -v $PWD/dist:/dist:ro docker.io/library/python:3.9-slim-bullseye bash -c 'pip install /dist/jupyterhub-*.tar.gz'
 
       # ref: https://github.com/actions/upload-artifact#readme
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: jupyterhub-${{ github.sha }}
           path: "dist/*"
