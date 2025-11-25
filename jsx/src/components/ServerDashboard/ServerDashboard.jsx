@@ -14,7 +14,7 @@ import {
   Card,
   CardGroup,
   Collapse,
-  Stack
+  Stack,
 } from "react-bootstrap";
 import ReactObjectTableViewer from "../ReactObjectTableViewer/ReactObjectTableViewer";
 
@@ -287,8 +287,9 @@ const ServerDashboard = (props) => {
     }
     return (
       <a
-        href={`${base_url}spawn/${user.name}${server.name ? "/" + server.name : ""
-          }`}
+        href={`${base_url}spawn/${user.name}${
+          server.name ? "/" + server.name : ""
+        }`}
       >
         <Button variant="light" size="xs">
           Spawn Page
@@ -505,12 +506,10 @@ const ServerDashboard = (props) => {
                   let failedServers = res.filter((e) => !e.ok);
                   if (failedServers.length > 0) {
                     setErrorAlert(
-                      `Failed to start ${failedServers.length} ${failedServers.length > 1
-                        ? "servers"
-                        : "server"
-                      }. ${failedServers.length > 1
-                        ? "Are they "
-                        : "Is it "
+                      `Failed to start ${failedServers.length} ${
+                        failedServers.length > 1 ? "servers" : "server"
+                      }. ${
+                        failedServers.length > 1 ? "Are they " : "Is it "
                       } already running?`,
                     );
                   }
@@ -520,9 +519,7 @@ const ServerDashboard = (props) => {
                   loadPageData();
                   return res;
                 })
-                .catch(() =>
-                  setErrorAlert(`Failed to start servers.`),
-                );
+                .catch(() => setErrorAlert(`Failed to start servers.`));
             }}
           >
             Start All
@@ -540,12 +537,10 @@ const ServerDashboard = (props) => {
                   let failedServers = res.flat().filter((e) => !e.ok);
                   if (failedServers.length > 0) {
                     setErrorAlert(
-                      `Failed to stop ${failedServers.length} ${failedServers.length > 1
-                        ? "servers"
-                        : "server"
-                      }. ${failedServers.length > 1
-                        ? "Are they "
-                        : "Is it "
+                      `Failed to stop ${failedServers.length} ${
+                        failedServers.length > 1 ? "servers" : "server"
+                      }. ${
+                        failedServers.length > 1 ? "Are they " : "Is it "
                       } already stopped?`,
                     );
                   }
@@ -555,15 +550,18 @@ const ServerDashboard = (props) => {
                   loadPageData();
                   return res;
                 })
-                .catch(() =>
-                  setErrorAlert(`Failed to stop servers.`),
-                );
+                .catch(() => setErrorAlert(`Failed to stop servers.`));
             }}
           >
             Stop All
           </Button>
           <div className="ms-auto">
-            <Button className="" variant="danger" id="shutdown-button" onClick={shutdownHub}>
+            <Button
+              className=""
+              variant="danger"
+              id="shutdown-button"
+              onClick={shutdownHub}
+            >
               Shutdown Hub
             </Button>
           </div>
@@ -605,9 +603,7 @@ const ServerDashboard = (props) => {
             </Button>
           </Link>
           <Link to="/groups">
-            <Button variant="light">
-              Manage Groups
-            </Button>
+            <Button variant="light">Manage Groups</Button>
           </Link>
         </Stack>
 
