@@ -1,6 +1,6 @@
 # PEP 621 build info
 [build-system]
-requires = ["setuptools>=61", "setuptools-scm"]
+requires = ["setuptools>=77", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
 # Project metadata
@@ -14,14 +14,14 @@ authors = [
   { name = "Jupyter Development Team", email = "jupyter@googlegroups.com" },
 ]
 keywords = ["Interactive", "Interpreter", "Shell", "Web", "Jupyter"]
-license = { text = "BSD-3-Clause" }
+license = "BSD-3-Clause"
+license-files = ["LICENSE"]
 requires-python = ">=3.10"
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "Intended Audience :: Developers",
   "Intended Audience :: System Administrators",
   "Intended Audience :: Science/Research",
-  "License :: OSI Approved :: BSD License",
   "Programming Language :: Python",
   "Programming Language :: Python :: 3",
   "Operating System :: POSIX",
@@ -81,7 +81,6 @@ simple = "jupyterhub.spawner:SimpleLocalProcessSpawner"
 
 [tool.setuptools]
 zip-safe = false
-license-files = ["LICENSE"]
 include-package-data = true
 
 [tool.setuptools.packages.find]
