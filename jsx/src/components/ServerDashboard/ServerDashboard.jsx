@@ -437,7 +437,7 @@ const ServerDashboard = (props) => {
             {server.started ? timeSince(server.started) : "Never"}
           </td>
           <td data-testid="user-row-profile-used">
-            {(server.user_options && server.user_options.profile) || "Default"}
+            {(server.user_options && server.user_options.profile) || ""}
           </td>
           <td data-testid="user-row-server-activity" className="actions">
             <StartServerButton server={server} user={user} />
