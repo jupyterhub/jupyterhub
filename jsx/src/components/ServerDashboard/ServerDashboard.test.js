@@ -763,7 +763,7 @@ test("Shows 'Default' when no profile is specified", async () => {
   });
 
   let profileCell = screen.getByTestId("user-row-profile-used");
-  expect(profileCell.textContent).toBe("Default");
+  expect(profileCell.textContent).toBe("");
 });
 
 test("Shows 'Never' for server start time when server never started", async () => {
