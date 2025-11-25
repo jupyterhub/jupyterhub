@@ -222,6 +222,12 @@ class SpawnHandler(BaseHandler):
             if isinstance(spawn_exc, web.HTTPError):
                 self.set_status(spawn_exc.status_code)
 
+                # web.HTTPError doesn't define headers,
+                # but custom exceptions may set them.
+                headers = getattr(spawn_exc, "headers", None) or {}
+                for name, value in headers.items():
+                    self.set_header(name, value)
+
             if spawn_exc:
                 error_message, error_html_message = format_exception(spawn_exc)
             else:
@@ -292,6 +298,10 @@ class SpawnHandler(BaseHandler):
             # This may need scoping to particular error codes.
             if isinstance(e, web.HTTPError):
                 self.set_status(e.status_code)
+
+                headers = getattr(e, "headers", None) or {}
+                for name, value in headers.items():
+                    self.set_header(name, value)
 
             error_message, error_html_message = format_exception(e)
 
