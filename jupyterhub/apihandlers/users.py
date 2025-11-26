@@ -17,6 +17,7 @@ from tornado.iostream import StreamClosedError
 from .. import orm, scopes
 from ..roles import assign_default_roles
 from ..scopes import needs_scope
+from ..slugs import is_valid_safe_slug
 from ..user import User
 from ..utils import (
     format_exception,
@@ -623,6 +624,11 @@ class UserServerAPIHandler(APIHandler):
             raise web.HTTPError(404)
 
         if server_name:
+            body = self.get_json_body() or {}
+            display_name = body.get("display_name")
+            if not display_name:
+                display_name = server_name
+
             if not self.allow_named_servers:
                 raise web.HTTPError(400, "Named servers are not enabled.")
 
@@ -638,7 +644,18 @@ class UserServerAPIHandler(APIHandler):
                         f"User {user_name} already has the maximum of {named_server_limit_per_user} named servers."
                         "  One must be deleted before a new server can be created",
                     )
-        spawner = user.get_spawner(server_name, replace_failed=True)
+
+                # Prevent creation of new invalid server names
+                if not is_valid_safe_slug(server_name):
+                    error_message = f"Invalid server_name: {server_name}"
+                    self.log.error(error_message)
+                    raise web.HTTPError(400, error_message)
+        else:
+            display_name = ''
+
+        spawner = user.get_or_create_spawner(
+            server_name, display_name, replace_failed=True
+        )
         pending = spawner.pending
         if pending == 'spawn':
             self.set_header('Content-Type', 'text/plain')
@@ -659,7 +676,7 @@ class UserServerAPIHandler(APIHandler):
                 raise web.HTTPError(400, f"{spawner._log_name} is already running")
 
         options = self.get_json_body()
-        await self.spawn_single_user(user, server_name, options=options)
+        await self.spawn_single_user(user, server_name, display_name, options=options)
         status = 202 if spawner.pending == 'spawn' else 201
         self.set_header('Content-Type', 'text/plain')
         self.set_status(status)
@@ -697,6 +714,7 @@ class UserServerAPIHandler(APIHandler):
             raise web.HTTPError(400, "Cannot delete the default server")
 
         spawner = user.spawners[server_name]
+
         if spawner.pending == 'stop':
             self.log.debug("%s already stopping", spawner._log_name)
             self.set_header('Content-Type', 'text/plain')
