@@ -490,6 +490,8 @@ class Service(Base):
 
     user = Column(Unicode(255), nullable=True)
 
+    timeout = Column(Integer, default=30, nullable=False)
+
     from_config = Column(Boolean, default=True)
 
     api_tokens = relationship(
