@@ -312,6 +312,7 @@ linkcheck_ignore = [
     # Occasionally blocks CI checks with 403
     r"https://www\.mysql\.com",
     r"https://www\.npmjs\.com",
+    r"https://medium\.com/.*",
     # Occasionally blocks CI checks with SSL error
     r"https://mediaspace\.msu\.edu/.*",
 ]
