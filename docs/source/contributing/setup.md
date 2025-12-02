@@ -120,11 +120,14 @@ a more detailed discussion.
 5. You are now ready to start JupyterHub!
 
    ```bash
-   jupyterhub
+   jupyterhub -f testing/jupyterhub_config.py
    ```
 
 6. You can access JupyterHub from your browser at
-   `http://localhost:8000` now.
+   `http://localhost:8000` now, and should see a login page.
+   You can login with any username and password,
+   and begin testing JupyterHub.
+   More on what the testing configuration does below.
 
 Happy developing!
 
@@ -142,11 +145,13 @@ configuration:
 jupyterhub -f testing/jupyterhub_config.py
 ```
 
+At this point, you should be able to vis `http://localhost:8000` and login with any username and password and start playing with JupyterHub or testing your changes.
+
 The test configuration enables a few things to make testing easier:
 
 - use 'dummy' authentication and 'simple' spawner
 - named servers are enabled
-- listen only on localhost
+- listen only on localhost because the testing config is wildly insecure if anybody has access to the port it is listening on.
 - 'admin' is an admin user, if you want to test the admin page
 - disable caching of static files
 
@@ -207,7 +212,7 @@ additional JavaScript dependencies:
 npm install
 ```
 
-This will fetch client-side JavaScript dependencies necessary to compile
+This will fetch NodeJS dependencies necessary to compile
 CSS.
 
 You may also need to manually update JavaScript and CSS after some
