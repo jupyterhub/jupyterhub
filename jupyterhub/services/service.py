@@ -52,6 +52,7 @@ from traitlets import (
     Dict,
     HasTraits,
     Instance,
+    Integer,
     List,
     Set,
     Unicode,
@@ -247,6 +248,15 @@ class Service(LoggingConfigurable):
 
     display = Bool(
         True, help="""Whether to list the service on the JupyterHub UI"""
+    ).tag(input=True)
+
+    timeout = Integer(
+        30,
+        help="""
+        Timeout (in seconds) to wait for the service to become available.
+
+        .. versionadded:: 6.0
+        """,
     ).tag(input=True)
 
     oauth_no_confirm = Bool(

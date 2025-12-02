@@ -2961,7 +2961,9 @@ class JupyterHub(Application):
                 # no URL to check, nothing to do
                 continue
             try:
-                await Server.from_orm(service.orm.server).wait_up(timeout=1, http=True)
+                await Server.from_orm(service.orm.server).wait_up(
+                    timeout=service.timeout, http=True
+                )
             except AnyTimeoutError:
                 self.log.warning(
                     "Cannot connect to %s service %s at %s",
@@ -3636,25 +3638,45 @@ class JupyterHub(Application):
             self.log.info("Adding external service %s", msg)
 
         if service.url:
-            tries = 10 if service.managed else 1
-            for i in range(tries):
-                try:
-                    await Server.from_orm(service.orm.server).wait_up(
-                        http=True, timeout=1, ssl_context=ssl_context
-                    )
-                except AnyTimeoutError:
-                    if service.managed:
+            server = Server.from_orm(service.orm.server)
+            wait_up_task = asyncio.create_task(
+                server.wait_up(
+                    http=True, timeout=service.timeout, ssl_context=ssl_context
+                )
+            )
+            futures = []
+            if service.managed:
+
+                async def wait_for_stop():
+                    """Return with status when managed service exits"""
+                    while True:
                         status = await service.spawner.poll()
-                        if status is not None:
-                            self.log.critical(
-                                "Service %s exited with status %s",
-                                service_name,
-                                status,
-                            )
-                            return False
-                else:
-                    return True
-            else:
+                        if status is None:
+                            await asyncio.sleep(1)
+                        else:
+                            return status
+
+                wait_for_stop_task = asyncio.create_task(wait_for_stop())
+                futures.append(wait_for_stop_task)
+
+            done, pending = await asyncio.wait(
+                futures, return_when=asyncio.FIRST_EXCEPTION
+            )
+            # cancel pending
+            [f.cancel() for f in pending if not f.done()]
+            if service.managed and wait_for_stop_task in done:
+                # service process exited while we were waiting to connect
+                status = await wait_for_stop_task
+                self.log.critical(
+                    "Service %s exited with status %s",
+                    service_name,
+                    status,
+                )
+                return False
+
+            try:
+                await wait_up_task
+            except AnyTimeoutError:
                 if service.managed:
                     self.log.critical(
                         "Cannot connect to %s service %s",
