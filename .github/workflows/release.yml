@@ -33,12 +33,12 @@ permissions:
 
 jobs:
   build-release:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.11"
+          python-version: "3.13"
           cache: pip
 
       - uses: actions/setup-node@v6
@@ -71,17 +71,28 @@ jobs:
           docker run --rm -v $PWD/dist:/dist:ro docker.io/library/python:3.13-slim-bullseye bash -c 'pip install /dist/jupyterhub-*.tar.gz'
 
       # ref: https://github.com/actions/upload-artifact#readme
-      - uses: actions/upload-artifact@v5
+      - name: upload dists
+        uses: actions/upload-artifact@v5
         with:
-          name: jupyterhub-${{ github.sha }}
-          path: "dist/*"
-          if-no-files-found: error
+          name: ${{ github.repository.name }}-dist
+          path: dist/
+
+  pypi-publish:
+    runs-on: ubuntu-24.04
+    if: startsWith(github.ref, 'refs/tags/')
+    environment:
+      name: release
+    needs:
+      - build-release
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Get release artifacts
+        uses: actions/download-artifact@v5
+        with:
+          name: ${{ github.repository.name }}-dist
+          path: dist/
 
       - name: Publish to PyPI
-        if: startsWith(github.ref, 'refs/tags/')
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
-        run: |
-          pip install twine
-          twine upload --skip-existing dist/*
+        uses: pypa/gh-action-pypi-publish@release/v1
