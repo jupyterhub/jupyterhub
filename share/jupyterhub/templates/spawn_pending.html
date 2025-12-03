@@ -26,6 +26,11 @@
           <summary>Event log</summary>
           <div id="progress-log"></div>
         </details>
+        <!-- Stop Server Button -->
+        <div class="text-center mt-3">
+          <button id="stop-server-btn" class="btn btn-danger btn-sm">Stop Server</button>
+          <div id="stop-server-status" class="mt-2" style="display: none;"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -33,9 +38,45 @@
 {% block script %}
   {{ super() }}
   <script type="text/javascript">
-    require(["jquery"], function($) {
+    require(["jquery", "jhapi"], function($, JHAPI) {
+      var base_url = window.jhdata ? window.jhdata.base_url : "{{ base_url }}";
+      var user = window.jhdata ? window.jhdata.user : "{{ user.name }}";
+      var api = new JHAPI(base_url);
+
       $("#refresh").click(function() {
         window.location.reload();
+      });
+
+      // Stop Server Button Handler
+      $("#stop-server-btn").click(function() {
+        var button = $(this);
+        var statusDiv = $("#stop-server-status");
+
+        // Disable button and show loading state
+        button.prop('disabled', true).text('Stopping...');
+        statusDiv.show().removeClass('alert-success alert-danger').addClass('alert alert-info').text('Stopping server...');
+
+        // Use JHAPI to stop server
+        api.stop_server(user, {
+          success: function() {
+            statusDiv.removeClass('alert-info alert-danger').addClass('alert-success').text('Server stopped successfully!');
+            // Redirect or reload after successful stop
+            setTimeout(function() {
+              window.location.reload();
+            }, 2000);
+          },
+          error: function(xhr, status, error) {
+            console.error('Error stopping server:', error);
+            var errorMessage = 'Error stopping server';
+            if (xhr.responseJSON && xhr.responseJSON.message) {
+              errorMessage += ': ' + xhr.responseJSON.message;
+            } else if (error) {
+              errorMessage += ': ' + error;
+            }
+            statusDiv.removeClass('alert-info alert-success').addClass('alert-danger').text(errorMessage);
+            button.prop('disabled', false).text('Stop Server');
+          }
+        });
       });
 
       // hook up event-stream for progress
