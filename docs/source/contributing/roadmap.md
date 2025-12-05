@@ -2,6 +2,13 @@
 
 # The JupyterHub roadmap
 
+:::{note}
+This JupyterHub roadmap has not been updated in a long time and is super outdated.
+We will be holding a workshop to update our roadmap, both our actual plans and how we communicate them, with the community February 25-26, 2006.
+[Read more on the planning issue](https://github.com/jupyterhub/team-compass/issues/805).
+A link to the workshop itself will come when it is public.
+:::
+
 This roadmap collects "next steps" for JupyterHub. It is about creating a
 shared understanding of the project's vision and direction amongst
 the community of users, contributors, and maintainers.
@@ -60,38 +67,14 @@ creating the environment in which a piece of software can be executed.
 
 These "Now" items are considered active areas of focus for the project:
 
-- HubShare - a sharing service for use with JupyterHub.
-  - Users should be able to:
-    - Push a project to other users.
-    - Get a checkout of a project from other users.
-    - Push updates to a published project.
-    - Pull updates from a published project.
-    - Manage conflicts/merges by simply picking a version (our/theirs)
-    - Get a checkout of a project from the internet. These steps are completely different from saving notebooks/files.
-    - Have directories that are managed by git completely separately from our stuff.
-    - Look at pushed content that they have access to without an explicit pull.
-    - Define and manage teams of users.
-      - Adding/removing a user to/from a team gives/removes them access to all projects that team has access to.
-    - Build other services, such as static HTML publishing and dashboarding on top of these things.
-
 ### Soon
 
 These "Soon" items are under discussion. Once an item reaches the point of an
 actionable plan, the item will be moved to the "Now" section. Typically,
 these will be moved at a future review of the roadmap.
 
-- resource monitoring and management:
-  - (prometheus?) API for resource monitoring
-  - tracking activity on single-user servers instead of the proxy
-  - notes and activity tracking per API token
-
 ### Later
 
 The "Later" items are things that are at the back of the project's mind. At this
 time there is no active plan for an item. The project would like to find the
 resources and time to discuss these ideas.
-
-- real-time collaboration
-  - Enter into real-time collaboration mode for a project that starts a shared execution context.
-  - Once the single-user notebook package supports realtime collaboration,
-    implement sharing mechanism integrated into the Hub.
