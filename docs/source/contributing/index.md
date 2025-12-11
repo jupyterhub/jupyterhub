@@ -14,7 +14,6 @@ This section covers information about our community, as well as ways that you ca
 ```{toctree}
 :maxdepth: 2
 
-contributor-list
 community
 setup
 docs
