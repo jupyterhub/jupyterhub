@@ -308,7 +308,7 @@ def new_hub(request, tmpdir, persist_db):
 
 
 async def test_resume_spawners(tmpdir, request, new_hub):
-    app = await new_hub()
+    app = await new_hub(allow_named_servers=True)
     db = app.db
     # spawn a user's server
     name = 'kurt'
@@ -316,6 +316,8 @@ async def test_resume_spawners(tmpdir, request, new_hub):
     await user.spawn()
     proc = user.spawner.proc
     assert proc is not None
+    stopped_spawner = user.spawners['stopped']
+    assert sorted(user.spawners) == ['', 'stopped']
 
     # stop the Hub without cleaning up servers
     app.cleanup_servers = False
@@ -330,6 +332,10 @@ async def test_resume_spawners(tmpdir, request, new_hub):
     user = app.users[name]
     assert user.running
     assert user.spawner.server is not None
+    # didn't load Spawner wrapper for stopped server
+    assert 'stopped' not in user.spawners
+    # but stopped server is there
+    assert 'stopped' in [s.name for s in user._orm_spawners]
 
     # stop the Hub without cleaning up servers
     app.cleanup_servers = False
@@ -347,6 +353,8 @@ async def test_resume_spawners(tmpdir, request, new_hub):
     assert not user.running
     assert user.spawner.server is None
     assert list(db.query(orm.Server)) == []
+    # spawners still exist
+    assert sorted([s.name for s in user._orm_spawners]) == ['', 'stopped']
 
 
 @pytest.mark.parametrize(
