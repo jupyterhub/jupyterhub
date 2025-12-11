@@ -3100,14 +3100,14 @@ class JupyterHub(Application):
             .filter(orm.Spawner.server != None)
             # pre-load relationships to avoid O(N active servers) queries
             .options(
-                # needs to be joinedload or selectinload, not contains_eager to avoid excluding stopped servers servers from the db session
-                # testing suggests selectinload is slower, but uses less memory than joinedload
-                # for large numbers of servers
+                # needs to be joinedload or selectinload,
+                # not contains_eager to avoid excluding stopped servers servers from the db session
+                # avoid joinedload on user_id which is degenerate,
+                # so selectinload it is
                 # make sure server->user relationship is loaded
                 selectinload(orm.Spawner.user),
                 # make sure users' _other_ spawners are also loaded
                 selectinload(orm.Spawner.user, orm.User._orm_spawners),
-                selectinload(orm.Spawner.server),
             )
             .populate_existing()
         ):
