@@ -291,7 +291,7 @@ async def test_spawn_pending_progress(
             f"Server ready at {user.server_url()}",
         ]
         logs_list = []
-        while not user.spawner.ready and len(logs_list) < len(expected_messages):
+        while not user.spawner.ready and len(logs_list) <= len(expected_messages):
             logs_list = [
                 await log.text_content()
                 for log in await browser.locator("div.progress-log-event").all()
