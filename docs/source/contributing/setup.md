@@ -5,7 +5,7 @@
 JupyterHub's continuous integration runs on [Ubuntu LTS](https://ubuntu.com/).
 
 While JupyterHub is only tested on one [Linux distribution](https://en.wikipedia.org/wiki/Linux_distribution),
-it should be fairly insensitive to variations between common [POXIS](https://en.wikipedia.org/wiki/POSIX) implementation,
+it should be fairly insensitive to variations between common [POSIX](https://en.wikipedia.org/wiki/POSIX) implementation,
 though we don't have the bandwidth to verify this automatically and continuously.
 
 Feel free to try it on your platform, and be sure to {ref}`let us know <contributing:community>` about any issues you encounter.
