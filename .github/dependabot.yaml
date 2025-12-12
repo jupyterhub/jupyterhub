@@ -10,10 +10,13 @@ updates:
   - package-ecosystem: github-actions
     directory: /
     labels: [ci]
+    groups:
+      # group official actions updates
+      actions:
+        patterns:
+          - "actions/*"
     schedule:
       interval: monthly
-      time: "05:00"
-      timezone: Etc/UTC
   - package-ecosystem: npm
     directory: /
     groups:
