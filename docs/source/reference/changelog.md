@@ -22,7 +22,7 @@ Contributors to major version bumps in JupyterHub include:
 
 ## 5.4
 
-### 5.4.3 - 2025-12-11
+### 5.4.3 - 2025-12-12
 
 ([full changelog](https://github.com/jupyterhub/jupyterhub/compare/5.4.2...5.4.3))
 
