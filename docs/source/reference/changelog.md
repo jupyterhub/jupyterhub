@@ -22,6 +22,35 @@ Contributors to major version bumps in JupyterHub include:
 
 ## 5.4
 
+### 5.4.3 - 2025-12-12
+
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/5.4.2...5.4.3))
+
+#### Bugs fixed
+
+- fix loading of stopped named servers at startup [#5236](https://github.com/jupyterhub/jupyterhub/pull/5236) ([@minrk](https://github.com/minrk))
+- allow callable default_url to return a falsy value to mean the default behavior [#5195](https://github.com/jupyterhub/jupyterhub/pull/5195) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- `headers` does not exist in `web.HTTPError` [#5191](https://github.com/jupyterhub/jupyterhub/pull/5191) ([@manics](https://github.com/manics), [@agoose77](https://github.com/agoose77), [@minrk](https://github.com/minrk))
+
+#### Documentation improvements
+
+- Link to compass contributor guide [#5227](https://github.com/jupyterhub/jupyterhub/pull/5227) ([@shaneknapp](https://github.com/shaneknapp), [@minrk](https://github.com/minrk))
+- add note about roadmap workshop to roadmap page [#5226](https://github.com/jupyterhub/jupyterhub/pull/5226) ([@minrk](https://github.com/minrk))
+- point to testing config sooner [#5225](https://github.com/jupyterhub/jupyterhub/pull/5225) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- typo: POSIX [#5224](https://github.com/jupyterhub/jupyterhub/pull/5224) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- Add noxfile.py [#5197](https://github.com/jupyterhub/jupyterhub/pull/5197) ([@rgaiacs](https://github.com/rgaiacs), [@minrk](https://github.com/minrk))
+- docs - update jupyterhub repo links to main branch [#5194](https://github.com/jupyterhub/jupyterhub/pull/5194) ([@kellyrowland](https://github.com/kellyrowland), [@minrk](https://github.com/minrk))
+- remove jupytercon banner [#5165](https://github.com/jupyterhub/jupyterhub/pull/5165) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics))
+
+#### Contributors to this release
+
+The following people contributed discussions, new ideas, code and documentation contributions, and review.
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/#how-does-this-tool-define-contributions-in-the-reports).
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2025-10-24&to=2025-12-11&type=c))
+
+@agoose77 ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aagoose77+updated%3A2025-10-24..2025-12-11&type=Issues)) | @clhedrick ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aclhedrick+updated%3A2025-10-24..2025-12-11&type=Issues)) | @consideRatio ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3AconsideRatio+updated%3A2025-10-24..2025-12-11&type=Issues)) | @dragz ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Adragz+updated%3A2025-10-24..2025-12-11&type=Issues)) | @erawn ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aerawn+updated%3A2025-10-24..2025-12-11&type=Issues)) | @kellyrowland ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Akellyrowland+updated%3A2025-10-24..2025-12-11&type=Issues)) | @manics ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amanics+updated%3A2025-10-24..2025-12-11&type=Issues)) | @minrk ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk+updated%3A2025-10-24..2025-12-11&type=Issues)) | @mynkyu ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amynkyu+updated%3A2025-10-24..2025-12-11&type=Issues)) | @Rameshkumar31595 ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3ARameshkumar31595+updated%3A2025-10-24..2025-12-11&type=Issues)) | @rgaiacs ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Argaiacs+updated%3A2025-10-24..2025-12-11&type=Issues)) | @shaneknapp ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ashaneknapp+updated%3A2025-10-24..2025-12-11&type=Issues)) | @tbizouerne ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Atbizouerne+updated%3A2025-10-24..2025-12-11&type=Issues)) | @willingc ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Awillingc+updated%3A2025-10-24..2025-12-11&type=Issues))
+
 ### 5.4.2 - 2025-10-24
 
 5.4.2 fixes a regression in 5.4.1 when not using internal SSL,
