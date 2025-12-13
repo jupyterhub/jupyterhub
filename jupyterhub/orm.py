@@ -1272,6 +1272,10 @@ class OAuthCode(Expiring, Base):
 
     scopes = Column(JSONList, default=[])
 
+    # PKCE added in 5.3
+    code_challenge = Column(Unicode(255), nullable=True)
+    code_challenge_method = Column(Unicode(64), nullable=True)
+
     @staticmethod
     def now():
         return utcnow(with_tz=True).timestamp()
