@@ -48,7 +48,8 @@ require(["jquery", "moment", "jhapi"], function ($, moment, JHAPI) {
       // ../spawn/user/ causes a 404, ../spawn/user redirects correctly to the default server
       window.location.href = "./spawn/" + user;
     } else {
-      window.location.href = "./spawn/" + user + "/" + serverName;
+      window.location.href =
+        "./spawn/" + user + "/" + serverName + "?convertname=1";
     }
   }
 
