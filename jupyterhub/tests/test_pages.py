@@ -1059,17 +1059,17 @@ async def test_login_no_allowed_adds_user(app):
     assert mock_add_user.mock_calls == [mock.call(user)]
 
 
-async def test_static_files(app):
+@pytest.mark.parametrize('http_method', ['head', 'get'])
+async def test_static_files(app, http_method):
+    send_request = getattr(async_requests, http_method)
     base_url = ujoin(public_host(app), app.hub.base_url)
-    r = await async_requests.get(ujoin(base_url, 'logo'))
+    r = await send_request(ujoin(base_url, 'logo'))
     r.raise_for_status()
     assert r.headers['content-type'] == 'image/png'
-    r = await async_requests.get(
-        ujoin(base_url, 'static', 'images', 'jupyterhub-80.png')
-    )
+    r = await send_request(ujoin(base_url, 'static', 'images', 'jupyterhub-80.png'))
     r.raise_for_status()
     assert r.headers['content-type'] == 'image/png'
-    r = await async_requests.get(ujoin(base_url, 'static', 'css', 'style.min.css'))
+    r = await send_request(ujoin(base_url, 'static', 'css', 'style.min.css'))
     r.raise_for_status()
     assert r.headers['content-type'] == 'text/css'
 

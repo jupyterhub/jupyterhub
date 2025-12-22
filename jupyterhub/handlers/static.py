@@ -24,6 +24,9 @@ class CacheControlStaticFilesHandler(StaticFileHandler):
 class LogoHandler(StaticFileHandler):
     """A singular handler for serving the logo."""
 
+    def head(self):
+        return super().get('', include_body=False)
+
     def get(self):
         return super().get('')
 
