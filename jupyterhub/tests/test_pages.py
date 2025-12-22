@@ -1059,7 +1059,7 @@ async def test_login_no_allowed_adds_user(app):
     assert mock_add_user.mock_calls == [mock.call(user)]
 
 
-@pytest.mark.parametrize('http_method', ["head", "get"])
+@pytest.mark.parametrize('http_method', ['head', 'get'])
 async def test_static_files(app, http_method):
     send_request = getattr(async_requests, http_method)
     base_url = ujoin(public_host(app), app.hub.base_url)
