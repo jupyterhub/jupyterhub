@@ -22,8 +22,6 @@ rather than keeing these monkey patches around.
 import os
 from pathlib import Path
 
-from jupyter_core import paths
-
 
 def _is_relative_to(path, prefix):
     """
@@ -68,6 +66,10 @@ def _disable_user_config(serverapp):
     2. Search paths for extensions, etc.
     3. import path
     """
+    # delayed import to avoid triggering early ImportError
+    # with unmet dependencies
+    from jupyter_core import paths
+
     original_jupyter_path = paths.jupyter_path()
     jupyter_path_without_home = list(_exclude_home(original_jupyter_path))
 

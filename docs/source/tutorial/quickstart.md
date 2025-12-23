@@ -11,7 +11,6 @@ Before installing JupyterHub, you will need:
   installing Python packages is helpful.
 - [Node.js {{node_min}}](https://www.npmjs.com/) or greater, along with npm. [Install Node.js/npm](https://docs.npmjs.com/getting-started/installing-node),
   using your operating system's package manager.
-
   - If you are using **`conda`**, the nodejs and npm dependencies will be installed for
     you by conda.
 
@@ -72,6 +71,35 @@ jupyterhub -h
 configurable-http-proxy -h
 ```
 
+## Configuration
+
+At this point, we could start jupyterhub, but nobody would be able to use it!
+Only users who are explicitly **allowed** can use JupyterHub.
+To allow users, we need to create a configuration file.
+JupyterHub uses a configuration file called `jupyterhub_config.py`,
+which is a regular Python script with one function `get_config()` pre-defined, returning the "config object".
+Assigning attributes to this object is how we configure JupyterHub.
+
+At this point, we have two choices:
+
+1. allow any user who can successfully login with our Authenticator (often a good choice for local machines with PAM)
+2. allow one or more users by name.
+
+We'll start with the first one.
+Create the file `jupyerhub_config.py` with the content:
+
+```python
+c = get_config()  # noqa
+c.Authenticator.allow_all = True
+# alternative: c.Authenticator.allowed_users = {"yourusername"}
+```
+
+This configuration means that anyone who can login with PAM (any existing user on the system) should have access to JupyterHub.
+
+:::{seealso}
+[](authenticators)
+:::
+
 ## Start the Hub server
 
 To start the Hub server, run the command:
@@ -90,6 +118,6 @@ To **allow multiple users to sign in** to the Hub server, you must start
 sudo jupyterhub
 ```
 
-The [wiki](https://github.com/jupyterhub/jupyterhub/wiki/Using-sudo-to-run-JupyterHub-without-root-privileges)
+[](howto:config:no-sudo)
 describes how to run the server as a _less privileged user_. This requires
 additional configuration of the system.

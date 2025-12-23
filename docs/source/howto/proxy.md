@@ -232,4 +232,4 @@ A list of the proxies that are currently available for JupyterHub (that we know 
 
 1. [`jupyterhub/configurable-http-proxy`](https://github.com/jupyterhub/configurable-http-proxy) The default proxy which uses node-http-proxy
 2. [`jupyterhub/traefik-proxy`](https://github.com/jupyterhub/traefik-proxy) The proxy which configures traefik proxy server for jupyterhub
-3. [`AbdealiJK/configurable-http-proxy`](https://github.com/AbdealiJK/configurable-http-proxy) A pure python implementation of the configurable-http-proxy
+3. [`AbdealiJK/configurable-http-proxy`](https://github.com/corridor/configurable-http-proxy) A pure python implementation of the configurable-http-proxy

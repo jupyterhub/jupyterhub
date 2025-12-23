@@ -2,11 +2,14 @@
 
 import asyncio
 import sys
+from contextlib import nullcontext
+from functools import partial
 from unittest import mock
 from urllib.parse import parse_qs, urlencode, urlparse
 
 import pytest
 from bs4 import BeautifulSoup
+from tornado import web
 from tornado.httputil import url_concat
 
 from .. import orm, roles, scopes
@@ -722,12 +725,48 @@ async def test_page_with_token(app, user, url, token_in):
 async def test_login_fail(app):
     name = 'wash'
     base_url = public_url(app)
+    login_url = base_url + 'hub/login'
+    r = await async_requests.get(login_url)
+    r.raise_for_status()
+    xsrf = r.cookies['_xsrf']
+    r = await async_requests.get(login_url)
+    assert set(r.cookies.keys()).issubset({"_xsrf"})
+    r = await async_requests.post(
+        login_url,
+        data={'username': name, 'password': 'wrong', '_xsrf': xsrf},
+        allow_redirects=False,
+        cookies=r.cookies,
+    )
+    assert r.status_code == 403
+    assert set(r.cookies.keys()).issubset({"_xsrf"})
+    page = BeautifulSoup(r.content, "html.parser")
+    assert "Sign in" in page.text
+    login = page.find("form")
+    login_error = login.find(class_="login_error")
+    assert login_error
+    assert "Invalid user" in login_error.text
+
+
+async def test_login_fail_xsrf_expired(app):
+    name = 'wash'
+    base_url = public_url(app)
     r = await async_requests.post(
         base_url + 'hub/login',
-        data={'username': name, 'password': 'wrong'},
+        data={
+            'username': name,
+            'password': name,
+            '_xsrf': "wrong",
+        },
         allow_redirects=False,
     )
+    assert r.status_code == 403
     assert set(r.cookies.keys()).issubset({"_xsrf"})
+    page = BeautifulSoup(r.content, "html.parser")
+    assert "Sign in" in page.text
+    login = page.find("form")
+    login_error = login.find(class_="login_error")
+    assert login_error
+    assert "Try again" in login_error.text
 
 
 @pytest.mark.parametrize(
@@ -1060,7 +1099,7 @@ async def test_oauth_token_page(app):
 
 @pytest.mark.parametrize("error_status", [503, 404])
 async def test_proxy_error(app, error_status):
-    r = await get_page('/error/%i' % error_status, app)
+    r = await get_page(f'/error/{error_status}', app)
     assert r.status_code == 200
 
 
@@ -1288,9 +1327,10 @@ async def test_pre_spawn_start_exc_options_form(app):
     async def mock_pre_spawn_start(user, spawner):
         raise Exception(exc)
 
-    with mock.patch.dict(
-        app.users.settings, {'spawner_class': FormSpawner}
-    ), mock.patch.object(app.authenticator, 'pre_spawn_start', mock_pre_spawn_start):
+    with (
+        mock.patch.dict(app.users.settings, {'spawner_class': FormSpawner}),
+        mock.patch.object(app.authenticator, 'pre_spawn_start', mock_pre_spawn_start),
+    ):
         cookies = await app.login_user('spring')
         user = app.users['spring']
         # spawn page shouldn't throw any error until the spawn is started
@@ -1335,3 +1375,89 @@ async def test_services_nav_links(
         assert service.href in nav_urls
     else:
         assert service.href not in nav_urls
+
+
+class TeapotError(web.HTTPError):
+    text = "I'm a <🫖>"
+    html = "<b>🕸️🫖</b>"
+
+    def __init__(self, log_msg, kind="text"):
+        super().__init__(418, log_msg)
+        self.jupyterhub_message = self.text
+        if kind == "html":
+            self.jupyterhub_html_message = self.html
+
+
+def hook_fail_fast(spawner, kind):
+    if kind == "unhandled":
+        raise RuntimeError("unhandle me!!!")
+    raise TeapotError("log_msg", kind=kind)
+
+
+async def hook_fail_slow(spawner, kind):
+    await asyncio.sleep(1)
+    hook_fail_fast(spawner, kind)
+
+
+@pytest.mark.parametrize("speed", ["fast", "slow"])
+@pytest.mark.parametrize("kind", ["text", "html", "unhandled"])
+async def test_spawn_fails_custom_message(app, user, kind, speed):
+    if speed == 'slow':
+        speed_context = mock.patch.dict(
+            app.tornado_settings, {'slow_spawn_timeout': 0.1}
+        )
+        hook = hook_fail_slow
+    else:
+        speed_context = nullcontext()
+        hook = hook_fail_fast
+    # test the response when spawn fails before redirecting to progress
+    with (
+        mock.patch.dict(
+            app.config.Spawner, {"pre_spawn_hook": partial(hook, kind=kind)}
+        ),
+        speed_context,
+    ):
+        cookies = await app.login_user(user.name)
+        assert user.spawner.pre_spawn_hook
+        r = await get_page("spawn", app, cookies=cookies)
+        if speed == "slow":
+            # go through spawn_pending, render not_running.html
+            assert r.ok
+            assert "spawn-pending" in r.url
+            # wait for ready signal before checking next redirect
+            while user.spawner.active:
+                await asyncio.sleep(0.1)
+            app.log.info(
+                f"pending {user.spawner.active=}, {user.spawner._spawn_future=}"
+            )
+            # this should fetch the not-running page
+            app.log.info("getting again")
+            r = await get_page(
+                f"spawn-pending/{user.escaped_name}", app, cookies=cookies
+            )
+            target_class = "container"
+            unhandled_text = "Spawn failed"
+        else:
+            unhandled_text = "Unhandled error"
+            target_class = "error"
+        page = BeautifulSoup(r.content)
+        if kind == "unhandled":
+            assert r.status_code == 500
+        else:
+            assert r.status_code == 418
+        error = page.find(class_=target_class)
+        # check escaping properly
+        error_html = str(error)
+        if kind == "text":
+            assert "<🫖>" in error.text
+            assert "🕸️" not in error.text
+            assert "&lt;🫖&gt;" in error_html
+        elif kind == "html":
+            assert "<🫖>" not in error.text
+            assert "🕸️" in error.text
+            assert "<b>🕸️🫖</b>" in error_html
+        elif kind == "unhandled":
+            assert unhandled_text in error.text
+            assert "unhandle me" not in error.text
+        else:
+            raise ValueError(f"unexpected {kind=}")

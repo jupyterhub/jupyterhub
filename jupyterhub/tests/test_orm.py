@@ -33,19 +33,19 @@ def test_server(db):
 
     # test wrapper
     server = objects.Server(orm_server=server)
-    assert server.host == 'http://%s:%i' % (socket.gethostname(), server.port)
+    assert server.host == f'http://{socket.gethostname()}:{server.port}'
     assert server.url == server.host + '/'
-    assert server.bind_url == 'http://*:%i/' % server.port
+    assert server.bind_url == f'http://*:{server.port}/'
     server.ip = '127.0.0.1'
-    assert server.host == 'http://127.0.0.1:%i' % server.port
+    assert server.host == f'http://127.0.0.1:{server.port}'
     assert server.url == server.host + '/'
 
     server.connect_ip = 'hub'
-    assert server.host == 'http://hub:%i' % server.port
+    assert server.host == f'http://hub:{server.port}'
     assert server.url == server.host + '/'
 
-    server.connect_url = 'http://hub-url:%i/connect' % server.port
-    assert server.host == 'http://hub-url:%i' % server.port
+    server.connect_url = f'http://hub-url:{server.port}/connect'
+    assert server.host == f'http://hub-url:{server.port}'
 
     server.bind_url = 'http://127.0.0.1/'
     assert server.port == 80

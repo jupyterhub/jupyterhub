@@ -46,7 +46,7 @@ from sqlalchemy.pool import StaticPool
 from sqlalchemy.types import LargeBinary, Text, TypeDecorator
 from tornado.log import app_log
 
-from .utils import compare_token, hash_token, new_token, random_port, utcnow
+from .utils import compare_token, fmt_ip_url, hash_token, new_token, random_port, utcnow
 
 # top-level variable for easier mocking in tests
 utcnow = partial(utcnow, with_tz=False)
@@ -108,7 +108,7 @@ class JSONList(JSONDict):
     """
 
     def process_bind_param(self, value, dialect):
-        if isinstance(value, (list, tuple)):
+        if isinstance(value, list | tuple):
             value = json.dumps(value)
         if isinstance(value, set):
             # serialize sets as ordered lists
@@ -157,7 +157,7 @@ class Server(Base):
     spawner = relationship("Spawner", back_populates="server", uselist=False)
 
     def __repr__(self):
-        return f"<Server({self.ip}:{self.port})>"
+        return f"<Server({fmt_ip_url(self.ip)}:{self.port})>"
 
 
 # lots of things have roles
@@ -490,6 +490,8 @@ class Service(Base):
 
     user = Column(Unicode(255), nullable=True)
 
+    timeout = Column(Integer, default=30, nullable=False)
+
     from_config = Column(Boolean, default=True)
 
     api_tokens = relationship(
@@ -547,7 +549,7 @@ class Expiring:
     which should be unix timestamp or datetime object
     """
 
-    now = utcnow  # function, must return float timestamp or datetime
+    now = staticmethod(utcnow)  # function, must return float timestamp or datetime
     expires_at = None  # must be defined
 
     @property
@@ -945,7 +947,7 @@ class ShareCode(_Share, Hashed, Base):
         else:
             server_name = "unknown/deleted"
 
-        return f"<{self.__class__.__name__}(server={server_name}, scopes={self.scopes}, expires_at={self.expires_at})>"
+        return f"<{self.__class__.__name__}(id={self.id}, server={server_name}, scopes={self.scopes}, expires_at={self.expires_at})>"
 
     @classmethod
     def new(
@@ -1050,7 +1052,7 @@ class APIToken(Hashed, Base):
 
     @property
     def api_id(self):
-        return 'a%i' % self.id
+        return f"a{self.id}"
 
     @property
     def owner(self):
@@ -1078,7 +1080,7 @@ class APIToken(Hashed, Base):
     session_id = Column(Unicode(255), nullable=True)
 
     # token metadata for bookkeeping
-    now = utcnow  # for expiry
+    now = staticmethod(utcnow)  # for expiry
     created = Column(DateTime, default=utcnow)
     expires_at = Column(DateTime, default=None, nullable=True)
     last_activity = Column(DateTime)

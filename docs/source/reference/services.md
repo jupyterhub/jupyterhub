@@ -399,10 +399,10 @@ done via the HubAuth constructor, direct assignment to a HubAuth object, or via 
 `JUPYTERHUB_API_TOKEN` environment variable. A number of the examples in the
 root of the jupyterhub git repository set the `JUPYTERHUB_API_TOKEN` variable
 so consider having a look at those for further reading
-([cull-idle](https://github.com/jupyterhub/jupyterhub/tree/master/examples/cull-idle),
-[external-oauth](https://github.com/jupyterhub/jupyterhub/tree/master/examples/external-oauth),
-[service-notebook](https://github.com/jupyterhub/jupyterhub/tree/master/examples/service-notebook)
-and [service-whoami](https://github.com/jupyterhub/jupyterhub/tree/master/examples/service-whoami))
+([cull-idle](https://github.com/jupyterhub/jupyterhub/tree/main/examples/cull-idle),
+[external-oauth](https://github.com/jupyterhub/jupyterhub/tree/main/examples/external-oauth),
+[service-notebook](https://github.com/jupyterhub/jupyterhub/tree/main/examples/service-notebook)
+and [service-whoami](https://github.com/jupyterhub/jupyterhub/tree/main/examples/service-whoami))
 
 Most of the logic for authentication implementation is found in the
 {meth}`.HubAuth.user_for_token` methods,
@@ -563,7 +563,7 @@ and an example of its configuration is found [here](https://github.com/jupyter/n
 nbviewer can also be run as a Hub-Managed Service as described [nbviewer README][nbviewer example]
 section on securing the notebook viewer.
 
-[requests]: https://docs.python-requests.org/en/master/
+[requests]: https://requests.readthedocs.io
 [services_auth]: ../api/services.auth.html
 [nbviewer example]: https://github.com/jupyter/nbviewer#securing-the-notebook-viewer
 [fastapi example]: https://github.com/jupyterhub/jupyterhub/tree/HEAD/examples/service-fastapi

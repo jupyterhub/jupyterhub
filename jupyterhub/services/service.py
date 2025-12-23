@@ -52,6 +52,7 @@ from traitlets import (
     Dict,
     HasTraits,
     Instance,
+    Integer,
     List,
     Set,
     Unicode,
@@ -249,6 +250,15 @@ class Service(LoggingConfigurable):
         True, help="""Whether to list the service on the JupyterHub UI"""
     ).tag(input=True)
 
+    timeout = Integer(
+        30,
+        help="""
+        Timeout (in seconds) to wait for the service to become available.
+
+        .. versionadded:: 6.0
+        """,
+    ).tag(input=True)
+
     oauth_no_confirm = Bool(
         False,
         help="""Skip OAuth confirmation when users access this service.
@@ -436,7 +446,10 @@ class Service(LoggingConfigurable):
             # since they are always local subprocesses
             hub = copy.deepcopy(self.hub)
             hub.connect_url = ''
-            hub.connect_ip = '127.0.0.1'
+            if self.hub.ip and ":" in self.hub.ip:
+                hub.connect_ip = "::1"
+            else:
+                hub.connect_ip = "127.0.0.1"
 
         self.spawner = _ServiceSpawner(
             cmd=self.command,

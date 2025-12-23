@@ -7,7 +7,7 @@ import pytest
 from .. import crypto
 from ..crypto import decrypt, encrypt
 
-keys = [('%i' % i).encode('ascii') * 32 for i in range(3)]
+keys = [str(i).encode('ascii') * 32 for i in range(3)]
 hex_keys = [b2a_hex(key).decode('ascii') for key in keys]
 b64_keys = [b2a_base64(key).decode('ascii').strip() for key in keys]
 
@@ -36,7 +36,7 @@ def test_env_constructor(key_env, keys):
     "key",
     [
         'a' * 44,  # base64, not 32 bytes
-        ('%44s' % 'notbase64'),  # not base64
+        f"{'notbase64':44}",  # not base64
         b'x' * 64,  # not hex
         b'short',  # not 32 bytes
     ],

@@ -38,6 +38,57 @@ from .utils import utcnow
 
 metrics_prefix = os.getenv('JUPYTERHUB_METRICS_PREFIX', 'jupyterhub')
 
+_env_spawn_duration_buckets = os.environ.get(
+    'JUPYTERHUB_SERVER_SPAWN_DURATION_SECONDS_BUCKETS', ""
+).strip()
+_env_stop_duration_buckets = os.environ.get(
+    "JUPYTERHUB_SERVER_STOP_DURATION_SECONDS_BUCKETS", ""
+).strip()
+
+if _env_spawn_duration_buckets:
+    spawn_duration_buckets = [
+        float(_s) for _s in _env_spawn_duration_buckets.split(",")
+    ]
+else:
+    spawn_duration_buckets = [
+        0.5,
+        1,
+        2.5,
+        5,
+        10,
+        15,
+        30,
+        60,
+        120,
+        180,
+        300,
+        600,
+        float("inf"),
+    ]
+
+if _env_stop_duration_buckets:
+    stop_duration_buckets = [float(_s) for _s in _env_stop_duration_buckets.split(",")]
+else:
+    # We default to the same buckets as upstream Prometheus (as it was before) so we don't
+    # break anything that was consuming this metric before bucket configuration was possible
+    stop_duration_buckets = [
+        0.005,
+        0.01,
+        0.025,
+        0.05,
+        0.075,
+        0.1,
+        0.25,
+        0.5,
+        0.75,
+        1,
+        2.5,
+        5,
+        7.5,
+        10,
+        float("inf"),
+    ]
+
 REQUEST_DURATION_SECONDS = Histogram(
     'request_duration_seconds',
     'Request duration for all HTTP requests',
@@ -51,7 +102,7 @@ SERVER_SPAWN_DURATION_SECONDS = Histogram(
     ['status'],
     # Use custom bucket sizes, since the default bucket ranges
     # are meant for quick running processes. Spawns can take a while!
-    buckets=[0.5, 1, 2.5, 5, 10, 15, 30, 60, 120, 180, 300, 600, float("inf")],
+    buckets=spawn_duration_buckets,
     namespace=metrics_prefix,
 )
 
@@ -175,6 +226,7 @@ SERVER_STOP_DURATION_SECONDS = Histogram(
     'server_stop_seconds',
     'Time taken for server stopping operation',
     ['status'],
+    buckets=stop_duration_buckets,
     namespace=metrics_prefix,
 )
 
@@ -319,7 +371,7 @@ class PeriodicMetricsCollector(LoggingConfigurable):
         config=True,
         help="""
         Enable event_loop_interval_seconds metric.
-        
+
         Measures event-loop responsiveness.
         """,
     )
@@ -328,7 +380,7 @@ class PeriodicMetricsCollector(LoggingConfigurable):
         config=True,
         help="""
         Interval (in seconds) on which to measure the event loop interval.
-        
+
         This is the _sensitivity_ of the `event_loop_interval` metric.
         Setting it too low (e.g. below 20ms) can end up slowing down the whole event loop
         by measuring too often,

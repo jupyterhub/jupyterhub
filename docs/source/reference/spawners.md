@@ -2,7 +2,7 @@
 
 # Spawners
 
-A [Spawner][] starts each single-user notebook server.
+A [Spawner](#Spawner) starts each single-user notebook server.
 The Spawner represents an abstract interface to a process,
 and a custom Spawner needs to be able to take three actions:
 
@@ -37,7 +37,7 @@ Some examples include:
 
 ### Spawner.start
 
-`Spawner.start` should start a single-user server for a single user.
+[](#Spawner.start) should start a single-user server for a single user.
 Information about the user can be retrieved from `self.user`,
 an object encapsulating the user's name, authentication, and server info.
 
@@ -68,11 +68,11 @@ async def start(self):
 When `Spawner.start` returns, the single-user server process should actually be running,
 not just requested. JupyterHub can handle `Spawner.start` being very slow
 (such as PBS-style batch queues, or instantiating whole AWS instances)
-via relaxing the `Spawner.start_timeout` config value.
+via relaxing the [](#Spawner.start_timeout) config value.
 
 #### Note on IPs and ports
 
-`Spawner.ip` and `Spawner.port` attributes set the _bind_ URL,
+[](#Spawner.ip) and [](#Spawner.port) attributes set the _bind_ URL,
 which the single-user server should listen on
 (passed to the single-user process via the `JUPYTERHUB_SERVICE_URL` environment variable).
 The _return_ value is the IP and port (or full URL) the Hub should _connect to_.
@@ -124,7 +124,7 @@ If both attributes are not present, the Exception will be shown to the user as u
 
 ### Spawner.poll
 
-`Spawner.poll` checks if the spawner is still running.
+[](#Spawner.poll) checks if the spawner is still running.
 It should return `None` if it is still running,
 and an integer exit status, otherwise.
 
@@ -133,7 +133,7 @@ to check if the local process is still running. On Windows, it uses `psutil.pid_
 
 ### Spawner.stop
 
-`Spawner.stop` should stop the process. It must be a tornado coroutine, which should return when the process has finished exiting.
+[](#Spawner.stop) should stop the process. It must be a tornado coroutine, which should return when the process has finished exiting.
 
 ## Spawner state
 
@@ -166,17 +166,18 @@ def clear_state(self):
     self.pid = 0
 ```
 
+(spawner_user_options)=
+
 ## Spawner options form
 
-(new in 0.4)
-
 Some deployments may want to offer options to users to influence how their servers are started.
-This may include cluster-based deployments, where users specify what resources should be available,
-or docker-based deployments where users can select from a list of base images.
+This may include cluster-based deployments, where users specify what memory or cpu resources should be available,
+or container-based deployments where users can select from a list of base images,
+or more complex configurations where users select a "profile" representing a bundle of settings to be applied together.
 
-This feature is enabled by setting `Spawner.options_form`, which is an HTML form snippet
+This feature is enabled by setting [](#Spawner.options_form), which is an HTML form snippet
 inserted unmodified into the spawn form.
-If the `Spawner.options_form` is defined, when a user tries to start their server, they will be directed to a form page, like this:
+If the `Spawner.options_form` is defined, when a user tries to start their server they will be directed to a form page, like this:
 
 ![spawn-form](/images/spawn-form.png)
 
@@ -186,28 +187,40 @@ See [this example](https://github.com/jupyterhub/jupyterhub/blob/HEAD/examples/s
 
 ### `Spawner.options_from_form`
 
-Options from this form will always be a dictionary of lists of strings, e.g.:
+Inputs from an HTML form always arrive as a dictionary of lists of strings, e.g.:
 
 ```python
-{
+formdata = {
   'integer': ['5'],
+  'checkbox': ['on'],
   'text': ['some text'],
   'select': ['a', 'b'],
 }
 ```
 
-When `formdata` arrives, it is passed through `Spawner.options_from_form(formdata)`,
-which is a method to turn the form data into the correct structure.
-This method must return a dictionary, and is meant to interpret the lists-of-strings into the correct types. For example, the `options_from_form` for the above form would look like:
+When `formdata` arrives, it is passed through [](#Spawner.options_from_form):
 
 ```python
-def options_from_form(self, formdata):
+spawner.user_options = spawner.options_from_form(formdata, spawner=spawner)
+```
+
+to create `spawner.user_options`.
+
+[](#Spawner.options_from_form) is a configurable function to turn the HTTP form data into the correct structure for [](#Spawner.user_options).
+`options_from_form` must return a dictionary, _may_ be async, and is meant to interpret the lists-of-strings a web form produces into the correct types.
+For example, the `options_from_form` for the above form might look like:
+
+```python
+def options_from_form(formdata, spawner=None):
     options = {}
     options['integer'] = int(formdata['integer'][0]) # single integer value
+    options['checkbox'] = formdata['checkbox'] == ['on']
     options['text'] = formdata['text'][0] # single string value
     options['select'] = formdata['select'] # list already correct
     options['notinform'] = 'extra info' # not in the form at all
     return options
+
+c.Spawner.options_from_form = options_from_form
 ```
 
 which would return:
@@ -215,15 +228,115 @@ which would return:
 ```python
 {
   'integer': 5,
+  'checkbox': True,
   'text': 'some text',
   'select': ['a', 'b'],
   'notinform': 'extra info',
 }
 ```
 
-When `Spawner.start` is called, this dictionary is accessible as `self.user_options`.
+### Applying user options
 
-[spawner]: https://github.com/jupyterhub/jupyterhub/blob/HEAD/jupyterhub/spawner.py
+The base Spawner class doesn't do anything with `user_options`, that is also up to your deployment and/or chosen Spawner.
+This is because the users can specify arbitrary option dictionary by using the API,
+so it is part of your Spawner and/or deployment configuration to expose the options you trust your users to set.
+
+[](#Spawner.apply_user_options) is the hook for taking `user_options` and applying whatever configuration it may represent.
+It is critical that `apply_user_options` validates all input, since these are provided by the user.
+
+```python
+def apply_user_options(spawner, user_options):
+    if "image" in user_options and isinstance(user_options["image"], str):
+        spawner.image = user_options["image"]
+
+c.Spawner.apply_user_options = apply_user_options
+```
+
+:::{versionadded} 5.3
+JupyterHub 5.3 introduces [](#Spawner.apply_user_options) configuration.
+Previously, [](#Spawner.user_options) could only be consumed during [](#Spawner.start),
+at which point `user_options` is available to the Spawner instance as `self.user_options`.
+This approach requires subclassing, so it was not possible to apply new `user_options` via configuration.
+In JupyterHub 5.3, it is possible to fully expose user options,
+and for some simple cases, fully with _declarative_ configuration.
+:::
+
+### Declarative configuration for user options
+
+While [](#Spawner.options_from_form) and [](#Spawner.apply_user_options) are callables by nature,
+some simple cases can be represented by declarative configuration,
+which is most conveniently expressed in e.g. the yaml of the JupyterHub helm chart.
+The cases currently handled are:
+
+```python
+c.Spawner.options_form = """
+<input name="image_input" type="text" value="quay.io/jupyterhub/singleuser:5.2"/>
+<input name="debug_checkbox" type="checkbox" />
+"""
+c.Spawner.options_from_form = "simple"
+c.Spawner.apply_user_options = {"image_input": "image", "debug_checkbox": "debug"}
+```
+
+`options_from_form = "simple"` uses a built-in method to do the very simplest interpretation of an html form,
+casting the lists of strings to single strings by getting the first item when there is only one.
+The only extra processing it performs is casting the checkbox value of `on` to True.
+
+So it turns this formdata:
+
+```python
+{
+  "image_input": ["my_image"],
+  "debug_checkbox": ["on"],
+}
+```
+
+into this `user_options`
+
+```python
+{
+  "image_input": "my_image",
+  "debug_checkbox": True
+}
+```
+
+When `apply_user_options` is a dictionary, any input in `user_options` is looked up in this dictionary,
+and assigned to the corresponding Spawner attribute.
+Strings are passed through traitlets' `from_string` logic (what is used for setting values on the command-line),
+which means you can set numbers and things this way as well,
+even though `options_from_form` leaves these as strings.
+
+So in the above configuration, we have exposed `Spawner.debug` and `Spawner.image` without needing to write any functions.
+In the JupyterHub helm chart YAML, this would look like:
+
+```yaml
+hub:
+  config:
+    KubeSpawner:
+      options_form: |
+        <input name="image_input" type="text" value="quay.io/jupyterhub/singleuser:5.2"/>
+        <input name="debug_checkbox" type="checkbox" />
+      options_from_form: simple
+      apply_user_options:
+        image_input: image
+        debug_checkbox: debug
+```
+
+### Setting `user_options` directly via the REST API
+
+In addition to going through the options form, `user_options` may be set directly, via the REST API.
+The body of a POST request to spawn a server may be a JSON dictionary,
+which will be used to set `user_options` directly.
+When used this way, neither `options_form` nor `options_from_form` are involved,
+`user_options` is set directly, and only `apply_user_options` is called.
+
+```
+POST /hub/api/users/servers/:name
+{
+  "option": 5,
+  "bool": True,
+  "string": "value"
+}
+```
 
 ## Writing a custom spawner
 
@@ -354,7 +467,7 @@ spawner, does not support limits and guarantees. One of the spawners
 that supports limits and guarantees is the
 [`systemdspawner`](https://github.com/jupyterhub/systemdspawner).
 
-### Memory Limits & Guarantees
+### Memory Limits and Guarantees
 
 `c.Spawner.mem_limit`: A **limit** specifies the _maximum amount of memory_
 that may be allocated, though there is no promise that the maximum amount will
@@ -374,7 +487,7 @@ available for the single-user notebook server to use. The environment variable
 limits and providing these guarantees.** If these values are set to `None`, no
 limits or guarantees are provided, and no environment values are set.
 
-### CPU Limits & Guarantees
+### CPU Limits and Guarantees
 
 `c.Spawner.cpu_limit`: In supported spawners, you can set
 `c.Spawner.cpu_limit` to limit the total number of cpu-cores that a

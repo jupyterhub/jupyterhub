@@ -23,7 +23,6 @@ from getpass import getuser
 from operator import itemgetter
 from pathlib import Path
 from textwrap import dedent
-from typing import Optional
 from urllib.parse import unquote, urlparse, urlunparse
 
 import tornado.httpserver
@@ -32,7 +31,7 @@ from dateutil.parser import parse as parse_date
 from jinja2 import ChoiceLoader, Environment, FileSystemLoader, PrefixLoader
 from jupyter_events.logger import EventLogger
 from sqlalchemy.exc import OperationalError, SQLAlchemyError
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import selectinload
 from tornado import gen, web
 from tornado.httpclient import AsyncHTTPClient
 from tornado.ioloop import IOLoop, PeriodicCallback
@@ -282,7 +281,7 @@ class JupyterHub(Application):
 
     @default('classes')
     def _load_classes(self):
-        classes = [Spawner, Authenticator, CryptKeeper]
+        classes = {Spawner, Authenticator, CryptKeeper}
         for name, trait in self.traits(config=True).items():
             # load entry point groups into configurable class list
             # so that they show up in config files, etc.
@@ -298,9 +297,9 @@ class JupyterHub(Application):
                             e,
                         )
                         continue
-                    if cls not in classes and isinstance(cls, Configurable):
-                        classes.append(cls)
-        return classes
+                    if issubclass(cls, Configurable):
+                        classes.add(cls)
+        return list(classes)
 
     load_groups = Dict(
         Union([Dict(), List()]),
@@ -873,13 +872,7 @@ class JupyterHub(Application):
         but your identity provider is likely much more strict,
         allowing you to make assumptions about the name.
 
-        The default behavior is to have all services
-        on a single `services.{domain}` subdomain,
-        and each user on `{username}.{domain}`.
-        This is the 'legacy' scheme,
-        and doesn't work for all usernames.
-
-        The 'idna' scheme is a new scheme that should produce a valid domain name for any user,
+        The 'idna' hook should produce a valid domain name for any user,
         using IDNA encoding for unicode usernames, and a truncate-and-hash approach for
         any usernames that can't be easily encoded into a domain component.
 
@@ -1698,7 +1691,11 @@ class JupyterHub(Application):
         """add a url prefix to handlers"""
         for i, tup in enumerate(handlers):
             lis = list(tup)
-            lis[0] = url_path_join(prefix, tup[0])
+            if tup[0]:
+                lis[0] = url_path_join(prefix, tup[0])
+            else:
+                # the '' route should match /prefix not /prefix/
+                lis[0] = prefix.rstrip("/")
             handlers[i] = tuple(lis)
         return handlers
 
@@ -1928,7 +1925,11 @@ class JupyterHub(Application):
                 self.internal_ssl_components_trust
             )
 
-            default_alt_names = ["IP:127.0.0.1", "DNS:localhost"]
+            default_alt_names = [
+                "IP:127.0.0.1",
+                "IP:0:0:0:0:0:0:0:1",
+                "DNS:localhost",
+            ]
             if self.subdomain_host:
                 default_alt_names.append(
                     f"DNS:{urlparse(self.subdomain_host).hostname}"
@@ -1982,12 +1983,16 @@ class JupyterHub(Application):
 
             # Configure the AsyncHTTPClient. This will affect anything using
             # AsyncHTTPClient.
-            ssl_context = make_ssl_context(
-                self.internal_ssl_key,
-                self.internal_ssl_cert,
-                cafile=self.internal_ssl_ca,
+            # can't use ssl_options in case of pycurl
+            AsyncHTTPClient.configure(
+                AsyncHTTPClient.configured_class(),
+                defaults=dict(
+                    ca_certs=self.internal_ssl_ca,
+                    client_key=self.internal_ssl_key,
+                    client_cert=self.internal_ssl_cert,
+                    validate_cert=True,
+                ),
             )
-            AsyncHTTPClient.configure(None, defaults={"ssl_options": ssl_context})
 
     def init_db(self):
         """Create the database connection"""
@@ -2768,7 +2773,7 @@ class JupyterHub(Application):
         self,
         spec: Dict,
         from_config=True,
-    ) -> Optional[Service]:
+    ) -> Service | None:
         """Create the service instance and related objects from
         config data.
 
@@ -2956,7 +2961,9 @@ class JupyterHub(Application):
                 # no URL to check, nothing to do
                 continue
             try:
-                await Server.from_orm(service.orm.server).wait_up(timeout=1, http=True)
+                await Server.from_orm(service.orm.server).wait_up(
+                    timeout=service.timeout, http=True
+                )
             except AnyTimeoutError:
                 self.log.warning(
                     "Cannot connect to %s service %s at %s",
@@ -3087,18 +3094,24 @@ class JupyterHub(Application):
         # we are only interested in the ones associated with a Spawner
         check_futures = []
 
-        for orm_user, orm_spawner in (
-            self.db.query(orm.User, orm.Spawner)
-            # join filters out any Users with no Spawners
-            .join(orm.Spawner, orm.User._orm_spawners)
-            # this gets Users with *any* active server
+        for orm_spawner in (
+            self.db.query(orm.Spawner)
+            # filter out spawners that aren't running
             .filter(orm.Spawner.server != None)
             # pre-load relationships to avoid O(N active servers) queries
             .options(
-                joinedload(orm.User._orm_spawners),
-                joinedload(orm.Spawner.server),
+                # needs to be joinedload or selectinload,
+                # not contains_eager to avoid excluding stopped servers servers from the db session
+                # avoid joinedload on user_id which is degenerate,
+                # so selectinload it is
+                # make sure server->user relationship is loaded
+                selectinload(orm.Spawner.user),
+                # make sure users' _other_ spawners are also loaded
+                selectinload(orm.Spawner.user, orm.User._orm_spawners),
             )
+            .populate_existing()
         ):
+            orm_user = orm_spawner.user
             # instantiate Spawner wrapper and check if it's still alive
             # spawner should be running
             user = self.users[orm_user]
@@ -3326,7 +3339,7 @@ class JupyterHub(Application):
         if self.pid_file:
             self.log.debug("Writing PID %i to %s", pid, self.pid_file)
             with open(self.pid_file, 'w') as f:
-                f.write('%i' % pid)
+                f.write(str(pid))
 
     @catch_config_error
     async def initialize(self, *args, **kwargs):
@@ -3596,7 +3609,7 @@ class JupyterHub(Application):
         self,
         service_name: str,
         service: Service,
-        ssl_context: Optional[ssl.SSLContext] = None,
+        ssl_context: ssl.SSLContext | None = None,
     ) -> bool:
         """Start a managed service or poll for external service
 
@@ -3630,31 +3643,58 @@ class JupyterHub(Application):
             self.log.info("Adding external service %s", msg)
 
         if service.url:
-            tries = 10 if service.managed else 1
-            for i in range(tries):
-                try:
-                    await Server.from_orm(service.orm.server).wait_up(
-                        http=True, timeout=1, ssl_context=ssl_context
-                    )
-                except AnyTimeoutError:
-                    if service.managed:
-                        status = await service.spawner.poll()
-                        if status is not None:
-                            self.log.error(
-                                "Service %s exited with status %s",
-                                service_name,
-                                status,
-                            )
-                            return False
-                else:
-                    return True
-            else:
-                self.log.error(
-                    "Cannot connect to %s service %s at %s. Is it running?",
-                    service.kind,
-                    service_name,
-                    service.url,
+            server = Server.from_orm(service.orm.server)
+            wait_up_task = asyncio.create_task(
+                server.wait_up(
+                    http=True, timeout=service.timeout, ssl_context=ssl_context
                 )
+            )
+            futures = []
+            if service.managed:
+
+                async def wait_for_stop():
+                    """Return with status when managed service exits"""
+                    while True:
+                        status = await service.spawner.poll()
+                        if status is None:
+                            await asyncio.sleep(1)
+                        else:
+                            return status
+
+                wait_for_stop_task = asyncio.create_task(wait_for_stop())
+                futures.append(wait_for_stop_task)
+
+            done, pending = await asyncio.wait(
+                futures, return_when=asyncio.FIRST_EXCEPTION
+            )
+            # cancel pending
+            [f.cancel() for f in pending if not f.done()]
+            if service.managed and wait_for_stop_task in done:
+                # service process exited while we were waiting to connect
+                status = await wait_for_stop_task
+                self.log.critical(
+                    "Service %s exited with status %s",
+                    service_name,
+                    status,
+                )
+                return False
+
+            try:
+                await wait_up_task
+            except AnyTimeoutError:
+                if service.managed:
+                    self.log.critical(
+                        "Cannot connect to %s service %s",
+                        service_name,
+                        service.kind,
+                    )
+                else:
+                    self.log.warning(
+                        "Cannot connect to %s service %s at %s. Is it running?",
+                        service.kind,
+                        service_name,
+                        service.url,
+                    )
                 return False
         return True
 
@@ -3745,18 +3785,8 @@ class JupyterHub(Application):
         # start the service(s)
         for service_name, service in self._service_map.items():
             service_ready = await self.start_service(service_name, service, ssl_context)
-            if not service_ready:
-                if service.from_config:
-                    # Stop the application if a config-based service failed to start.
-                    self.exit(1)
-                else:
-                    # Only warn for database-based service, so that admin can connect
-                    # to hub to remove the service.
-                    self.log.error(
-                        "Failed to reach externally managed service %s",
-                        service_name,
-                        exc_info=True,
-                    )
+            if not service_ready and service.managed:
+                self.exit(1)
 
         await self.proxy.check_routes(self.users, self._service_map)
 
@@ -3833,7 +3863,7 @@ class JupyterHub(Application):
         FIXME: If/when tornado supports the defaults in asyncio,
                remove and bump tornado requirement for py38.
         """
-        if sys.platform.startswith("win") and sys.version_info >= (3, 8):
+        if sys.platform.startswith("win"):
             try:
                 from asyncio import (
                     WindowsProactorEventLoopPolicy,
@@ -3887,6 +3917,10 @@ class JupyterHub(Application):
             tasks = [t for t in asyncio.all_tasks()]
             for t in tasks:
                 self.log.debug("Task status: %s", t)
+        self._stop_event_loop()
+
+    def _stop_event_loop(self):
+        """In a method to allow tests to not do this"""
         asyncio.get_event_loop().stop()
 
     def stop(self):

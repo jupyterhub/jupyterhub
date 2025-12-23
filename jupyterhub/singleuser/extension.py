@@ -47,7 +47,6 @@ from jupyterhub.utils import (
     _bool_env,
     exponential_backoff,
     isoformat,
-    make_ssl_context,
     url_path_join,
 )
 
@@ -325,12 +324,20 @@ class JupyterHubSingleUser(ExtensionApp):
 
     @default('hub_http_client')
     def _default_client(self):
-        ssl_context = make_ssl_context(
-            self.hub_auth.keyfile,
-            self.hub_auth.certfile,
-            cafile=self.hub_auth.client_ca,
+        # can't use ssl_options in case of pycurl
+        defaults = dict(validate_cert=True)
+        # don't set falsy empty strings,
+        # which tornado interprets as paths
+        if self.hub_auth.client_ca:
+            defaults["ca_certs"] = self.hub_auth.client_ca
+        if self.hub_auth.keyfile:
+            defaults["client_key"] = self.hub_auth.keyfile
+        if self.hub_auth.certfile:
+            defaults["client_cert"] = self.hub_auth.certfile
+        AsyncHTTPClient.configure(
+            AsyncHTTPClient.configured_class(),
+            defaults=defaults,
         )
-        AsyncHTTPClient.configure(None, defaults={"ssl_options": ssl_context})
         return AsyncHTTPClient()
 
     async def check_hub_version(self):
@@ -518,7 +525,8 @@ class JupyterHubSingleUser(ExtensionApp):
         if url.hostname:
             cfg.ip = url.hostname
         else:
-            cfg.ip = "127.0.0.1"
+            # All interfaces (ipv4+ipv6)
+            cfg.ip = ""
 
         cfg.base_url = os.environ.get('JUPYTERHUB_SERVICE_PREFIX') or '/'
 

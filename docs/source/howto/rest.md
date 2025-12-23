@@ -201,7 +201,7 @@ Authorization header.
 
 ### Use requests
 
-Using the popular Python [requests](https://docs.python-requests.org)
+Using the popular Python [requests](https://requests.readthedocs.io)
 library, an API GET request is made to [/users](rest-api-get-users), and the request sends an API token for
 authorization. The response contains information about the users, here's example code to make an API request for the users of a JupyterHub deployment
 

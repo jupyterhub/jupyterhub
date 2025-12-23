@@ -21,16 +21,12 @@ import time
 import uuid
 import warnings
 from binascii import b2a_hex
+from contextlib import aclosing
 from datetime import datetime, timezone
 from functools import lru_cache
 from hmac import compare_digest
 from operator import itemgetter
 from urllib.parse import quote
-
-if sys.version_info >= (3, 10):
-    from contextlib import aclosing
-else:
-    from async_generator import aclosing
 
 import idna
 from sqlalchemy.exc import SQLAlchemyError
@@ -108,8 +104,10 @@ def can_connect(ip, port):
 
     Return True if we can connect, False otherwise.
     """
-    if ip in {'', '0.0.0.0', '::'}:
+    if ip in {'', '0.0.0.0'}:
         ip = '127.0.0.1'
+    elif ip == "::":
+        ip = "::1"
     try:
         socket.create_connection((ip, port)).close()
     except OSError as e:
@@ -168,7 +166,8 @@ def make_ssl_context(
     ssl_context.load_default_certs()
 
     ssl_context.load_cert_chain(certfile, keyfile)
-    ssl_context.check_hostname = check_hostname
+    if check_hostname is not None:
+        ssl_context.check_hostname = check_hostname
     return ssl_context
 
 
@@ -267,17 +266,20 @@ async def exponential_backoff(
 
 async def wait_for_server(ip, port, timeout=10):
     """Wait for any server to show up at ip:port."""
-    if ip in {'', '0.0.0.0', '::'}:
+    if ip in {'', '0.0.0.0'}:
         ip = '127.0.0.1'
-    app_log.debug("Waiting %ss for server at %s:%s", timeout, ip, port)
+    elif ip == "::":
+        ip = "::1"
+    display_ip = fmt_ip_url(ip)
+    app_log.debug("Waiting %ss for server at %s:%s", timeout, display_ip, port)
     tic = time.perf_counter()
     await exponential_backoff(
         lambda: can_connect(ip, port),
-        f"Server at {ip}:{port} didn't respond in {timeout} seconds",
+        f"Server at {display_ip}:{port} didn't respond in {timeout} seconds",
         timeout=timeout,
     )
     toc = time.perf_counter()
-    app_log.debug("Server at %s:%s responded in %.2fs", ip, port, toc - tic)
+    app_log.debug("Server at %s:%s responded in %.2fs", display_ip, port, toc - tic)
 
 
 async def wait_for_http_server(url, timeout=10, ssl_context=None):
@@ -466,9 +468,15 @@ def url_path_join(*pieces):
 
     Use to prevent double slash when joining subpath. This will leave the
     initial and final / in place.
+    Empty trailing items are ignored.
 
-    Copied from `notebook.utils.url_path_join`.
+    Based on `notebook.utils.url_path_join`.
     """
+    pieces = list(pieces)
+    while pieces and not pieces[-1]:
+        del pieces[-1]
+    if not pieces:
+        return ""
     initial = pieces[0].startswith('/')
     final = pieces[-1].endswith('/')
     stripped = [s.strip('/') for s in pieces]
@@ -502,20 +510,20 @@ def print_ps_info(file=sys.stderr):
     # format CPU percentage
     cpu = p.cpu_percent(0.1)
     if cpu >= 10:
-        cpu_s = "%i" % cpu
+        cpu_s = str(int(cpu))
     else:
         cpu_s = f"{cpu:.1f}"
 
     # format memory (only resident set)
     rss = p.memory_info().rss
     if rss >= 1e9:
-        mem_s = '%.1fG' % (rss / 1e9)
+        mem_s = f'{rss / 1e9:.1f}G'
     elif rss >= 1e7:
-        mem_s = '%.0fM' % (rss / 1e6)
+        mem_s = f'{rss / 1e6:.0f}M'
     elif rss >= 1e6:
-        mem_s = '%.1fM' % (rss / 1e6)
+        mem_s = f'{rss / 1e6:.1f}M'
     else:
-        mem_s = '%.0fk' % (rss / 1e3)
+        mem_s = f'{rss / 1e3:.0f}k'
 
     # left-justify and shrink-to-fit columns
     cpulen = max(len(cpu_s), 4)
@@ -560,7 +568,7 @@ def print_stacks(file=sys.stderr):
 
     from .log import coroutine_frames
 
-    print("Active threads: %i" % threading.active_count(), file=file)
+    print(f"Active threads: {threading.active_count()}", file=file)
     for thread in threading.enumerate():
         print(f"Thread {thread.name}:", end='', file=file)
         frame = sys._current_frames()[thread.ident]
@@ -592,7 +600,7 @@ def print_stacks(file=sys.stderr):
     # coroutines to native `async def`
     tasks = asyncio_all_tasks()
     if tasks:
-        print("AsyncIO tasks: %i" % len(tasks))
+        print(f"AsyncIO tasks: {len(tasks)}")
         for task in tasks:
             task.print_stack(file=file)
 
@@ -962,3 +970,23 @@ def recursive_update(target, new):
 
         else:
             target[k] = v
+
+
+def fmt_ip_url(ip):
+    """
+    Format an IP for use in URLs. IPv6 is wrapped with [], everything else is
+    unchanged
+    """
+    if ":" in ip:
+        return f"[{ip}]"
+    return ip
+
+
+def format_exception(exc, *, only_jupyterhub=False):
+    """
+    Format an exception into a text string and HTML pair.
+    """
+    default_message = None if only_jupyterhub else str(exc)
+    return getattr(exc, "jupyterhub_message", default_message), getattr(
+        exc, "jupyterhub_html_message", None
+    )

@@ -58,7 +58,6 @@ for administration of the Hub and its users.
 - A Linux/Unix based system
 - [Python](https://www.python.org/downloads/) 3.8 or greater
 - [nodejs/npm](https://www.npmjs.com/)
-
   - If you are using **`conda`**, the nodejs and npm dependencies will be installed for
     you by conda.
 
@@ -111,7 +110,7 @@ Visit `http://localhost:8000` in your browser, and sign in with your system user
 
 _Note_: To allow multiple users to sign in to the server, you will need to
 run the `jupyterhub` command as a _privileged user_, such as root.
-The [wiki](https://github.com/jupyterhub/jupyterhub/wiki/Using-sudo-to-run-JupyterHub-without-root-privileges)
+The [documentation](https://jupyterhub.readthedocs.io/en/latest/howto/configuration/config-sudo.html)
 describes how to run the server as a _less privileged user_, which requires
 more configuration of the system.
 
@@ -220,7 +219,7 @@ docker container or Linux VM.
 We use a shared copyright model that enables all contributors to maintain the
 copyright on their contributions.
 
-All code is licensed under the terms of the [revised BSD license](./COPYING.md).
+All code is licensed under the terms of the [revised BSD license](./LICENSE).
 
 ## Help and resources
 

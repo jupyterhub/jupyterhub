@@ -260,7 +260,7 @@ async def test_shell_cmd(db, tmpdir, request):
     s.server.port = port
     db.commit()
     await wait_for_spawner(s)
-    r = await async_requests.get('http://%s:%i/env' % (ip, port))
+    r = await async_requests.get(f'http://{ip}:{port}/env')
     r.raise_for_status()
     env = r.json()
     assert env['TESTVAR'] == 'foo'
@@ -524,14 +524,53 @@ async def test_spawner_oauth_roles_bad(app, user):
 
 async def test_spawner_options_from_form(db):
     def options_from_form(form_data):
-        return form_data
+        options = {}
+        for key, value in form_data.items():
+            options[key] = value[0]
+        options["default"] = "added"
+        return options
 
     spawner = new_spawner(db, options_from_form=options_from_form)
     form_data = {"key": ["value"]}
     result = spawner.run_options_from_form(form_data)
-    for key, value in form_data.items():
-        assert key in result
-        assert result[key] == value
+    assert result == {
+        "key": "value",
+        "default": "added",
+    }
+
+
+@pytest.mark.parametrize(
+    "options_from_form, expected",
+    [
+        pytest.param(None, "unchanged", id="default"),
+        pytest.param("passthrough", "unchanged", id="passthrough"),
+        pytest.param(
+            "simple",
+            {
+                "single": "value",
+                "multiple": ["a", "b"],
+                "checkbox": True,
+                "number": "1",
+            },
+            id="simple",
+        ),
+    ],
+)
+async def test_predefined_options_from_form(db, options_from_form, expected):
+    kwargs = {}
+    if options_from_form:
+        kwargs["options_from_form"] = options_from_form
+    spawner = new_spawner(db, **kwargs)
+    form_data = {
+        "single": ["value"],
+        "multiple": ["a", "b"],
+        "checkbox": ["on"],
+        "number": ["1"],
+    }
+    if expected == "unchanged":
+        expected = form_data
+    result = spawner.run_options_from_form(form_data)
+    assert result == expected
 
 
 async def test_spawner_options_from_form_with_spawner(db):
@@ -544,6 +583,41 @@ async def test_spawner_options_from_form_with_spawner(db):
     for key, value in form_data.items():
         assert key in result
         assert result[key] == value
+
+
+async def test_apply_user_options_dict(db):
+    apply_user_options = {
+        # from_string doesn't work,
+        # but string assignment does
+        "mem": "mem_limit",
+        "notebook_dir": "notebook_dir",
+        "term_timeout": "term_timeout",
+        "start_timeout": "start_timeout",
+        "environment": "environment",
+        "unsupported": "unsupported",
+    }
+    user_options = {
+        "mem": "1G",
+        "notebook_dir": "/tmp",
+        "term_timeout": 1,
+        "start_timeout": "10",
+        "environment": {
+            "key": "value",
+        },
+        # shouldn't set these values:
+        # unsupported, but declared;
+        "unsupported": 5,
+        # undeclared, but available
+        "cpu_limit": "1m",
+    }
+    spawner = new_spawner(db, apply_user_options=apply_user_options)
+    await spawner._run_apply_user_options(user_options)
+    assert spawner.mem_limit == 1 << 30
+    assert spawner.notebook_dir == "/tmp"
+    assert spawner.term_timeout == 1
+    assert spawner.environment == {"key": "value"}
+    assert not hasattr(spawner, "unsupported")
+    assert spawner.cpu_limit is None
 
 
 def test_spawner_server(db):

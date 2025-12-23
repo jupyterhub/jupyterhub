@@ -49,7 +49,6 @@ from ..utils import (
     _bool_env,
     exponential_backoff,
     isoformat,
-    make_ssl_context,
     url_path_join,
 )
 from ._decorator import allow_unauthenticated
@@ -288,6 +287,8 @@ class SingleUserNotebookAppMixin(Configurable):
             url = urlparse(os.environ['JUPYTERHUB_SERVICE_URL'])
             if url.hostname:
                 return url.hostname
+            # All interfaces (ipv4+ipv6)
+            return ""
         return '127.0.0.1'
 
     # disable some single-user configurables
@@ -401,10 +402,20 @@ class SingleUserNotebookAppMixin(Configurable):
 
     @default('hub_http_client')
     def _default_client(self):
-        ssl_context = make_ssl_context(
-            self.keyfile, self.certfile, cafile=self.client_ca
+        # can't use ssl_options in case of pycurl
+        defaults = dict(validate_cert=True)
+        # don't set falsy empty strings,
+        # which tornado interprets as paths
+        if self.client_ca:
+            defaults["ca_certs"] = self.client_ca
+        if self.keyfile:
+            defaults["client_key"] = self.keyfile
+        if self.certfile:
+            defaults["client_cert"] = self.certfile
+        AsyncHTTPClient.configure(
+            AsyncHTTPClient.configured_class(),
+            defaults=defaults,
         )
-        AsyncHTTPClient.configure(None, defaults={"ssl_options": ssl_context})
         return AsyncHTTPClient()
 
     async def check_hub_version(self):

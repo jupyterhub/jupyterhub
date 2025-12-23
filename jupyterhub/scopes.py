@@ -31,8 +31,11 @@ from tornado.log import app_log
 from . import orm, roles
 from ._memoize import DoNotCache, FrozenDict, lru_cache_key
 
-"""when modifying the scope definitions, make sure that `docs/source/rbac/generate-scope-table.py` is run
-   so that changes are reflected in the documentation and REST API description."""
+"""when modifying the scope definitions
+   `docs/source/rbac/generate-scope-table.py` must be run
+   so that changes are reflected in the documentation and REST API description.
+   `pre-commit run -a` should automatically take care of this.
+   """
 scope_definitions = {
     '(no_scope)': {'description': 'Identify the owner of the requesting entity.'},
     'self': {
@@ -64,7 +67,7 @@ scope_definitions = {
         'subscopes': ['read:users:name'],
     },
     'read:users': {
-        'description': 'Read user models (including servers, tokens and authentication state).',
+        'description': 'Read user models (including the URL of the default server if it is running).',
         'subscopes': [
             'read:users:name',
             'read:users:groups',

@@ -32,19 +32,59 @@ popular services:
 - MediaWiki
 - OpenShift
 
-A [generic implementation](https://github.com/jupyterhub/oauthenticator/blob/master/oauthenticator/generic.py), which you can use for OAuth authentication with any provider, is also available.
+A [generic implementation](https://github.com/jupyterhub/oauthenticator/blob/main/oauthenticator/generic.py), which you can use for OAuth authentication with any provider, is also available.
 
 ## The Dummy Authenticator
 
-When testing, it may be helpful to use the
-{class}`~.jupyterhub.auth.DummyAuthenticator`. This allows for any username and
-password unless a global password has been set. Once set, any username will
-still be accepted but the correct password will need to be provided.
+When testing, it may be helpful to use the {class}`~.jupyterhub.auth.DummyAuthenticator`:
+
+```python
+c.JupyterHub.authenticator_class = "dummy"
+# always a good idea to limit to localhost when testing with an insecure config
+c.JupyterHub.ip = "127.0.0.1"
+```
+
+This allows for any username and password to login, and is _wildly_ insecure.
+
+To use, specify
+
+```python
+c.JupyterHub.authenticator_class = "dummy"
+```
 
 :::{versionadded} 5.0
 The DummyAuthenticator's default `allow_all` is True,
 unlike most other Authenticators.
 :::
+
+:::{deprecated} 5.3
+Setting a password on DummyAuthenticator is deprecated.
+Use the new {class}`~.jupyterhub.authenticators.shared.SharedPasswordAuthenticator`
+if you want to set a shared password for users.
+:::
+
+## Shared Password Authenticator
+
+:::{versionadded} 5.3
+{class}`~.jupyterhub.authenticators.shared.SharedPasswordAuthenticator` is added and [DummyAuthenticator.password](#DummyAuthenticator.password) is deprecated.
+:::
+
+For short-term deployments like workshops where there is no real user data to protect and you trust users to not abuse the system or each other,
+{class}`~.jupyterhub.authenticators.shared.SharedPasswordAuthenticator` can be used.
+
+Set a [user password](#SharedPasswordAuthenticator.user_password) for users to login:
+
+```python
+c.JupyterHub.authenticator_class = "shared-password"
+c.SharedPasswordAuthenticator.user_password = "my-workshop-2042"
+```
+
+You can also grant admin users access by adding them to `admin_users` and setting a separate [admin password](#SharedPasswordAuthenticator.admin_password):
+
+```python
+c.Authenticator.admin_users = {"danger", "eggs"}
+c.SharedPasswordAuthenticator.admin_password = "extra-super-secret-secure-password"
+```
 
 ## Additional Authenticators
 
@@ -469,8 +509,19 @@ which is a list of group names the user should be a member of:
 - If `None` is returned, no changes are made to the user's group membership
 
 If authenticator-managed groups are enabled,
-all group-management via the API is disabled,
-and roles cannot be specified with `load_groups` traitlet.
+groups cannot be specified with `load_groups` traitlet.
+
+:::{warning}
+When `manage_groups` is True,
+managing groups via the API is still permitted via the `admin:groups` scope (starting with 5.3),
+but any time a user logs in their group membership is completely reset via the login process.
+So it only really makes sense to make manual changes via the API that reflect upstream changes which are not automatically propagated, such as group deletion.
+
+:::
+
+:::{versionchanged} 5.3
+Prior to JupyterHub 5.3, all group management via the API was disabled if `Authenticator.manage_groups` is True.
+:::
 
 (authenticator-roles)=
 

@@ -208,7 +208,7 @@ mybinder.org node CPU usage is low with 50-150 users sharing just 8 cores
 
 ### Concurrent users and culling idle servers
 
-Related to [][idleness], all of these resource consumptions and limits are calculated based on **concurrently active users**,
+Related to [](idleness), all of these resource consumptions and limits are calculated based on **concurrently active users**,
 not total users.
 You might have 10,000 users of your JupyterHub deployment, but only 100 of them running at any given time.
 That 100 is the main number you need to use for your capacity planning.

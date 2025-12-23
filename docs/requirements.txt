@@ -2,6 +2,7 @@
 # don't depend on it here, as that often results in a duplicate
 # installation of jupyterhub that's already installed
 autodoc-traits
+intersphinx-registry
 jupyterhub-sphinx-theme
 myst-parser>=0.19
 pre-commit
@@ -12,3 +13,4 @@ sphinx-copybutton
 sphinx-jsonschema
 sphinxext-opengraph
 sphinxext-rediraffe
+tomli; python_version < '3.11'

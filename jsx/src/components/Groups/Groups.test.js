@@ -3,7 +3,7 @@ import "@testing-library/jest-dom";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { Provider, useSelector } from "react-redux";
 import { createStore } from "redux";
-import { HashRouter, useSearchParams } from "react-router-dom";
+import { HashRouter, useSearchParams } from "react-router";
 // eslint-disable-next-line
 import regeneratorRuntime from "regenerator-runtime";
 
@@ -15,8 +15,8 @@ jest.mock("react-redux", () => ({
   useSelector: jest.fn(),
 }));
 
-jest.mock("react-router-dom", () => ({
-  ...jest.requireActual("react-router-dom"),
+jest.mock("react-router", () => ({
+  ...jest.requireActual("react-router"),
   useSearchParams: jest.fn(),
 }));
 
@@ -57,13 +57,34 @@ var mockAppState = () =>
     },
   });
 
+var mockUpdateGroups = () => {
+  const state = mockAppState();
+  return jest.fn().mockImplementation((offset, limit) =>
+    Promise.resolve({
+      items: state.groups_data.slice(0, limit),
+      _pagination: {
+        offset: offset,
+        limit: limit || 2,
+        total: state.groups_page.total,
+      },
+    }),
+  );
+};
+
+let searchParams = new URLSearchParams();
+
 beforeEach(() => {
   useSelector.mockImplementation((callback) => {
     return callback(mockAppState());
   });
-  useSearchParams.mockImplementation(() => {
-    return [new URLSearchParams(), jest.fn()];
-  });
+  searchParams = new URLSearchParams();
+  searchParams.set("limit", "2");
+  useSearchParams.mockImplementation(() => [
+    searchParams,
+    (callback) => {
+      searchParams = callback(searchParams);
+    },
+  ]);
 });
 
 afterEach(() => {
@@ -74,7 +95,7 @@ afterEach(() => {
 });
 
 test("Renders", async () => {
-  let callbackSpy = mockAsync();
+  let callbackSpy = mockUpdateGroups();
 
   await act(async () => {
     render(groupsJsx(callbackSpy));
@@ -84,7 +105,7 @@ test("Renders", async () => {
 });
 
 test("Renders groups_data prop into links", async () => {
-  let callbackSpy = mockAsync();
+  let callbackSpy = mockUpdateGroups();
 
   await act(async () => {
     render(groupsJsx(callbackSpy));
@@ -102,7 +123,7 @@ test("Renders nothing if required data is not available", async () => {
     return callback({});
   });
 
-  let callbackSpy = mockAsync();
+  let callbackSpy = mockUpdateGroups();
 
   await act(async () => {
     render(groupsJsx(callbackSpy));
@@ -113,34 +134,24 @@ test("Renders nothing if required data is not available", async () => {
 });
 
 test("Interacting with PaginationFooter causes page refresh", async () => {
-  let updateGroupsSpy = mockAsync();
-  let setSearchParamsSpy = mockAsync();
-  let searchParams = new URLSearchParams({ limit: "2" });
-  useSearchParams.mockImplementation(() => [
-    searchParams,
-    (callback) => {
-      searchParams = callback(searchParams);
-      setSearchParamsSpy(searchParams.toString());
-    },
-  ]);
-  let _, setSearchParams;
+  let updateGroupsSpy = mockUpdateGroups();
   await act(async () => {
     render(groupsJsx(updateGroupsSpy));
-    [_, setSearchParams] = useSearchParams();
   });
 
-  expect(updateGroupsSpy).toBeCalledWith(0, 2);
+  expect(updateGroupsSpy).toHaveBeenCalledWith(0, 2);
 
   var lastState =
     mockReducers.mock.results[mockReducers.mock.results.length - 1].value;
   expect(lastState.groups_page.offset).toEqual(0);
   expect(lastState.groups_page.limit).toEqual(2);
+  expect(searchParams.get("offset")).toEqual(null);
 
   let next = screen.getByTestId("paginate-next");
   await act(async () => {
     await fireEvent.click(next);
   });
-  expect(updateGroupsSpy).toBeCalledWith(2, 2);
-  // mocked updateGroups means callback after load doesn't fire
-  // expect(setSearchParamsSpy).toBeCalledWith("limit=2&offset=2");
+  expect(searchParams.get("offset")).toEqual("2");
+  // FIXME: useSelector mocks prevent updateGroups from being called
+  // expect(updateGroupsSpy).toHaveBeenCalledWith(2, 2);
 });

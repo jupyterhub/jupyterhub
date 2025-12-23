@@ -2,37 +2,56 @@
 
 # Setting up a development install
 
+JupyterHub's continuous integration runs on [Ubuntu LTS](https://ubuntu.com/).
+
+While JupyterHub is only tested on one [Linux distribution](https://en.wikipedia.org/wiki/Linux_distribution),
+it should be fairly insensitive to variations between common [POSIX](https://en.wikipedia.org/wiki/POSIX) implementation,
+though we don't have the bandwidth to verify this automatically and continuously.
+
+Feel free to try it on your platform, and be sure to {ref}`let us know <contributing:community>` about any issues you encounter.
+
 ## System requirements
 
-JupyterHub can only run on macOS or Linux operating systems. If you are
-using Windows, we recommend using [VirtualBox](https://virtualbox.org)
-or a similar system to run [Ubuntu Linux](https://ubuntu.com) for
-development.
+Your system **must** be able to run
+
+- Python
+- NodeJS
+- Git
+
+Our small team knows JupyterHub to work perfectly on macOS or Linux operating systems.
+
+```{admonition} What about Windows?
+Some users have reported that JupyterHub runs successfully on [Windows Subsystem for Linux (WSL)](https://learn.microsoft.com/en-us/windows/wsl/). We have no plans to support Windows outside of the WSL.
+```
+
+```{admonition} What about virtualization?
+Using any form of virtualization (for example, [VirtualBox](https://www.virtualbox.org/), [Docker](https://www.docker.com/), [Podman](https://podman.io/), [WSL](https://learn.microsoft.com/en-us/windows/wsl/)) is a good way to get up and running quickly, though properly configuring the networking settings can be a bit tricky.
+```
 
 ### Install Python
 
-JupyterHub is written in the [Python](https://python.org) programming language and
+JupyterHub is written in the [Python](https://www.python.org) programming language and
 requires you have at least version {{python_min}} installed locally. If you haven’t
 installed Python before, the recommended way to install it is to use
 [Miniforge](https://github.com/conda-forge/miniforge#download).
 
-### Install nodejs
+### Install NodeJS
 
-[NodeJS {{node_min}}+](https://nodejs.org/en/) is required for building some JavaScript components.
-`configurable-http-proxy`, the default proxy implementation for JupyterHub, is written in Javascript.
+Some JavaScript components require you have at least version {{node_min}} of [NodeJS](https://nodejs.org/en/) installed locally.
+`configurable-http-proxy`, the default proxy implementation for JupyterHub, is written in JavaScript.
 If you have not installed NodeJS before, we recommend installing it in the `miniconda` environment you set up for Python.
 You can do so with `conda install nodejs`.
 
 Many in the Jupyter community use [`nvm`](https://github.com/nvm-sh/nvm) to
 managing node dependencies.
 
-### Install git
+### Install Git
 
-JupyterHub uses [Git](https://git-scm.com) & [GitHub](https://github.com)
-for development & collaboration. You need to [install git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) to work on
-JupyterHub. We also recommend getting a free account on GitHub.com.
+JupyterHub uses [Git](https://git-scm.com) and [GitHub](https://github.com)
+for development and collaboration. You need to [install Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) to work on
+JupyterHub. We also recommend getting a free account on GitHub.
 
-## Setting up a development install
+## Install JupyterHub for development
 
 When developing JupyterHub, you would need to make changes and be able to instantly view the results of the changes. To achieve that, a developer install is required.
 
@@ -44,7 +63,7 @@ be achieved in many ways, for example, `tox`, `conda`, `docker`, etc. See this
 a more detailed discussion.
 :::
 
-1. Clone the [JupyterHub git repository](https://github.com/jupyterhub/jupyterhub)
+1. Clone the [JupyterHub Git repository](https://github.com/jupyterhub/jupyterhub)
    to your computer.
 
    ```bash
@@ -65,7 +84,7 @@ a more detailed discussion.
    npm -v
    ```
 
-   This should return a version number greater than or equal to 5.0.
+   This should return a version number greater than or equal to {{node_min}}.
 
 3. Install `configurable-http-proxy` (required to run and test the default JupyterHub configuration):
 
@@ -92,7 +111,7 @@ a more detailed discussion.
 
 4. Install an editable version of JupyterHub and its requirements for
    development and testing. This lets you edit JupyterHub code in a text editor
-   & restart the JupyterHub process to see your code changes immediately.
+   and restart the JupyterHub process to see your code changes immediately.
 
    ```bash
    python3 -m pip install --editable ".[test]"
@@ -101,15 +120,18 @@ a more detailed discussion.
 5. You are now ready to start JupyterHub!
 
    ```bash
-   jupyterhub
+   jupyterhub -f testing/jupyterhub_config.py
    ```
 
 6. You can access JupyterHub from your browser at
-   `http://localhost:8000` now.
+   `http://localhost:8000` now, and should see a login page.
+   You can login with any username and password,
+   and begin testing JupyterHub.
+   More on what the testing configuration does below.
 
 Happy developing!
 
-## Using DummyAuthenticator & SimpleLocalProcessSpawner
+## Using DummyAuthenticator and SimpleLocalProcessSpawner
 
 To simplify testing of JupyterHub, it is helpful to use
 {class}`~jupyterhub.auth.DummyAuthenticator` instead of the default JupyterHub
@@ -123,29 +145,33 @@ configuration:
 jupyterhub -f testing/jupyterhub_config.py
 ```
 
+At this point, you should be able to vis `http://localhost:8000` and login with any username and password and start playing with JupyterHub or testing your changes.
+
 The test configuration enables a few things to make testing easier:
 
 - use 'dummy' authentication and 'simple' spawner
 - named servers are enabled
-- listen only on localhost
+- listen only on localhost because the testing config is wildly insecure if anybody has access to the port it is listening on.
 - 'admin' is an admin user, if you want to test the admin page
 - disable caching of static files
 
 The default JupyterHub [authenticator](PAMAuthenticator)
-& [spawner](LocalProcessSpawner)
+and [spawner](LocalProcessSpawner)
 require your system to have user accounts for each user you want to log in to
 JupyterHub as.
 
-DummyAuthenticator allows you to log in with any username & password,
+DummyAuthenticator allows you to log in with any username and password,
 while SimpleLocalProcessSpawner allows you to start servers without having to
 create a Unix user for each JupyterHub user. Together, these make it
 much easier to test JupyterHub.
 
-Tip: If you are working on parts of JupyterHub that are common to all
-authenticators & spawners, we recommend using both DummyAuthenticator &
+:::{tip}
+If you are working on parts of JupyterHub that are common to all
+authenticators and spawners, we recommend using both DummyAuthenticator and
 SimpleLocalProcessSpawner. If you are working on just authenticator-related
 parts, use only SimpleLocalProcessSpawner. Similarly, if you are working on
 just spawner-related parts, use only DummyAuthenticator.
+:::
 
 ## Building frontend components
 
@@ -186,7 +212,7 @@ additional JavaScript dependencies:
 npm install
 ```
 
-This will fetch client-side JavaScript dependencies necessary to compile
+This will fetch NodeJS dependencies necessary to compile
 CSS.
 
 You may also need to manually update JavaScript and CSS after some

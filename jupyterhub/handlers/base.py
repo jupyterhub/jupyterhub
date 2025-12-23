@@ -1061,10 +1061,12 @@ class BaseHandler(RequestHandler):
             # round suggestion to nicer human value (nearest 10 seconds or minute)
             if retry_time <= 90:
                 # round human seconds up to nearest 10
-                human_retry_time = "%i0 seconds" % math.ceil(retry_time / 10.0)
+                delay = math.ceil(retry_time / 10.0)
+                human_retry_time = f"{delay}0 seconds"
             else:
                 # round number of minutes
-                human_retry_time = "%i minutes" % round(retry_time / 60.0)
+                delay = round(retry_time / 60.0)
+                human_retry_time = f"{delay} minutes"
 
             self.log.warning(
                 '%s pending spawns, throttling. Suggested retry in %s seconds.',
@@ -1099,12 +1101,12 @@ class BaseHandler(RequestHandler):
         self.log.debug(
             "%i%s concurrent spawns",
             spawn_pending_count,
-            '/%i' % concurrent_spawn_limit if concurrent_spawn_limit else '',
+            f'/{concurrent_spawn_limit}' if concurrent_spawn_limit else '',
         )
         self.log.debug(
             "%i%s active servers",
             active_count,
-            '/%i' % active_server_limit if active_server_limit else '',
+            f'/{active_server_limit}' if active_server_limit else '',
         )
 
         spawner = user.spawners[server_name]
@@ -1246,6 +1248,20 @@ class BaseHandler(RequestHandler):
                     status=ServerSpawnStatus.failure
                 ).observe(time.perf_counter() - spawn_start_time)
 
+                # if it stopped, give the original spawn future a second chance to raise
+                # this avoids storing the generic 500 error as the spawn failure,
+                # when the original may be more informative
+                try:
+                    await asyncio.wait_for(
+                        asyncio.shield(finish_spawn_future), timeout=1
+                    )
+                except TimeoutError:
+                    pass
+
+                if finish_spawn_future.exception():
+                    # raise original exception if it already failed
+                    await finish_spawn_future
+
                 raise web.HTTPError(
                     500,
                     f"Spawner failed to start [status={status}]. The logs for {spawner._log_name} may contain details.",
@@ -1310,6 +1326,22 @@ class BaseHandler(RequestHandler):
         spawner = user.spawners[server_name]
         if spawner.pending:
             raise RuntimeError(f"{spawner._log_name} pending {spawner.pending}")
+
+        if self.authenticator.refresh_pre_stop:
+            auth_user = await self.refresh_auth(user, force=True)
+            if auth_user is None:
+                if (
+                    self.current_user.kind == "user"
+                    and self.current_user.name == user.name
+                ):
+                    raise web.HTTPError(
+                        403, "auth has expired for %s, login again", user.name
+                    )
+                else:
+                    self.log.warning(
+                        "User %s may have stale auth info. Stopping anyway.", user.name
+                    )
+
         # set user._stop_pending before doing anything async
         # to avoid races
         spawner._stop_pending = True
@@ -1471,6 +1503,7 @@ class BaseHandler(RequestHandler):
         """render custom error pages"""
         exc_info = kwargs.get('exc_info')
         message = ''
+        message_html = ''
         exception = None
         status_message = responses.get(status_code, 'Unknown HTTP Error')
         if exc_info:
@@ -1480,11 +1513,16 @@ class BaseHandler(RequestHandler):
                 message = exception.log_message % exception.args
             except Exception:
                 pass
+            # allow custom html messages
+            message_html = getattr(exception, "jupyterhub_html_message", "")
 
             # construct the custom reason, if defined
             reason = getattr(exception, 'reason', '')
             if reason:
                 message = reasons.get(reason, reason)
+
+            # get special jupyterhub_message, if defined
+            message = getattr(exception, "jupyterhub_message", message)
 
         if exception and isinstance(exception, SQLAlchemyError):
             self.log.warning("Rolling back session due to database error %s", exception)
@@ -1495,6 +1533,7 @@ class BaseHandler(RequestHandler):
             status_code=status_code,
             status_message=status_message,
             message=message,
+            message_html=message_html,
             extra_error_html=getattr(self, 'extra_error_html', ''),
             exception=exception,
         )
@@ -1611,7 +1650,7 @@ class UserUrlHandler(BaseHandler):
 
     def _fail_api_request(self, user_name='', server_name=''):
         """Fail an API request to a not-running server"""
-        self.log.warning(
+        self.log.debug(
             "Failing suspected API request to not-running server: %s", self.request.path
         )
 

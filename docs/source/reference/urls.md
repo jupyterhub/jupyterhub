@@ -169,26 +169,19 @@ _Version changed: 1.0_
 JupyterHub version 0.9 failed these API requests with status `404`,
 but version 1.0 uses 503.
 
-## `/user-redirect/...`
+## `/hub/user-redirect/...`
 
-The `/user-redirect/...` URL is for sharing a URL that will redirect a user
+The `/hub/user-redirect/...` URL is for sharing a URL that will redirect a user
 to a path on their own default server.
 This is useful when different users have the same file at the same URL on their servers,
 and you want a single link to give to any user that will open that file on their server.
 
-e.g. a link to `/user-redirect/notebooks/Index.ipynb`
+e.g. a link to `/hub/user-redirect/notebooks/Index.ipynb`
 will send user `hortense` to `/user/hortense/notebooks/Index.ipynb`
 
 **DO NOT** share links to your own server with other users.
 This will not work in general,
 unless you grant those users access to your server.
-
-**Contributions welcome:** The JupyterLab "shareable link" should share this link
-when run with JupyterHub, but it does not.
-See [jupyterlab-hub](https://github.com/jupyterhub/jupyterlab-hub)
-where this should probably be done and
-[this issue in JupyterLab](https://github.com/jupyterlab/jupyterlab/issues/5388)
-that is intended to make it possible.
 
 ## Spawning
 

@@ -32,6 +32,7 @@ import os
 import sys
 from subprocess import TimeoutExpired
 from unittest import mock
+from warnings import warn
 
 import pytest_asyncio
 from packaging.version import parse as parse_version
@@ -101,7 +102,7 @@ def ssl_tmpdir(tmpdir_factory):
 
 
 @fixture(scope='module')
-async def app(request, io_loop, ssl_tmpdir):
+async def app(request, ssl_tmpdir):
     """Mock a jupyterhub app for testing"""
     mocked_app = None
     ssl_enabled = getattr(
@@ -169,26 +170,23 @@ async def io_loop(request):
     The main reason to depend on this fixture is to ensure your cleanup
     happens before the io_loop is closed.
     """
+    warn(
+        "jupyterhub's io_loop fixture is deprecated. Use async fixtures to get the event loop.",
+        DeprecationWarning,
+    )
     io_loop = AsyncIOMainLoop()
     event_loop = asyncio.get_running_loop()
     assert asyncio.get_event_loop() is event_loop
     assert io_loop.asyncio_loop is event_loop
-
-    def _close():
-        io_loop.close(all_fds=True)
-
-    request.addfinalizer(_close)
     return io_loop
 
 
 @fixture(autouse=True)
-async def cleanup_after(request, io_loop):
+async def cleanup_after(request):
     """function-scoped fixture to shutdown user servers
 
     allows cleanup of servers between tests
     without having to launch a whole new app
-
-    depends on io_loop to ensure it runs before things are closed.
     """
 
     try:
@@ -358,14 +356,15 @@ async def _mockservice(request, app, name, external=False, url=False):
           (as opposed to headless, API-only).
     """
     spec = {'name': name, 'command': mockservice_cmd, 'admin': True}
+    port = random_port()
     if url:
         if app.internal_ssl:
-            spec['url'] = 'https://127.0.0.1:%i' % random_port()
+            spec['url'] = f'https://127.0.0.1:{port}'
         else:
-            spec['url'] = 'http://127.0.0.1:%i' % random_port()
+            spec['url'] = f'http://127.0.0.1:{port}'
 
     if external:
-        spec['oauth_redirect_uri'] = 'http://127.0.0.1:%i' % random_port()
+        spec['oauth_redirect_uri'] = f'http://127.0.0.1:{port}'
 
     event_loop = asyncio.get_running_loop()
 

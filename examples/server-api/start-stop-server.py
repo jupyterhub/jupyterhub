@@ -161,7 +161,7 @@ def main():
 
     session = make_session(get_token())
     server_url = start_server(session, hub_url, user)
-    r = session.get(f"{server_url}/api/status")
+    r = session.get(f"{server_url}api/status")
     r.raise_for_status()
     log.info(f"Server status: {r.text}")
 

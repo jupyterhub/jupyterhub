@@ -7,7 +7,7 @@ info:
   license:
     name: BSD-3-Clause
     identifier: BSD-3-Clause
-  version: 5.2.0.dev
+  version: 6.0.0.dev
 servers:
   - url: /hub/api
 security:
@@ -62,20 +62,19 @@ paths:
                     properties:
                       class:
                         type: string
-                        description:
-                          The Python class currently active for JupyterHub
-                          Authentication
+                        description: The Python class currently active for 
+                          JupyterHub Authentication
                       version:
                         type: string
-                        description: The version of the currently active Authenticator
+                        description: The version of the currently active 
+                          Authenticator
                   spawner:
                     type: object
                     properties:
                       class:
                         type: string
-                        description:
-                          The Python class currently active for spawning
-                          single-user notebook servers
+                        description: The Python class currently active for 
+                          spawning single-user notebook servers
                       version:
                         type: string
                         description: The version of the currently active Spawner
@@ -325,9 +324,8 @@ paths:
       parameters:
         - $ref: "#/components/parameters/userName"
       requestBody:
-        description:
-          Updated user info. At least one key to be updated (name or admin)
-          is required.
+        description: Updated user info. At least one key to be updated (name or 
+          admin) is required.
         content:
           application/json:
             schema:
@@ -335,14 +333,12 @@ paths:
               properties:
                 name:
                   type: string
-                  description:
-                    the new name (optional, if another key is updated i.e.
-                    admin)
+                  description: the new name (optional, if another key is updated
+                    i.e. admin)
                 admin:
                   type: boolean
-                  description:
-                    update admin (optional, if another key is updated i.e.
-                    name)
+                  description: update admin (optional, if another key is updated
+                    i.e. name)
         required: true
       responses:
         200:
@@ -358,9 +354,8 @@ paths:
     post:
       operationId: post-user-activity
       summary: Notify Hub of activity for a given user
-      description:
-        Notify the Hub of activity by the user, e.g. accessing a service
-        or (more likely) actively using a server.
+      description: Notify the Hub of activity by the user, e.g. accessing a 
+        service or (more likely) actively using a server.
       parameters:
         - $ref: "#/components/parameters/userName"
       requestBody:
@@ -439,9 +434,8 @@ paths:
           description: The user's notebook server has started
           content: {}
         202:
-          description:
-            The user's notebook server has not yet started, but has been
-            requested
+          description: The user's notebook server has not yet started, but has 
+            been requested
           content: {}
       security:
         - oauth2:
@@ -454,9 +448,8 @@ paths:
         - $ref: "#/components/parameters/userName"
       responses:
         202:
-          description:
-            The user's notebook server has not yet stopped as it is taking
-            a while to stop
+          description: The user's notebook server has not yet stopped as it is 
+            taking a while to stop
           content: {}
         204:
           description: The user's notebook server has stopped
@@ -487,9 +480,8 @@ paths:
           description: The user's notebook named-server has started
           content: {}
         202:
-          description:
-            The user's notebook named-server has not yet started, but has
-            been requested
+          description: The user's notebook named-server has not yet started, but
+            has been requested
           content: {}
       security:
         - oauth2:
@@ -524,9 +516,8 @@ paths:
         required: false
       responses:
         202:
-          description:
-            The user's notebook named-server has not yet stopped as it
-            is taking a while to stop
+          description: The user's notebook named-server has not yet stopped as 
+            it is taking a while to stop
           content: {}
         204:
           description: The user's notebook named-server has stopped
@@ -539,9 +530,8 @@ paths:
     get:
       operationId: get-user-shared
       summary: List servers shared with user
-      description:
-        Returns list of Shares granting the user access to servers owned
-        by others (new in 5.0)
+      description: Returns list of Shares granting the user access to servers 
+        owned by others (new in 5.0)
       parameters:
         - $ref: "#/components/parameters/userName"
 
@@ -654,12 +644,13 @@ paths:
                 expires_in:
                   type: number
                   example: 3600
-                  description:
-                    lifetime (in seconds) after which the requested token
-                    will expire. Omit, or specify null or 0 for no expiration.
+                  description: lifetime (in seconds) after which the requested 
+                    token will expire. Omit, or specify null or 0 for no 
+                    expiration.
                 note:
                   type: string
-                  description: A note attached to the token for future bookkeeping
+                  description: A note attached to the token for future 
+                    bookkeeping
                 roles:
                   type: array
                   description: |
@@ -837,7 +828,8 @@ paths:
         - $ref: "#/components/parameters/sharedServerName"
       responses:
         200:
-          description: The permissions granted to members of `group` on `owner/server`
+          description: The permissions granted to members of `group` on 
+            `owner/server`
           content:
             application/json:
               schema:
@@ -1252,7 +1244,8 @@ paths:
                         description: |
                           The full URL for accepting the code,
                           if JupyterHub.public_url configuration is defined.
-                        example: https://hub.example.org/hub/accept-share?code=abc123
+                        example: 
+                          https://hub.example.org/hub/accept-share?code=abc123
       security:
         - oauth2:
             - shares
@@ -1329,9 +1322,8 @@ paths:
     get:
       operationId: get-proxy
       summary: Get the proxy's routing table
-      description:
-        A convenience alias for getting the routing table directly from
-        the proxy
+      description: A convenience alias for getting the routing table directly 
+        from the proxy
       parameters:
         - $ref: "#/components/parameters/paginationOffset"
         - $ref: "#/components/parameters/paginationLimit"
@@ -1342,9 +1334,8 @@ paths:
             application/json:
               schema:
                 type: object
-                description:
-                  configurable-http-proxy routing table (see configurable-http-proxy
-                  docs for details)
+                description: configurable-http-proxy routing table (see 
+                  configurable-http-proxy docs for details)
       security:
         - oauth2:
             - proxy
@@ -1363,9 +1354,8 @@ paths:
       summary: Notify the Hub about a new proxy
       description: Notifies the Hub of a new proxy to use.
       requestBody:
-        description:
-          Any values that have changed for the new proxy. All keys are
-          optional.
+        description: Any values that have changed for the new proxy. All keys 
+          are optional.
         content:
           application/json:
             schema:
@@ -1456,9 +1446,8 @@ paths:
     get:
       operationId: get-auth-cookie
       summary: Identify a user from a cookie
-      description:
-        Used by single-user notebook servers to hand off cookie authentication
-        to the Hub
+      description: Used by single-user notebook servers to hand off cookie 
+        authentication to the Hub
       parameters:
         - name: cookie_name
           in: path
@@ -1582,14 +1571,12 @@ paths:
               properties:
                 proxy:
                   type: boolean
-                  description:
-                    Whether the proxy should be shutdown as well (default
-                    from Hub config)
+                  description: Whether the proxy should be shutdown as well 
+                    (default from Hub config)
                 servers:
                   type: boolean
-                  description:
-                    Whether users' notebook servers should be shutdown
-                    as well (default from Hub config)
+                  description: Whether users' notebook servers should be 
+                    shutdown as well (default from Hub config)
         required: false
       responses:
         202:
@@ -1713,6 +1700,11 @@ components:
         name:
           type: string
           description: The user's name
+        kind:
+          type: string
+          description: the string 'user' to distinguish from 'service'
+          enum:
+            - user
         admin:
           type: boolean
           description: Whether the user is an admin
@@ -1728,9 +1720,8 @@ components:
             type: string
         server:
           type: string
-          description:
-            The user's notebook server's base URL, if running; null if
-            not.
+          description: The user's notebook server's base URL, if running; null 
+            if not.
         pending:
           type: string
           description: The currently pending action, if any
@@ -1761,9 +1752,8 @@ components:
       properties:
         name:
           type: string
-          description:
-            The server's name. The user's default server has an empty name
-            ('')
+          description: The server's name. The user's default server has an empty
+            name ('')
         ready:
           type: boolean
           description: |
@@ -1825,16 +1815,14 @@ components:
         state:
           type: object
           properties: {}
-          description:
-            Arbitrary internal state from this server's spawner. Only available
-            on the hub's users list or get-user-by-name method, and only with admin:users:server_state
-            scope. None otherwise.
+          description: Arbitrary internal state from this server's spawner. Only
+            available on the hub's users list or get-user-by-name method, and 
+            only with admin:users:server_state scope. None otherwise.
         user_options:
           type: object
           properties: {}
-          description:
-            User specified options for the user's spawned instance of a
-            single-user server.
+          description: User specified options for the user's spawned instance of
+            a single-user server.
     RequestIdentity:
       description: |
         The model for the entity making the request.
@@ -1851,6 +1839,13 @@ components:
               service: "#/components/schemas/Service"
         - type: object
           properties:
+            kind:
+              type: string
+              description: |
+                'user' or 'service' depending on the entity which owns the token
+              enum:
+                - user
+                - service
             session_id:
               type:
                 - string
@@ -1887,6 +1882,11 @@ components:
         name:
           type: string
           description: The group's name
+        kind:
+          type: string
+          description: Always the string 'group'
+          enum:
+            - group
         users:
           type: array
           description: The names of users who are members of this group
@@ -1912,6 +1912,11 @@ components:
         name:
           type: string
           description: The service's name
+        kind:
+          type: string
+          description: the string 'service' to distinguish from 'user'
+          enum:
+            - service
         admin:
           type: boolean
           description: Whether the service is an admin
@@ -1985,9 +1990,8 @@ components:
           items:
             type: string
         group:
-          description:
-            the group being shared with (exactly one of 'user' or 'group'
-            will be non-null, the other will be null)
+          description: the group being shared with (exactly one of 'user' or 
+            'group' will be non-null, the other will be null)
           type:
             - object
             - "null"
@@ -1995,9 +1999,8 @@ components:
             name:
               type: string
         user:
-          description:
-            the user being shared with (exactly one of 'user' or 'group'
-            will be non-null, the other will be null)
+          description: the user being shared with (exactly one of 'user' or 
+            'group' will be non-null, the other will be null)
           type:
             - object
             - "null"
@@ -2010,9 +2013,8 @@ components:
           format: date-time
 
     ShareCode:
-      description:
-        A single sharing code. There is at most one of these objects per
-        (server, user) or (server, group) combination.
+      description: A single sharing code. There is at most one of these objects 
+        per (server, user) or (server, group) combination.
       type: object
       properties:
         server:
@@ -2047,41 +2049,41 @@ components:
       properties:
         id:
           type: string
-          description:
-            The id of the API token. Used for modifying or deleting the
-            token.
+          description: The id of the API token. Used for modifying or deleting 
+            the token.
         user:
           type: string
-          description: The user that owns a token (undefined if owned by a service)
+          description: The user that owns a token (undefined if owned by a 
+            service)
         service:
           type: string
-          description: The service that owns the token (undefined of owned by a user)
+          description: The service that owns the token (undefined of owned by a 
+            user)
         roles:
           type: array
-          description:
-            Deprecated in JupyterHub 3, always an empty list. Tokens have
-            'scopes' starting from JupyterHub 3.
+          description: Deprecated in JupyterHub 3, always an empty list. Tokens 
+            have 'scopes' starting from JupyterHub 3.
           items:
             type: string
         scopes:
           type: array
-          description:
-            List of scopes this token has been assigned. New in JupyterHub
-            3. In JupyterHub 2.x, tokens were assigned 'roles' instead of scopes.
+          description: List of scopes this token has been assigned. New in 
+            JupyterHub 3. In JupyterHub 2.x, tokens were assigned 'roles' 
+            instead of scopes.
           items:
             type: string
         note:
           type: string
-          description:
-            A note about the token, typically describing what it was created
-            for.
+          description: A note about the token, typically describing what it was 
+            created for.
         created:
           type: string
           description: Timestamp when this token was created
           format: date-time
         expires_at:
           type: string
-          description: Timestamp when this token expires. Null if there is no expiry.
+          description: Timestamp when this token expires. Null if there is no 
+            expiry.
           format: date-time
         last_activity:
           type: string
@@ -2104,46 +2106,45 @@ components:
       properties:
         token:
           type: string
-          description:
-            The token itself. Only present in responses to requests for
-            a new token.
+          description: The token itself. Only present in responses to requests 
+            for a new token.
         id:
           type: string
-          description:
-            The id of the API token. Used for modifying or deleting the
-            token.
+          description: The id of the API token. Used for modifying or deleting 
+            the token.
         user:
           type: string
-          description: The user that owns a token (undefined if owned by a service)
+          description: The user that owns a token (undefined if owned by a 
+            service)
         service:
           type: string
-          description: The service that owns the token (undefined of owned by a user)
+          description: The service that owns the token (undefined of owned by a 
+            user)
         roles:
           type: array
-          description:
-            Deprecated in JupyterHub 3, always an empty list. Tokens have
-            'scopes' starting from JupyterHub 3.
+          description: Deprecated in JupyterHub 3, always an empty list. Tokens 
+            have 'scopes' starting from JupyterHub 3.
           items:
             type: string
         scopes:
           type: array
-          description:
-            List of scopes this token has been assigned. New in JupyterHub
-            3. In JupyterHub 2.x, tokens were assigned 'roles' instead of scopes.
+          description: List of scopes this token has been assigned. New in 
+            JupyterHub 3. In JupyterHub 2.x, tokens were assigned 'roles' 
+            instead of scopes.
           items:
             type: string
         note:
           type: string
-          description:
-            A note about the token, typically describing what it was created
-            for.
+          description: A note about the token, typically describing what it was 
+            created for.
         created:
           type: string
           description: Timestamp when this token was created
           format: date-time
         expires_at:
           type: string
-          description: Timestamp when this token expires. Null if there is no expiry.
+          description: Timestamp when this token expires. Null if there is no 
+            expiry.
           format: date-time
         last_activity:
           type: string
@@ -2173,28 +2174,23 @@ components:
           tokenUrl: /hub/api/oauth2/token
           scopes:
             (no_scope): Identify the owner of the requesting entity.
-            self:
-              The user’s own resources _(metascope for users, resolves to (no_scope)
-              for services)_
-            inherit:
-              Everything that the token-owning entity can access _(metascope
-              for tokens)_
-            admin-ui:
-              Access the admin page. Permission to take actions via the admin
-              page granted separately.
-            admin:users:
-              Read, modify, create, and delete users and their authentication
-              state, not including their servers or tokens. This is an extremely privileged
-              scope and should be considered tantamount to superuser.
+            self: The user’s own resources _(metascope for users, resolves to 
+              (no_scope) for services)_
+            inherit: Everything that the token-owning entity can access 
+              _(metascope for tokens)_
+            admin-ui: Access the admin page. Permission to take actions via the 
+              admin page granted separately.
+            admin:users: Read, modify, create, and delete users and their 
+              authentication state, not including their servers or tokens. This 
+              is an extremely privileged scope and should be considered 
+              tantamount to superuser.
             admin:auth_state: Read a user’s authentication state.
-            users:
-              Read and write permissions to user models (excluding servers, tokens
-              and authentication state).
+            users: Read and write permissions to user models (excluding servers,
+              tokens and authentication state).
             delete:users: Delete users.
             list:users: List users, including at least their names.
-            read:users:
-              Read user models (including servers, tokens and authentication
-              state).
+            read:users: Read user models (including the URL of the default 
+              server if it is running).
             read:users:name: Read names of users.
             read:users:groups: Read users’ group membership.
             read:users:activity: Read time of last user activity.
@@ -2203,28 +2199,25 @@ components:
             read:roles:services: Read service role assignments.
             read:roles:groups: Read group role assignments.
             users:activity: Update time of last user activity.
-            admin:servers:
-              Read, start, stop, create and delete user servers and their
-              state.
+            admin:servers: Read, start, stop, create and delete user servers and
+              their state.
             admin:server_state: Read and write users’ server state.
             servers: Start and stop user servers.
-            read:servers:
-              Read users’ names and their server models (excluding the
-              server state).
+            read:servers: Read users’ names and their server models (excluding 
+              the server state).
             delete:servers: Stop and delete users' servers.
             tokens: Read, write, create and delete user tokens.
             read:tokens: Read user tokens.
-            admin:groups: Read and write group information, create and delete groups.
-            groups:
-              "Read and write group information, including adding/removing any
-              users to/from groups. Note: adding users to groups may affect permissions."
+            admin:groups: Read and write group information, create and delete 
+              groups.
+            groups: 'Read and write group information, including adding/removing any
+              users to/from groups. Note: adding users to groups may affect permissions.'
             list:groups: List groups, including at least their names.
             read:groups: Read group models.
             read:groups:name: Read group names.
             delete:groups: Delete groups.
-            admin:services:
-              Create, read, update, delete services, not including services
-              defined from config files.
+            admin:services: Create, read, update, delete services, not including
+              services defined from config files.
             list:services: List services, including at least their names.
             read:services: Read service models.
             read:services:name: Read service names.
@@ -2237,8 +2230,7 @@ components:
             read:groups:shares: Read servers shared with a group.
             read:shares: Read information about shared access to servers.
             shares: Manage access to shared servers.
-            proxy:
-              Read information about the proxy’s routing table, sync the Hub
-              with the proxy and notify the Hub about a new proxy.
+            proxy: Read information about the proxy’s routing table, sync the 
+              Hub with the proxy and notify the Hub about a new proxy.
             shutdown: Shutdown the hub.
             read:metrics: Read prometheus metrics.

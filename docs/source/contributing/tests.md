@@ -6,61 +6,69 @@ Unit testing helps to validate that JupyterHub works the way we think it does,
 and continues to do so when changes occur. They also help communicate
 precisely what we expect our code to do.
 
-JupyterHub uses [pytest](https://pytest.org) for all the tests. You
-can find them under the [jupyterhub/tests](https://github.com/jupyterhub/jupyterhub/tree/main/jupyterhub/tests) directory in the git repository.
+JupyterHub uses [`pytest`](https://pytest.org) for all the tests. You
+can find them under the [jupyterhub/tests](https://github.com/jupyterhub/jupyterhub/tree/main/jupyterhub/tests) directory in the Git repository.
 
-## Running the tests
+```{note}
+Before run any test, make sure you have completed {ref}`contributing:setup`.
+Once you are done, you would be able to run `jupyterhub` from the command line and access it from your web browser.
+This ensures that the development environment is properly set up for tests to run.
+```
 
-1. Make sure you have completed {ref}`contributing:setup`.
-   Once you are done, you would be able to run `jupyterhub` from the command line and access it from your web browser.
-   This ensures that the dev environment is properly set up for tests to run.
+```{note}
+For details of `pytest`, refer to the [`pytest` usage documentation](https://pytest.readthedocs.io/en/latest/usage.html).
+```
 
-2. You can run all tests in JupyterHub
+## Running all the tests
 
-   ```bash
-   pytest -v jupyterhub/tests
-   ```
+You can run all tests in JupyterHub
 
-   This should display progress as it runs all the tests, printing
-   information about any test failures as they occur.
+```bash
+pytest -v jupyterhub/tests
+```
 
-   If you wish to confirm test coverage the run tests with the `--cov` flag:
+This should display progress as it runs all the tests, printing
+information about any test failures as they occur.
 
-   ```bash
-   pytest -v --cov=jupyterhub jupyterhub/tests
-   ```
+If you wish to confirm test coverage the run tests with the `--cov` flag:
 
-3. You can also run tests in just a specific file:
+```bash
+pytest -v --cov=jupyterhub jupyterhub/tests
+```
 
-   ```bash
-   pytest -v jupyterhub/tests/<test-file-name>
-   ```
+## Running tests from a specific file
 
-4. To run a specific test only, you can do:
+You can also run tests in just a specific file:
 
-   ```bash
-   pytest -v jupyterhub/tests/<test-file-name>::<test-name>
-   ```
+```bash
+pytest -v jupyterhub/tests/<test-file-name>
+```
 
-   This runs the test with function name `<test-name>` defined in
-   `<test-file-name>`. This is very useful when you are iteratively
-   developing a single test.
+## Running a single test
 
-   For example, to run the test `test_shutdown` in the file `test_api.py`,
-   you would run:
+To run a specific test only, you can do:
 
-   ```bash
-   pytest -v jupyterhub/tests/test_api.py::test_shutdown
-   ```
+```bash
+pytest -v jupyterhub/tests/<test-file-name>::<test-name>
+```
 
-   For more details, refer to the [pytest usage documentation](https://pytest.readthedocs.io/en/latest/usage.html).
+This runs the test with function name `<test-name>` defined in
+`<test-file-name>`. This is very useful when you are iteratively
+developing a single test.
+
+For example, to run the test `test_shutdown` in the file `test_api.py`,
+you would run:
+
+```bash
+pytest -v jupyterhub/tests/test_api.py::test_shutdown
+```
 
 ## Test organisation
 
 The tests live in `jupyterhub/tests` and are organized roughly into:
 
-1. `test_api.py` tests the REST API
-2. `test_pages.py` tests loading the HTML pages
+1. `test_api.py`: tests the REST API
+2. `test_pages.py`: tests loading the HTML pages
 
 and other collections of tests for different components.
 When writing a new test, there should usually be a test of
@@ -126,7 +134,7 @@ For more information on asyncio and event-loops, here are some resources:
 
 ### All the tests are failing
 
-Make sure you have completed all the steps in {ref}`contributing:setup` successfully, and are able to access JupyterHub from your browser at http://localhost:8000 after starting `jupyterhub` in your command line.
+Make sure you have completed all the steps in {ref}`contributing:setup` successfully, and are able to access JupyterHub from your browser at <http://localhost:8000> after starting `jupyterhub` in your command line.
 
 ## Code formatting and linting
 

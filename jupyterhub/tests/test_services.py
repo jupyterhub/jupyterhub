@@ -27,7 +27,7 @@ async def external_service(app, name='mockservice'):
         'JUPYTERHUB_API_TOKEN': hexlify(os.urandom(5)),
         'JUPYTERHUB_SERVICE_NAME': name,
         'JUPYTERHUB_API_URL': url_path_join(app.hub.url, 'api/'),
-        'JUPYTERHUB_SERVICE_URL': 'http://127.0.0.1:%i' % random_port(),
+        'JUPYTERHUB_SERVICE_URL': f'http://127.0.0.1:{random_port()}',
     }
     proc = Popen(mockservice_cmd, env=env)
     try:
@@ -65,7 +65,9 @@ async def test_proxy_service(app, mockservice_url):
     service = mockservice_url
     name = service.name
     await app.proxy.get_all_routes()
-    url = public_url(app, service) + '/foo'
+    url = public_url(app, service)
+    assert url.endswith("/")
+    url += "foo"
     r = await async_requests.get(url, allow_redirects=False)
     path = f'/services/{name}/foo'
     r.raise_for_status()
@@ -143,9 +145,10 @@ async def test_external_services_without_api_token_set(app):
     """
     name_1 = 'external_1'
     name_2 = 'external_2'
-    async with external_service(app, name=name_1) as env_1, external_service(
-        app, name=name_2
-    ) as env_2:
+    async with (
+        external_service(app, name=name_1) as env_1,
+        external_service(app, name=name_2) as env_2,
+    ):
         app.services = [
             {
                 'name': name_1,

@@ -74,26 +74,26 @@ jobs:
         # Python versions available at:
         #   https://github.com/actions/python-versions/blob/HEAD/versions-manifest.json
         include:
-          - python: "3.8"
+          - python: "3.10"
             oldest_dependencies: oldest_dependencies
             legacy_notebook: legacy_notebook
-          - python: "3.8"
+          - python: "3.11"
             jupyter_server: "1.*"
             subset: singleuser
-          - python: "3.9"
-            db: mysql
-          - python: "3.10"
-            db: postgres
           - python: "3.12"
+            db: mysql
+          - python: "3.12"
+            db: postgres
+          - python: "3.13"
             subdomain: subdomain
             serverextension: serverextension
-          - python: "3.11"
+          - python: "3.13"
             ssl: ssl
             serverextension: serverextension
-          - python: "3.11"
+          - python: "3.13"
             jupyverse: jupyverse
             subset: singleuser
-          - python: "3.11"
+          - python: "3.13"
             subdomain: subdomain
             noextension: noextension
             subset: singleuser
@@ -101,12 +101,14 @@ jobs:
             ssl: ssl
             noextension: noextension
             subset: singleuser
-          - python: "3.11"
-            browser: browser
-          - python: "3.11"
-            subdomain: subdomain
+          - python: "3.13"
             browser: browser
           - python: "3.12"
+            subdomain: subdomain
+            browser: browser
+          - python: "3.14"
+            main_dependencies: main_dependencies
+          - python: "3.14t"
             main_dependencies: main_dependencies
 
     steps:
@@ -139,11 +141,11 @@ jobs:
           if [ "${{ matrix.jupyverse }}" != "" ]; then
               echo "JUPYTERHUB_SINGLEUSER_APP=jupyverse" >> $GITHUB_ENV
           fi
-      - uses: actions/checkout@v4
-      # NOTE: actions/setup-node@v4 make use of a cache within the GitHub base
+      - uses: actions/checkout@v6
+      # NOTE: actions/setup-node@v6 make use of a cache within the GitHub base
       #       environment and setup in a fraction of a second.
       - name: Install Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "20"
       - name: Install Javascript dependencies
@@ -152,10 +154,10 @@ jobs:
           npm install -g configurable-http-proxy yarn
           npm list
 
-      # NOTE: actions/setup-python@v5 make use of a cache within the GitHub base
+      # NOTE: actions/setup-python@v6 make use of a cache within the GitHub base
       #       environment and setup in a fraction of a second.
       - name: Install Python ${{ matrix.python }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "${{ matrix.python }}"
           cache: pip
@@ -173,7 +175,7 @@ jobs:
             # make sure our `>=` pins really do express our minimum supported versions
             pip install -r ci/oldest-dependencies/requirements.old -e .
           else
-            pip install --pre -e ".[test]"
+            pip install --pre -e ".[test]" "pycurl; python_version >= '3.10'"
           fi
 
           if [ "${{ matrix.main_dependencies }}" != "" ]; then
@@ -252,31 +254,10 @@ jobs:
 
       - name: Ensure browsers are installed for playwright
         if: matrix.browser
-        run: python -m playwright install --with-deps
+        run: python -m playwright install --with-deps firefox
 
       - name: Run pytest
         run: |
           pytest -k "${{ matrix.subset }}" --maxfail=2 --cov=jupyterhub jupyterhub/tests
 
-      - uses: codecov/codecov-action@v4
-
-  docker-build:
-    runs-on: ubuntu-22.04
-    timeout-minutes: 20
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: build images
-        run: |
-          DOCKER_BUILDKIT=1 docker build -t jupyterhub/jupyterhub .
-          docker build -t jupyterhub/jupyterhub-onbuild onbuild
-          docker build -t jupyterhub/singleuser singleuser
-
-      - name: smoke test jupyterhub
-        run: |
-          docker run --rm -t jupyterhub/jupyterhub jupyterhub --help
-
-      - name: verify static files
-        run: |
-          docker run --rm -t -v $PWD/dockerfiles:/io jupyterhub/jupyterhub python3 /io/test.py
+      - uses: codecov/codecov-action@v5

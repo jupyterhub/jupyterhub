@@ -62,7 +62,7 @@ async def test_submit_login_form(app, browser, user_special_chars):
     await browser.goto(login_url)
     await login(browser, user.name, password=user.name)
     expected_url = public_url(app, user)
-    await expect(browser).to_have_url(expected_url)
+    await browser.wait_for_url(expected_url)
 
 
 @pytest.mark.parametrize(
@@ -143,7 +143,7 @@ async def test_open_url_login(
         await expect(browser).to_have_url(re.compile(pattern))
         await expect(browser).not_to_have_url(re.compile(".*/user/.*"))
     else:
-        await expect(browser).to_have_url(
+        await browser.wait_for_url(
             re.compile(".*/user/" + f"{user_special_chars.urlname}/")
         )
 
@@ -283,19 +283,21 @@ async def test_spawn_pending_progress(
         await launch_btn.click()
     # wait for progress message to appear
     progress = browser.locator("#progress-message")
-    progress_message = await progress.text_content()
     async with browser.expect_navigation(url=re.compile(".*/user/" + f"{urlname}/")):
         # wait for log messages to appear
         expected_messages = [
             "Server requested",
             "Spawning server...",
-            f"Server ready at {app.base_url}user/{urlname}/",
+            f"Server ready at {user.server_url()}",
         ]
-        while not user.spawner.ready:
+        logs_list = []
+        while not user.spawner.ready and len(logs_list) <= len(expected_messages):
             logs_list = [
                 await log.text_content()
                 for log in await browser.locator("div.progress-log-event").all()
             ]
+            # Read progress_message inside the loop to get updated content
+            progress_message = await progress.text_content()
             if progress_message:
                 assert progress_message in expected_messages
             # race condition: progress_message _should_
@@ -882,17 +884,15 @@ async def test_menu_bar(app, browser, page, logged_in, user_special_chars):
                 expected_url = f"hub/login?next={url_escape(app.base_url)}"
                 assert expected_url in browser.url
             else:
-                await expect(browser).to_have_url(
+                await browser.wait_for_url(
                     re.compile(f".*/user/{user_special_chars.urlname}/")
                 )
                 await browser.go_back()
-                await expect(browser).to_have_url(re.compile(".*" + page))
+                await browser.wait_for_url(re.compile(".*" + page))
         elif index == 3:
-            await expect(browser).to_have_url(re.compile(".*/login"))
+            await browser.wait_for_url(re.compile(".*/login"))
         else:
-            await expect(browser).to_have_url(
-                re.compile(".*" + expected_link_bar_url[index])
-            )
+            await browser.wait_for_url(re.compile(".*" + expected_link_bar_url[index]))
 
 
 # LOGOUT
@@ -923,8 +923,8 @@ async def test_user_logout(app, browser, url, user_special_chars):
 
     # verify that user can login after logout
     await login(browser, user.name, password=user.name)
-    await expect(browser).to_have_url(
-        re.compile(".*/user/" + f"{user_special_chars.urlname}/")
+    await browser.wait_for_url(
+        re.compile(".*/user/" + f"{user_special_chars.urlname}/"),
     )
 
 
@@ -1015,7 +1015,7 @@ async def test_oauth_page(
         await expect(scopes_element).not_to_be_visible()
         for scopes_element in scopes_elements
     ]
-    # checking that all scopes granded to user are presented in POST form (scope_list)
+    # checking that all scopes granted to user are presented in POST form (scope_list)
     scope_list_oauth_page = [
         await scopes_element.get_attribute("value")
         for scopes_element in scopes_elements
@@ -1233,18 +1233,16 @@ async def test_search_on_admin_page(
     await element_search.fill(search_value, force=True)
     await browser.wait_for_load_state("networkidle")
     # get the result of the search from db
-    users_count_db_filtered = (
+    total = (
         app.db.query(orm.User).filter(orm.User.name.like(f'%{search_value}%')).count()
     )
     # get the result of the search
     filtered_list_on_page = browser.locator('//tr[@class="user-row"]')
     displaying = browser.get_by_text("Displaying")
-    if users_count_db_filtered <= 50:
-        await expect(filtered_list_on_page).to_have_count(users_count_db_filtered)
-        start = 1 if users_count_db_filtered else 0
-        await expect(displaying).to_contain_text(
-            re.compile(f"{start}-{users_count_db_filtered}")
-        )
+    if total <= 50:
+        await expect(filtered_list_on_page).to_have_count(total)
+        start = 1 if total else 0
+        await expect(displaying).to_contain_text(f"{start}-{total}")
         # check that users names contain the search value in the filtered list
         for element in await filtered_list_on_page.get_by_test_id(
             "user-row-name"
@@ -1252,12 +1250,19 @@ async def test_search_on_admin_page(
             await expect(element).to_contain_text(re.compile(f".*{search_value}.*"))
     else:
         await expect(filtered_list_on_page).to_have_count(50)
-        await expect(displaying).to_contain_text(re.compile("1-50"))
+        # make sure we wait for 'of {total}', otherwise we might not have waited
+        # until the name filter has been applied
+        await expect(displaying).to_contain_text(f"1-50 of {total}")
+        # check that users names contain the search value in the filtered list
+        for element in await filtered_list_on_page.get_by_test_id(
+            "user-row-name"
+        ).all():
+            await expect(element).to_contain_text(re.compile(f".*{search_value}.*"))
         # click on Next button to verify that the rest part of filtered list is displayed on the next page
         await browser.get_by_role("button", name="Next").click()
         await browser.wait_for_load_state("networkidle")
         filtered_list_on_next_page = browser.locator('//tr[@class="user-row"]')
-        await expect(filtered_list_on_page).to_have_count(users_count_db_filtered - 50)
+        await expect(filtered_list_on_page).to_have_count(total - 50)
         for element in await filtered_list_on_next_page.get_by_test_id(
             "user-row-name"
         ).all():
@@ -1282,8 +1287,8 @@ async def test_start_stop_server_on_admin_page(
         spawn_btn_xpath = f'//a[contains(@href, "spawn/{username}")]/button[contains(@class, "btn-light")]'
         spawn_btn = browser.locator(spawn_btn_xpath)
         await expect(spawn_btn).to_be_enabled()
-        async with browser.expect_navigation(url=f"**/user/{username}/"):
-            await spawn_btn.click()
+        await spawn_btn.click()
+        await browser.wait_for_url(url=f"**/user/{username}/")
 
     async def click_access_server(browser, username):
         """access to the server for users via the Access Server button"""
@@ -1331,7 +1336,7 @@ async def test_start_stop_server_on_admin_page(
 
     # click on Spawn page button
     await click_spawn_page(browser, user2.name)
-    await expect(browser).to_have_url(re.compile(".*" + f"/user/{user2.name}/"))
+    await browser.wait_for_url(re.compile(".*" + f"/user/{user2.name}/"))
 
     # open/return to the Admin page
     admin_page = url_path_join(public_host(app), app.hub.base_url, "admin")
@@ -1414,15 +1419,31 @@ async def test_login_xsrf_initial_cookies(app, browser, case, username):
     # after visiting page, cookies get re-established
     await browser.goto(login_url)
     cookies = await browser.context.cookies()
+    cookies = sorted(cookies, key=lambda cookie: len(cookie['path'] or ''))
     print(cookies)
-    cookie = cookies[0]
+    cookie = cookies[-1]
     assert cookie['name'] == '_xsrf'
     assert cookie["path"] == app.hub.base_url
+    # make sure cookie matches form input
+    xsrf_input = browser.locator('//input[@name="_xsrf"]')
+    await expect(xsrf_input).to_have_value(cookie["value"])
 
-    # next page visit, cookies don't change
+    # every visit to login page resets the xsrf cookie
+    # value will only change if timestamp advances
+    await asyncio.sleep(1.5)
     await browser.goto(login_url)
     cookies_2 = await browser.context.cookies()
-    assert cookies == cookies_2
+    cookies_2 = sorted(cookies_2, key=lambda cookie: len(cookie['path'] or ''))
+    print(cookies_2)
+    new_cookie = cookies_2[-1]
+    # xsrf cookie reset
+    assert new_cookie['name'] == "_xsrf"
+    assert new_cookie != cookie
+    assert new_cookie["expires"] > cookie["expires"]
+    # make sure cookie matches form input
+    xsrf_input = browser.locator('//input[@name="_xsrf"]')
+    await expect(xsrf_input).to_have_value(new_cookie["value"])
+
     # login is successful
     await login(browser, username, username)
 
@@ -1469,18 +1490,18 @@ async def test_singleuser_xsrf(
     await browser.goto(login_url)
     await login(browser, browser_user.name, browser_user.name)
     # end up at single-user
-    await expect(browser).to_have_url(re.compile(rf".*/user/{browser_user.name}/.*"))
+    await browser.wait_for_url(re.compile(rf".*/user/{browser_user.name}/.*"))
     # wait for target user to start, too
     await target_start
     await app.proxy.add_user(target_user)
 
     # visit target user, sets credentials for second server
     await browser.goto(public_url(app, target_user))
-    await expect(browser).to_have_url(re.compile(r".*/oauth2/authorize"))
+    await browser.wait_for_url(re.compile(r".*/oauth2/authorize"))
     auth_button = browser.locator('//button[@type="submit"]')
     await expect(auth_button).to_be_enabled()
     await auth_button.click()
-    await expect(browser).to_have_url(re.compile(rf".*/user/{target_user.name}/.*"))
+    await browser.wait_for_url(re.compile(rf".*/user/{target_user.name}/.*"))
 
     # at this point, we are on a page served by target_user,
     # logged in as browser_user
@@ -1622,8 +1643,8 @@ async def test_singleuser_xsrf(
         url_path_join(app.base_url, f"hub/spawn/{browser_user.name}/{server_name}"),
     )
     await browser.goto(url)
-    await expect(browser).to_have_url(
-        re.compile(rf".*/user/{browser_user.name}/{server_name}/.*")
+    await browser.wait_for_url(
+        re.compile(rf".*/user/{browser_user.name}/{server_name}/.*"),
     )
     # from named server URL, make sure we can talk to a kernel
     token = browser_user.new_api_token(scopes=["access:servers!user"])

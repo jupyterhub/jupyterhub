@@ -1,27 +1,27 @@
 # PEP 621 build info
 [build-system]
-requires = ["setuptools>=61", "setuptools-scm"]
+requires = ["setuptools>=77", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
 # Project metadata
 # ref: https://setuptools.pypa.io/en/latest/userguide/pyproject_config.html
 [project]
 name = "jupyterhub"
-version = "5.2.0.dev"
+version = "6.0.0.dev"
 dynamic = ["readme", "dependencies"]
 description = "JupyterHub: A multi-user server for Jupyter notebooks"
 authors = [
   { name = "Jupyter Development Team", email = "jupyter@googlegroups.com" },
 ]
 keywords = ["Interactive", "Interpreter", "Shell", "Web", "Jupyter"]
-license = { text = "BSD-3-Clause" }
-requires-python = ">=3.8"
+license = "BSD-3-Clause"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "Intended Audience :: Developers",
   "Intended Audience :: System Administrators",
   "Intended Audience :: Science/Research",
-  "License :: OSI Approved :: BSD License",
   "Programming Language :: Python",
   "Programming Language :: Python :: 3",
   "Operating System :: POSIX",
@@ -51,7 +51,7 @@ test = [
   # the test test_nbclassic_control_panel.
   "nbclassic",
   "pytest>=3.3",
-  "pytest-asyncio>=0.17,!=0.23.*",
+  "pytest-asyncio>=1.1",
   "pytest-cov",
   "pytest-rerunfailures",
   "requests-mock",
@@ -67,6 +67,7 @@ jupyterhub-singleuser = "jupyterhub.singleuser:main"
 default = "jupyterhub.auth:PAMAuthenticator"
 pam = "jupyterhub.auth:PAMAuthenticator"
 dummy = "jupyterhub.auth:DummyAuthenticator"
+shared-password = "jupyterhub.authenticators.shared:SharedPasswordAuthenticator"
 null = "jupyterhub.auth:NullAuthenticator"
 
 [project.entry-points."jupyterhub.proxies"]
@@ -80,7 +81,6 @@ simple = "jupyterhub.spawner:SimpleLocalProcessSpawner"
 
 [tool.setuptools]
 zip-safe = false
-license-files = ["COPYING.md"]
 include-package-data = true
 
 [tool.setuptools.packages.find]
@@ -146,7 +146,7 @@ indent_size = 2
 github_url = "https://github.com/jupyterhub/jupyterhub"
 
 [tool.tbump.version]
-current = "5.2.0.dev"
+current = "6.0.0.dev"
 
 # Example of a semver regexp.
 # Make sure this matches current_version before

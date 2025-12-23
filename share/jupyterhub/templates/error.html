@@ -7,8 +7,11 @@
       <h1>{{ status_code }} : {{ status_message }}</h1>
     {% endblock h1_error %}
     {% block error_detail %}
-      {% if message %}<p>{{ message }}</p>{% endif %}
-      {% if message_html %}<p>{{ message_html | safe }}</p>{% endif %}
+      {% if message_html %}
+        <p>{{ message_html | safe }}</p>
+      {% elif message %}
+        <p>{{ message }}</p>
+      {% endif %}
       {% if extra_error_html %}<p>{{ extra_error_html | safe }}</p>{% endif %}
     {% endblock error_detail %}
   </div>

@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -8,24 +8,24 @@ from pydantic import BaseModel
 class Server(BaseModel):
     name: str
     ready: bool
-    pending: Optional[str]
+    pending: str | None
     url: str
     progress_url: str
     started: datetime
     last_activity: datetime
-    state: Optional[Any]
-    user_options: Optional[Any]
+    state: Any | None
+    user_options: Any | None
 
 
 class User(BaseModel):
     name: str
     admin: bool
-    groups: Optional[List[str]]
-    server: Optional[str]
-    pending: Optional[str]
+    groups: list[str] | None
+    server: str | None
+    pending: str | None
     last_activity: datetime
-    servers: Optional[Dict[str, Server]]
-    scopes: List[str]
+    servers: dict[str, Server] | None
+    scopes: list[str]
 
 
 # https://stackoverflow.com/questions/64501193/fastapi-how-to-use-httpexception-in-responses

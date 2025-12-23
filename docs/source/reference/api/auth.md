@@ -1,33 +1,42 @@
 # Authenticators
 
-## Module: {mod}`jupyterhub.auth`
-
 ```{eval-rst}
-.. automodule:: jupyterhub.auth
+.. module:: jupyterhub.auth
 ```
 
-### {class}`Authenticator`
+## {class}`Authenticator`
 
 ```{eval-rst}
 .. autoconfigurable:: Authenticator
    :members:
 ```
 
-### {class}`LocalAuthenticator`
+## {class}`LocalAuthenticator`
 
 ```{eval-rst}
 .. autoconfigurable:: LocalAuthenticator
    :members:
 ```
 
-### {class}`PAMAuthenticator`
+## {class}`PAMAuthenticator`
 
 ```{eval-rst}
 .. autoconfigurable:: PAMAuthenticator
 ```
 
-### {class}`DummyAuthenticator`
+## {class}`DummyAuthenticator`
 
 ```{eval-rst}
 .. autoconfigurable:: DummyAuthenticator
+```
+
+```{eval-rst}
+.. module:: jupyterhub.authenticators.shared
+```
+
+## {class}`SharedPasswordAuthenticator`
+
+```{eval-rst}
+.. autoconfigurable:: SharedPasswordAuthenticator
+   :no-inherited-members:
 ```

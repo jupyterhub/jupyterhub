@@ -246,6 +246,13 @@ class MockHub(JupyterHub):
         if 'allow_all' not in self.config.Authenticator:
             self.config.Authenticator.allow_all = True
 
+        if 'api_url' not in self.config.ConfigurableHTTPProxy:
+            proxy_port = random_port()
+            proxy_proto = "https" if self.internal_ssl else "http"
+            self.config.ConfigurableHTTPProxy.api_url = (
+                f"{proxy_proto}://127.0.0.1:{proxy_port}"
+            )
+
     @default('subdomain_host')
     def _subdomain_host_default(self):
         return os.environ.get('JUPYTERHUB_TEST_SUBDOMAIN_HOST', '')
@@ -256,7 +263,7 @@ class MockHub(JupyterHub):
             port = urlparse(self.subdomain_host).port
         else:
             port = random_port()
-        return 'http://127.0.0.1:%i/@/space%%20word/' % (port,)
+        return f'http://127.0.0.1:{port}/@/space%20word/'
 
     @default('ip')
     def _ip_default(self):
@@ -268,6 +275,10 @@ class MockHub(JupyterHub):
             port = urlparse(self.subdomain_host).port
             if port:
                 return port
+        return random_port()
+
+    @default('hub_port')
+    def _hub_port_default(self):
         return random_port()
 
     @default('authenticator_class')
@@ -370,6 +381,10 @@ class MockHub(JupyterHub):
         self._atexit_ran = True
         super().stop()
         self.db_file.close()
+
+    def _stop_event_loop(self):
+        # leave it to pytest-asyncio to stop the loop
+        pass
 
     async def login_user(self, name):
         """Login a user by name, returning her cookies."""

@@ -12,7 +12,7 @@
           {{ custom_html | safe }}
         {% elif login_service %}
           <div class="service-login">
-            <p id='insecure-login-warning' class='hidden'>
+            <p id='insecure-login-warning' class='hidden alert alert-warning'>
               Warning: JupyterHub seems to be served over an unsecured HTTP connection.
               We strongly recommend enabling HTTPS for JupyterHub.
             </p>
@@ -28,34 +28,74 @@
               <h1>Sign in</h1>
             </div>
             <div class='auth-form-body m-auto'>
-              <p id='insecure-login-warning' class='hidden'>
+              <p id='insecure-login-warning' class='hidden alert alert-warning'>
                 Warning: JupyterHub seems to be served over an unsecured HTTP connection.
                 We strongly recommend enabling HTTPS for JupyterHub.
               </p>
               {% if login_error %}<p class="login_error">{{ login_error }}</p>{% endif %}
               <input type="hidden" name="_xsrf" value="{{ xsrf }}" />
-              <label for="username_input">Username:</label>
-              <input id="username_input"
-                     type="text"
-                     autocapitalize="off"
-                     autocorrect="off"
-                     autocomplete="username"
-                     class="form-control"
-                     name="username"
-                     val="{{ username }}"
-                     autofocus="autofocus" />
-              <label for='password_input'>Password:</label>
-              <input type="password"
-                     class="form-control"
-                     autocomplete="current-password"
-                     name="password"
-                     id="password_input" />
+              {# Allow full override of the "label" and "input" elements of the username and password fields. #}
+              {% block username_input %}
+                <label for="username_input">Username:</label>
+                <input id="username_input"
+                       {% block username_input_attrs %}
+                       type="text"
+                       autocapitalize="off"
+                       autocorrect="off"
+                       autocomplete="username"
+                       class="form-control"
+                       name="username"
+                       value="{{ username }}"
+                       autofocus="autofocus"
+                       {% endblock username_input_attrs %} />
+              {% endblock username_input %}
+              {% block password_input %}
+                <label for="password_input">Password:</label>
+                {# Use Bootstrap input-group for consistent layout and to avoid overlay issues with autofill or password managers #}
+                <div class="input-group">
+                  <input id="password_input"
+                         {% block password_input_attrs %}
+                         type="password"
+                         class="form-control"
+                         autocomplete="current-password"
+                         name="password"
+                         {% endblock password_input_attrs %} />
+                  {# Toggle button for showing/hiding password visibility #}
+                  <button type="button"
+                          id="toggle_password_visibility"
+                          class="input-group-text"
+                          aria-controls="password_input"
+                          aria-pressed="false"
+                          title="Show password">
+                    <i class="fa fa-eye" aria-hidden="true"></i>
+                  </button>
+                </div>
+                <script>
+                  document.addEventListener("DOMContentLoaded", function() {
+                    const toggle = document.getElementById("toggle_password_visibility");
+                    const pwd = document.getElementById("password_input");
+                    const icon = toggle.querySelector("i");
+
+                    toggle.addEventListener("click", function() {
+                      const isHidden = pwd.type === "password";
+                      pwd.type = isHidden ? "text" : "password";
+                      icon.className = isHidden ? "fa fa-eye-slash" : "fa fa-eye";
+                      toggle.setAttribute("aria-pressed", isHidden ? "true" : "false");
+                      toggle.setAttribute("title", isHidden ? "Hide password" : "Show password");
+                    });
+                  });
+                </script>
+              {% endblock password_input %}
               {% if authenticator.request_otp %}
-                <label for='otp_input'>{{ authenticator.otp_prompt }}</label>
-                <input class="form-control"
-                       autocomplete="one-time-password"
-                       name="otp"
-                       id="otp_input" />
+                {% block otp_input %}
+                  <label for="otp_input">{{ authenticator.otp_prompt }}</label>
+                  <input id="otp_input"
+                         {% block otp_input_attrs %}
+                         class="form-control"
+                         autocomplete="one-time-password"
+                         name="otp"
+                         {% endblock otp_input_attrs %} />
+                {% endblock otp_input %}
               {% endif %}
               <div class="feedback-container">
                 <input id="login_submit"
@@ -96,6 +136,7 @@
       var warning = document.getElementById('insecure-login-warning');
       warning.className = warning.className.replace(/\bhidden\b/, '');
     }
+
     // setup onSubmit feedback
     $('form').submit((e) => {
       var form = $(e.target);

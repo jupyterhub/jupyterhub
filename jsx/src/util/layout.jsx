@@ -1,7 +1,7 @@
 import React from "react";
-import { withProps } from "recompose";
 import { Col, Row, Container } from "react-bootstrap";
 import PropTypes from "prop-types";
+import { withProps } from "./_recompose";
 import ErrorAlert from "./error";
 
 export const MainCol = (props) => {

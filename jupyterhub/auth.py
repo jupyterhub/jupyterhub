@@ -77,10 +77,16 @@ class Authenticator(LoggingConfigurable):
         help="""The max age (in seconds) of authentication info
         before forcing a refresh of user auth info.
 
-        Refreshing auth info allows, e.g. requesting/re-validating auth tokens.
+        Authenticators that support it may re-load managed groups,
+        refresh auth tokens, etc., or force a new login if auth info cannot be refreshed.
 
-        See :meth:`.refresh_user` for what happens when user auth info is refreshed
-        (nothing by default).
+        See :meth:`.refresh_user` for what happens when user auth info is refreshed,
+        which varies by authenticator.
+        If an Authenticator does not implement `refresh_user`,
+        auth info will never be considered stale.
+
+        Set `auth_refresh_age = 0` to disable time-based calls to `refresh_user`.
+        You can still use :attr:`refresh_pre_spawn` or :attr:`refresh_pre_stop` if `auth_refresh_age` is disabled.
         """,
     )
 
@@ -97,6 +103,25 @@ class Authenticator(LoggingConfigurable):
 
         If refresh_user cannot refresh the user auth data,
         launch will fail until the user logs in again.
+        """,
+    )
+
+    refresh_pre_stop = Bool(
+        False,
+        config=True,
+        help="""Force refresh of auth prior to stop.
+
+        This forces :meth:`.refresh_user` to be called prior to stopping
+        a server, to ensure that auth state is up-to-date.
+
+        This can be important when e.g. auth tokens stored in auth_state may have expired,
+        but are a required part of the Spawner's shutdown steps.
+
+        If refresh_user cannot refresh the user auth data,
+        stop will fail until the user logs in again.
+        If an admin initiates the stop, it will proceed regardless.
+
+        .. versionadded:: 5.4
         """,
     )
 
@@ -223,6 +248,7 @@ class Authenticator(LoggingConfigurable):
 
         Authenticator subclasses may override the default with e.g.::
 
+            from traitlets import default
             @default("allow_all")
             def _default_allow_all(self):
                 # if _any_ auth config (depends on the Authenticator)
@@ -1218,7 +1244,7 @@ class LocalAuthenticator(Authenticator):
         cmd = [arg.replace('USERNAME', name) for arg in self.add_user_cmd]
         try:
             uid = self.uids[name]
-            cmd += ['--uid', '%d' % uid]
+            cmd += ['--uid', str(uid)]
         except KeyError:
             self.log.debug(f"No UID for user {name}")
         cmd += [name]
@@ -1497,11 +1523,18 @@ class DummyAuthenticator(Authenticator):
     password = Unicode(
         config=True,
         help="""
-        Set a global password for all users wanting to log in.
-
-        This allows users with any username to log in with the same static password.
+        .. deprecated:: 5.3
+        
+            Setting a password in DummyAuthenticator is deprecated.
+            Use `SharedPasswordAuthenticator` instead.
         """,
     )
+
+    @observe("password")
+    def _password_changed(self, change):
+        msg = "DummyAuthenticator.password is deprecated in JupyterHub 5.3. Use SharedPasswordAuthenticator.user_password instead."
+        warnings.warn(msg, DeprecationWarning)
+        self.log.warning(msg)
 
     def check_allow_config(self):
         super().check_allow_config()
@@ -1513,7 +1546,7 @@ class DummyAuthenticator(Authenticator):
         """Checks against a global password if it's been set. If not, allow any user/pass combo"""
         if self.password:
             if data['password'] == self.password:
-                return data['username']
+                return data["username"]
             return None
         return data['username']
 

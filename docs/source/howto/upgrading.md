@@ -27,7 +27,7 @@ For specific version migrations:
 The [changelog](changelog) contains information on what has
 changed with the new JupyterHub release and any deprecation warnings.
 Read these notes to familiarize yourself with the coming changes. There
-might be new releases of the authenticators & spawners you use, so
+might be new releases of the authenticators and spawners you use, so
 read the changelogs for those too!
 
 ## Notify your users
@@ -41,7 +41,7 @@ If you use a different proxy or run `configurable-http-proxy`
 independent of JupyterHub, your users will be able to continue using notebook
 servers they had already launched, but will not be able to launch new servers or sign in.
 
-## Backup database & config
+## Backup database and config
 
 Before doing an upgrade, it is critical to back up:
 
@@ -90,7 +90,7 @@ with:
 conda install -c conda-forge jupyterhub==<version>
 ```
 
-You should also check for new releases of the authenticator & spawner you
+You should also check for new releases of the authenticator and spawner you
 are using. You might wish to upgrade those packages, too, along with JupyterHub
 or upgrade them separately.
 
@@ -106,17 +106,6 @@ jupyterhub upgrade-db
 
 This should find the location of your database, and run the necessary upgrades
 for it.
-
-### SQLite database disadvantages
-
-SQLite has some disadvantages when it comes to upgrading JupyterHub. These
-are:
-
-- `upgrade-db` may not work, and you may need to delete your database
-  and start with a fresh one.
-- `downgrade-db` **will not** work if you want to rollback to an
-  earlier version, so backup the `jupyterhub.sqlite` file before
-  upgrading.
 
 ### What happens if I delete my database?
 

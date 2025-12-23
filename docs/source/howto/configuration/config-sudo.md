@@ -35,7 +35,7 @@ This user shouldn't have a login shell or password (possible with -r).
 
 ## Set up sudospawner
 
-Next, you will need [sudospawner](https://github.com/jupyter/sudospawner)
+Next, you will need [sudospawner](https://github.com/jupyterhub/sudospawner)
 to enable monitoring the single-user servers with sudo:
 
 ```bash
@@ -72,7 +72,7 @@ rhea ALL=(JUPYTER_USERS) NOPASSWD:JUPYTER_CMD
 ```
 
 It might be useful to modify `secure_path` to add commands in path. (Search for
-`secure_path` in the [sudo docs](https://www.sudo.ws/man/1.8.14/sudoers.man.html)
+`secure_path` in the [sudo docs](https://www.sudo.ws)
 
 As an alternative to adding every user to the `/etc/sudoers` file, you can
 use a group in the last line above, instead of `JUPYTER_USERS`:
@@ -125,7 +125,7 @@ the shadow password database.
 **Note:** On [Fedora based distributions](https://fedoraproject.org/wiki/List_of_Fedora_remixes) there is no clear way to configure
 the PAM database to allow sufficient access for authenticating with the target user's password
 from JupyterHub. As a workaround we recommend use an
-[alternative authentication method](https://github.com/jupyterhub/jupyterhub/wiki/Authenticators).
+[alternative authentication method](authenticators-reference).
 
 ```bash
 $ ls -l /etc/shadow

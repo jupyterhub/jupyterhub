@@ -10,10 +10,13 @@ updates:
   - package-ecosystem: github-actions
     directory: /
     labels: [ci]
+    groups:
+      # group official actions updates
+      actions:
+        patterns:
+          - "actions/*"
     schedule:
       interval: monthly
-      time: "05:00"
-      timezone: Etc/UTC
   - package-ecosystem: npm
     directory: /
     groups:
@@ -48,9 +51,16 @@ updates:
       # group major bumps of webpack-related dependencies
       jsx-webpack:
         patterns:
-          - "webpack*"
+          - "*webpack*"
           - "@babel/*"
           - "*-loader"
+        update-types:
+          - major
+      # group major bumps of jest-related dependencies
+      jsx-jest:
+        patterns:
+          - "*jest*"
+          - "*test*"
         update-types:
           - major
     schedule:

@@ -71,15 +71,21 @@ require(["jquery", "moment", "jhapi"], function ($, moment, JHAPI) {
     var row = getRow($(this));
     var serverName = row.data("server-name");
 
-    // before request
-    disableRow(row);
+    if (
+      window.confirm(
+        `Are you sure you want to delete your server "${serverName}"?`,
+      )
+    ) {
+      // before request
+      disableRow(row);
 
-    // request
-    api.delete_named_server(user, serverName, {
-      success: function () {
-        row.remove();
-      },
-    });
+      // request
+      api.delete_named_server(user, serverName, {
+        success: function () {
+          row.remove();
+        },
+      });
+    }
   }
 
   // initial state: hook up click events

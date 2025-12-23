@@ -35,7 +35,7 @@ async def test_external_proxy(request):
     proxy_port = random_port()
     cfg = Config()
     cfg.ConfigurableHTTPProxy.auth_token = auth_token
-    cfg.ConfigurableHTTPProxy.api_url = 'http://%s:%i' % (proxy_ip, proxy_port)
+    cfg.ConfigurableHTTPProxy.api_url = f'http://{proxy_ip}:{proxy_port}'
     cfg.ConfigurableHTTPProxy.should_start = False
 
     app = MockHub.instance(config=cfg)
@@ -76,7 +76,7 @@ async def test_external_proxy(request):
     request.addfinalizer(_cleanup_proxy)
 
     def wait_for_proxy():
-        return wait_for_http_server('http://%s:%i' % (proxy_ip, proxy_port))
+        return wait_for_http_server(f'http://{proxy_ip}:{proxy_port}')
 
     await wait_for_proxy()
 
@@ -141,7 +141,7 @@ async def test_external_proxy(request):
         '--api-port',
         str(proxy_port),
         '--default-target',
-        'http://%s:%i' % (app.hub_ip, app.hub_port),
+        f'http://{app.hub_ip}:{app.hub_port}',
     ]
     if app.subdomain_host:
         cmd.append('--host-routing')

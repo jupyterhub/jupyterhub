@@ -84,7 +84,6 @@ The passed scopes are compared to the scopes required to access the API as follo
 - if the API scopes are present within the set of passed scopes, the access is granted and the API returns its "full" response
 
 - if that is not the case, another check is utilized to determine if subscopes of the required API scopes can be found in the passed scope set:
-
   - if found, the RBAC framework employs the {ref}`filtering <vertical-filtering-target>` procedures to refine the API response to access only resource attributes corresponding to the passed scopes. For example, providing a scope `read:users:activity!group=class-C` for the `GET /users` API will return a list of user models from group `class-C` containing only the `last_activity` attribute for each user model
 
   - if not found, the access to API is denied

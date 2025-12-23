@@ -10,7 +10,9 @@ in both Hub and single-user code
 
 import base64
 import hashlib
+import os
 from http.cookies import SimpleCookie
+from ipaddress import ip_address, ip_network
 
 from tornado import web
 from tornado.log import app_log
@@ -104,9 +106,12 @@ def _get_xsrf_token_cookie(handler):
     return (None, None)
 
 
-def _set_xsrf_cookie(handler, xsrf_id, *, cookie_path="", authenticated=None):
+def _set_xsrf_cookie(
+    handler, xsrf_id, *, cookie_path="", authenticated=None, xsrf_token=None
+):
     """Set xsrf token cookie"""
-    xsrf_token = _create_signed_value_urlsafe(handler, "_xsrf", xsrf_id)
+    if xsrf_token is None:
+        xsrf_token = _create_signed_value_urlsafe(handler, "_xsrf", xsrf_id)
     xsrf_cookie_kwargs = {}
     xsrf_cookie_kwargs.update(handler.settings.get('xsrf_cookie_kwargs', {}))
     xsrf_cookie_kwargs.setdefault("path", cookie_path)
@@ -128,6 +133,7 @@ def _set_xsrf_cookie(handler, xsrf_id, *, cookie_path="", authenticated=None):
         xsrf_cookie_kwargs,
     )
     handler.set_cookie("_xsrf", xsrf_token, **xsrf_cookie_kwargs)
+    return xsrf_token
 
 
 def get_xsrf_token(handler, cookie_path=""):
@@ -173,7 +179,9 @@ def get_xsrf_token(handler, cookie_path=""):
             )
 
     if _set_cookie:
-        _set_xsrf_cookie(handler, xsrf_id, cookie_path=cookie_path)
+        _set_xsrf_cookie(
+            handler, xsrf_id, cookie_path=cookie_path, xsrf_token=xsrf_token
+        )
     handler._xsrf_token = xsrf_token
     return xsrf_token
 
@@ -230,18 +238,71 @@ def check_xsrf_cookie(handler):
         )
 
 
+# allow disabling using ip in anonymous id
+def _get_anonymous_ip_cidrs():
+    """
+    List of CIDRs to consider anonymous from $JUPYTERHUB_XSRF_ANONYMOUS_IP_CIDRS
+
+    e.g. private network IPs, which likely mean proxy ips
+    and do not meaningfully distinguish users
+    (fixing proxy headers would usually fix this).
+    """
+    cidr_list_env = os.environ.get("JUPYTERHUB_XSRF_ANONYMOUS_IP_CIDRS")
+    if not cidr_list_env:
+        return []
+    return [ip_network(cidr) for cidr in cidr_list_env.split(";")]
+
+
+_anonymous_ip_cidrs = _get_anonymous_ip_cidrs()
+
+# allow specifying which headers to use for anonymous id
+# (default: User-Agent)
+# these should be stable (over a few minutes) for a single client and unlikely
+# to be shared across users
+_anonymous_id_headers = os.environ.get(
+    "JUPYTERHUB_XSRF_ANONYMOUS_ID_HEADERS", "User-Agent"
+).split(";")
+
+
 def _anonymous_xsrf_id(handler):
     """Generate an appropriate xsrf token id for an anonymous request
 
     Currently uses hash of request ip and user-agent
 
     These are typically used only for the initial login page,
+    and don't need to be perfectly unique, just:
+
+    1. reasonably stable for a single user for the duration of a login
+       (a few requests, which may pass through different proxies)
+    2. somewhat unlikely to be shared across users
+
+    These are typically used only for the initial login page,
     so only need to be valid for a few seconds to a few minutes
     (enough to submit a login form with MFA).
     """
     hasher = hashlib.sha256()
-    hasher.update(handler.request.remote_ip.encode("ascii"))
-    hasher.update(
-        handler.request.headers.get("User-Agent", "").encode("utf8", "replace")
-    )
+    ip = ip_to_hash = handler.request.remote_ip
+    try:
+        ip_addr = ip_address(ip)
+    except ValueError as e:
+        # invalid ip ?!
+        app_log.error("Error parsing remote ip %r: %s", ip, e)
+    else:
+        # if the ip is private (e.g. a cluster ip),
+        # this is almost certainly a proxy ip and not useful
+        # for distinguishing request origin.
+        # A proxy has the double downside of multiple replicas
+        # meaning the value can change from one request to the next for the
+        # same 'true' origin, resulting in unavoidable xsrf mismatch errors
+        for cidr in _anonymous_ip_cidrs:
+            if ip_addr in cidr:
+                # use matching cidr
+                ip_to_hash = str(cidr)
+                break
+    hasher.update(ip_to_hash.encode("ascii"))
+    for name in _anonymous_id_headers:
+        header = handler.request.headers.get(name, "")
+        hasher.update(header.encode("utf8", "replace"))
+        # field delimiter (should be something not valid utf8)
+        hasher.update(b"\xff")
     return base64.urlsafe_b64encode(hasher.digest()).decode("ascii")

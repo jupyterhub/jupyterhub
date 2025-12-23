@@ -101,7 +101,7 @@ matching `*.jupyter.example.org`.
 Unfortunately, for many institutional domains, wildcard DNS and SSL may not be available.
 
 We also **strongly encourage** serving JupyterHub and user content on a domain that is _not_ a subdomain of any sensitive content.
-For reasoning, see [GitHub's discussion of moving user content to github.io from \*.github.com](https://github.blog/2013-04-09-yummy-cookies-across-domains/).
+For reasoning, see [GitHub's discussion of moving user content to github.io from \*.github.com](https://github.blog/engineering/yummy-cookies-across-domains/).
 
 **If you do plan to serve untrusted users, enabling subdomains is highly encouraged**,
 as it resolves many security issues, which are difficult to unavoidable when JupyterHub is on a single-domain.
@@ -186,7 +186,6 @@ For example:
 
 - `Content-Security-Policy` header must prohibit popups and iframes from the same origin.
   The following Content-Security-Policy rules are _insecure_ and readily enable users to access each others' servers:
-
   - `frame-ancestors: 'self'`
   - `frame-ancestors: '*'`
   - `sandbox allow-popups`

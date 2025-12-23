@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router";
 import PropTypes from "prop-types";
 import { Button, Card } from "react-bootstrap";
 import GroupSelect from "../GroupSelect/GroupSelect";
@@ -41,6 +41,10 @@ const GroupEdit = (props) => {
       navigate("/groups");
     }
   }, [location]);
+
+  useEffect(() => {
+    setSelected(group_data.users);
+  }, []);
 
   const { group_data } = location.state || {};
   if (!group_data) return <div></div>;
@@ -175,6 +179,7 @@ GroupEdit.propTypes = {
   removeFromGroup: PropTypes.func,
   deleteGroup: PropTypes.func,
   updateGroups: PropTypes.func,
+  updateProp: PropTypes.func,
   validateUser: PropTypes.func,
 };
 

@@ -103,7 +103,7 @@ async def test_singleuser_auth(
     assert r.status_code == 200
 
     # logout
-    r = await s.get(url_path_join(url, 'logout'))
+    r = await s.get(url_path_join(url, 'logout'), allow_redirects=False)
     assert len(r.cookies) == 0
 
     # accessing another user's server hits the oauth confirmation page
@@ -201,9 +201,9 @@ async def test_disable_user_config(request, app, tmp_path, full_spawn):
     # (symlink and real)
     def assert_not_in_home(path, name):
         path = Path(path).resolve()
-        assert not (str(path) + os.path.sep).startswith(
-            str(tmp_path) + os.path.sep
-        ), f"{name}: {path} is in home {tmp_path}"
+        assert not (str(path) + os.path.sep).startswith(str(tmp_path) + os.path.sep), (
+            f"{name}: {path} is in home {tmp_path}"
+        )
 
     for path in info['config_file_paths']:
         assert_not_in_home(path, 'config_file_paths')

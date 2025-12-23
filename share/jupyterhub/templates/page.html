@@ -47,10 +47,18 @@
       <link rel="icon" href="{{ static_url('favicon.ico') }}" type="image/x-icon">
     {% endblock favicon %}
     {% block scripts %}
-      <script src="{{static_url("components/bootstrap/dist/js/bootstrap.bundle.min.js") }}" type="text/javascript" charset="utf-8"></script>
-      <script src="{{static_url("components/requirejs/require.js") }}" type="text/javascript" charset="utf-8"></script>
-      <script src="{{static_url("components/jquery/dist/jquery.min.js") }}" type="text/javascript" charset="utf-8"></script>
-      <script src="{{static_url("js/darkmode.js") }}" type="text/javascript" charset="utf-8"></script>
+      <script src="{{static_url("components/bootstrap/dist/js/bootstrap.bundle.min.js") }}"
+              type="text/javascript"
+              charset="utf-8"></script>
+      <script src="{{static_url("components/requirejs/require.js") }}"
+              type="text/javascript"
+              charset="utf-8"></script>
+      <script src="{{static_url("components/jquery/dist/jquery.min.js") }}"
+              type="text/javascript"
+              charset="utf-8"></script>
+      <script src="{{static_url("js/darkmode.js") }}"
+              type="text/javascript"
+              charset="utf-8"></script>
     {% endblock scripts %}
     {# djlint js formatting doesn't handle template blocks in js #}
     {# djlint: off #}
@@ -184,7 +192,7 @@
                         <a id="logout"
                            role="button"
                            class="btn btn-sm btn-outline-contrast"
-                           href="{{ logout_url }}"> <i aria-hidden="true" class="fa fa-sign-out"></i> Logout</a>
+                           href="{{ logout_url }}"> <i aria-hidden="true" class="fa fa-sign-out"></i>Logout</a>
                       {% else %}
                         <a id="login"
                            role="button"

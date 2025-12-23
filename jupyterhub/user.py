@@ -102,7 +102,7 @@ class UserDict(dict):
 
         it does not check if the user is in the database
         """
-        if isinstance(key, (User, orm.User)):
+        if isinstance(key, User | orm.User):
             key = key.id
         elif isinstance(key, str):
             # username lookup, O(N)
@@ -786,7 +786,7 @@ class User:
         if handler:
             await self.refresh_auth(handler)
 
-        base_url = url_path_join(self.base_url, url_escape_path(server_name)) + '/'
+        base_url = url_path_join(self.base_url, url_escape_path(server_name), "/")
 
         orm_server = orm.Server(base_url=base_url)
         db.add(orm_server)
@@ -877,8 +877,7 @@ class User:
                 api_token,
                 url_path_join(self.url, url_escape_path(server_name), 'oauth_callback'),
                 allowed_scopes=allowed_scopes,
-                description="Server at %s"
-                % (url_path_join(self.base_url, server_name) + '/'),
+                description=f"Server at {url_path_join(self.base_url, server_name, '/')}",
             )
             spawner.orm_spawner.oauth_client = oauth_client
         db.commit()
@@ -905,6 +904,7 @@ class User:
             # wait for spawner.start to return
             # run optional preparation work to bootstrap the notebook
             await spawner.apply_group_overrides()
+            await spawner._run_apply_user_options(spawner.user_options)
             await maybe_future(spawner.run_pre_spawn_hook())
             if self.settings.get('internal_ssl'):
                 self.log.debug("Creating internal SSL certs for %s", spawner._log_name)
@@ -920,19 +920,16 @@ class User:
             await asyncio.wait_for(f, timeout=spawner.start_timeout)
             url = f.result()
             if url:
-                # get ip, port info from return value of start()
-                if isinstance(url, str):
-                    # >= 0.9 can return a full URL string
-                    pass
-                else:
-                    # >= 0.7 returns (ip, port)
+                # get url from return value of start()
+                if not isinstance(url, str):
+                    # older Spawners return (ip, port)
                     proto = 'https' if self.settings['internal_ssl'] else 'http'
-
+                    ip, port = url
                     # check if spawner returned an IPv6 address
-                    if ':' in url[0]:
-                        url = '%s://[%s]:%i' % ((proto,) + url)
-                    else:
-                        url = '%s://%s:%i' % ((proto,) + url)
+                    if ':' in ip:
+                        # ipv6 needs [::] in url
+                        ip = f'[{ip}]'
+                    url = f'{proto}://{ip}:{int(port)}'
                 urlinfo = urlparse(url)
                 server.proto = urlinfo.scheme
                 server.ip = urlinfo.hostname
