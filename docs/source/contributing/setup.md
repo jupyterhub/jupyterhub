@@ -81,7 +81,7 @@ a more detailed discussion.
    This should return a version number greater than or equal to {{python_min}}.
 
    ```bash
-   npm -v
+   node -v
    ```
 
    This should return a version number greater than or equal to {{node_min}}.
