@@ -316,6 +316,7 @@ async def test_resume_spawners(tmpdir, request, new_hub):
     await user.spawn()
     proc = user.spawner.proc
     assert proc is not None
+    user._new_orm_spawner('stopped', 'stopped')
     stopped_spawner = user.spawners['stopped']
     assert sorted(user.spawners) == ['', 'stopped']
 
