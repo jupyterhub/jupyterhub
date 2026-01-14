@@ -4,7 +4,7 @@
 
 :::{note}
 This JupyterHub roadmap has not been updated in a long time and is super outdated.
-On 25-26 February 2006, we are holding a [workshop](https://events.linuxfoundation.org/roadmap-workshop-for-jupyterhub-and-binder/) to update our roadmap, both our actual plans and how we communicate them.
+On 25-26 February 2026, we are holding a [workshop](https://events.linuxfoundation.org/roadmap-workshop-for-jupyterhub-and-binder/) to update our roadmap, both our actual plans and how we communicate them.
 Contributors are invited to [register](https://events.linuxfoundation.org/roadmap-workshop-for-jupyterhub-and-binder/register/) for the workshop.
 :::
 
