@@ -4,9 +4,8 @@
 
 :::{note}
 This JupyterHub roadmap has not been updated in a long time and is super outdated.
-We will be holding a workshop to update our roadmap, both our actual plans and how we communicate them, with the community February 25-26, 2006.
-[Read more on the planning issue](https://github.com/jupyterhub/team-compass/issues/805).
-A link to the workshop itself will come when it is public.
+On 25-26 February 2026, we are holding a [workshop](https://events.linuxfoundation.org/roadmap-workshop-for-jupyterhub-and-binder/) to update our roadmap, both our actual plans and how we communicate them.
+Contributors are invited to [register](https://events.linuxfoundation.org/roadmap-workshop-for-jupyterhub-and-binder/register/) for the workshop.
 :::
 
 This roadmap collects "next steps" for JupyterHub. It is about creating a
