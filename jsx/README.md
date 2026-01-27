@@ -11,7 +11,9 @@ admin dashboard codebase.
 - `npm run hot`: Bundles the application and runs a mock (serverless) version on port 8000
 - `npm run lint`: Lints JSX with ESLint
 - `npm run lint --fix`: Lints and fixes errors JSX with ESLint / formats with Prettier
-- `npm run place`: Copies the transpiled React bundle to share/jupyterhub/static/js/admin-react.js for use.
+- `npm run build:watch`: Automatically rebuild the admin page during development.
+- `npm run test`: Runs the test suite.
+- `npm run snap`: Updates snapshot tests.
 
 ### Good To Know
 
