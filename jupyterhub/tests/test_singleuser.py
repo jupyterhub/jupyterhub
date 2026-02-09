@@ -70,7 +70,10 @@ async def test_singleuser_auth(
         user.groups.append(group)
         app.db.commit()
 
-    if server_name not in user.spawners or not user.spawners[server_name].active:
+    if (
+        server_name not in user.spawners
+        or not user.get_or_create_spawner(server_name, server_name).active
+    ):
         await user.spawn(server_name)
         await app.proxy.add_user(user, server_name)
     spawner = user.spawners[server_name]
