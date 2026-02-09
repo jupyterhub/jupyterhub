@@ -131,7 +131,7 @@ jobs:
               echo "PGHOST=127.0.0.1" >> $GITHUB_ENV
               echo "PGUSER=test_user" >> $GITHUB_ENV
               echo "PGPASSWORD=hub[test/:?" >> $GITHUB_ENV
-              echo "JUPYTERHUB_TEST_DB_URL=postgresql://test_user:hub%5Btest%2F%3A%3F@127.0.0.1:5432/jupyterhub" >> $GITHUB_ENV
+              echo "JUPYTERHUB_TEST_DB_URL=postgresql+psycopg://test_user:hub%5Btest%2F%3A%3F@127.0.0.1:5432/jupyterhub" >> $GITHUB_ENV
           fi
           if [ "${{ matrix.serverextension }}" != "" ]; then
               echo "JUPYTERHUB_SINGLEUSER_EXTENSION=1" >> $GITHUB_ENV
@@ -199,7 +199,7 @@ jobs:
               pip install mysqlclient
           fi
           if [ "${{ matrix.db }}" == "postgres" ]; then
-              pip install psycopg2-binary
+              pip install psycopg[binary]
           fi
           if [ "${{ matrix.serverextension }}" != "" ]; then
             pip install 'jupyter-server>=2'
