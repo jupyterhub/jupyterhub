@@ -72,7 +72,7 @@
     "jest-environment-jsdom": "^30.2.0",
     "prettier": "^3.8.1",
     "style-loader": "^4.0.0",
-    "webpack": "^5.104.1",
+    "webpack": "^5.105.2",
     "webpack-cli": "^6.0.1",
     "webpack-dev-server": "^5.2.3"
   }
