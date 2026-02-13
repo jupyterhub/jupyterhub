@@ -40,7 +40,7 @@ while True:
         print("interrupted")
 """
 
-pytestmark = pytest.mark.db(pytest.mark.ssl)
+pytestmark = pytest.mark.ssl
 
 
 def setup():
