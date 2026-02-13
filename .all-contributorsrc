@@ -3,9 +3,7 @@
   "projectOwner": "jupyterhub",
   "repoType": "github",
   "repoHost": "https://github.com",
-  "files": [
-    "README.md"
-  ],
+  "files": ["README.md"],
   "imageSize": 100,
   "commit": true,
   "commitConvention": "angular",
@@ -15,10 +13,7 @@
       "name": "Anamika",
       "avatar_url": "https://avatars.githubusercontent.com/u/206292878?v=4",
       "profile": "https://github.com/anny0811",
-      "contributions": [
-        "doc",
-        "code"
-      ]
+      "contributions": ["doc", "code"]
     }
   ],
   "contributorsPerLine": 7,
