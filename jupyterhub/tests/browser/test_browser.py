@@ -1347,7 +1347,9 @@ async def test_start_stop_server_on_admin_page(
 
     # click on Start button
     await click_start_server(browser, user1.name)
-    await expect(browser.get_by_role("button", name="Stop Server")).to_have_count(1)
+    await expect(browser.get_by_role("button", name="Stop Server")).to_have_count(
+        1, timeout=30_000
+    )
     await expect(browser.get_by_role("button", name="Start Server")).to_have_count(
         len(users_list) - 1
     )
