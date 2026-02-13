@@ -16,6 +16,8 @@ ssl_enabled = True
 # possible errors raised by ssl failures
 SSL_ERROR = (SSLError, ConnectionError)
 
+pytestmark = pytest.mark.ssl
+
 
 async def wait_for_spawner(spawner, timeout=10):
     """Wait for an http server to show up

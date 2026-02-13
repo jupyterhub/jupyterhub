@@ -40,6 +40,8 @@ while True:
         print("interrupted")
 """
 
+pytestmark = pytest.mark.db(pytest.mark.ssl)
+
 
 def setup():
     logging.basicConfig(level=logging.DEBUG)
