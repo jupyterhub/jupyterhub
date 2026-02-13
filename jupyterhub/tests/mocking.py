@@ -89,7 +89,9 @@ class MockSpawner(SimpleLocalProcessSpawner):
     def start(self):
         # preserve any JupyterHub env in mock spawner
         for key in os.environ:
-            if 'JUPYTERHUB' in key and key not in self.env_keep:
+            if key in self.env_keep:
+                continue
+            if any(substring in key for substring in ["JUPYTERHUB", "COVERAGE"]):
                 self.env_keep.append(key)
 
         if self.use_this_api_token:

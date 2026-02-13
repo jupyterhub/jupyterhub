@@ -40,6 +40,7 @@ from pytest import fixture, mark, raises
 from sqlalchemy import event
 from tornado.httpclient import HTTPError
 from tornado.platform.asyncio import AsyncIOMainLoop
+from traitlets import default
 
 import jupyterhub.services.service
 
@@ -337,6 +338,17 @@ class MockServiceSpawner(jupyterhub.services.service._ServiceSpawner):
     """
 
     poll_interval = 1
+
+    @default("env_keep")
+    def _env_keep_default(self):
+        # preserve test and coverage env
+        to_keep = super()._env_keep_default()
+        for key in os.environ:
+            if key in to_keep:
+                continue
+            if any(substring in key for substring in ['COVERAGE', 'JUPYTERHUB']):
+                to_keep.append(key)
+        return to_keep
 
 
 async def _mockservice(request, app, name, external=False, url=False):
