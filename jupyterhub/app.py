@@ -1900,6 +1900,12 @@ class JupyterHub(Application):
                 remove_existing=self.recreate_internal_certs,
             )
 
+            # If any external CAs were specified in external_ssl_authorities
+            # add records of them to Certipy's store. Update before we build
+            # the internal trust bundles, so that any external CAs are included
+            # in the trust bundles.
+            self.internal_ssl_authorities.update(self.external_ssl_authorities)
+
             # Here we define how trust should be laid out per each component
             self.internal_ssl_components_trust = {
                 'hub-ca': list(self.internal_ssl_authorities.keys()),
@@ -1911,9 +1917,6 @@ class JupyterHub(Application):
 
             hub_name = 'hub-ca'
 
-            # If any external CAs were specified in external_ssl_authorities
-            # add records of them to Certipy's store.
-            self.internal_ssl_authorities.update(self.external_ssl_authorities)
             for authority, files in self.internal_ssl_authorities.items():
                 if files:
                     self.log.info("Adding CA for %s", authority)
