@@ -23,6 +23,9 @@ from .utils import AsyncSession, async_requests, get_page
 IS_JUPYVERSE = os.environ.get("JUPYTERHUB_SINGLEUSER_APP") == "jupyverse"
 
 
+pytestmark = pytest.mark.ssl
+
+
 @pytest.fixture(autouse=True)
 def _jupyverse(app):
     if IS_JUPYVERSE:

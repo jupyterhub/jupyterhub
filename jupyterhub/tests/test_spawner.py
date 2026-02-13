@@ -40,6 +40,8 @@ while True:
         print("interrupted")
 """
 
+pytestmark = pytest.mark.ssl
+
 
 def setup():
     logging.basicConfig(level=logging.DEBUG)
@@ -123,8 +125,15 @@ async def test_single_user_spawner(app, request):
     await wait_for_spawner(spawner)
     status = await spawner.poll()
     assert status is None
+    # seems to take a long time to exit sometimes
+    # (only on CI when this is the first test)
+    # give slow CI an extra long grace period to exit
+    spawner.interrupt_timeout = 60
     await spawner.stop()
     status = await spawner.poll()
+    # ensures clean exit
+    # will be e.g. -15 if terminated (interrupt timeout reached),
+    # -9 if killed (even TERM didn't stop the process)
     assert status == 0
 
 

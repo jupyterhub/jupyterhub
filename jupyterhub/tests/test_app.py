@@ -54,6 +54,7 @@ def test_show_config(tmpdir):
     assert config["JupyterHub"]["log_level"] == 10
 
 
+@pytest.mark.db
 def test_token_app():
     cmd = [sys.executable, '-m', 'jupyterhub', 'token']
     out = check_output(cmd + ['--help-all']).decode('utf8', 'replace')
@@ -119,6 +120,7 @@ def test_generate_config():
     assert 'Authenticator.allowed_users' in cfg_text
 
 
+@pytest.mark.db
 async def test_init_tokens(request):
     with TemporaryDirectory() as td:
         db_file = os.path.join(td, 'jupyterhub.sqlite')
@@ -236,6 +238,7 @@ def test_cookie_secret_string():
     assert app.cookie_secret == binascii.a2b_hex('abc123')
 
 
+@pytest.mark.db
 async def test_load_groups(tmpdir, request):
     to_load = {
         'blue': {
@@ -307,6 +310,7 @@ def new_hub(request, tmpdir, persist_db):
     return new_hub
 
 
+@pytest.mark.db
 async def test_resume_spawners(tmpdir, request, new_hub):
     app = await new_hub(allow_named_servers=True)
     db = app.db
@@ -459,6 +463,7 @@ def test_launch_instance(request, argv, sys_argv):
         assert hub.argv == argv
 
 
+@pytest.mark.db
 async def test_user_creation(tmpdir, request):
     allowed_users = {"in-allowed", "in-group-in-allowed", "in-role-in-allowed"}
     groups = {
@@ -499,6 +504,7 @@ async def test_user_creation(tmpdir, request):
     }
 
 
+@pytest.mark.db
 async def test_recreate_service_from_database(
     request, new_hub, service_name, service_data
 ):
@@ -538,6 +544,7 @@ async def test_recreate_service_from_database(
     assert service_name not in app._service_map
 
 
+@pytest.mark.db
 async def test_revoke_blocked_users(username, groupname, new_hub):
     config = Config()
     config.Authenticator.admin_users = {username}

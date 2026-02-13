@@ -34,6 +34,9 @@ from .utils import (
     public_url,
 )
 
+# run this full exercise with all db implementations
+pytestmark = pytest.mark.db
+
 # --------------------
 # Authentication tests
 # --------------------

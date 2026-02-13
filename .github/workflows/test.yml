@@ -126,6 +126,9 @@ jobs:
           fi
           if [ "${{ matrix.ssl }}" == "ssl" ]; then
               echo "SSL_ENABLED=1" >> $GITHUB_ENV
+              # limit tests to those relevant to ssl
+              echo "PYTEST_ADDOPTS=$PYTEST_ADDOPTS" -m ssl >> "${GITHUB_ENV}"
+
           fi
           if [ "${{ matrix.db }}" == "postgres" ]; then
               echo "PGHOST=127.0.0.1" >> $GITHUB_ENV
@@ -247,6 +250,8 @@ jobs:
               DB=postgres bash ci/docker-db.sh
               DB=postgres bash ci/init-db.sh
           fi
+          # limit db runs to subset of tests
+          echo "PYTEST_ADDOPTS=$PYTEST_ADDOPTS -m db" >> "${GITHUB_ENV}"
 
       - name: Configure browser tests
         if: matrix.browser

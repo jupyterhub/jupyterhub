@@ -1859,7 +1859,7 @@ class LocalProcessSpawner(Spawner):
     """
 
     interrupt_timeout = Integer(
-        10,
+        30,
         help="""
         Seconds to wait for single-user server process to halt after SIGINT.
 
@@ -1868,7 +1868,7 @@ class LocalProcessSpawner(Spawner):
     ).tag(config=True)
 
     term_timeout = Integer(
-        5,
+        30,
         help="""
         Seconds to wait for single-user server process to halt after SIGTERM.
 

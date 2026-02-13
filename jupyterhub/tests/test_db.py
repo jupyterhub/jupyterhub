@@ -17,6 +17,9 @@ here = os.path.abspath(os.path.dirname(__file__))
 populate_db = os.path.join(here, 'populate_db.py')
 
 
+pytestmark = pytest.mark.db
+
+
 def generate_old_db(env_dir, hub_version, db_url):
     """Generate an old jupyterhub database
 

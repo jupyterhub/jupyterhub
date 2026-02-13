@@ -15,6 +15,8 @@ from ..user import User
 from ..utils import utcnow
 from .mocking import MockSpawner
 
+pytestmark = pytest.mark.db
+
 
 def assert_not_found(db, ORMType, id):
     """Assert that an item with a given id is not found"""
