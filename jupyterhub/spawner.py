@@ -39,6 +39,7 @@ from traitlets import (
 from traitlets.config import LoggingConfigurable
 
 from . import orm
+from . import metrics
 from .objects import Server
 from .roles import roles_to_scopes
 from .traitlets import ByteSpecification, Callable, Command

@@ -28,7 +28,7 @@ import time
 from datetime import timedelta
 from enum import Enum
 
-from prometheus_client import Gauge, Histogram
+from prometheus_client import Gauge, Histogram, Counter
 from tornado.ioloop import PeriodicCallback
 from traitlets import Any, Bool, Dict, Float, Integer
 from traitlets.config import LoggingConfigurable
@@ -147,6 +147,15 @@ PROXY_POLL_DURATION_SECONDS = Histogram(
     'proxy_poll_duration_seconds',
     'Duration for polling all routes from proxy',
     namespace=metrics_prefix,
+)
+
+SERVER_SPAWN_TOTAL = Counter (
+    'server_spawn_total',
+    'Total number of server spawn' 
+attempts',
+    ['status'],
+    namespace=metrics_prefix,
+
 )
 
 

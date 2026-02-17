@@ -14,7 +14,7 @@ from tornado.log import app_log
 from . import orm, roles, scopes
 from ._version import __version__, _check_version
 from .crypto import CryptKeeper, EncryptionUnavailable, InvalidToken, decrypt, encrypt
-from .metrics import RUNNING_SERVERS, TOTAL_USERS
+from .metrics import RUNNING_SERVERS, TOTAL_USERS, SERVER_SPAWN_TOTAL
 from .objects import Server
 from .spawner import LocalProcessSpawner
 from .utils import (
@@ -919,6 +919,7 @@ class User:
             # we want this task to halt if it doesn't return in the time limit.
             await asyncio.wait_for(f, timeout=spawner.start_timeout)
             url = f.result()
+            SERVER_SPAWN_TOTAL.labels(status='success').inc()
             if url:
                 # get url from return value of start()
                 if not isinstance(url, str):
@@ -992,6 +993,7 @@ class User:
                     db.commit()
 
         except Exception as e:
+            SERVER_SPAWN_TOTAL.labels(status='failure').inc()
             if isinstance(e, AnyTimeoutError):
                 self.log.warning(
                     f"{self.name}'s server failed to start"
