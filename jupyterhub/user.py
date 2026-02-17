@@ -993,6 +993,7 @@ class User:
                     db.commit()
 
         except Exception as e:
+            
             SERVER_SPAWN_TOTAL.labels(status='failure').inc()
             if isinstance(e, AnyTimeoutError):
                 self.log.warning(
