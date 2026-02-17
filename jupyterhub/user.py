@@ -14,7 +14,7 @@ from tornado.log import app_log
 from . import orm, roles, scopes
 from ._version import __version__, _check_version
 from .crypto import CryptKeeper, EncryptionUnavailable, InvalidToken, decrypt, encrypt
-from .metrics import RUNNING_SERVERS, TOTAL_USERS, SERVER_SPAWN_TOTAL
+from .metrics import RUNNING_SERVERS, SERVER_SPAWN_TOTAL, TOTAL_USERS
 from .objects import Server
 from .spawner import LocalProcessSpawner
 from .utils import (
