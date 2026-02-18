@@ -432,9 +432,8 @@ class PeriodicMetricsCollector(LoggingConfigurable):
             )
 
             self.log.info(f'Found {value} active users in the last {period}')
-            ACTIVE_USERS.labels(period=period.value).set(value)
-
-    async def _measure_event_loop_interval(self):
+            ACTIVE_USERS.labels(period=period.value).set(value) 
+            def _measure_event_loop_interval(self):
         """Measure the event loop responsiveness
 
         A single long-running coroutine because PeriodicCallback is too expensive
