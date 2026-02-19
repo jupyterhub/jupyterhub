@@ -86,14 +86,14 @@ paths:
     get:
       summary: Get server start
       tags:
-        - Servers
+           - Servers
       description: Returns a stream of events representing the progress of a server starting.
       responses:
-      '200'
+          200:
       description: Event stream of progress
       security:
-        - token:
-        - oauth2:
+          - token:
+          - oauth2:
 
   /user:
     get:
