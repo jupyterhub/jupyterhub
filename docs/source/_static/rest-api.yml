@@ -85,8 +85,9 @@ paths:
     get:
       summary: Get server start
       tags:
-           - Servers
-      description: Returns a stream of events representing the progress of a server starting.
+        - Servers
+      description: Returns a stream of events representing the progress of a 
+        server starting.
       responses:
         200:
           description: Event stream of progress
@@ -98,10 +99,9 @@ paths:
     get:
       operationId: get-current-user
       summary: Get current user
-      description: 
-        Returns the User model for the owner of the authenticating token.
-        Includes information about the requesting token itself,
-        such as the currently authorized scopes.
+      description: Returns the User model for the owner of the authenticating 
+        token. Includes information about the requesting token itself, such as 
+        the currently authorized scopes.
       responses:
         200:
           description: |
