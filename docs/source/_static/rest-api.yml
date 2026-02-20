@@ -3,7 +3,6 @@ info:
   title: JupyterHub REST API
   description: |
     The REST API for JupyterHub.
-    Authentication supports both OAuth2 tokens and API tokens(Bearer).
     <a href="./">Return to JupyterHub documentation</a>.
   license:
     name: BSD-3-Clause
@@ -89,17 +88,17 @@ paths:
            - Servers
       description: Returns a stream of events representing the progress of a server starting.
       responses:
-          200:
-      description: Event stream of progress
+        200:
+          description: Event stream of progress
       security:
-          - token:
-          - oauth2:
+        - oauth2:
+            - read:hub
 
   /user:
     get:
       operationId: get-current-user
       summary: Get current user
-      description: |
+      description: 
         Returns the User model for the owner of the authenticating token.
         Includes information about the requesting token itself,
         such as the currently authorized scopes.
