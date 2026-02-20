@@ -81,20 +81,32 @@ paths:
       security:
         - oauth2:
             - read:hub
-  /users/{user}/servers/{server_name}/progress:
+
+  /users/{user}/server/{server_name}/progess:
     get:
+      operationId: get_server_progress  
       summary: Get server start
       tags:
         - Servers
-      description: Returns a stream of events representing the progress of a 
-        server starting.
+      description: |
+        Returns a stream of events representing the progress of a server starting.
+      parameters:
+        - name: user 
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: server_name
+          in: path
+          required: true
+          schema: 
+            type: string
       responses:
         200:
           description: Event stream of progress
       security:
         - oauth2:
             - read:hub
-
   /user:
     get:
       operationId: get-current-user
