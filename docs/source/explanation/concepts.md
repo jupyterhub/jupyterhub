@@ -207,7 +207,7 @@ separately](howto:separate-proxy),
 user's connections will continue to work even without the hub.
 
 The default proxy is **ConfigurableHttpProxy** which is simple but
-effective. A more advanced option is the [**Traefik Proxy**](https://blog.jupyter.org/introducing-traefikproxy-a-new-jupyterhub-proxy-based-on-traefik-4839e972faf6),
+effective. A more advanced option is the [**Traefik Proxy**](http://blog.jupyter.org/introducing-traefikproxy-a-new-jupyterhub-proxy-based-on-traefik-4839e972faf6),
 which gives you redundancy and high-availability.
 
 When users "connect to JupyterHub", they _always_ first connect to the
