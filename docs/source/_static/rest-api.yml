@@ -84,14 +84,14 @@ paths:
 
   /users/{user}/server/{server_name}/progess:
     get:
-      operationId: get_server_progress  
+      operationId: get_server_progress
       summary: Get server start
       tags:
         - Servers
       description: |
         Returns a stream of events representing the progress of a server starting.
       parameters:
-        - name: user 
+        - name: user
           in: path
           required: true
           schema:
@@ -99,7 +99,7 @@ paths:
         - name: server_name
           in: path
           required: true
-          schema: 
+          schema:
             type: string
       responses:
         200:
@@ -2161,7 +2161,7 @@ components:
               their state.
             admin:server_state: Read and write users’ server state.
             servers: Start and stop user servers.
-            read:servers: Read users’ names and their server models (excluding 
+            read:servers: Read users’ names and their server models (excluding
               the server state).
             delete:servers: Stop and delete users' servers.
             tokens: Read, write, create and delete user tokens.
