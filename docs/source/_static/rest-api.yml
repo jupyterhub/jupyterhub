@@ -331,13 +331,12 @@ paths:
                   format: date-time
                 servers:
                   type: object
-                  properties:
-                    <server name>:
-                      required:
-                        - last_activity
-                      type: object
-                      properties:
-                        last_activity:
+                  additionalProperties:
+                    type: object
+                    required:
+                      - last_activity
+                    properties:
+                      last_activity:
                           type: string
                           description: |
                             Timestamp of last-seen activity on this server.
