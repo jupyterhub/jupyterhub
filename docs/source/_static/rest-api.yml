@@ -2148,7 +2148,7 @@ components:
               their state.
             admin:server_state: Read and write users’ server state.
             servers: Start and stop user servers.
-            read:servers: Read users’ names and their server models (excluding 
+            read:servers: Read users’ names and their server models (excluding
               the server state).
             delete:servers: Stop and delete users' servers.
             tokens: Read, write, create and delete user tokens.

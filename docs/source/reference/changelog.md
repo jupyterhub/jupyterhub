@@ -101,8 +101,7 @@ Notably:
 #### Contributors to this release
 
 The following people contributed discussions, new ideas, code and documentation contributions, and review.
-See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/#how-does-this-tool-define-contributions-in-the-reports).
-
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/)
 ([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2025-10-06&to=2025-10-17&type=c))
 
 @choldgraf ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Acholdgraf+updated%3A2025-10-06..2025-10-17&type=Issues)) | @krassowski ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Akrassowski+updated%3A2025-10-06..2025-10-17&type=Issues)) | @kreuzert ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Akreuzert+updated%3A2025-10-06..2025-10-17&type=Issues)) | @manics ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amanics+updated%3A2025-10-06..2025-10-17&type=Issues)) | @minrk ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk+updated%3A2025-10-06..2025-10-17&type=Issues))

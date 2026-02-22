@@ -155,7 +155,7 @@ The [Educational Development and Technology](https://ethz.ch/en/the-eth-zurich/o
 
 ### Google Cloud Platform
 
-- [Using Tensorflow and JupyterHub in Classrooms](https://cloud.google.com/solutions/using-tensorflow-jupyterhub-classrooms)
+- [Using Tensorflow and JupyterHub in Classrooms](https://docs.cloud.google.com/architecture)
 - [using-tensorflow-and-jupyterhub blog post](https://opensource.googleblog.com/2016/10/using-tensorflow-and-jupyterhub.html)
 
 ### Everware
