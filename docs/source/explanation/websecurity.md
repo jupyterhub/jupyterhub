@@ -180,8 +180,7 @@ JupyterHub uses distinct xsrf tokens stored in cookies on each server path to at
 This has limitations because not all requests are protected by these XSRF tokens,
 and unless additional measures are taken, the XSRF tokens from other user prefixes may be retrieved.
 
-[Same-Origin Policy]: https://developer.mozilla.org/en-US/docs/Web/Security/Same-origin_policy
-
+[Same-Origin Policy]: https://developer.mozilla.org/en-US/docs/Web/Security/Defenses/Same-origin_policy
 For example:
 
 - `Content-Security-Policy` header must prohibit popups and iframes from the same origin.
