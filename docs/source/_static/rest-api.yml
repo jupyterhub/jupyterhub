@@ -337,23 +337,11 @@ paths:
                       - last_activity
                     properties:
                       last_activity:
-                          type: string
-                          description: |
-                            Timestamp of last-seen activity on this server.
-                          format: date-time
-                      description: |
-                        Activity for a single server.
-                  description: |
-                    Register activity for specific servers by name.
-                    The keys of this dict are the names of servers.
-                    The default server has an empty name ('').
-              example:
-                last_activity: 2019-02-06T12:54:14Z
-                servers:
-                  "":
-                    last_activity: 2019-02-06T12:54:14Z
-                  gpu:
-                    last_activity: 2019-02-06T12:54:14Z
+                        type: string
+                        description: |
+                          Timestamp of last-seen activity on this server.
+                        format: date-time
+                        Example: 2019-02-06T12:54:14Z
         required: false
       responses:
         200:
