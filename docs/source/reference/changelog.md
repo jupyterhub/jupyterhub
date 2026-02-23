@@ -286,7 +286,7 @@ See [our definition of contributors](https://github-activity.readthedocs.io/en/l
 #### Contributors to this release
 
 The following people contributed discussions, new ideas, code and documentation contributions, and review.
-See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/#how-does-this-tool-define-contributions-in-the-reports).
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/)
 
 ([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2024-10-01&to=2024-10-21&type=c))
 
