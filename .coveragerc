@@ -4,6 +4,7 @@ branch = False
 omit =
     jupyterhub/tests/*
     jupyterhub/alembic/*
+patch = subprocess
 
 [report]
 exclude_lines =
