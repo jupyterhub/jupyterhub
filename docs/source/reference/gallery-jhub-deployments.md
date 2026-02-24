@@ -16,7 +16,7 @@ Please submit pull requests to update information or to add new institutions or 
 
 - [BIDS - Berkeley Institute for Data Science](https://bids.berkeley.edu/)
 
-- [Data 8](https://www.data8.org/)
+- [Data 8](https://data8.org/)
   - [GitHub organization](https://github.com/data-8)
 
 - [NERSC](https://www.nersc.gov/)
@@ -155,7 +155,7 @@ The [Educational Development and Technology](https://ethz.ch/en/the-eth-zurich/o
 
 ### Google Cloud Platform
 
-- [Using Tensorflow and JupyterHub in Classrooms](https://cloud.google.com/solutions/using-tensorflow-jupyterhub-classrooms)
+- [Using Tensorflow and JupyterHub in Classrooms](https://docs.cloud.google.com/architecture)
 - [using-tensorflow-and-jupyterhub blog post](https://opensource.googleblog.com/2016/10/using-tensorflow-and-jupyterhub.html)
 
 ### Everware

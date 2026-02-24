@@ -37,7 +37,7 @@ Some examples include:
 
 ### Spawner.start
 
-[](#Spawner.start) should start a single-user server for a single user.
+{meth}`Spawner.start` should start a single-user server for a single user.
 Information about the user can be retrieved from `self.user`,
 an object encapsulating the user's name, authentication, and server info.
 
@@ -124,7 +124,7 @@ If both attributes are not present, the Exception will be shown to the user as u
 
 ### Spawner.poll
 
-[](#Spawner.poll) checks if the spawner is still running.
+{meth}`Spawner.poll` checks if the spawner is still running.
 It should return `None` if it is still running,
 and an integer exit status, otherwise.
 
@@ -133,7 +133,7 @@ to check if the local process is still running. On Windows, it uses `psutil.pid_
 
 ### Spawner.stop
 
-[](#Spawner.stop) should stop the process. It must be a tornado coroutine, which should return when the process has finished exiting.
+{meth}`Spawner.stop` should stop the process. It must be a tornado coroutine, which should return when the process has finished exiting.
 
 ## Spawner state
 
@@ -254,7 +254,7 @@ c.Spawner.apply_user_options = apply_user_options
 
 :::{versionadded} 5.3
 JupyterHub 5.3 introduces [](#Spawner.apply_user_options) configuration.
-Previously, [](#Spawner.user_options) could only be consumed during [](#Spawner.start),
+Previously, [](#Spawner.user_options) could only be consumed during {meth}`Spawner.start`,
 at which point `user_options` is available to the Spawner instance as `self.user_options`.
 This approach requires subclassing, so it was not possible to apply new `user_options` via configuration.
 In JupyterHub 5.3, it is possible to fully expose user options,
