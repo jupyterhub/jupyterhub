@@ -17,6 +17,8 @@ from .mocking import FormSpawner
 from .test_api import TIMESTAMP, add_user, api_request, fill_user, normalize_user
 from .utils import async_requests, get_page, public_host, public_url
 
+pytestmark = pytest.mark.ssl(pytest.mark.db)
+
 
 @pytest.fixture
 def named_servers(app):
