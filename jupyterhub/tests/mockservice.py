@@ -23,6 +23,7 @@ from urllib.parse import urlparse
 import requests
 from tornado import httpserver, ioloop, log, web
 from tornado.httputil import url_concat
+from tornado.log import app_log
 
 from jupyterhub.services.auth import (
     HubAuthenticated,
@@ -79,10 +80,31 @@ class OWhoAmIHandler(HubOAuthenticated, web.RequestHandler):
     """
 
     def get_login_url(self):
+        pkce = self.get_argument("pkce", None)
+        if pkce is not None:
+            if pkce == "missing":
+                app_log.info("disabling PKCE")
+                self.hub_auth.pkce_enabled = False
+            elif pkce == "incorrect":
+                app_log.info("testing PKCE validation failure")
+                good_pkce = self.hub_auth.generate_pkce_code_challenge
+
+                def bad_pkce():
+                    verifier, challenge, method = good_pkce()
+                    bad_verifier = "WRONG" + verifier[5:]
+                    return bad_verifier, challenge, method
+
+                self.hub_auth.generate_pkce_code_challenge = bad_pkce
+            elif pkce == "correct":
+                app_log.info("enabling PKCE")
+                self.hub_auth.pkce_enabled = True
+            else:
+                raise web.HTTPError(400, f"Bad PKCE: {pkce}")
         login_url = super().get_login_url()
         scopes = self.get_argument("request-scope", None)
         if scopes is not None:
             login_url = url_concat(login_url, {"scope": scopes})
+
         return login_url
 
     @web.authenticated
