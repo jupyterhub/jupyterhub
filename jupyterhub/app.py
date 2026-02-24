@@ -428,6 +428,18 @@ class JupyterHub(Application):
         """,
     ).tag(config=True)
 
+    oauth_require_pkce = Bool(
+        False,
+        help=""""
+        Require PKCE validation of OAuth.
+
+        Requires PKCE validation.
+
+        Defaults to False for backward-compatibility.
+
+        .. versionadded:: 6.0
+        """,
+    )
     oauth_token_expires_in = Integer(
         help="""Expiry (in seconds) of OAuth access tokens.
 
@@ -3152,6 +3164,7 @@ class JupyterHub(Application):
             url_prefix=url_path_join(base_url, 'api/oauth2'),
             login_url=url_path_join(base_url, 'login'),
             token_expires_in=self.oauth_token_expires_in,
+            require_pkce=self.oauth_require_pkce,
         )
 
     def cleanup_oauth_clients(self):

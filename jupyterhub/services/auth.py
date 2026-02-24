@@ -894,6 +894,21 @@ class HubOAuth(HubAuth):
             },
         )
 
+    # only allow disabling for testing, really
+    # no reason to disable in practice
+    pkce_enabled = Bool(
+        True,
+        help="""
+        Set to False to disable PKCE verification.
+
+        There should be no reason to disable this,
+        as PKCE is ignored if unsupported by the Hub.
+
+        .. versionadded:: 6.0
+        """,
+        config=True,
+    )
+
     @property
     def cookie_name(self):
         """Use OAuth client_id for cookie name
@@ -1080,7 +1095,7 @@ class HubOAuth(HubAuth):
         """
         Return `(code_verifier, code_challenge, code_challenge_method)` for PKCE
 
-        .. versionadded:: 5.3
+        .. versionadded:: 6.0
 
         .. seealso::
 
@@ -1156,7 +1171,7 @@ class HubOAuth(HubAuth):
     def _default_oauth_states(self):
         return _ExpiringDict(max_age=self.oauth_state_max_age)
 
-    def set_state_cookie(self, handler, next_url=None, code_verifier=None):
+    def set_state_cookie(self, handler, next_url=None, *, code_verifier=None):
         """Generate an OAuth state and store it in a cookie
 
         Parameters
@@ -1165,13 +1180,19 @@ class HubOAuth(HubAuth):
             A tornado RequestHandler
         next_url : str
             The page to redirect to on successful login
-        code_verifier : str
-            The PKCE code verifier
+        code_verifier : str or None, optional
+            The PKCE code verifier, if any.
+            Omit or specify None for no verifier.
 
         Returns
         -------
         state : str
             The OAuth state that has been stored in the cookie (url safe, base64-encoded)
+
+        .. versionchanged:: 6.0
+
+            added code_verifier argument.
+
         """
         extra_state = {}
         if code_verifier:
@@ -1432,20 +1453,20 @@ class HubAuthenticated:
             # add state argument to OAuth url
             # must do this _after_ allowing get_login_url to raise
             # so we don't set unused cookies
-            code_verifier, code_challenge, code_challenge_method = (
-                self.hub_auth.generate_pkce_code_challenge()
-            )
+            params = {}
+            if self.hub_auth.pkce_enabled:
+                code_verifier, code_challenge, code_challenge_method = (
+                    self.hub_auth.generate_pkce_code_challenge()
+                )
+                params["code_challenge"] = code_challenge
+                params["code_challenge_method"] = code_challenge_method
+            else:
+                code_verifier = None
             state = self.hub_auth.set_state_cookie(
                 self, next_url=self.request.uri, code_verifier=code_verifier
             )
-            login_url = url_concat(
-                login_url,
-                {
-                    'state': state,
-                    'code_challenge': code_challenge,
-                    'code_challenge_method': code_challenge_method,
-                },
-            )
+            params['state'] = state
+            login_url = url_concat(login_url, params)
         self._hub_login_url = login_url
         return login_url
 

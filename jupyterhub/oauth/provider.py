@@ -34,8 +34,9 @@ base.is_absolute_uri = is_absolute_uri
 
 
 class JupyterHubRequestValidator(RequestValidator):
-    def __init__(self, db):
+    def __init__(self, db, require_pkce=False):
         self.db = db
+        self.require_pkce = require_pkce
         super().__init__()
 
     def authenticate_client(self, request, *args, **kwargs):
@@ -494,8 +495,7 @@ class JupyterHubRequestValidator(RequestValidator):
 
         .. _`RFC7636`: https://tools.ietf.org/html/rfc7636
         """
-        # TODO: add config to enforce PKCE
-        return False
+        return self.require_pkce
 
     def get_code_challenge(self, code, request):
         """Is called for every "token" requests.
@@ -772,9 +772,15 @@ class JupyterHubOAuthServer(WebApplicationServer):
             return client
 
 
-def make_provider(session_factory, url_prefix, login_url, **oauth_server_kwargs):
+def make_provider(
+    session_factory, url_prefix, login_url, *, require_pkce=False, **oauth_server_kwargs
+):
     """Make an OAuth provider"""
     db = session_factory()
-    validator = JupyterHubRequestValidator(db)
+    validator = JupyterHubRequestValidator(db, require_pkce=require_pkce)
     server = JupyterHubOAuthServer(db, validator, **oauth_server_kwargs)
+    # attach validator to server as attribute
+    # oauthlib doesn't provide a public handle via server.
+    # we only need this for tests.
+    server._validator = validator
     return server
