@@ -1,14 +1,14 @@
 """pkce
 
 Revision ID: afd65840b69e
-Revises: 4621fec11365
+Revises: be8ecf03ddac
 Create Date: 2024-10-21 11:14:43.079782
 
 """
 
 # revision identifiers, used by Alembic.
 revision = 'afd65840b69e'
-down_revision = '4621fec11365'
+down_revision = 'be8ecf03ddac'
 branch_labels = None
 depends_on = None
 
