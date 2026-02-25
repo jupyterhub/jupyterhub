@@ -193,6 +193,7 @@ class APIHandler(BaseHandler):
 
         model = {
             'name': orm_spawner.name,
+            'display_name': orm_spawner.display_name,
             'full_name': f"{orm_spawner.user.name}/{orm_spawner.name}",
             'last_activity': isoformat(orm_spawner.last_activity),
             'started': isoformat(orm_spawner.started),

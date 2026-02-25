@@ -1004,7 +1004,9 @@ class BaseHandler(RequestHandler):
     def active_server_limit(self):
         return self.settings.get('active_server_limit', 0)
 
-    async def spawn_single_user(self, user, server_name='', options=None):
+    async def spawn_single_user(
+        self, user, server_name='', display_name='', options=None
+    ):
         # in case of error, include 'try again from /hub/home' message
         if self.authenticator.refresh_pre_spawn:
             auth_user = await self.refresh_auth(user, force=True)
@@ -1025,6 +1027,7 @@ class BaseHandler(RequestHandler):
                 )
                 self.log.error(error_message)
                 raise web.HTTPError(400, error_message)
+
             user_server_name = f'{user.name}:{server_name}'
 
         if server_name in user.spawners and user.spawners[server_name].pending:
@@ -1096,7 +1099,7 @@ class BaseHandler(RequestHandler):
 
         self.log.debug("Initiating spawn for %s", user_server_name)
 
-        spawn_future = user.spawn(server_name, options, handler=self)
+        spawn_future = user.spawn(server_name, display_name, options, handler=self)
 
         self.log.debug(
             "%i%s concurrent spawns",

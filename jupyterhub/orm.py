@@ -412,6 +412,7 @@ class Spawner(Base):
 
     state = Column(JSONDict)
     name = Column(Unicode(255))
+    display_name = Column(Unicode(255))
 
     started = Column(DateTime)
     last_activity = Column(DateTime, nullable=True)
