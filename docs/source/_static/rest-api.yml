@@ -2138,6 +2138,7 @@ components:
             servers: Start and stop user servers.
             read:servers: Read users’ names and their server models (excluding 
               the server state).
+            start:servers: Start users' servers. (added in JupyterHub 6)
             delete:servers: Stop and delete users' servers.
             tokens: Read, write, create and delete user tokens.
             read:tokens: Read user tokens.
