@@ -71,7 +71,8 @@ Here is a sample of organizations that use JupyterHub:
   Minnesota Supercomputing Institute, ALCF, CERN, Lawrence Livermore National Laboratory, HUNT
 - **Online communities**: Pangeo, Quantopian, mybinder.org, MathHub, Open Humans
 - **Computing infrastructure providers**: NERSC, San Diego Supercomputing Center, Compute Canada
-- **Companies**: Capital One, SANDVIK code, Globus
+- **Companies**: Capital One, Sandvik, Globus
+- **Public authorities**: Skatteverket (Sweden), Finansinspektionen (Sweden)
 
 See the [Gallery of JupyterHub deployments](gallery-of-deployments) for
 a more complete list of JupyterHub deployments at institutions.
