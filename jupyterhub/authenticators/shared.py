@@ -1,6 +1,6 @@
 from secrets import compare_digest
 
-from traitlets import Unicode, validate
+from traitlets import Dict, List, Unicode, validate
 
 from ..auth import Authenticator
 
@@ -102,6 +102,36 @@ class SharedPasswordAuthenticator(Authenticator):
             )
         return new
 
+    password_groups = Dict(
+        List(Unicode()),
+        key_trait=Unicode(),
+        config=True,
+        help="""
+        Assign groups to users based on the password they use.
+
+        Based on the password used, assign the user a set of groups.
+        Key is the password, and value is the list of groups that should be assigned.
+        """,
+    )
+
+    @validate("password_groups")
+    def _validate_password_groups(self, proposal):
+        new = proposal.value
+        trait_name = f"{self.__class__.__name__}.{proposal.trait.name}"
+        clsname = self.__class__.__name__
+
+        if not new:
+            # Not set, is ok
+            return
+
+        if not self.manage_groups:
+            # It is always a mistake to have password_groups set without manage_groups set
+            raise ValueError(
+                f"{trait_name} is set, but {clsname}.manage_groups is not set. Explicitly set {clsname}.manage_groups to True"
+            )
+
+        return new
+
     def check_allow_config(self):
         """Validate and warn about any suspicious allow config"""
         super().check_allow_config()
@@ -131,6 +161,11 @@ class SharedPasswordAuthenticator(Authenticator):
                     " No non-admin users will be able to login."
                 )
 
+        if self.password_groups and not self.manage_groups:
+            self.log.error(
+                f"{clsname}.password_groups is set, but {clsname}.manage_groups is *not* set, so groups will not be assigned"
+            )
+
     async def authenticate(self, handler, data):
         """Checks against shared password"""
         if data["username"] in self.admin_users:
@@ -138,12 +173,19 @@ class SharedPasswordAuthenticator(Authenticator):
             if self.admin_password and compare_digest(
                 data["password"], self.admin_password
             ):
-                return {"name": data["username"], "admin": True}
+                return {"name": data["username"], "admin": True, "groups": []}
         else:
             if self.user_password and compare_digest(
                 data["password"], self.user_password
             ):
                 # Anyone logging in with the standard password is *never* admin
-                return {"name": data["username"], "admin": False}
+                return {"name": data["username"], "admin": False, "groups": []}
+
+            for group_password in self.password_groups:
+                if compare_digest(data["password"], group_password):
+                    return {
+                        "name": data["username"],
+                        "groups": self.password_groups[group_password],
+                    }
 
         return None
