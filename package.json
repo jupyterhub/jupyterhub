@@ -16,6 +16,7 @@
     "jsx:run": "npm run --prefix jsx"
   },
   "devDependencies": {
+    "all-contributors-cli": "^6.26.1",
     "sass": "^1.74.1"
   },
   "dependencies": {
