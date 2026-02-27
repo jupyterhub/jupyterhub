@@ -116,6 +116,51 @@ async def test_empty_passwords():
     assert not authorized
 
 
+async def test_manage_groups_validation():
+    with pytest.raises(
+        ValueError,
+        match='SharedPasswordAuthenticator.password_groups is set, but SharedPasswordAuthenticator.manage_groups is not set. Explicitly set SharedPasswordAuthenticator.manage_groups to True',
+    ):
+        SharedPasswordAuthenticator(
+            allow_all=True,
+            admin_users={"admin"},
+            user_password="",
+            admin_password="",
+            manage_groups=False,
+            password_groups={"test": ["hello"]},
+        )
+
+
+async def test_password_groups():
+    authenticator = SharedPasswordAuthenticator(
+        allow_all=True,
+        admin_users={"admin"},
+        user_password="passwordpassword",
+        admin_password="",
+        password_groups={"test-1": ["group-a", "group-b"], "test-2": ["group-c"]},
+        manage_groups=True,
+    )
+    authorized = await authenticator.get_authenticated_user(
+        None, {'username': 'user-1', 'password': 'test-1'}
+    )
+    assert authorized
+    assert authorized["groups"] == ["group-a", "group-b"]
+
+    # Login as same user, different groups
+    authorized = await authenticator.get_authenticated_user(
+        None, {'username': 'user-1', 'password': 'test-2'}
+    )
+    assert authorized
+    assert authorized["groups"] == ["group-c"]
+
+    # Login as same user, user password, no groups
+    authorized = await authenticator.get_authenticated_user(
+        None, {'username': 'user-1', 'password': 'passwordpassword'}
+    )
+    assert authorized
+    assert authorized["groups"] == []
+
+
 @pytest.mark.parametrize(
     "auth_config, warns, not_warns",
     [
