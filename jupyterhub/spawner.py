@@ -273,6 +273,12 @@ class Spawner(LoggingConfigurable):
             return self.orm_spawner.name
         return ''
 
+    @property
+    def display_name(self):
+        if self.orm_spawner:
+            return self.orm_spawner.display_name
+        return ''
+
     internal_ssl = Bool(False)
     internal_trust_bundles = Dict()
     internal_certs_location = Unicode('')
