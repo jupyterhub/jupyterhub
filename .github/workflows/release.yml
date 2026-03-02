@@ -74,7 +74,7 @@ jobs:
 
       # ref: https://github.com/actions/upload-artifact#readme
       - name: upload dists
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v5
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: ${{ github.repository.name }}-dist
           path: dist/
@@ -91,7 +91,7 @@ jobs:
 
     steps:
       - name: Get release artifacts
-        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v5
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
         with:
           name: ${{ github.repository.name }}-dist
           path: dist/
