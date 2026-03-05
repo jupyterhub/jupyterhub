@@ -45,7 +45,7 @@ Contributors to major version bumps in JupyterHub include:
 #### Contributors to this release
 
 The following people contributed discussions, new ideas, code and documentation contributions, and review.
-See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/#how-does-this-tool-define-contributions-in-the-reports).
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest)
 
 ([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2025-10-24&to=2025-12-11&type=c))
 
@@ -65,7 +65,7 @@ but still accessing the hub over https.
 #### Contributors to this release
 
 The following people contributed discussions, new ideas, code and documentation contributions, and review.
-See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/#how-does-this-tool-define-contributions-in-the-reports).
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/)
 
 ([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2025-10-17&to=2025-10-24&type=c))
 
@@ -101,8 +101,7 @@ Notably:
 #### Contributors to this release
 
 The following people contributed discussions, new ideas, code and documentation contributions, and review.
-See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/#how-does-this-tool-define-contributions-in-the-reports).
-
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/)
 ([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2025-10-06&to=2025-10-17&type=c))
 
 @choldgraf ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Acholdgraf+updated%3A2025-10-06..2025-10-17&type=Issues)) | @krassowski ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Akrassowski+updated%3A2025-10-06..2025-10-17&type=Issues)) | @kreuzert ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Akreuzert+updated%3A2025-10-06..2025-10-17&type=Issues)) | @manics ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amanics+updated%3A2025-10-06..2025-10-17&type=Issues)) | @minrk ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk+updated%3A2025-10-06..2025-10-17&type=Issues))
@@ -167,7 +166,7 @@ No special upgrade steps should be required.
 #### Contributors to this release
 
 The following people contributed discussions, new ideas, code and documentation contributions, and review.
-See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/#how-does-this-tool-define-contributions-in-the-reports).
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest)
 
 ([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2025-04-15&to=2025-10-06&type=c))
 
@@ -259,7 +258,7 @@ which has the following consequences:
 #### Contributors to this release
 
 The following people contributed discussions, new ideas, code and documentation contributions, and review.
-See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/#how-does-this-tool-define-contributions-in-the-reports).
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/)
 
 ([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2024-10-21&to=2025-04-15&type=c))
 
@@ -287,7 +286,7 @@ See [our definition of contributors](https://github-activity.readthedocs.io/en/l
 #### Contributors to this release
 
 The following people contributed discussions, new ideas, code and documentation contributions, and review.
-See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/#how-does-this-tool-define-contributions-in-the-reports).
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/)
 
 ([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2024-10-01&to=2024-10-21&type=c))
 
@@ -335,7 +334,7 @@ See [our definition of contributors](https://github-activity.readthedocs.io/en/l
 #### Contributors to this release
 
 The following people contributed discussions, new ideas, code and documentation contributions, and review.
-See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/#how-does-this-tool-define-contributions-in-the-reports).
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/)
 
 ([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2024-07-31&to=2024-10-01&type=c))
 
@@ -381,7 +380,7 @@ The [full advisory][CVE-2024-41942] will be published 7 days after the release.
 #### Contributors to this release
 
 The following people contributed discussions, new ideas, code and documentation contributions, and review.
-See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/#how-does-this-tool-define-contributions-in-the-reports).
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/)
 
 ([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2024-05-24&to=2024-07-30&type=c))
 
@@ -560,7 +559,7 @@ Changes that are likely to require effort to upgrade:
 #### Contributors to this release
 
 The following people contributed discussions, new ideas, code and documentation contributions, and review.
-See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/#how-does-this-tool-define-contributions-in-the-reports).
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/)
 
 ([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2023-08-10&to=2024-05-24&type=c))
 
@@ -590,7 +589,7 @@ The [full advisory][CVE-2024-41942] will be published 7 days after the release.
 #### Contributors to this release
 
 The following people contributed discussions, new ideas, code and documentation contributions, and review.
-See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/#how-does-this-tool-define-contributions-in-the-reports).
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/)
 
 ([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2024-03-30&to=2024-04-04&type=c))
 
@@ -607,7 +606,7 @@ See [our definition of contributors](https://github-activity.readthedocs.io/en/l
 #### Contributors to this release
 
 The following people contributed discussions, new ideas, code and documentation contributions, and review.
-See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/#how-does-this-tool-define-contributions-in-the-reports).
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/)
 
 ([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2024-03-26&to=2024-03-30&type=c))
 
@@ -624,7 +623,7 @@ See [our definition of contributors](https://github-activity.readthedocs.io/en/l
 #### Contributors to this release
 
 The following people contributed discussions, new ideas, code and documentation contributions, and review.
-See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/#how-does-this-tool-define-contributions-in-the-reports).
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/)
 
 ([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2024-03-25&to=2024-03-26&type=c))
 
@@ -643,7 +642,7 @@ See [our definition of contributors](https://github-activity.readthedocs.io/en/l
 #### Contributors to this release
 
 The following people contributed discussions, new ideas, code and documentation contributions, and review.
-See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/#how-does-this-tool-define-contributions-in-the-reports).
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/)
 
 ([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2024-03-23&to=2024-03-25&type=c))
 
@@ -663,7 +662,7 @@ particularly jupyter-server-proxy.
 #### Contributors to this release
 
 The following people contributed discussions, new ideas, code and documentation contributions, and review.
-See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/#how-does-this-tool-define-contributions-in-the-reports).
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/)
 
 ([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2024-03-20&to=2024-03-23&type=c))
 
@@ -712,7 +711,7 @@ For more information on securely deploying JupyterHub, see the [web security doc
 #### Contributors to this release
 
 The following people contributed discussions, new ideas, code and documentation contributions, and review.
-See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/#how-does-this-tool-define-contributions-in-the-reports).
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/)
 
 ([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2023-08-10&to=2024-03-19&type=c))
 
@@ -742,7 +741,7 @@ See [our definition of contributors](https://github-activity.readthedocs.io/en/l
 #### Contributors to this release
 
 The following people contributed discussions, new ideas, code and documentation contributions, and review.
-See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/#how-does-this-tool-define-contributions-in-the-reports).
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/)
 
 ([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2023-06-08&to=2023-08-10&type=c))
 
@@ -788,7 +787,7 @@ See [our definition of contributors](https://github-activity.readthedocs.io/en/l
 #### Contributors to this release
 
 The following people contributed discussions, new ideas, code and documentation contributions, and review.
-See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/#how-does-this-tool-define-contributions-in-the-reports).
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/)
 
 ([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2023-04-20&to=2023-06-07&type=c))
 
@@ -923,7 +922,7 @@ In addition to these, thanks to contributions from this years Outreachy interns,
 #### Contributors to this release
 
 The following people contributed discussions, new ideas, code and documentation contributions, and review.
-See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/#how-does-this-tool-define-contributions-in-the-reports).
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/)
 
 ([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2022-12-05&to=2023-04-20&type=c))
 

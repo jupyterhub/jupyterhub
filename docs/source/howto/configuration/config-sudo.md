@@ -167,7 +167,7 @@ You may also be interested in limiting the amount of CPU any process can use
 on your server. `cpulimit` is a useful tool that is available for many Linux
 distributions' packaging system. This can be used to keep any user's process
 from using too much CPU cycles. You can configure it accoring to [these
-instructions](https://ubuntuforums.org/showthread.php?t=992706).
+instructions](https://discourse.ubuntu.com/)
 
 ### Shadow group (FreeBSD)
 

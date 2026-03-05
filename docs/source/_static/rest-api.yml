@@ -81,14 +81,39 @@ paths:
       security:
         - oauth2:
             - read:hub
+
+  /users/{user}/server/{server_name}/progess:
+    get:
+      operationId: get_server_progress
+      summary: Get server start
+      tags:
+        - Servers
+      description: |
+        Returns a stream of events representing the progress of a server starting.
+      parameters:
+        - name: user
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: server_name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Event stream of progress
+      security:
+        - oauth2:
+            - read:hub
   /user:
     get:
       operationId: get-current-user
       summary: Get current user
-      description: |
-        Returns the User model for the owner of the authenticating token.
-        Includes information about the requesting token itself,
-        such as the currently authorized scopes.
+      description: Returns the User model for the owner of the authenticating 
+        token. Includes information about the requesting token itself, such as 
+        the currently authorized scopes.
       responses:
         200:
           description: |
@@ -306,30 +331,17 @@ paths:
                   format: date-time
                 servers:
                   type: object
-                  properties:
-                    <server name>:
-                      required:
-                        - last_activity
-                      type: object
-                      properties:
-                        last_activity:
-                          type: string
-                          description: |
-                            Timestamp of last-seen activity on this server.
-                          format: date-time
-                      description: |
-                        Activity for a single server.
-                  description: |
-                    Register activity for specific servers by name.
-                    The keys of this dict are the names of servers.
-                    The default server has an empty name ('').
-              example:
-                last_activity: 2019-02-06T12:54:14Z
-                servers:
-                  "":
-                    last_activity: 2019-02-06T12:54:14Z
-                  gpu:
-                    last_activity: 2019-02-06T12:54:14Z
+                  additionalProperties:
+                    type: object
+                    required:
+                      - last_activity
+                    properties:
+                      last_activity:
+                        type: string
+                        description: |
+                          Timestamp of last-seen activity on this server.
+                        format: date-time
+                        example: 2019-02-06T12:54:14Z
         required: false
       responses:
         200:
