@@ -324,6 +324,7 @@ class APIHandler(BaseHandler):
             'read:users': {
                 'kind',
                 'name',
+                'user_info',
                 'admin',
                 'roles',
                 'groups',
@@ -332,12 +333,12 @@ class APIHandler(BaseHandler):
                 'created',
                 'last_activity',
             },
-            'read:users:name': {'kind', 'name', 'admin'},
-            'read:users:groups': {'kind', 'name', 'groups'},
-            'read:users:activity': {'kind', 'name', 'last_activity'},
-            'read:servers': {'kind', 'name', 'servers'},
-            'read:roles:users': {'kind', 'name', 'roles', 'admin'},
-            'admin:auth_state': {'kind', 'name', 'auth_state'},
+            'read:users:name': {'kind', 'name', 'user_info', 'admin'},
+            'read:users:groups': {'kind', 'name', 'user_info', 'groups'},
+            'read:users:activity': {'kind', 'name', 'user_info', 'last_activity'},
+            'read:servers': {'kind', 'name', 'user_info', 'servers'},
+            'read:roles:users': {'kind', 'name', 'user_info', 'roles', 'admin'},
+            'admin:auth_state': {'kind', 'name', 'user_info', 'auth_state'},
         }
         allowed_keys = set()
         model = self._filter_model(
@@ -373,6 +374,9 @@ class APIHandler(BaseHandler):
                 # leave present and empty
                 # if request has access to read servers in general
                 model["servers"] = servers
+
+            if "user_info" in allowed_keys:
+                model["user_info"] = user.user_info
 
         return model
 

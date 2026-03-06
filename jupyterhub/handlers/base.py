@@ -908,6 +908,7 @@ class BaseHandler(RequestHandler):
         if isinstance(authenticated, str):
             authenticated = {'name': authenticated}
         username = authenticated['name']
+        user_info = authenticated.get('user_info', None)
         auth_state = authenticated.get('auth_state')
         admin = authenticated.get('admin')
         refreshing = user is not None
@@ -921,6 +922,8 @@ class BaseHandler(RequestHandler):
             if new_user:
                 user = self.user_from_username(username)
                 await maybe_future(self.authenticator.add_user(user))
+
+        user.user_info = user_info
         # Only set `admin` if the authenticator returned an explicit value.
         if admin is not None and admin != user.admin:
             user.admin = admin
