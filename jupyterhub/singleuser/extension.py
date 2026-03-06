@@ -87,7 +87,21 @@ class JupyterHubUser(User):
 
     def __init__(self, hub_user):
         self.hub_user = hub_user
-        super().__init__(username=self.hub_user["name"])
+        kwargs = {
+            "username": hub_user["name"],
+        }
+        user_info = hub_user.get("user_info", {})
+        if "name" in user_info:
+            kwargs["name"] = user_info["name"]
+        if "display_name" in user_info:
+            kwargs["display_name"] = user_info["display_name"]
+        if "initials" in user_info:
+            kwargs["initials"] = user_info["initials"]
+        if "avatar_url" in user_info:
+            kwargs["avatar_url"] = user_info["avatar_url"]
+        if "color" in user_info:
+            kwargs["color"] = user_info["color"]
+        super().__init__(**kwargs)
 
 
 class JupyterHubOAuthCallbackHandler(HubOAuthCallbackHandler):
