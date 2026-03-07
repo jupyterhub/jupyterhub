@@ -614,7 +614,7 @@ class UserTokenAPIHandler(APIHandler):
 class UserServerAPIHandler(APIHandler):
     """Start and stop single-user servers"""
 
-    @needs_scope('servers')
+    @needs_scope('start:servers')
     async def post(self, user_name, server_name=''):
         user = self.find_user(user_name)
         if user is None:
