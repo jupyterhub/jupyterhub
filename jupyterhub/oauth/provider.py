@@ -34,8 +34,9 @@ base.is_absolute_uri = is_absolute_uri
 
 
 class JupyterHubRequestValidator(RequestValidator):
-    def __init__(self, db):
+    def __init__(self, db, require_pkce=False):
         self.db = db
+        self.require_pkce = require_pkce
         super().__init__()
 
     def authenticate_client(self, request, *args, **kwargs):
@@ -259,6 +260,8 @@ class JupyterHubRequestValidator(RequestValidator):
 
         orm_code = orm.OAuthCode(
             code=code['code'],
+            code_challenge=request.code_challenge,
+            code_challenge_method=request.code_challenge_method,
             # oauth has 5 minutes to complete
             expires_at=int(orm.OAuthCode.now() + 300),
             scopes=list(request.scopes),
@@ -463,7 +466,87 @@ class JupyterHubRequestValidator(RequestValidator):
         request.user = orm_code.user
         request.session_id = orm_code.session_id
         request.scopes = orm_code.scopes
+        # attach PKCE attributes
+        request.code_challenge = orm_code.code_challenge
+        request.code_challenge_method = orm_code.code_challenge_method
         return True
+
+    def is_pkce_required(self, client_id, request):
+        """Determine if current request requires PKCE. Default, False.
+        This is called for both "authorization" and "token" requests.
+
+        Override this method by ``return True`` to enable PKCE for everyone.
+        You might want to enable it only for public clients.
+        Note that PKCE can also be used in addition of a client authentication.
+
+        OAuth 2.0 public clients utilizing the Authorization Code Grant are
+        susceptible to the authorization code interception attack.  This
+        specification describes the attack as well as a technique to mitigate
+        against the threat through the use of Proof Key for Code Exchange
+        (PKCE, pronounced "pixy"). See `RFC7636`_.
+
+        :param client_id: Client identifier.
+        :param request: OAuthlib request.
+        :type request: oauthlib.common.Request
+        :rtype: True or False
+
+        Method is used by:
+            - Authorization Code Grant
+
+        .. _`RFC7636`: https://tools.ietf.org/html/rfc7636
+        """
+        return self.require_pkce
+
+    def get_code_challenge(self, code, request):
+        """Is called for every "token" requests.
+
+        When the server issues the authorization code in the authorization
+        response, it MUST associate the ``code_challenge`` and
+        ``code_challenge_method`` values with the authorization code so it can
+        be verified later.
+
+        Typically, the ``code_challenge`` and ``code_challenge_method`` values
+        are stored in encrypted form in the ``code`` itself but could
+        alternatively be stored on the server associated with the code.  The
+        server MUST NOT include the ``code_challenge`` value in client requests
+        in a form that other entities can extract.
+
+        Return the ``code_challenge`` associated to the code.
+        If ``None`` is returned, code is considered to not be associated to any
+        challenges.
+
+        :param code: Authorization code.
+        :param request: OAuthlib request.
+        :type request: oauthlib.common.Request
+        :rtype: code_challenge string
+
+        Method is used by:
+            - Authorization Code Grant - when PKCE is active
+
+        """
+        # attached in validate_code
+        return request.code_challenge
+
+    def get_code_challenge_method(self, code, request):
+        """Is called during the "token" request processing, when a
+        ``code_verifier`` and a ``code_challenge`` has been provided.
+
+        See ``.get_code_challenge``.
+
+        Must return ``plain`` or ``S256``. You can return a custom value if you have
+        implemented your own ``AuthorizationCodeGrant`` class.
+
+        :param code: Authorization code.
+        :param request: OAuthlib request.
+        :type request: oauthlib.common.Request
+        :rtype: code_challenge_method string
+
+        Method is used by:
+            - Authorization Code Grant - when PKCE is active
+
+        """
+        # persisted in validate_code
+        return request.code_challenge_method
 
     def validate_grant_type(
         self, client_id, grant_type, client, request, *args, **kwargs
@@ -689,9 +772,15 @@ class JupyterHubOAuthServer(WebApplicationServer):
             return client
 
 
-def make_provider(session_factory, url_prefix, login_url, **oauth_server_kwargs):
+def make_provider(
+    session_factory, url_prefix, login_url, *, require_pkce=False, **oauth_server_kwargs
+):
     """Make an OAuth provider"""
     db = session_factory()
-    validator = JupyterHubRequestValidator(db)
+    validator = JupyterHubRequestValidator(db, require_pkce=require_pkce)
     server = JupyterHubOAuthServer(db, validator, **oauth_server_kwargs)
+    # attach validator to server as attribute
+    # oauthlib doesn't provide a public handle via server.
+    # we only need this for tests.
+    server._validator = validator
     return server
