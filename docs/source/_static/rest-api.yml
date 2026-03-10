@@ -307,17 +307,17 @@ paths:
                 servers:
                   type: object
                   additionalProperties:
-                      type: object
-                      required:
-                        - last_activity
-                      properties:
-                        last_activity:
-                          type: string
-                          description: |
-                            Timestamp of last-seen activity on this server.
-                          format: date-time
-                      description: |
-                        Activity for a single server.
+                    type: object
+                    required:
+                      - last_activity
+                    properties:
+                      last_activity:
+                        type: string
+                        description: |
+                          Timestamp of last-seen activity on this server.
+                        format: date-time
+                    description: |
+                      Activity for a single server.
                   description: |
                     Register activity for specific servers by name.
                     The keys of this dict are the names of servers.
