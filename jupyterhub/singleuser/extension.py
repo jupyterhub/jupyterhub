@@ -157,7 +157,7 @@ class JupyterHubIdentityProvider(IdentityProvider):
             else:
                 code_verifier = None
             state = self.hub_auth.set_state_cookie(
-                self, next_url=self.request.uri, code_verifier=code_verifier
+                handler, next_url=handler.request.uri, code_verifier=code_verifier
             )
             params['state'] = state
             _hub_login_url = url_concat(login_url, params)
