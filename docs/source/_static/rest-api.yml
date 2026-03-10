@@ -306,11 +306,10 @@ paths:
                   format: date-time
                 servers:
                   type: object
-                  properties:
-                    <server name>:
+                  additionalProperties:
+                      type: object
                       required:
                         - last_activity
-                      type: object
                       properties:
                         last_activity:
                           type: string
