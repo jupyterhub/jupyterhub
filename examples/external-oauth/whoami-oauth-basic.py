@@ -6,12 +6,20 @@ so all URLs and requests necessary for OAuth with JupyterHub should be in one pl
 
 import json
 import os
+import secrets
 from urllib.parse import urlencode, urlparse
 
+from oauthlib.oauth2 import Client
 from tornado import log, web
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 from tornado.httputil import url_concat
 from tornado.ioloop import IOLoop
+
+# dict by state id
+state_dict = {}
+
+oauth = Client("client_id_unused")
+PKCE_CHALLENGE_METHOD = "S256"
 
 
 class JupyterHubLoginHandler(web.RequestHandler):
@@ -20,13 +28,14 @@ class JupyterHubLoginHandler(web.RequestHandler):
     this handler both begins and ends the OAuth process
     """
 
-    async def token_for_code(self, code):
+    async def token_for_code(self, code, code_verifier):
         """Complete OAuth by requesting an access token for an oauth code"""
         params = dict(
             client_id=self.settings['client_id'],
             client_secret=self.settings['api_token'],
             grant_type='authorization_code',
             code=code,
+            code_verifier=code_verifier,
             redirect_uri=self.settings['redirect_uri'],
         )
         req = HTTPRequest(
@@ -44,7 +53,17 @@ class JupyterHubLoginHandler(web.RequestHandler):
         if code:
             # code is set, we are the oauth callback
             # complete oauth
-            token = await self.token_for_code(code)
+
+            # get PKCE code_verifier
+            state_id = self.get_argument("state", None)
+            state = state_dict.pop(state_id, None)
+            if not state:
+                raise web.HTTPError(400, "Invalid oauth state")
+
+            # get pkce code verifier
+            code_verifier = state["code_verifier"]
+
+            token = await self.token_for_code(code, code_verifier)
             # login successful, set cookie and redirect back to home
             self.set_secure_cookie('whoami-oauth-token', token)
             self.redirect('/')
@@ -52,6 +71,15 @@ class JupyterHubLoginHandler(web.RequestHandler):
             # we are the login handler,
             # begin oauth process which will come back later with an
             # authorization_code
+            # create pkce arguments
+            state_id = secrets.token_urlsafe(16)
+            code_verifier = oauth.create_code_verifier(64)
+            state_dict[state_id] = {
+                "code_verifier": code_verifier,
+            }
+            code_challenge = oauth.create_code_challenge(
+                code_verifier, PKCE_CHALLENGE_METHOD
+            )
             self.redirect(
                 url_concat(
                     self.settings['authorize_url'],
@@ -59,6 +87,9 @@ class JupyterHubLoginHandler(web.RequestHandler):
                         redirect_uri=self.settings['redirect_uri'],
                         client_id=self.settings['client_id'],
                         response_type='code',
+                        code_challenge=code_challenge,
+                        code_challenge_method=PKCE_CHALLENGE_METHOD,
+                        state=state_id,
                     ),
                 )
             )
