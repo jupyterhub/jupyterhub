@@ -41,7 +41,6 @@ from http import HTTPStatus
 from unittest import mock
 from urllib.parse import urlencode, urlparse
 
-from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 from tornado.httputil import url_concat
 from tornado.log import app_log
 from tornado.web import HTTPError, RequestHandler
@@ -59,6 +58,8 @@ from traitlets import (
     validate,
 )
 from traitlets.config import SingletonConfigurable
+
+from jupyterhub.utils import async_fetch
 
 from .._xsrf_utils import (
     _anonymous_xsrf_id,
@@ -591,10 +592,9 @@ class HubAuth(SingletonConfigurable):
             self.cache[cache_key] = data
         return data
 
-    async def _api_request(self, method, url, **kwargs):
+    async def _api_request(self, method, url, headers={}, **kwargs):
         """Make an API request"""
         allow_403 = kwargs.pop('allow_403', False)
-        headers = kwargs.setdefault('headers', {})
         headers.setdefault('Authorization', f'token {self.api_token}')
         # translate requests args to tornado's
         if self.certfile:
@@ -603,13 +603,13 @@ class HubAuth(SingletonConfigurable):
             kwargs["client_key"] = self.keyfile
         if self.client_ca:
             kwargs["ca_certs"] = self.client_ca
-        req = HTTPRequest(
-            url,
-            method=method,
-            **kwargs,
-        )
+
         try:
-            r = await AsyncHTTPClient().fetch(req, raise_error=False)
+            r = await async_fetch(
+                url, method=method, raise_error=False, headers=headers, **kwargs
+            )
+        except HTTPError as e:
+            pass
         except Exception as e:
             app_log.error("Error connecting to %s: %s", self.api_url, e)
             msg = f"Failed to connect to Hub API at {self.api_url!r}."

@@ -21,18 +21,128 @@ import time
 import uuid
 import warnings
 from binascii import b2a_hex
-from contextlib import aclosing
+from collections.abc import Generator
+from contextlib import aclosing, contextmanager
 from datetime import datetime, timezone
 from functools import lru_cache
 from hmac import compare_digest
 from operator import itemgetter
-from urllib.parse import quote
+from typing import Any
+from urllib.parse import (
+    SplitResult,
+    quote,
+    urlsplit,
+    urlunsplit,
+)
 
 import idna
 from sqlalchemy.exc import SQLAlchemyError
 from tornado import gen, ioloop, web
-from tornado.httpclient import AsyncHTTPClient, HTTPError
+from tornado.httpclient import AsyncHTTPClient, HTTPError, HTTPRequest, HTTPResponse
 from tornado.log import app_log
+from tornado.netutil import Resolver
+
+
+def urlencode_unix_socket_path(socket_path: str) -> str:
+    """Encodes a UNIX socket path string from a socket path for the `http+unix` URI form."""
+    return socket_path.replace("/", "%2F")
+
+
+def urldecode_unix_socket_path(socket_path: str) -> str:
+    """Decodes a UNIX sock path string from an encoded sock path for the `http+unix` URI form."""
+    return socket_path.replace("%2F", "/")
+
+
+def unix_socket_in_use(socket_path: str) -> bool:
+    """Checks whether a UNIX socket path on disk is in use by attempting to connect to it."""
+    if not os.path.exists(socket_path):
+        return False
+
+    try:
+        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        sock.connect(socket_path)
+    except OSError:
+        return False
+    else:
+        return True
+    finally:
+        sock.close()
+
+
+@contextmanager
+def _request_for_tornado_client(
+    urlstring: str, method: str = "GET", body: Any = None, headers: Any = None, **kwargs
+) -> Generator[HTTPRequest, None, None]:
+    """A utility that provides a context that handles
+    HTTP, HTTPS, and HTTP+UNIX request.
+    Creates a tornado HTTPRequest object with a URL
+    that tornado's HTTPClients can accept.
+    If the request is made to a unix socket, temporarily
+    configure the AsyncHTTPClient to resolve the URL
+    and connect to the proper socket.
+    """
+    parts = urlsplit(urlstring)
+    if parts.scheme in ["http", "https"]:
+        pass
+    elif "unix" in parts.scheme:
+        # If unix socket, mimic HTTP.
+        parts = SplitResult(
+            scheme="http",
+            netloc=parts.netloc,
+            path=parts.path,
+            query=parts.query,
+            fragment=parts.fragment,
+        )
+
+        class UnixSocketResolver(Resolver):
+            """A resolver that routes HTTP requests to unix sockets
+            in tornado HTTP clients.
+            Due to constraints in Tornados' API, the scheme of the
+            must be `http` (not `http+unix`). Applications should replace
+            the scheme in URLS before making a request to the HTTP client.
+            """
+
+            def initialize(self, resolver):
+                self.resolver = resolver
+
+            def close(self):
+                self.resolver.close()
+
+            async def resolve(self, host, port, *args, **kwargs):
+                return [(socket.AF_UNIX, urldecode_unix_socket_path(host))]
+
+        resolver = UnixSocketResolver(resolver=Resolver())
+        AsyncHTTPClient.configure(AsyncHTTPClient.configured_class(), resolver=resolver)
+    else:
+        msg = "Unknown URL scheme."
+        raise Exception(msg)
+
+    # Yield the request for the given client.
+    url = urlunsplit(parts)
+    request = HTTPRequest(url, method=method, body=body, headers=headers, **kwargs)
+    yield request
+
+
+async def async_fetch(
+    urlstring: str,
+    method: str = "GET",
+    body: Any = None,
+    headers: Any = None,
+    io_loop: Any = None,
+    raise_error: bool = True,
+    **kwargs,
+) -> HTTPResponse:
+    """
+    Send an asynchronous HTTP, HTTPS, or HTTP+UNIX request
+    to a Tornado Web Server. Returns a tornado HTTPResponse.
+    """
+    with _request_for_tornado_client(
+        urlstring, method=method, body=body, headers=headers, **kwargs
+    ) as request:
+        response = await AsyncHTTPClient(io_loop).fetch(
+            request, raise_error=raise_error
+        )
+    return response
 
 
 def _bool_env(key, default=False):
@@ -99,7 +209,18 @@ def isoformat(dt):
     return dt.isoformat() + 'Z'
 
 
-def can_connect(ip, port):
+def can_connect(address, port=None):
+    """Check if we can connect to an address (ip or socket path) and optional port.
+
+    Return True if we can connect, False otherwise.
+    """
+    if port:
+        return can_connect_ip(address, port)
+    else:
+        return unix_socket_in_use(urldecode_unix_socket_path(address))
+
+
+def can_connect_ip(ip, port):
     """Check if we can connect to an ip:port.
 
     Return True if we can connect, False otherwise.
@@ -264,22 +385,22 @@ async def exponential_backoff(
     raise asyncio.TimeoutError(fail_message)
 
 
-async def wait_for_server(ip, port, timeout=10):
-    """Wait for any server to show up at ip:port."""
-    if ip in {'', '0.0.0.0'}:
-        ip = '127.0.0.1'
-    elif ip == "::":
-        ip = "::1"
-    display_ip = fmt_ip_url(ip)
-    app_log.debug("Waiting %ss for server at %s:%s", timeout, display_ip, port)
+async def wait_for_server(address, port, timeout=10):
+    """Wait for any server to show up at address:port."""
+    if port:
+        display_address = f"{fmt_ip_url(address)}:{port}"
+    else:
+        display_address = address
+
+    app_log.debug("Waiting %ss for server at %s", timeout, display_address)
     tic = time.perf_counter()
     await exponential_backoff(
-        lambda: can_connect(ip, port),
-        f"Server at {display_ip}:{port} didn't respond in {timeout} seconds",
+        lambda: can_connect(address, port),
+        f"Server at {display_address} didn't respond in {timeout} seconds",
         timeout=timeout,
     )
     toc = time.perf_counter()
-    app_log.debug("Server at %s:%s responded in %.2fs", display_ip, port, toc - tic)
+    app_log.debug("Server at %s responded in %.2fs", display_address, toc - tic)
 
 
 async def wait_for_http_server(url, timeout=10, ssl_context=None):
@@ -287,16 +408,16 @@ async def wait_for_http_server(url, timeout=10, ssl_context=None):
 
     Any non-5XX response code will do, even 404.
     """
-    client = AsyncHTTPClient()
+    request_args = {'follow_redirects': False}
     if ssl_context:
-        client.ssl_options = ssl_context
+        request_args['ssl_options'] = ssl_context
 
     app_log.debug("Waiting %ss for server at %s", timeout, url)
     tic = time.perf_counter()
 
     async def is_reachable():
         try:
-            r = await client.fetch(url, follow_redirects=False)
+            r = await async_fetch(url, **request_args)
             return r
         except HTTPError as e:
             if e.code >= 500:

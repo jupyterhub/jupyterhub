@@ -744,6 +744,11 @@ class JupyterHub(Application):
 
         This is the address on which the proxy will bind.
         Sets protocol, ip, base_url
+
+        For example:
+
+            ""http://:8000""
+            "unix+http://%2Fsrv%2Fjupyterhub%2Fproxy.sock"
         """,
     ).tag(config=True)
 
@@ -752,7 +757,9 @@ class JupyterHub(Application):
         """ensure protocol field of bind_url matches ssl"""
         v = proposal['value']
         proto, sep, rest = v.partition('://')
-        if self.ssl_cert and proto != 'https':
+        if proto == 'unix+http':
+            return v
+        elif self.ssl_cert and proto != 'https':
             return 'https' + sep + rest
         elif proto != 'http' and not self.ssl_cert:
             return 'http' + sep + rest
