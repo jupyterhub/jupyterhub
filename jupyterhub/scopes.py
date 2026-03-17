@@ -480,24 +480,20 @@ def _expand_self_scope(username):
     Returns:
       expanded scopes (set): set of expanded scopes covering standard user privileges
     """
-    scope_list = [
+    raw_scope_list = [
         'read:users',
-        'read:users:name',
-        'read:users:groups',
         'users:shares',
-        'read:users:shares',
         'read:shares',
         'users:activity',
-        'read:users:activity',
         'servers',
-        'delete:servers',
-        'read:servers',
         'tokens',
-        'read:tokens',
         'access:servers',
     ]
+    expanded_scopes = frozenset()
+    for scope in raw_scope_list:
+        expanded_scopes |= _expand_scope(scope)
     # return immutable frozenset because the result is cached
-    return frozenset(f"{scope}!user={username}" for scope in scope_list)
+    return frozenset(f"{scope}!user={username}" for scope in expanded_scopes)
 
 
 @lru_cache(maxsize=65535)
