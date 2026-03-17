@@ -47,6 +47,7 @@ You can also read more in detail [here](https://www.oauth.com/oauth2-servers/def
 - **code**: A short-lived temporary secret that the **client** exchanges
   for a **token** at the conclusion of OAuth,
   in what's generally called the "OAuth callback handler."
+- **PKCE**: pronounced "pixie", this is an additional layer of security to verify the oauth process.
 
 ## One oauth flow
 
@@ -373,3 +374,37 @@ based on the authentication/authorization state of the browser:
   If the second request fails to detect the authentication that should have been established during the redirect,
   it will start the authentication redirect process over again,
   and keep redirecting in a loop until the browser balks.
+
+### PKCE
+
+PKCE stands for "Proof Key for Code Exchange."
+JupyterHub added support for PKCE in 6.0,
+as it is expected to be [required in OAuth 2.1](https://oauth.net/2.1/).
+PKCE is an additional layer of security in the OAuth flow.
+
+PKCE adds two arguments to the OAuth flow:
+
+1. a `code_verifier`, which is a random secret, unique to each OAuth flow
+1. a `code_challenge`, which is the sha256 hash of the verifier
+
+When PKCE is enabled, the initial OAuth `authorize` request includes the `code_challenge`, and the final token exchange includes the `code_verifier`.
+The OAuth provider makes sure these two values match before issuing a token and completing the oauth flow.
+
+For backward-compatibility, in JupyterHub 6.0, PKCE is not _enforced_ by default, but it is _enabled_ by default.
+That means if an OAuth request does not send the `code_challenge`, there will be no check for the `code_verifier`, which means older clients that do not yet support PKCE will not break.
+However, if a `code_challenge` is sent, the `code_verifier` will be checked and required before completing OAuth.
+
+For clients, it is always safe to enable PKCE, even with old versions of JupyterHub, because OAuth providers MUST ignore unhandled parameters.
+
+For enhanced security, JupyterHub deployments may set
+
+```python
+c.JupyterHub.oauth_require_pkce = True
+```
+
+This _only_ changes JupyterHub's behavior when no PKCE arguments are passed, as `jupyterhub-singleuser` and services authentication always send PKCE arguments.
+This should work as long as `jupyterhub` is up-to-date in the user environments, and any _custom_ OAuth-enabled services also implement PKCE.
+
+```{seealso}
+https://datatracker.ietf.org/doc/html/rfc7636#section-4
+```

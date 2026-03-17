@@ -653,3 +653,67 @@ async def test_oauth_logout(app, mockservice_url, create_user_with_scopes):
     reply = r.json()
     sub_reply = {key: reply.get(key, 'missing') for key in ('kind', 'name')}
     assert sub_reply == {'name': name, 'kind': 'user'}
+
+
+# cases:
+# - wrong verifier (always error)
+# - correct (always ok)
+# - missing, not required (ok)
+# - missing, required (error)
+@pytest.mark.parametrize(
+    "case, required, expect_success",
+    [
+        ("missing", False, True),
+        ("missing", True, False),
+        ("correct", True, True),
+        ("correct", False, True),
+        ("incorrect", True, False),
+        ("incorrect", False, False),
+    ],
+)
+async def test_pkce(
+    app, mockservice_url, create_user_with_scopes, case, required, expect_success
+):
+    """Test PKCE validation"""
+    user = create_user_with_scopes("access:services")
+    app.db.commit()
+
+    s = AsyncSession()
+    name = user.name
+    s.cookies = await app.login_user(name)
+
+    url = public_url(app, mockservice_url) + "owhoami"
+    url_with_param = url_concat(url, {"pkce": case})
+
+    test_settings = {}
+    test_settings.update(app.tornado_settings)
+    test_settings["oauth_no_confirm_list"] = {mockservice_url.oauth_client_id}
+    with (
+        mock.patch.object(app.oauth_provider._validator, "require_pkce", required),
+        mock.patch.dict(app.tornado_settings, test_settings),
+    ):
+        r = await s.get(url_with_param)
+
+    # useful to debug failures:
+    print(r.url, [_r.url for _r in r.history])
+
+    dest_url, _, query_s = r.url.partition("?")
+    query = parse_qs(query_s)
+    if not expect_success:
+        assert dest_url == public_url(app, mockservice_url) + "oauth_callback"
+        if case == "incorrect":
+            # incorrect verifier, completes oauth redirect,
+            # fails to issue code
+            assert "code" in query
+            assert r.status_code == 500
+            # verify error page? mockservice doesn't forward this
+        else:
+            # missing verifier, code not issued,
+            # oauth redirects with ?error=invalid_request
+            assert query.get("error") == ["invalid_request"]
+            assert r.status_code == 400
+        return
+
+    # expect_success: all okay
+    assert dest_url == url
+    assert r.status_code == 200
