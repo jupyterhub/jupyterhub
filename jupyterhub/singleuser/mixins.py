@@ -173,13 +173,11 @@ flags = {
 class SingleUserNotebookAppMixin(Configurable):
     """A Subclass of the regular NotebookApp that is aware of the parent multiuser context."""
 
-    description = dedent(
-        """
+    description = dedent("""
     Single-user server for JupyterHub. Extends the Jupyter Notebook server.
 
     Meant to be invoked by JupyterHub Spawners, not directly.
-    """
-    )
+    """)
 
     examples = ""
     subcommands = {}

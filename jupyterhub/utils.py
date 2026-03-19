@@ -710,7 +710,7 @@ def _parse_accept_header(accept):
 
         q = 1.0
         for part in parts:
-            (key, _, value) = part.partition("=")
+            key, _, value = part.partition("=")
             key = key.strip()
             if key == "q":
                 try:

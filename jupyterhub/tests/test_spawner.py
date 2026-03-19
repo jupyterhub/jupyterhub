@@ -263,7 +263,7 @@ async def test_shell_cmd(db, tmpdir, request):
     db.commit()
     s.server = Server.from_orm(server)
     db.commit()
-    (ip, port) = await s.start()
+    ip, port = await s.start()
     request.addfinalizer(s.stop)
     s.server.ip = ip
     s.server.port = port

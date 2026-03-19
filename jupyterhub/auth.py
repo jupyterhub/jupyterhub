@@ -36,15 +36,13 @@ class Authenticator(LoggingConfigurable):
     @default("db")
     def _deprecated_db(self):
         self.log.warning(
-            dedent(
-                """
+            dedent("""
                 The shared database session at Authenticator.db is deprecated, and will be removed.
                 Please manage your own database and connections.
 
                 Contact JupyterHub at https://github.com/jupyterhub/jupyterhub/issues/3700
                 if you have questions or ideas about direct database needs for your Authenticator.
-                """
-            ),
+                """),
         )
         return self._deprecated_db_session
 
@@ -125,8 +123,7 @@ class Authenticator(LoggingConfigurable):
         """,
     )
 
-    admin_users = Set(
-        help="""
+    admin_users = Set(help="""
         Set of users that will be granted admin rights on this JupyterHub.
 
         Note:
@@ -162,8 +159,7 @@ class Authenticator(LoggingConfigurable):
         Admin access should be treated the same way root access is.
 
         Defaults to an empty set, in which case no user has admin access.
-        """
-    ).tag(config=True)
+        """).tag(config=True)
 
     any_allow_config = Bool(
         False,
@@ -219,8 +215,7 @@ class Authenticator(LoggingConfigurable):
         config=True,
     )
 
-    allowed_users = Set(
-        help="""
+    allowed_users = Set(help="""
         Set of usernames that are allowed to log in.
 
         Use this to limit which authenticated users may login.
@@ -234,8 +229,7 @@ class Authenticator(LoggingConfigurable):
 
         .. versionchanged:: 1.2
             `Authenticator.whitelist` renamed to `allowed_users`
-        """
-    ).tag(config=True)
+        """).tag(config=True)
 
     allow_all = Bool(
         False,
@@ -315,8 +309,7 @@ class Authenticator(LoggingConfigurable):
             return True
         return False
 
-    blocked_users = Set(
-        help="""
+    blocked_users = Set(help="""
         Set of usernames that are not allowed to log in.
 
         Use this with supported authenticators to restrict which users can not log in. This is an
@@ -337,8 +330,7 @@ class Authenticator(LoggingConfigurable):
 
         .. versionchanged:: 1.2
             `Authenticator.blacklist` renamed to `blocked_users`
-        """
-    ).tag(config=True)
+        """).tag(config=True)
 
     otp_prompt = Any(
         "OTP:",
@@ -393,13 +385,11 @@ class Authenticator(LoggingConfigurable):
                 string_set_typo,
             )
 
-    custom_html = Unicode(
-        help="""
+    custom_html = Unicode(help="""
         HTML form to be overridden by authenticators if they want a custom authentication form.
 
         Defaults to an empty string, which shows the default username/password form.
-        """
-    )
+        """)
 
     def get_custom_html(self, base_url):
         """Get custom HTML for the authenticator.
@@ -408,8 +398,7 @@ class Authenticator(LoggingConfigurable):
         """
         return self.custom_html
 
-    login_service = Unicode(
-        help="""
+    login_service = Unicode(help="""
         Name of the login service that this authenticator is providing using to authenticate users.
 
         Example: GitHub, MediaWiki, Google, etc.
@@ -417,18 +406,15 @@ class Authenticator(LoggingConfigurable):
         Setting this value replaces the login form with a "Login with <login_service>" button.
 
         Any authenticator that redirects to an external service (e.g. using OAuth) should set this.
-        """
-    )
+        """)
 
-    username_pattern = Unicode(
-        help="""
+    username_pattern = Unicode(help="""
         Regular expression pattern that all valid usernames must match.
 
         If a username does not match the pattern specified here, authentication will not be attempted.
 
         If not set, allow any username.
-        """
-    ).tag(config=True)
+        """).tag(config=True)
 
     @observe('username_pattern')
     def _username_pattern_changed(self, change):
@@ -436,11 +422,9 @@ class Authenticator(LoggingConfigurable):
             self.username_regex = None
         self.username_regex = re.compile(change['new'])
 
-    username_regex = Any(
-        help="""
+    username_regex = Any(help="""
         Compiled regex kept in sync with `username_pattern`
-        """
-    )
+        """)
 
     def validate_username(self, username):
         """Validate a normalized username
@@ -1099,8 +1083,7 @@ class LocalAuthenticator(Authenticator):
         """,
     ).tag(config=True)
 
-    add_user_cmd = Command(
-        help="""
+    add_user_cmd = Command(help="""
         The command to use for creating users as a list of strings
 
         For each element in the list, the string USERNAME will be replaced with
@@ -1119,8 +1102,7 @@ class LocalAuthenticator(Authenticator):
             adduser -q --gecos "" --home /customhome/river --disabled-password river
 
         when the user 'river' is created.
-        """
-    ).tag(config=True)
+        """).tag(config=True)
 
     @default('add_user_cmd')
     def _add_user_cmd_default(self):
@@ -1134,28 +1116,24 @@ class LocalAuthenticator(Authenticator):
             # This appears to be the Linux non-interactive adduser command:
             return ['adduser', '-q', '--gecos', '""', '--disabled-password']
 
-    uids = Dict(
-        help="""
+    uids = Dict(help="""
         Dictionary of uids to use at user creation time.
         This helps ensure that users created from the database
         get the same uid each time they are created
         in temporary deployments or containers.
-        """
-    ).tag(config=True)
+        """).tag(config=True)
 
     group_whitelist = Set(
         help="""DEPRECATED: use allowed_groups""",
     ).tag(config=True)
 
-    allowed_groups = Set(
-        help="""
+    allowed_groups = Set(help="""
         Allow login from all users in these UNIX groups.
 
         .. versionchanged:: 5.0
             `allowed_groups` may be specified together with allowed_users,
             to grant access by group OR name.
-        """
-    ).tag(config=True, allow_config=True)
+        """).tag(config=True, allow_config=True)
 
     def check_allowed(self, username, authentication=None):
         if self.check_allowed_groups(username, authentication):
@@ -1329,8 +1307,7 @@ class PAMAuthenticator(LocalAuthenticator):
         """,
     ).tag(config=True)
 
-    admin_groups = Set(
-        help="""
+    admin_groups = Set(help="""
         Authoritative list of user groups that determine admin access.
         Users not in these groups can still be granted admin status through admin_users.
 
@@ -1339,8 +1316,7 @@ class PAMAuthenticator(LocalAuthenticator):
         Note: As of JupyterHub 2.0,
         full admin rights should not be required,
         and more precise permissions can be managed via roles.
-        """
-    ).tag(config=True)
+        """).tag(config=True)
 
     pam_normalize_username = Bool(
         False,

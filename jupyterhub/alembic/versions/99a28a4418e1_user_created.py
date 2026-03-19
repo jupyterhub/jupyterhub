@@ -28,25 +28,21 @@ def upgrade():
     c = op.get_bind()
     # fill created date with current time
     now = utcnow()
-    c.execute(
-        f"""
+    c.execute(f"""
         UPDATE users
         SET created='{now}'
-        """
-    )
+        """)
 
     tables = sa.inspect(c.engine).get_table_names()
 
     if 'spawners' in tables:
         op.add_column('spawners', sa.Column('started', sa.DateTime, nullable=True))
         # fill started value with now for running servers
-        c.execute(
-            f"""
+        c.execute(f"""
             UPDATE spawners
             SET started='{now}'
             WHERE server_id IS NOT NULL
-            """
-        )
+            """)
 
 
 def downgrade():
