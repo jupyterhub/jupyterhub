@@ -1503,11 +1503,9 @@ class JupyterHub(Application):
             # assume sqlite, if given as a plain filename
             self.db_url = f'sqlite:///{new}'
 
-    db_kwargs = Dict(
-        help="""Include any kwargs to pass to the database connection.
+    db_kwargs = Dict(help="""Include any kwargs to pass to the database connection.
         See sqlalchemy.create_engine for details.
-        """
-    ).tag(config=True)
+        """).tag(config=True)
 
     upgrade_db = Bool(
         False,
@@ -1609,20 +1607,16 @@ class JupyterHub(Application):
         """override default log format to include time"""
         return "%(color)s[%(levelname)1.1s %(asctime)s.%(msecs).03d %(name)s %(module)s:%(lineno)d]%(end_color)s %(message)s"
 
-    extra_log_file = Unicode(
-        help="""
+    extra_log_file = Unicode(help="""
         DEPRECATED: use output redirection instead, e.g.
 
         jupyterhub &>> /var/log/jupyterhub.log
-        """
-    ).tag(config=True)
+        """).tag(config=True)
 
     @observe('extra_log_file')
     def _log_file_changed(self, change):
         if change.new:
-            self.log.warning(
-                dedent(
-                    f"""
+            self.log.warning(dedent(f"""
                 extra_log_file is DEPRECATED in jupyterhub-0.8.2.
 
                 extra_log_file only redirects logs of the Hub itself,
@@ -1633,9 +1627,7 @@ class JupyterHub(Application):
                 output instead, e.g.
 
                     jupyterhub &>> '{change.new}'
-            """
-                )
-            )
+            """))
 
     extra_log_handlers = List(
         Instance(logging.Handler), help="Extra log handlers to set on JupyterHub logger"
@@ -1711,14 +1703,12 @@ class JupyterHub(Application):
             handlers[i] = tuple(lis)
         return handlers
 
-    extra_handlers = List(
-        help="""
+    extra_handlers = List(help="""
         DEPRECATED.
 
         If you need to register additional HTTP endpoints
         please use services instead.
-        """
-    ).tag(config=True)
+        """).tag(config=True)
 
     @observe("extra_handlers")
     def _extra_handlers_changed(self, change):
@@ -1858,9 +1848,7 @@ class JupyterHub(Application):
                 else:
                     # old b64 secret with a bunch of ignored bytes
                     secret = binascii.a2b_base64(text_secret)
-                    self.log.warning(
-                        dedent(
-                            """
+                    self.log.warning(dedent("""
                     Old base64 cookie-secret detected in {0}.
 
                     JupyterHub >= 0.8 expects 32B hex-encoded cookie secret
@@ -1869,9 +1857,7 @@ class JupyterHub(Application):
                     To generate a new secret:
 
                         openssl rand -hex 32 > "{0}"
-                    """
-                        ).format(secret_file)
-                    )
+                    """).format(secret_file))
             except Exception as e:
                 self.log.error(
                     "Refusing to run JupyterHub with invalid cookie_secret_file. "
@@ -2219,18 +2205,14 @@ class JupyterHub(Application):
                     )
                     db.delete(user)
                 else:
-                    self.log.warning(
-                        dedent(
-                            """
+                    self.log.warning(dedent("""
                     You can set
                         c.Authenticator.delete_invalid_users = True
                     to automatically delete users from the Hub database that no longer pass
                     Authenticator validation,
                     such as when user accounts are deleted from the external system
                     without notifying JupyterHub.
-                    """
-                        )
-                    )
+                    """))
             else:
                 total_users += 1
                 # handle database upgrades where user.created is undefined.
@@ -3123,8 +3105,7 @@ class JupyterHub(Application):
                 selectinload(orm.Spawner.user),
                 # make sure users' _other_ spawners are also loaded
                 selectinload(orm.Spawner.user, orm.User._orm_spawners),
-            )
-            .populate_existing()
+            ).populate_existing()
         ):
             orm_user = orm_spawner.user
             # instantiate Spawner wrapper and check if it's still alive

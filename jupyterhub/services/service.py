@@ -196,32 +196,25 @@ class Service(LoggingConfigurable):
     # traits tagged with `input=True` are accepted as input from configuration / API
     # input traits are also persisted to the db UNLESS they are also tagged with `in_db=False`
 
-    name = Unicode(
-        help="""The name of the service.
+    name = Unicode(help="""The name of the service.
 
         If the service has an http endpoint, it
-        """
-    ).tag(input=True)
+        """).tag(input=True)
     admin = Bool(False, help="Does the service need admin-access to the Hub API?").tag(
         input=True
     )
-    url = Unicode(
-        help="""URL of the service.
+    url = Unicode(help="""URL of the service.
 
         Only specify if the service runs an HTTP(s) endpoint that.
         If managed, will be passed as JUPYTERHUB_SERVICE_URL env.
-        """
-    ).tag(input=True)
+        """).tag(input=True)
 
-    oauth_roles = List(
-        help="""OAuth allowed roles.
+    oauth_roles = List(help="""OAuth allowed roles.
 
         DEPRECATED in 3.0: use oauth_client_allowed_scopes
-      """
-    ).tag(input=True, in_db=False)
+      """).tag(input=True, in_db=False)
 
-    oauth_client_allowed_scopes = List(
-        help="""OAuth allowed scopes.
+    oauth_client_allowed_scopes = List(help="""OAuth allowed scopes.
 
         This sets the maximum and default scopes
         assigned to oauth tokens issued for this service
@@ -230,15 +223,12 @@ class Service(LoggingConfigurable):
 
         Default is an empty list, meaning minimal permissions to identify users,
         no actions can be taken on their behalf.
-      """
-    ).tag(input=True)
+      """).tag(input=True)
 
-    api_token = Unicode(
-        help="""The API token to use for the service.
+    api_token = Unicode(help="""The API token to use for the service.
 
         If unspecified, an API token will be generated for managed services.
-        """
-    ).tag(input=True, in_db=False)
+        """).tag(input=True, in_db=False)
 
     info = Dict(
         help="""Provide a place to include miscellaneous information about the service,
@@ -297,11 +287,9 @@ class Service(LoggingConfigurable):
     cwd = Unicode(help="""The working directory in which to run the service.""").tag(
         input=True
     )
-    environment = Dict(
-        help="""Environment variables to pass to the service.
+    environment = Dict(help="""Environment variables to pass to the service.
         Only used if the Hub is spawning the service.
-        """
-    ).tag(input=True)
+        """).tag(input=True)
     user = Unicode(
         "",
         help="""The user to become when launching the service.
@@ -327,13 +315,11 @@ class Service(LoggingConfigurable):
     oauth_provider = Any()
     _oauth_specified = Set(help="List of oauth config fields specified via config.")
 
-    oauth_client_id = Unicode(
-        help="""OAuth client ID for this service.
+    oauth_client_id = Unicode(help="""OAuth client ID for this service.
 
         You shouldn't generally need to change this.
         Default: `service-<name>`
-        """
-    ).tag(input=True, in_db=False)
+        """).tag(input=True, in_db=False)
 
     @default('oauth_client_id')
     def _default_client_id(self):
@@ -348,15 +334,13 @@ class Service(LoggingConfigurable):
             )
         return proposal.value
 
-    oauth_redirect_uri = Unicode(
-        help="""OAuth redirect URI for this service.
+    oauth_redirect_uri = Unicode(help="""OAuth redirect URI for this service.
 
         Must be set for external services that are not accessed through the proxy,
         or any service which have a redirect URI different from the default.
 
         Default: `/services/:name/oauth_callback`
-        """
-    ).tag(input=True, in_db=False)
+        """).tag(input=True, in_db=False)
 
     @default('oauth_redirect_uri')
     def _default_redirect_uri(self):

@@ -70,24 +70,20 @@ class GradesHandler(HubOAuthenticated, RequestHandler):
         for student, grade in grades.items():
             qstudent = escape(student)
             qgrade = escape(str(grade))
-            self.write(
-                f"""
+            self.write(f"""
                 <tr>
                  <td class="student">{qstudent}</td>
                  <td class="grade">{qgrade}</td>
                 </tr>
-                """
-            )
+                """)
         if WRITE_SCOPE in self.current_user["scopes"]:
             self.write("Enter grade:")
-            self.write(
-                """
+            self.write("""
                 <form action=. method=POST>
                     <input name=student placeholder=student></input>
                     <input kind=number name=grade placeholder=grade></input>
                     <input type="submit" value="Submit">
-                """
-            )
+                """)
 
     @require_scope([READ_SCOPE])
     async def get(self):

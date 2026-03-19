@@ -14,19 +14,37 @@ ci:
   autoupdate_schedule: monthly
 
 repos:
-  # autoformat and lint Python code
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.4
+  # Autoformat: Python code, syntax patterns are modernized
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v3.21.2
     hooks:
-      - id: ruff
-        types_or:
-          - python
-          - jupyter
-        args: ["--fix", "--show-fixes"]
-      - id: ruff-format
-        types_or:
-          - python
-          - jupyter
+      - id: pyupgrade
+
+  # Autoformat: Python lint fixes
+  - repo: https://github.com/PyCQA/autoflake
+    rev: v2.3.3
+    hooks:
+      - id: autoflake
+        args:
+          - --in-place
+
+  # Autoformat: python imports
+  - repo: https://github.com/pycqa/isort
+    rev: 8.0.1
+    hooks:
+      - id: isort
+
+  # Autoformat: Python code
+  - repo: https://github.com/psf/black-pre-commit-mirror
+    rev: 26.3.1
+    hooks:
+      - id: black
+
+  # Lint: Python code
+  - repo: https://github.com/PyCQA/flake8
+    rev: 7.3.0
+    hooks:
+      - id: flake8
 
   # Autoformat: markdown, yaml, javascript (see the file .prettierignore)
   - repo: https://github.com/rbubley/mirrors-prettier

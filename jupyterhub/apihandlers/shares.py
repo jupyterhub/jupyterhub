@@ -520,7 +520,7 @@ class ServerShareCodeAPIHandler(_ShareAPIHandler):
         spawner = self._lookup_spawner(user_name, server_name)
 
         # issue the code
-        (share_code, code) = orm.ShareCode.new(
+        share_code, code = orm.ShareCode.new(
             self.db, spawner, scopes=scopes, expires_in=request.expires_in
         )
         # return the model (including code only this one time when it's created)

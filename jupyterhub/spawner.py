@@ -175,15 +175,13 @@ class Spawner(LoggingConfigurable):
     @default("db")
     def _deprecated_db(self):
         self.log.warning(
-            dedent(
-                """
+            dedent("""
                 The shared database session at Spawner.db is deprecated, and will be removed.
                 Please manage your own database and connections.
 
                 Contact JupyterHub at https://github.com/jupyterhub/jupyterhub/issues/3700
                 if you have questions or ideas about direct database needs for your Spawner.
-                """
-            ),
+                """),
         )
         return self._deprecated_db_session
 
@@ -892,8 +890,7 @@ class Spawner(LoggingConfigurable):
                     f"No such Spawner attribute {attr} for user option {key} on {self._log_name}"
                 )
 
-    user_options = Dict(
-        help="""
+    user_options = Dict(help="""
         Dict of user specified options for the user's spawned instance of a single-user server.
 
         These user options are usually provided by the `options_form` displayed to the user when they start
@@ -911,8 +908,7 @@ class Spawner(LoggingConfigurable):
             - :attr:`options_form`
             - :attr:`options_from_form`
             - :attr:`apply_user_options`
-        """
-    )
+        """)
 
     env_keep = List(
         ['JUPYTERHUB_SINGLEUSER_APP'],
@@ -924,16 +920,13 @@ class Spawner(LoggingConfigurable):
         """,
     ).tag(config=True)
 
-    env = Dict(
-        help="""Deprecated: use Spawner.get_env or Spawner.environment
+    env = Dict(help="""Deprecated: use Spawner.get_env or Spawner.environment
 
     - extend Spawner.get_env for adding required env in Spawner subclasses
     - Spawner.environment for config-specified env
-    """
-    )
+    """)
 
-    environment = Dict(
-        help="""
+    environment = Dict(help="""
         Extra environment variables to set for the single-user server's process.
 
         Environment variables that end up in the single-user server's process come from 3 sources:
@@ -954,8 +947,7 @@ class Spawner(LoggingConfigurable):
             environment from this configuration has highest priority,
             allowing override of 'default' env variables,
             such as JUPYTERHUB_API_URL.
-        """
-    ).tag(config=True)
+        """).tag(config=True)
 
     cmd = Command(
         ['jupyterhub-singleuser'],
@@ -984,8 +976,7 @@ class Spawner(LoggingConfigurable):
         """,
     ).tag(config=True)
 
-    notebook_dir = Unicode(
-        help="""
+    notebook_dir = Unicode(help="""
         Path to the notebook directory for the single-user server.
 
         The user sees a file listing of this directory when the notebook interface is started. The
@@ -997,11 +988,9 @@ class Spawner(LoggingConfigurable):
 
         Note that this does *not* prevent users from accessing files outside of this path! They
         can do so with many other means.
-        """
-    ).tag(config=True)
+        """).tag(config=True)
 
-    default_url = Unicode(
-        help="""
+    default_url = Unicode(help="""
         The URL the single-user server should start in.
 
         `{username}` will be expanded to the user's username
@@ -1012,8 +1001,7 @@ class Spawner(LoggingConfigurable):
           navigate the whole filesystem from their notebook server, but still start in their home directory.
         - Start with `/notebooks` instead of `/tree` if `default_url` points to a notebook instead of a directory.
         - You can set this to `/lab` to have JupyterLab start by default, rather than Jupyter Notebook.
-        """
-    ).tag(config=True)
+        """).tag(config=True)
 
     @validate('notebook_dir', 'default_url')
     def _deprecate_percent_u(self, proposal):
@@ -1117,8 +1105,7 @@ class Spawner(LoggingConfigurable):
         """,
     ).tag(config=True)
 
-    progress_ready_hook = Any(
-        help="""
+    progress_ready_hook = Any(help="""
         An optional hook function that you can implement to modify the
         ready event, which will be shown to the user on the spawn progress page when their server
         is ready.
@@ -1135,11 +1122,9 @@ class Spawner(LoggingConfigurable):
 
             c.Spawner.progress_ready_hook = my_ready_hook
 
-        """
-    ).tag(config=True)
+        """).tag(config=True)
 
-    pre_spawn_hook = Any(
-        help="""
+    pre_spawn_hook = Any(help="""
         An optional hook function that you can implement to do some
         bootstrapping work before the spawner starts. For example, create a
         directory for your user or load initial content.
@@ -1156,20 +1141,16 @@ class Spawner(LoggingConfigurable):
 
             c.Spawner.pre_spawn_hook = my_hook
 
-        """
-    ).tag(config=True)
+        """).tag(config=True)
 
-    post_stop_hook = Any(
-        help="""
+    post_stop_hook = Any(help="""
         An optional hook function that you can implement to do work after
         the spawner stops.
 
         This can be set independent of any concrete spawner implementation.
-        """
-    ).tag(config=True)
+        """).tag(config=True)
 
-    auth_state_hook = Any(
-        help="""
+    auth_state_hook = Any(help="""
         An optional hook function that you can implement to pass `auth_state`
         to the spawner after it has been initialized but before it starts.
         The `auth_state` dictionary may be set by the `.authenticate()`
@@ -1183,8 +1164,7 @@ class Spawner(LoggingConfigurable):
 
             c.Spawner.auth_state_hook = userdata_hook
 
-        """
-    ).tag(config=True)
+        """).tag(config=True)
 
     hub_connect_url = Unicode(
         None,
@@ -1886,8 +1866,7 @@ class LocalProcessSpawner(Spawner):
         """,
     ).tag(config=True)
 
-    popen_kwargs = Dict(
-        help="""Extra keyword arguments to pass to Popen
+    popen_kwargs = Dict(help="""Extra keyword arguments to pass to Popen
 
         when spawning single-user servers.
 
@@ -1895,8 +1874,7 @@ class LocalProcessSpawner(Spawner):
 
             popen_kwargs = dict(shell=True)
 
-        """
-    ).tag(config=True)
+        """).tag(config=True)
     shell_cmd = Command(
         minlen=0,
         help="""Specify a shell command to launch.
