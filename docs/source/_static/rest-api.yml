@@ -1637,6 +1637,12 @@ components:
           description: the string 'user' to distinguish from 'service'
           enum:
             - user
+        user_info:
+          type: object
+          properties: {}
+          description: |
+            Optional dict containing optional user profile information
+            (e.g. name, display_name, initials, avatar_url, color).
         admin:
           type: boolean
           description: Whether the user is an admin
