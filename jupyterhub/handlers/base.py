@@ -803,6 +803,8 @@ class BaseHandler(RequestHandler):
             # treat absolute URLs for our host as absolute paths:
             # below, redirects that aren't strictly paths are rejected
             next_url = parsed_next_url.path
+            # make sure path is handled as a path, not a `//host/path` url
+            next_url = "/" + next_url.lstrip("/")
             if parsed_next_url.query:
                 next_url = next_url + '?' + parsed_next_url.query
             if parsed_next_url.fragment:
