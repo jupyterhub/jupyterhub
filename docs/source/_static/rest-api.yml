@@ -470,8 +470,7 @@ paths:
       security:
         - oauth2:
             - delete:servers
-
-/users/{user}/servers/{server_name}/progress:
+  /users/{user}/servers/{server_name}/progress:
     get:
       operationId: get_server_progress
       summary: Get server start progress events
