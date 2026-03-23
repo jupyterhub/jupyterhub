@@ -908,6 +908,7 @@ class BaseHandler(RequestHandler):
         if isinstance(authenticated, str):
             authenticated = {'name': authenticated}
         username = authenticated['name']
+        user_info = authenticated.get('user_info', None)
         auth_state = authenticated.get('auth_state')
         admin = authenticated.get('admin')
         refreshing = user is not None
