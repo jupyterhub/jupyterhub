@@ -409,7 +409,7 @@ good ways to get started, but if you have custom needs, eventually it
 may become hard to adapt them to your requirements.
 
 - [**Zero to JupyterHub with
-  Kubernetes**](https://zero-to-jupyterhub.readthedocs.io/) installs
+  Kubernetes**](https://z2jh.jupyter.org/) installs
   an entire scaleable system using Kubernetes. Uses KubeSpawner,
   ....Authenticator, ....
 
@@ -417,7 +417,7 @@ may become hard to adapt them to your requirements.
   using SystemdSpawner and NativeAuthenticator (which manages users
   itself).
 
-- [**JupyterHub the hard way**](https://github.com/jupyterhub/jupyterhub-the-hard-way/blob/master/docs/installation-guide-hard.md)
+- [**JupyterHub the hard way**](https://github.com/jupyterhub/jupyterhub-the-hard-way/blob/HEAD/docs/installation-guide-hard.md)
   takes you through everything yourself. It is a natural companion to
   this guide, since you get to experience every little bit.
 

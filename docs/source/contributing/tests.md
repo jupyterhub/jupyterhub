@@ -6,7 +6,7 @@ Unit testing helps to validate that JupyterHub works the way we think it does,
 and continues to do so when changes occur. They also help communicate
 precisely what we expect our code to do.
 
-JupyterHub uses [`pytest`](https://pytest.org) for all the tests. You
+JupyterHub uses [`pytest`](https://docs.pytest.org) for all the tests. You
 can find them under the [jupyterhub/tests](https://github.com/jupyterhub/jupyterhub/tree/main/jupyterhub/tests) directory in the Git repository.
 
 ```{note}
@@ -16,7 +16,7 @@ This ensures that the development environment is properly set up for tests to ru
 ```
 
 ```{note}
-For details of `pytest`, refer to the [`pytest` usage documentation](https://pytest.readthedocs.io/en/latest/usage.html).
+For details of `pytest`, refer to the [`pytest` usage documentation](https://docs.pytest.org/en/latest/usage.html).
 ```
 
 ## Running all the tests
@@ -101,7 +101,7 @@ And fixtures to add functionality or spawning behavior:
 - `bad_spawn`: enables the BadSpawner (a spawner that fails immediately)
 - `slow_bad_spawn`: enables the SlowBadSpawner (a spawner that fails after a short delay)
 
-Refer to the [pytest fixtures documentation](https://pytest.readthedocs.io/en/latest/fixture.html) to learn how to use fixtures that exists already and to create new ones.
+Refer to the [pytest fixtures documentation](https://docs.pytest.org/en/latest/fixture.html) to learn how to use fixtures that exists already and to create new ones.
 
 ### The Pytest-Asyncio Plugin
 

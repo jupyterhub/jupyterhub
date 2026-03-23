@@ -20,7 +20,7 @@ or as few templates as you desire.
 
 ## Extending Templates
 
-Jinja provides a mechanism to [extend templates](https://jinja.palletsprojects.com/en/3.0.x/templates/#template-inheritance).
+Jinja provides a mechanism to [extend templates](https://jinja.palletsprojects.com/en/stable/templates/#template-inheritance).
 
 A base template can define `block`(s) within itself that child templates can fill up or
 supply content to. The
