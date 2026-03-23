@@ -536,12 +536,10 @@ class ConfigurableHTTPProxy(Proxy):
         if change.new:
             self.log_level = "debug"
 
-    auth_token = Unicode(
-        help="""The Proxy auth token
+    auth_token = Unicode(help="""The Proxy auth token
 
         Loaded from the CONFIGPROXY_AUTH_TOKEN env variable by default.
-        """
-    ).tag(config=True)
+        """).tag(config=True)
     check_running_interval = Integer(
         5,
         help="Interval (in seconds) at which to check if the proxy is running.",
@@ -686,9 +684,7 @@ class ConfigurableHTTPProxy(Proxy):
         cmd = []
         proxy_api = 'proxy-api'
         proxy_client = 'proxy-client'
-        api_key = self.app.internal_proxy_certs[
-            proxy_api
-        ][
+        api_key = self.app.internal_proxy_certs[proxy_api][
             'keyfile'
         ]  # Check content in next test and just patch manulaly or in the config of the file
         api_cert = self.app.internal_proxy_certs[proxy_api]['certfile']

@@ -407,14 +407,12 @@ class HubAuth(SingletonConfigurable):
         """,
     ).tag(config=True)
 
-    cookie_options = Dict(
-        help="""Additional options to pass when setting cookies.
+    cookie_options = Dict(help="""Additional options to pass when setting cookies.
 
         Can include things like `expires_days=None` for session-expiry
         or `secure=True` if served on HTTPS and default HTTPS discovery fails
         (e.g. behind some proxies).
-        """
-    ).tag(config=True)
+        """).tag(config=True)
 
     @default('cookie_options')
     def _default_cookie_options(self):
@@ -1044,12 +1042,10 @@ class HubOAuth(HubAuth):
 
     # HubOAuth API
 
-    oauth_client_id = Unicode(
-        help="""The OAuth client ID for this application.
+    oauth_client_id = Unicode(help="""The OAuth client ID for this application.
 
         Use JUPYTERHUB_CLIENT_ID by default.
-        """
-    ).tag(config=True)
+        """).tag(config=True)
 
     @default('oauth_client_id')
     def _client_id(self):
@@ -1061,12 +1057,10 @@ class HubOAuth(HubAuth):
             raise ValueError(f"{proposal.trait.name} cannot be empty.")
         return proposal.value
 
-    oauth_redirect_uri = Unicode(
-        help="""OAuth redirect URI
+    oauth_redirect_uri = Unicode(help="""OAuth redirect URI
 
         Should generally be /base_url/oauth_callback
-        """
-    ).tag(config=True)
+        """).tag(config=True)
 
     @default('oauth_redirect_uri')
     def _default_redirect(self):

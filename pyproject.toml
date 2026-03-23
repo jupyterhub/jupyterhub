@@ -103,8 +103,20 @@ fallback_version = "0.0.0"
 # [tool.setuptools.data-files]
 # "share/jupyterhub" = ["share/jupyterhub/**"]
 
-# ruff is our linter and formatter
+# linters and autoformatters
+[tool.autoflake]
+ignore-init-module-imports = true
+remove-all-unused-imports = true
+remove-duplicate-keys = true
+remove-unused-variables = false
 
+[tool.black]
+skip-string-normalization = true
+
+[tool.isort]
+profile = "black"
+
+# ruff no longer used
 [tool.ruff.format]
 quote-style = "preserve"
 

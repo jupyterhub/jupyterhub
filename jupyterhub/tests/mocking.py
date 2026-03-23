@@ -108,7 +108,7 @@ class SlowSpawner(MockSpawner):
     _start_future = None
 
     async def start(self):
-        (ip, port) = await super().start()
+        ip, port = await super().start()
         if self._start_future is not None:
             await self._start_future
         else:
