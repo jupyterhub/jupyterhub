@@ -313,6 +313,7 @@ linkcheck_ignore = [
     r"https://www\.mysql\.com",
     r"https://www\.npmjs\.com",
     r"https://medium\.com/.*",
+    r"https://blog\.jupyter\.org/.*",
     # Occasionally blocks CI checks with SSL error
     r"https://mediaspace\.msu\.edu/.*",
 ]

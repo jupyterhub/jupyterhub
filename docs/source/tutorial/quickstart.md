@@ -42,7 +42,7 @@ system as the Hub or not), you will need:
   4 or greater.
 
 [jupyterlab]: https://jupyterlab.readthedocs.io
-[jupyter notebook]: https://jupyter.readthedocs.io/en/latest/install.html
+[jupyter notebook]: https://docs.jupyter.org/en/latest/install.html
 
 ## Installation
 

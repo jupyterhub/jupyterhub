@@ -417,7 +417,7 @@ may become hard to adapt them to your requirements.
   using SystemdSpawner and NativeAuthenticator (which manages users
   itself).
 
-- [**JupyterHub the hard way**](https://github.com/jupyterhub/jupyterhub-the-hard-way/blob/master/docs/installation-guide-hard.md)
+- [**JupyterHub the hard way**](https://github.com/jupyterhub/jupyterhub-the-hard-way/blob/HEAD/docs/installation-guide-hard.md)
   takes you through everything yourself. It is a natural companion to
   this guide, since you get to experience every little bit.
 
