@@ -1,0 +1,12 @@
+rules:
+  cache-poisoning:
+    # only care about cache poisoning in release workflow
+    ignore:
+      - test.yml
+      - test-docs.yml
+      - test-jsx.yml
+  unpinned-uses:
+    config:
+      policies:
+        jupyterhub/*: ref-pin
+        manics/*: ref-pin
