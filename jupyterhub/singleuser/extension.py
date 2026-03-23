@@ -90,7 +90,7 @@ class JupyterHubUser(User):
         kwargs = {
             "username": hub_user["name"],
         }
-        user_info = hub_user.get("user_info", {})
+        user_info = hub_user.get("user_info") or {}
         if "name" in user_info:
             kwargs["name"] = user_info["name"]
         if "display_name" in user_info:
