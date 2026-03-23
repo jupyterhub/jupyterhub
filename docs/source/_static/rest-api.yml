@@ -89,7 +89,45 @@ paths:
       tags:
         - Servers
       description: |
-        Returns a stream of events representing the progress of a server starting.
+        An EventStream (`text/event-stream`) of events representing the progress of a server starting.
+        
+        All progress events have at least these two fields:
+          
+        - `progress`: a number, representing percent progress, from 0-100
+        - `message`: a string message
+        
+        Events _may_ have additional fields:
+
+        - `html_message`: a formatted message field for display in HTML contexts.
+
+        When the server is ready, the last event in the stream will look like:
+        
+        ```json
+        {
+          "progress": 100,
+          "ready": true,
+          "message": "Server ready at /users/username/",
+          "url": "/users/username/"
+        }
+        ```
+        
+        with additional fields:
+          
+        - `ready`: `true` indicating that the server is ready
+        - `url`: the URL of the server. `url` is an _absolute path_ unless `public_url` or `subdomain_host` is specified,
+          in which case it will be a full URL.
+
+        If the server is already ready when progress is requested, only this final ready event will be included.
+
+        On failure, the last event looks like:
+
+        ```json
+        {
+          "progress": 100,
+          "failed": true,
+          "message": "Spawn failed"
+        }
+        ```
       parameters:
         - name: user
           in: path
