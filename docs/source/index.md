@@ -54,7 +54,7 @@ For convenient administration of the Hub, its users, and services,
 JupyterHub also provides a {doc}`REST API <reference/rest-api>`.
 
 The JupyterHub team and Project Jupyter value our community, and JupyterHub
-follows the Jupyter [Community Guides](https://jupyter.readthedocs.io/en/latest/community/content-community.html).
+follows the Jupyter [Community Guides](https://docs.jupyter.org/en/latest/community/content-community.html).
 
 ---
 

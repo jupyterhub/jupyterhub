@@ -71,7 +71,7 @@ Within CERN, there are two noteworthy JupyterHub deployments in operation:
 [Chameleon](https://www.chameleoncloud.org) is a NSF-funded configurable experimental environment for large-scale computer science systems research with [bare metal reconfigurability](https://chameleoncloud.readthedocs.io/en/latest/technical/baremetal.html). Chameleon users utilize JupyterHub to document and reproduce their complex CISE and networking experiments.
 
 - [Shared JupyterHub](https://jupyter.chameleoncloud.org): provides a common "workbench" environment for any Chameleon user.
-- [Trovi](https://trovi.chameleoncloud.org): a sharing portal of experiments, tutorials, and examples, which users can launch as a dedicated isolated environments on Chameleon's JupyterHub.
+- [Trovi](https://trovi.chameleoncloud.org/dashboard/): a sharing portal of experiments, tutorials, and examples, which users can launch as a dedicated isolated environments on Chameleon's JupyterHub.
 
 ### ETH Zurich
 

@@ -409,7 +409,7 @@ good ways to get started, but if you have custom needs, eventually it
 may become hard to adapt them to your requirements.
 
 - [**Zero to JupyterHub with
-  Kubernetes**](https://zero-to-jupyterhub.readthedocs.io/) installs
+  Kubernetes**](https://z2jh.jupyter.org/) installs
   an entire scaleable system using Kubernetes. Uses KubeSpawner,
   ....Authenticator, ....
 
