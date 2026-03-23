@@ -82,7 +82,7 @@ paths:
         - oauth2:
             - read:hub
 
-  /users/{user}/server/{server_name}/progess:
+  /users/{user}/servers/{server_name}/progess:
     get:
       operationId: get_server_progress
       summary: Get server start
