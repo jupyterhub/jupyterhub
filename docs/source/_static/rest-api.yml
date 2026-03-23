@@ -85,7 +85,7 @@ paths:
   /users/{user}/servers/{server_name}/progess:
     get:
       operationId: get_server_progress
-      summary: Get server start
+      summary: Get server start progress events
       tags:
         - Servers
       description: |
