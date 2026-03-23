@@ -685,7 +685,9 @@ async def test_get_user(app):
     r.raise_for_status()
 
     user = normalize_user(r.json())
-    assert user == fill_user({'name': name, 'roles': ['user'], 'auth_state': None, 'user_info': None})
+    assert user == fill_user(
+        {'name': name, 'roles': ['user'], 'auth_state': None, 'user_info': None}
+    )
 
     # admin request, no such user
     r = await api_request(

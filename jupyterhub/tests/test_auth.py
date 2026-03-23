@@ -493,6 +493,7 @@ async def test_post_auth_hook():
 
     assert authorized['testkey'] == 'testvalue'
 
+
 async def test_post_auth_hook_user_info():
     def test_auth_hook(authenticator, handler, authentication):
         authentication['user_info'] = {'testkey': 'testvalue'}
@@ -505,6 +506,7 @@ async def test_post_auth_hook_user_info():
     )
 
     assert authorized['user_info']['testkey'] == 'testvalue'
+
 
 class MyAuthenticator(auth.Authenticator):
     def check_whitelist(self, username, authentication=None):
