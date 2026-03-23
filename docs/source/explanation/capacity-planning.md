@@ -68,7 +68,7 @@ but elastic resources (like [zero-to-jupyterhub][]) tend to provide **lower over
 (especially when deployed with monitoring allowing cost optimizations over time),
 but which are **less predictable**.
 
-[the-littlest-jupyterhub]: https://the-littlest-jupyterhub.readthedocs.io
+[the-littlest-jupyterhub]: https://tljh.jupyter.org
 
 [zero-to-jupyterhub]: https://z2jh.jupyter.org
 

@@ -16,7 +16,7 @@ Please submit pull requests to update information or to add new institutions or 
 
 - [BIDS - Berkeley Institute for Data Science](https://bids.berkeley.edu/)
 
-- [Data 8](https://www.data8.org/)
+- [Data 8](https://data8.org/)
   - [GitHub organization](https://github.com/data-8)
 
 - [NERSC](https://www.nersc.gov/)
@@ -71,7 +71,7 @@ Within CERN, there are two noteworthy JupyterHub deployments in operation:
 [Chameleon](https://www.chameleoncloud.org) is a NSF-funded configurable experimental environment for large-scale computer science systems research with [bare metal reconfigurability](https://chameleoncloud.readthedocs.io/en/latest/technical/baremetal.html). Chameleon users utilize JupyterHub to document and reproduce their complex CISE and networking experiments.
 
 - [Shared JupyterHub](https://jupyter.chameleoncloud.org): provides a common "workbench" environment for any Chameleon user.
-- [Trovi](https://www.chameleoncloud.org/experiment/share): a sharing portal of experiments, tutorials, and examples, which users can launch as a dedicated isolated environments on Chameleon's JupyterHub.
+- [Trovi](https://trovi.chameleoncloud.org/dashboard/): a sharing portal of experiments, tutorials, and examples, which users can launch as a dedicated isolated environments on Chameleon's JupyterHub.
 
 ### ETH Zurich
 
@@ -104,10 +104,6 @@ The [Educational Development and Technology](https://ethz.ch/en/the-eth-zurich/o
 ### Michigan State University
 
 - [Setting up JupyterHub](https://mediaspace.msu.edu/media/Setting+Up+Your+JupyterHub+Password/1_hgv13aag/11980471)
-
-### University of Minnesota
-
-- [JupyterHub Inside HPC](https://insidehpc.com/tag/jupyterhub/)
 
 ### University of Missouri
 
