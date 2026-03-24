@@ -1643,6 +1643,8 @@ components:
           description: |
             Optional dict containing optional user profile information
             (e.g. name, display_name, initials, avatar_url, color).
+            
+            Added in JupyterHub 6.0
         admin:
           type: boolean
           description: Whether the user is an admin
