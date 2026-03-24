@@ -117,7 +117,7 @@ If authentication is successful the `authenticate` method must return either:
   - `name`: the username
   - `admin`: optional, a boolean indicating whether the user is an admin.
     In most cases it is better to use fine grained [RBAC permissions](rbac) instead of giving users full admin privileges.
-  - `user_info`: optional, a dictionary of [user info that will be persisted](authenticator-user-info)
+  - `user_info`: optional, a dictionary of [user info that will be persisted](authenticator-user-info) (added in 6.0)
   - `auth_state`: optional, a dictionary of [auth state that will be persisted](authenticator-auth-state)
   - `groups`: optional, a list of JupyterHub [group memberships](authenticator-groups)
 
