@@ -39,11 +39,13 @@ env:
 
 jobs:
   validate-rest-api-definition:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
         with:
           node-version: "22"
           cache: npm
@@ -55,13 +57,14 @@ jobs:
   test-docs:
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
+          persist-credentials: false
           # make rediraffecheckdiff requires git history to compare current
           # commit with the main branch and previous releases.
           fetch-depth: 0
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
           python-version: "3.11"
           cache: pip
@@ -99,22 +102,24 @@ jobs:
       - name: check redirects for this PR
         if: github.event_name == 'pull_request'
         run: |
-          cd docs
-          export REDIRAFFE_BRANCH=origin/${{ github.base_ref }}
           make rediraffecheckdiff
+        env:
+          REDIRAFFE_BRANCH: origin/${{ github.base_ref }}
+        working-directory: docs
 
       # this should check currently published 'stable' links for redirects
       - name: check redirects since last release
         if: github.repository == 'jupyterhub/jupyterhub'
         run: |
-          cd docs
           export REDIRAFFE_BRANCH=$(git describe --tags --abbrev=0)
           make rediraffecheckdiff
+        working-directory: docs
 
       # longer-term redirect check (fixed version) for older links
       - name: check redirects since 3.0.0
         if: github.repository == 'jupyterhub/jupyterhub'
         run: |
-          cd docs
-          export REDIRAFFE_BRANCH=3.0.0
           make rediraffecheckdiff
+        env:
+          REDIRAFFE_BRANCH: "3.0.0"
+        working-directory: docs

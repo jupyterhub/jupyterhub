@@ -65,6 +65,14 @@ repos:
         files: ".*templates/.*.html"
         types_or: ["html"]
 
+  # github actions security checks
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: v1.23.1
+    hooks:
+      - id: zizmor
+        args:
+          - --fix
+
   # Autoformat and linting, misc. details
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0

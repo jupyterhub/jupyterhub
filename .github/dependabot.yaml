@@ -17,6 +17,8 @@ updates:
           - "actions/*"
     schedule:
       interval: monthly
+    cooldown:
+      default-days: 7
   - package-ecosystem: npm
     directory: /
     groups:
@@ -29,6 +31,8 @@ updates:
           - patch
     schedule:
       interval: monthly
+    cooldown:
+      default-days: 7
   - package-ecosystem: npm
     directory: /jsx
     groups:
@@ -64,3 +68,5 @@ updates:
           - major
     schedule:
       interval: monthly
+    cooldown:
+      default-days: 7

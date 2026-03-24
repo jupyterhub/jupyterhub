@@ -144,23 +144,23 @@ jobs:
           if [ "${{ matrix.jupyverse }}" != "" ]; then
               echo "JUPYTERHUB_SINGLEUSER_APP=jupyverse" >> $GITHUB_ENV
           fi
-      - uses: actions/checkout@v6
-      # NOTE: actions/setup-node@v6 make use of a cache within the GitHub base
-      #       environment and setup in a fraction of a second.
-      - name: Install Node
-        uses: actions/setup-node@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          node-version: "20"
+          persist-credentials: false
+
+      - name: Install Node
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          node-version: "24"
+
       - name: Install Javascript dependencies
         run: |
           npm install
           npm install -g configurable-http-proxy yarn
           npm list
 
-      # NOTE: actions/setup-python@v6 make use of a cache within the GitHub base
-      #       environment and setup in a fraction of a second.
       - name: Install Python ${{ matrix.python }}
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
           python-version: "${{ matrix.python }}"
           cache: pip
@@ -265,4 +265,4 @@ jobs:
         run: |
           pytest -k "${{ matrix.subset }}" --maxfail=2 --cov=jupyterhub jupyterhub/tests
 
-      - uses: codecov/codecov-action@v5
+      - uses: codecov/codecov-action@1af58845a975a7985b0beb0cbe6fbbb71a41dbad # v5
