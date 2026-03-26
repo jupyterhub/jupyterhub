@@ -823,6 +823,11 @@ async def test_login_strip(app, form_user, auth_user, form_password):
         (False, '//other.domain', '', None),
         (False, '///other.domain/triple', '', None),
         (False, '\\\\other.domain/backslashes', '', None),
+        # preserve path when host matches
+        (False, 'HOST/other.domain/', '/other.domain/', None),
+        (False, 'HOST//other.domain/', '/other.domain/', None),
+        (False, 'HOST///other.domain/', '/other.domain/', None),
+        (False, 'HOST////other.domain/', '/other.domain/', None),
         # params are handled correctly (ignored if ?next= specified)
         (
             True,
@@ -836,10 +841,16 @@ async def test_login_strip(app, form_user, auth_user, form_password):
     ],
 )
 async def test_login_redirect(app, running, next_url, location, params):
+    if 'HOST' in next_url:
+        next_url = next_url.replace('HOST', public_host(app))
+        print(next_url)
+
     cookies = await app.login_user('river')
     user = app.users['river']
     if location:
-        location = ujoin(app.base_url, location)
+        if not urlparse(next_url).netloc:
+            # add base url to expectation if next_url doesn't include host
+            location = ujoin(app.base_url, location)
     elif running:
         # location not specified,
         location = user.url
