@@ -37,7 +37,11 @@ def generate_old_db(env_dir, hub_version, db_url):
     if 'mysql' in db_url:
         pkgs.append('mysqlclient')
     elif 'postgres' in db_url:
-        pkgs.append('psycopg2-binary')
+        if V(hub_version) < V("3.1.1"):
+            pkgs.append('psycopg2-binary')
+            db_url = db_url.replace("psycopg:", "psycopg2:")
+        else:
+            pkgs.append('psycopg[binary]')
     check_call([env_pip, 'install'] + pkgs)
     check_call([env_py, populate_db, db_url])
 
