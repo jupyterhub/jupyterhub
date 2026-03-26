@@ -22,6 +22,18 @@ Contributors to major version bumps in JupyterHub include:
 
 ## 5.4
 
+### 5.4.4 - 2026-03-26
+
+```{important}
+5.4.4 is a security release, fixing an open redirect vulnerability in JupyterHub ([CVE-2026-33709]).
+```
+
+The advisory will be published 7 days after release (2026-04-02).
+
+[CVE-2026-33709]: https://github.com/jupyterhub/jupyterhub/security/advisories/GHSA-3vff-hjqv-m7h8
+
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/5.4.3...5.4.4))
+
 ### 5.4.3 - 2025-12-12
 
 ([full changelog](https://github.com/jupyterhub/jupyterhub/compare/5.4.2...5.4.3))
