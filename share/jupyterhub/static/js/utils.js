@@ -5,7 +5,7 @@
 // Modifications Copyright (c) Jupyter Development Team.
 // Distributed under the terms of the Modified BSD License.
 
-define(["jquery"], function ($) {
+define(["jquery", "js-sha256"], function ($, sha256) {
   "use strict";
 
   var url_path_join = function () {
@@ -122,6 +122,62 @@ define(["jquery"], function ($) {
     modal.show();
   };
 
+  var safe_slug = function (name) {
+    const max_length = 32;
+    const _hash_length = 8;
+    // Generate an always-safe, unique string for any input
+    // truncates name to max_length - len(hash_suffix) to fit in max_length
+    // after adding hash suffix
+    const name_length = max_length - (_hash_length + 1);
+
+    if (name_length < 1) {
+      throw Error(`Cannot make safe names shorter than ${_hash_length + 2}`);
+    }
+
+    if (
+      name.length < max_length &&
+      /^[a-z]([a-z0-9-]*[a-z0-9])?$/.test(name) &&
+      name.indexOf("-") < 0
+    ) {
+      return name;
+    }
+
+    // quick, short hash to avoid name collisions
+    const name_hash = sha256(name).substring(0, _hash_length);
+
+    // const safe_name = _extract_safe_name(name, name_length)
+    // Generate safe substring of a name
+    // Guarantees:
+    // - always starts with a lowercase letter
+    // - always ends with a lowercase letter or number
+    // - no hyphens (so clients are free to use hyphens for other purposes)
+    // - only contains lowercase letters, numbers
+    // - length at least 1 ('x' if other rules strips down to empty string)
+    // - max length not exceeded
+    let safe_name = name
+      .toLowerCase()
+      .replaceAll(/[^a-z0-9]+/g, "")
+      .substring(0, name_length);
+    if (!safe_name) {
+      safe_name = "x";
+    }
+    if (!/^[a-z]+/.test(safe_name)) {
+      safe_name = "x" + safe_name.substring(0, name_length - 1);
+    }
+    // the result will always have _exactly_ one '-'
+    return `${safe_name}-${name_hash}`;
+  };
+
+  var sanitise_display_name = function (name) {
+    let s = name.normalize("NFC");
+
+    // Allow letters, marks, numbers, punctuation, symbols, and spaces
+    s = s.replace(/[^\p{L}\p{M}\p{N}\p{P}\p{S} ]+/gu, "");
+    // Collapse multiple spaces, and leading/trailing
+    s = s.replace(/ {2,}/g, " ").trim();
+    return s;
+  };
+
   var utils = {
     url_path_join: url_path_join,
     url_join_encode: url_join_encode,
@@ -134,6 +190,8 @@ define(["jquery"], function ($) {
     ajax_error_msg: ajax_error_msg,
     log_ajax_error: log_ajax_error,
     ajax_error_dialog: ajax_error_dialog,
+    safe_slug: safe_slug,
+    sanitise_display_name: sanitise_display_name,
   };
 
   return utils;

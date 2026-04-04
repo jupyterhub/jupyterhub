@@ -17,7 +17,7 @@ from tornado.iostream import StreamClosedError
 from .. import orm, scopes
 from ..roles import assign_default_roles
 from ..scopes import needs_scope
-from ..slugs import is_valid_safe_slug
+from ..slugs import is_valid_display_name, is_valid_safe_slug, normalise_unicode
 from ..user import User
 from ..utils import (
     format_exception,
@@ -650,6 +650,13 @@ class UserServerAPIHandler(APIHandler):
                     error_message = f"Invalid server_name: {server_name}"
                     self.log.error(error_message)
                     raise web.HTTPError(400, error_message)
+
+                if not is_valid_display_name(display_name):
+                    error_message = f"Invalid display_name: {display_name}"
+                    self.log.error(error_message)
+                    raise web.HTTPError(400, error_message)
+                display_name = normalise_unicode(display_name)
+
         else:
             display_name = ''
 
