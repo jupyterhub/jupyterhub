@@ -9,6 +9,7 @@ Requirements:
 import hashlib
 import re
 import string
+import unicodedata
 
 _alphanum = tuple(string.ascii_letters + string.digits)
 _alpha_lower = tuple(string.ascii_lowercase)
@@ -26,6 +27,40 @@ _non_alphanum_pattern = re.compile(r'[^a-z0-9]+')
 
 # length of hash suffix
 _hash_length = 8
+
+# Unicode printable characters excluding whitespace, based on
+# https://stackoverflow.com/questions/41757886/how-can-i-recognise-non-printable-unicode-characters-in-python/41761339#41761339
+# https://www.fileformat.info/info/unicode/category/index.htm
+printable_unicode_categories_excluding_whitespace = {
+    # letters
+    "LC",
+    "Ll",
+    "Lm",
+    "Lo",
+    "Lt",
+    "Lu",
+    # marks
+    "Mc",
+    "Me",
+    "Mn",
+    # numbers
+    "Nd",
+    "Nl",
+    "No",
+    # punctuation
+    "Pc",
+    "Pd",
+    "Pe",
+    "Pf",
+    "Pi",
+    "Po",
+    "Ps",
+    # symbol
+    "Sc",
+    "Sk",
+    "Sm",
+    "So",
+}
 
 
 def _is_valid_general(
@@ -211,3 +246,30 @@ def multi_slug(names, max_length=48):
     # by joining names with '--', this cannot collide with single-hashed names,
     # which can only contain '-' and the '---' hash delimiter once
     return f"{'--'.join(name_slugs)}---{hash}"
+
+
+def is_valid_display_name(s):
+    """check display names are valid
+
+    Between 1 and 255 chars
+    Can contain most printable non whitespace unicode characters
+    Must not start or end with space
+    Must not contain multiple consecutive spaces
+    """
+    if len(s) < 1 or len(s) > 255:
+        return False
+    if "  " in s or s.startswith(" ") or s.endswith(" "):
+        return False
+    for c in s:
+        if c == " ":
+            continue
+        if (
+            unicodedata.category(c)
+            not in printable_unicode_categories_excluding_whitespace
+        ):
+            return False
+    return True
+
+
+def normalise_unicode(s):
+    return unicodedata.normalize("NFC", s)

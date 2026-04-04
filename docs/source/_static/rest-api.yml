@@ -1684,8 +1684,13 @@ components:
       properties:
         name:
           type: string
-          description: The server's name. The user's default server has an empty
-            name ('')
+          description: |
+            The server's name. The user's default server has an empty name ('').
+
+            Changed in JupyterHub 6.0:
+            New servers are restricted to characters [a-z0-9] and optionally a single hyphen;
+            must start with [a-z] and end with [a-z0-9]; maximum length 32 characters.
+            Named servers created in older versions of JupyterHub may not follow these restrictions.
         display_name:
           type: string
           description: The server's display name. Added in JupyterHub 6.0.

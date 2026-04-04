@@ -7,6 +7,7 @@ import time
 from collections import defaultdict
 from datetime import datetime
 from http.client import responses
+from urllib.parse import unquote
 
 from jinja2 import TemplateNotFound
 from tornado import web
@@ -15,7 +16,7 @@ from tornado.httputil import url_concat
 from .. import __version__, orm
 from ..metrics import SERVER_POLL_DURATION_SECONDS, ServerPollStatus
 from ..scopes import describe_raw_scopes, needs_scope
-from ..slugs import is_valid_safe_slug, safe_slug
+from ..slugs import is_valid_display_name, is_valid_safe_slug, normalise_unicode
 from ..utils import (
     format_exception,
     maybe_future,
@@ -143,14 +144,10 @@ class SpawnHandler(BaseHandler):
             user_name = self.current_user.name
         if server_name:
             server_displayname = server_name
-            # The current form is used to manage existing servers as well as create
-            # new ones so look for this parameter to indicate it's a new spawner
-            # TODO: Have a different endpoint for creating new servers?
-            convertname = self.request.arguments.get("convertname")
-            if convertname and convertname[0].decode() == "1":
-                # User submitted this from the UI, so treat as a user-friendly
-                # displayname and convert to a safe_slug
-                server_name = safe_slug(server_name)
+            displayname = self.request.arguments.get("displayname")
+            if displayname:
+                server_displayname = unquote(displayname[0])
+            # names are validated in _get()
         else:
             server_displayname = server_name = ""
 
@@ -178,6 +175,8 @@ class SpawnHandler(BaseHandler):
                 await self.get_current_user_named_server_limit()
             )
 
+            # Allow invalid server names created before JupyterHub 6
+            # Prevent creation of new invalid server names
             if named_server_limit_per_user > 0 and server_name not in user.orm_spawners:
                 named_spawners = list(user.all_spawners(include_default=False))
                 if named_server_limit_per_user <= len(named_spawners):
@@ -187,11 +186,16 @@ class SpawnHandler(BaseHandler):
                         "  One must be deleted before a new server can be created",
                     )
 
-                # Prevent creation of new invalid server names
                 if not is_valid_safe_slug(server_name):
                     error_message = f"Invalid server_name: {server_name}"
                     self.log.error(error_message)
                     raise web.HTTPError(400, error_message)
+
+                if not is_valid_display_name(display_name):
+                    error_message = f"Invalid display_name: {display_name}"
+                    self.log.error(error_message)
+                    raise web.HTTPError(400, error_message)
+                display_name = normalise_unicode(display_name)
 
         if not self.allow_named_servers and user.running:
             url = self.get_next_url(user, default=user.server_url(""))
