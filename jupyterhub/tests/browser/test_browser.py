@@ -353,6 +353,33 @@ async def test_spawn_pending_server_ready(app, browser, user_special_chars):
     await expect(stop_start_btns.nth(1)).to_have_id("start")
 
 
+async def test_spawn_named_server(
+    app,
+    browser,
+    user_special_chars,
+    slow_spawn,
+    named_servers,  # noqa: F811
+):
+    """verify that a new named server with special characters is slugified and launched"""
+
+    user = user_special_chars.user
+    entered_display_name = " <  🐧  > "
+    expected_display_name = "< 🐧 >"
+    expected_encoded_display_name = "%3C+%F0%9F%90%A7+%3E"
+    expected_server_name = "x-dc14c4a4"
+
+    await login_home(browser, app, user.name)
+    await browser.get_by_role("textbox", name="server name").fill(entered_display_name)
+    await browser.get_by_role("button", name="Add New Server").click()
+
+    await browser.wait_for_url(
+        f"**/hub/spawn-pending/{user_special_chars.urlname}/{expected_server_name}?display_name={expected_encoded_display_name}",
+    )
+    await browser.wait_for_url(
+        f"**/user/{user_special_chars.urlname}/{expected_server_name}/**"
+    )
+
+
 # HOME PAGE
 
 
