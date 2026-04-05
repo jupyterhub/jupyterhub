@@ -237,6 +237,9 @@ class SpawnHandler(BaseHandler):
         # 'next' is reserved argument for redirect after spawn
         query_options.pop('next', None)
 
+        # display_name is reserved for jupyterhub
+        query_options.pop('display_name', None)
+
         spawn_exc = None
 
         if len(query_options) > 0:
