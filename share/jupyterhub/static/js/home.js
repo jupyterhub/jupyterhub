@@ -61,7 +61,7 @@ require(["jquery", "moment", "jhapi", "utils"], function (
         user +
         "/" +
         serverName +
-        "?displayname=" +
+        "?display_name=" +
         encodeURIComponent(display_name);
     }
   }

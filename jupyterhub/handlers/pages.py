@@ -144,7 +144,7 @@ class SpawnHandler(BaseHandler):
             user_name = self.current_user.name
         if server_name:
             server_displayname = server_name
-            displayname = self.request.arguments.get("displayname")
+            displayname = self.request.arguments.get("display_name")
             if displayname:
                 server_displayname = unquote(displayname[0])
             # names are validated in _get()
