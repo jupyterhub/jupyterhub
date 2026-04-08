@@ -28,16 +28,14 @@ def pytest_addoption(parser):
 
 @pytest.fixture
 def cmdoptions(request):
-    return dict(
-        (opt, request.config.getoption(f"--{opt}"))
+    return {
+        opt: request.config.getoption(f"--{opt}")
         for opt in ["headed", "slowmo", "videodir"]
-    )
+    }
 
 
 @pytest.fixture()
 async def browser(cmdoptions):
-    print(cmdoptions)
-
     # browser_type in ["chromium", "firefox", "webkit"]
     async with async_playwright() as playwright:
         browser = await playwright.firefox.launch(
