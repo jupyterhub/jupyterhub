@@ -155,7 +155,6 @@ More than 10 general-purpose, and more than 20 course-specific environments are 
 >
 > From: [You can (quickly) count on JupyterHub - vu.nl](https://vu.nl/en/news/2024/you-can-quickly-count-on-jupyterhub)
 
-
 ## Service Providers
 
 ### AWS
