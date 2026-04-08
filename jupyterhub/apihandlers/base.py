@@ -324,6 +324,7 @@ class APIHandler(BaseHandler):
             'read:users': {
                 'kind',
                 'name',
+                'user_info',
                 'admin',
                 'roles',
                 'groups',
@@ -332,7 +333,7 @@ class APIHandler(BaseHandler):
                 'created',
                 'last_activity',
             },
-            'read:users:name': {'kind', 'name', 'admin'},
+            'read:users:name': {'kind', 'name', 'user_info', 'admin'},
             'read:users:groups': {'kind', 'name', 'groups'},
             'read:users:activity': {'kind', 'name', 'last_activity'},
             'read:servers': {'kind', 'name', 'servers'},
@@ -373,6 +374,9 @@ class APIHandler(BaseHandler):
                 # leave present and empty
                 # if request has access to read servers in general
                 model["servers"] = servers
+
+            if "user_info" in allowed_keys:
+                model["user_info"] = user.user_info
 
         return model
 

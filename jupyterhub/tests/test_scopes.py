@@ -415,7 +415,7 @@ async def test_vertical_filter(app, create_user_with_scopes):
     user = create_user_with_scopes('list:users')
     r = await api_request(app, 'users', headers=auth_header(app.db, user.name))
     assert r.status_code == 200
-    allowed_keys = {'name', 'kind', 'admin'}
+    allowed_keys = {'name', 'kind', 'admin', 'user_info'}
     assert {key for user in r.json() for key in user.keys()} == allowed_keys
 
 
@@ -425,7 +425,7 @@ async def test_stacked_vertical_filter(app, create_user_with_scopes):
     )
     r = await api_request(app, 'users', headers=auth_header(app.db, user.name))
     assert r.status_code == 200
-    allowed_keys = {'admin', 'name', 'kind', 'groups', 'last_activity'}
+    allowed_keys = {'admin', 'name', 'kind', 'user_info', 'groups', 'last_activity'}
     for user in r.json():
         result_model = set(user)
         assert result_model == allowed_keys
@@ -439,7 +439,7 @@ async def test_cross_filter(app, create_user_with_scopes):
     app.db.commit()
     r = await api_request(app, 'users', headers=auth_header(app.db, user.name))
     assert r.status_code == 200
-    restricted_keys = {'admin', 'name', 'kind', 'last_activity'}
+    restricted_keys = {'admin', 'name', 'kind', 'user_info', 'last_activity'}
     key_in_full_model = 'created'
     for model_user in r.json():
         if model_user['name'] == user.name:
@@ -1007,6 +1007,7 @@ async def test_list_users_filter(
         {
             'name': name,
             'admin': name == 'admin',
+            'user_info': None,
             'kind': 'user',
         }
         for name in sorted(expected)

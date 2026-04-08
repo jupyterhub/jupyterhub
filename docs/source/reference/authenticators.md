@@ -117,6 +117,7 @@ If authentication is successful the `authenticate` method must return either:
   - `name`: the username
   - `admin`: optional, a boolean indicating whether the user is an admin.
     In most cases it is better to use fine grained [RBAC permissions](rbac) instead of giving users full admin privileges.
+  - `user_info`: optional, a dictionary of [user info that will be persisted](authenticator-user-info) (added in 6.0)
   - `auth_state`: optional, a dictionary of [auth state that will be persisted](authenticator-auth-state)
   - `groups`: optional, a list of JupyterHub [group memberships](authenticator-groups)
 
@@ -478,6 +479,51 @@ def auth_state_hook(spawner, auth_state):
 
 c.Spawner.auth_state_hook = auth_state_hook
 ```
+
+(authenticator-user-info)=
+
+### User info
+
+```{versionadded} 6.0
+```
+
+JupyterHub provides the ability to store additional, **non-sensitive** user profile information via the `user_info` field. This can be used to supply metadata such as name, display name, initials, or avatar URLs. This information may be used by the Jupyter Server Identity Provider and extensions within the Jupyter ecosystem.
+
+Unlike `auth_state`, the `user_info` field is intended for non-sensitive data and is stored directly in the database without encryption.
+
+#### Populating user_info
+
+`user_info` is populated by the Authenticator, either during authentication or trhough a `post_auth_hook`. This allows administrators to enrich the user model with additional metadata:
+
+```
+def my_hook(authenticator, handler, auth_model):
+    if auth_model['user_info'] is None:
+        auth_model['user_info'] = {}
+
+    # Example fields provided by an authenticator
+    auth_model['user_info']['name'] = ...
+    auth_model['user_info']['display_name'] = ...
+    auth_model['user_info']['initials'] = ...
+    auth_model['user_info']['avatar_url'] = ...
+    auth_model['user_info']['color'] = ...
+
+    return auth_model
+
+c.Authenticator.post_auth_hook = my_hook
+```
+
+#### Using user_info
+
+The `user_info` field is propagated to the `jupyterhub-singleuser` server environment and is accessible via the Jupyter Server identity system. It is used to construct a `User` object with attributes such as:
+
+- `username`
+- `name`
+- `display_name`
+- `initials`
+- `avatar_url`
+- `color`
+
+These fields can be accessed by server extensions and frontend applications.
 
 (authenticator-groups)=
 
