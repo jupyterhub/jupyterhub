@@ -392,7 +392,9 @@ class User:
             .all()
         )
         # prevent deletion of role scopes that are explicitly defined in auth.load_managed_roles()
-        predef_managed_roles = [r.get('name') for r in await self.authenticator.load_managed_roles() or []]
+        predef_managed_roles = [
+            r.get('name') for r in await self.authenticator.load_managed_roles() or []
+        ]
 
         for stripped_role in managed_stripped_roles:
             if (
