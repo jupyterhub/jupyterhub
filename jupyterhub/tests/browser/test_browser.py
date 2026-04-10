@@ -353,31 +353,44 @@ async def test_spawn_pending_server_ready(app, browser, user_special_chars):
     await expect(stop_start_btns.nth(1)).to_have_id("start")
 
 
-async def test_spawn_named_server(
+async def test_spawn_named_server_with_form(
     app,
     browser,
     user_special_chars,
-    slow_spawn,
+    form_spawn,
     named_servers,  # noqa: F811
 ):
-    """verify that a new named server with special characters is slugified and launched"""
+    """verify that a new named server with special characters is slugified and launched with custom form inputs"""
 
     user = user_special_chars.user
+    urlname = user_special_chars.urlname
+    urlname_alt = user_special_chars.urlname_alt
     entered_display_name = " <  🐧  > "
     expected_display_name = "< 🐧 >"
-    expected_encoded_display_name = "%3C+%F0%9F%90%A7+%3E"
+    expected_encoded_display_name = "%3C%20%F0%9F%90%A7%20%3E"
     expected_server_name = "x-dc14c4a4"
+
+    entered_form_input = "😇 <&!&> 😇"
 
     await login_home(browser, app, user.name)
     await browser.get_by_role("textbox", name="server name").fill(entered_display_name)
     await browser.get_by_role("button", name="Add New Server").click()
 
     await browser.wait_for_url(
-        f"**/hub/spawn-pending/{user_special_chars.urlname}/{expected_server_name}?display_name={expected_encoded_display_name}",
+        f"**/hub/spawn/{urlname_alt}/{expected_server_name}?display_name={expected_encoded_display_name}"
     )
-    await browser.wait_for_url(
-        f"**/user/{user_special_chars.urlname}/{expected_server_name}/**"
+
+    await browser.get_by_role("textbox", name="energy").fill(entered_form_input)
+    await browser.get_by_role("button", name="Start").click()
+
+    await browser.wait_for_url(f"**/user/{urlname}/{expected_server_name}/")
+
+    user_server_env_url = url_path_join(
+        public_url(app, user), expected_server_name, "/env"
     )
+    response = await browser.goto(user_server_env_url)
+    env = await response.json()
+    assert env["ENERGY"] == entered_form_input
 
 
 # HOME PAGE
