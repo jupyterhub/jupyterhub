@@ -38,7 +38,7 @@ from urllib.parse import urlparse
 from pamela import PAMError
 from sqlalchemy import event
 from tornado.httputil import url_concat
-from traitlets import Bool, Dict, default
+from traitlets import Bool, Dict, Unicode, default
 
 from .. import metrics, orm, roles
 from ..app import JupyterHub
@@ -153,10 +153,28 @@ class SlowBadSpawner(MockSpawner):
         raise RuntimeError("I don't work!")
 
 
+class CustomInputSpawner(SlowSpawner):
+    """A spawner that can be used to test custom form inputs by requesting /env"""
+
+    form_input = Unicode()
+
+    def get_env(self):
+        env = super().get_env()
+        env["FORM_INPUT"] = self.form_input
+        return env
+
+
 class FormSpawner(MockSpawner):
     """A spawner that has an options form defined"""
 
-    options_form = "IMAFORM"
+    energy = Unicode(help="field that is set as an environment variable for testing")
+
+    # Only one of the form fields is used in browser UI tests
+    options_form = """
+        <input aria-label="energy" name="energy" type="text" value=""/>
+    """
+
+    apply_user_options = {"energy": "energy"}
 
     def options_from_form(self, form_data):
         options = {'notspecified': 5}
@@ -170,6 +188,11 @@ class FormSpawner(MockSpawner):
         if 'illegal_argument' in form_data:
             raise ValueError("You are not allowed to specify 'illegal_argument'")
         return options
+
+    def get_env(self):
+        env = super().get_env()
+        env["ENERGY"] = self.energy
+        return env
 
 
 class FalsyCallableFormSpawner(FormSpawner):
