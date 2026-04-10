@@ -499,6 +499,13 @@ def slow_bad_spawn(app):
 
 
 @fixture
+def form_spawn(app):
+    """Fixture enabling FormSpawner"""
+    with mock.patch.dict(app.tornado_settings, {'spawner_class': mocking.FormSpawner}):
+        yield
+
+
+@fixture
 def create_temp_role(app):
     """Generate a temporary role with certain scopes.
     Convenience function that provides setup, database handling and teardown"""
