@@ -381,7 +381,10 @@ class SpawnHandler(BaseHandler):
             url_escape_path(server_name),
         )
 
-        pending_url = self.append_query_parameters(pending_url, exclude=['next'])
+        # display_name is handled by the hub, it shouldn't be passed to the spawner
+        pending_url = self.append_query_parameters(
+            pending_url, exclude=['next', 'display_name']
+        )
 
         if self.get_argument('next', None):
             # preserve `?next=...` through spawn-pending
