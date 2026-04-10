@@ -366,9 +366,8 @@ async def test_spawn_named_server_with_form(
     urlname = user_special_chars.urlname
     urlname_alt = user_special_chars.urlname_alt
     entered_display_name = " <  🐧  > "
-    expected_display_name = "< 🐧 >"
-    expected_encoded_display_name = "%3C%20%F0%9F%90%A7%20%3E"
-    expected_server_name = "x-dc14c4a4"
+    expected_encoded_display_name = "%20%3C%20%20%F0%9F%90%A7%20%20%3E"
+    expected_server_name = " <  🐧  >"
 
     entered_form_input = "😇 <&!&> 😇"
 
@@ -377,13 +376,13 @@ async def test_spawn_named_server_with_form(
     await browser.get_by_role("button", name="Add New Server").click()
 
     await browser.wait_for_url(
-        f"**/hub/spawn/{urlname_alt}/{expected_server_name}?display_name={expected_encoded_display_name}"
+        f"**/hub/spawn/{urlname_alt}/{expected_encoded_display_name}"
     )
 
     await browser.get_by_role("textbox", name="energy").fill(entered_form_input)
     await browser.get_by_role("button", name="Start").click()
 
-    await browser.wait_for_url(f"**/user/{urlname}/{expected_server_name}/")
+    await browser.wait_for_url(f"**/user/{urlname}/{expected_encoded_display_name}/")
 
     user_server_env_url = url_path_join(
         public_url(app, user), expected_server_name, "/env"
