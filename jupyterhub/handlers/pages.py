@@ -176,6 +176,7 @@ class SpawnHandler(BaseHandler):
             )
 
             # Allow invalid server names created before JupyterHub 6
+            # if allow_invalid_named_server_start
             # Prevent creation of new invalid server names
             if named_server_limit_per_user > 0 and server_name not in user.orm_spawners:
                 named_spawners = list(user.all_spawners(include_default=False))
@@ -196,6 +197,13 @@ class SpawnHandler(BaseHandler):
                     self.log.error(error_message)
                     raise web.HTTPError(400, error_message)
                 display_name = normalise_unicode(display_name)
+
+            if not self.settings[
+                "allow_invalid_named_server_start"
+            ] and not is_valid_safe_slug(server_name):
+                error_message = f"Starting invalid server_name '{server_name}' is disabled, contact your adminstrator"
+                self.log.error(error_message)
+                raise web.HTTPError(400, error_message)
 
         if not self.allow_named_servers and user.running:
             url = self.get_next_url(user, default=user.server_url(""))

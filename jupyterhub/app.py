@@ -41,6 +41,7 @@ from traitlets import (
     Bool,
     Bytes,
     Dict,
+    Enum,
     Float,
     Instance,
     Integer,
@@ -1364,6 +1365,20 @@ class JupyterHub(Application):
                 return 5
 
             c.JupyterHub.named_server_limit_per_user = named_server_limit_per_user_fn
+        """,
+    ).tag(config=True)
+
+    allow_existing_invalid_named_servers = Enum(
+        ("allow-start", "allow-delete"),
+        "allow-start",
+        help="""
+        How to handle existing named servers with invalid names.
+
+        JupyterHub 6 restricts the format of named servers. This controls how
+        named servers created with older versions are handled:
+
+          - allow-start: existing servers can be started, stopped or deleted by the owner
+          - allow-delete: existing servers can be stopped or deleted by the owner
         """,
     ).tag(config=True)
 
@@ -3281,6 +3296,9 @@ class JupyterHub(Application):
             allow_named_servers=self.allow_named_servers,
             default_server_name=self._default_server_name,
             named_server_limit_per_user=self.named_server_limit_per_user,
+            allow_invalid_named_server_start=(
+                self.allow_existing_invalid_named_servers == "allow-start"
+            ),
             oauth_provider=self.oauth_provider,
             oauth_no_confirm_list=oauth_no_confirm_list,
             concurrent_spawn_limit=self.concurrent_spawn_limit,

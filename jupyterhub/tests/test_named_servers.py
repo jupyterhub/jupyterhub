@@ -59,6 +59,14 @@ def default_server_name(app, named_servers):
         app.default_server_name = ''
 
 
+@pytest.fixture
+def disable_invalid_named_server_start(app, named_servers):
+    with mock.patch.dict(
+        app.tornado_settings, {"allow_invalid_named_server_start": False}
+    ):
+        yield
+
+
 async def test_default_server(app, named_servers):
     """Test the default /users/:user/server handler when named servers are enabled"""
     username = 'rosie'
@@ -255,6 +263,27 @@ async def test_create_invalid_named_server(app, named_servers, servername):
     assert exc.value.response.json() == {
         'status': 400,
         'message': f"Invalid server_name: {servername}",
+    }
+
+
+async def test_start_invalid_named_server_disabled(
+    app, disable_invalid_named_server_start
+):
+    username = 'donaar'
+    user = add_user(app.db, app, name=username)
+    assert user.allow_named_servers
+    cookies = await app.login_user(username)
+    servername = "<!>"
+    escapedname = "%3C!%3E"
+
+    user._new_orm_spawner(servername, servername)
+
+    r = await api_request(app, "users", username, "servers", escapedname, method="post")
+    with pytest.raises(HTTPError) as exc:
+        r.raise_for_status()
+    assert exc.value.response.json() == {
+        "status": 400,
+        "message": f"Starting invalid server_name '{servername}' is disabled, contact your adminstrator",
     }
 
 
