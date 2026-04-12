@@ -657,6 +657,13 @@ class UserServerAPIHandler(APIHandler):
                     raise web.HTTPError(400, error_message)
                 display_name = normalise_unicode(display_name)
 
+            if not self.settings[
+                "allow_invalid_named_server_start"
+            ] and not is_valid_safe_slug(server_name):
+                error_message = f"Starting invalid server_name '{server_name}' is disabled, contact your adminstrator"
+                self.log.error(error_message)
+                raise web.HTTPError(400, error_message)
+
         else:
             display_name = ''
 
