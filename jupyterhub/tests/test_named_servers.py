@@ -258,18 +258,31 @@ async def test_create_invalid_named_server(app, named_servers, servername):
     }
 
 
-async def test_delete_named_server(app, named_servers):
+@pytest.mark.parametrize(
+    "servername,escapedname,start_only",
+    [
+        ("splugoth", "splugoth", False),
+        # Servers with a non-compliant name can be started/deleted but not created
+        ("$p~c|a! ch@rs", "%24p~c%7Ca%21%20ch@rs", True),
+    ],
+)
+async def test_delete_named_server(
+    app, named_servers, servername, escapedname, start_only
+):
     username = 'donaar'
     user = add_user(app.db, app, name=username)
     assert user.allow_named_servers
     cookies = await app.login_user(username)
-    servername = 'splugoth'
-    r = await api_request(app, 'users', username, 'servers', servername, method='post')
+
+    if start_only:
+        user._new_orm_spawner(servername, servername)
+
+    r = await api_request(app, 'users', username, 'servers', escapedname, method='post')
     r.raise_for_status()
     assert r.status_code == 201
 
     r = await api_request(
-        app, 'users', username, 'servers', servername, method='delete'
+        app, 'users', username, 'servers', escapedname, method='delete'
     )
     r.raise_for_status()
     assert r.status_code == 204
