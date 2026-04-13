@@ -123,6 +123,9 @@ define(["jquery", "js-sha256"], function ($, sha256) {
   };
 
   var safe_slug = function (name) {
+    if (!name) {
+      throw new Error("Unable to create safe slug for empty string");
+    }
     const max_length = 32;
     const _hash_length = 8;
     // Generate an always-safe, unique string for any input
