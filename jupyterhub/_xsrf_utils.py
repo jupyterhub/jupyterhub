@@ -193,7 +193,7 @@ def _needs_check_xsrf(handler):
         return False
 
     fetch_mode = handler.request.headers.get("Sec-Fetch-Mode", "unspecified")
-    if fetch_mode in {"websocket", "no-cors"} or (
+    if fetch_mode == "websocket" or (
         fetch_mode in {"navigate", "unspecified"}
         and handler.request.method.lower() in {"get", "head", "options"}
     ):
