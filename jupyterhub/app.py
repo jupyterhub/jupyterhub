@@ -3412,7 +3412,7 @@ class JupyterHub(Application):
             self.log.warning(
                 "%d named servers have names that do not comply with restrictions "
                 "introduced in JupyterHub 6. See "
-                "https://jupyterhub.readthedocs.io/en/6.0.0/<TODO> "
+                "https://jupyterhub.readthedocs.io/en/6.0.0/howto/upgrading-v6.html "
                 "for migration instructions.",
                 len(cant_modify) + len(to_modify),
             )

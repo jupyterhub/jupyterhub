@@ -535,8 +535,8 @@ class User:
 
         if server_name and not is_valid_safe_slug(server_name):
             self.log.warning(
-                "JupyterHub 6 has new restrictions on servernames. "
-                "See https://jupyterhub.readthedocs.io/en/6.0.0/<TODO> "
+                "JupyterHub 6 has new restrictions on servernames. See "
+                "https://jupyterhub.readthedocs.io/en/6.0.0/howto/upgrading-v6.html "
                 "for advice on migrating named servers (%s)",
                 server_name,
             )
