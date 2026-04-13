@@ -16,7 +16,7 @@ ci:
 repos:
   # autoformat and lint Python code
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.13.3
+    rev: b831c3dc5d27d9da294ae4e915773b99aa24a7c5 # frozen: v0.15.10
     hooks:
       - id: ruff
         types_or:
@@ -30,14 +30,14 @@ repos:
 
   # Autoformat: markdown, yaml, javascript (see the file .prettierignore)
   - repo: https://github.com/rbubley/mirrors-prettier
-    rev: v3.6.2
+    rev: b25652612a4a3c1da8caccfca9af661db56b2c07 # frozen: v3.8.2
     hooks:
       - id: prettier
         exclude: .*/templates/.*|docs/source/_static/rest-api.yml|docs/source/rbac/scope-table.md
 
   # autoformat HTML templates
   - repo: https://github.com/djlint/djLint
-    rev: v1.36.4
+    rev: 9112cb64851c95a7802358af285d21ad8b7f6437 # frozen: v1.36.4
     hooks:
       - id: djlint-reformat-jinja
         files: ".*templates/.*.html"
@@ -49,7 +49,7 @@ repos:
 
   # Autoformat and linting, misc. details
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v6.0.0
+    rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c # frozen: v6.0.0
     hooks:
       - id: end-of-file-fixer
         exclude: share/jupyterhub/static/js/admin-react.js
