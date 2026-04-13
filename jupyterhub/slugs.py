@@ -88,7 +88,7 @@ def is_valid_safe_slug(s):
 
     alphanumeric, with an optional '-' in the middle
     """
-    if len(s) > 32:
+    if len(s) > 32 or len(s) < 1:
         return False
     name, sep, suffix = s.partition("-")
     if not name or (sep and not suffix):
@@ -192,7 +192,7 @@ def strip_and_hash(name, max_length=32):
 
 
 def safe_slug(name, is_valid=is_valid_default, max_length=32):
-    """Always generate a safe slug
+    """Always generate a safe slug for a non-empty string
 
     is_valid should be a callable that returns True if a given string follows appropriate rules,
     and False if it does not.
@@ -203,6 +203,8 @@ def safe_slug(name, is_valid=is_valid_default, max_length=32):
     1. validity, and
     2. no collisions
     """
+    if not name:
+        raise ValueError("Unable to create safe slug for empty string")
     if '-' in name:
         # don't accept any names that could collide with the safe slug
         return strip_and_hash(name, max_length=max_length)
