@@ -10,10 +10,15 @@ updates:
   - package-ecosystem: github-actions
     directory: /
     labels: [ci]
+    groups:
+      # group official actions updates
+      actions:
+        patterns:
+          - "actions/*"
     schedule:
       interval: monthly
-      time: "05:00"
-      timezone: Etc/UTC
+    cooldown:
+      default-days: 7
   - package-ecosystem: npm
     directory: /
     groups:
@@ -26,6 +31,8 @@ updates:
           - patch
     schedule:
       interval: monthly
+    cooldown:
+      default-days: 7
   - package-ecosystem: npm
     directory: /jsx
     groups:
@@ -39,9 +46,8 @@ updates:
       # group major bumps of react-related dependencies
       jsx-react:
         patterns:
-          - "react*"
-          - "redux*"
-          - "*react"
+          - "*react*"
+          - "*redux*"
           - "recompose"
         update-types:
           - major
@@ -62,3 +68,5 @@ updates:
           - major
     schedule:
       interval: monthly
+    cooldown:
+      default-days: 7
