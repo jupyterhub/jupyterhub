@@ -1589,7 +1589,8 @@ class JupyterHub(Application):
     handlers = List()
 
     config_role_names = List(
-        [], help = "Cached list of authenticator-managed roles loaded by load_managed_roles on startup"
+        [],
+        help="Cached list of authenticator-managed roles loaded by load_managed_roles on startup",
     )
 
     _log_formatter_cls = CoroutineLogFormatter
