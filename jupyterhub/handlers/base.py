@@ -948,7 +948,7 @@ class BaseHandler(RequestHandler):
         if self.authenticator.manage_roles:
             auth_roles = authenticated.get("roles")
             if auth_roles is not None:
-                await user.sync_roles(auth_roles)
+                user.sync_roles(auth_roles)
         # always set auth_state and commit,
         # because there could be key-rotation or clearing of previous values
         # going on.

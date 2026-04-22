@@ -301,7 +301,7 @@ class User:
             self.orm_user.groups = []
         self.db.commit()
 
-    async def sync_roles(self, auth_roles):
+    def sync_roles(self, auth_roles):
         """Synchronize roles with database"""
         auth_roles_by_name = {role['name']: role for role in auth_roles}
 
@@ -391,17 +391,13 @@ class User:
             )
             .all()
         )
-        # prevent deletion of role scopes that are explicitly defined in auth.load_managed_roles()
-        predef_managed_roles = [
-            r.get('name') for r in await self.authenticator.load_managed_roles() or []
-        ]
 
         for stripped_role in managed_stripped_roles:
             if (
                 not stripped_role.users
                 and not stripped_role.services
                 and not stripped_role.groups
-                and not stripped_role.name in predef_managed_roles
+                and not stripped_role.name in self.settings.get('config_role_names')
             ):
                 self.db.delete(stripped_role)
 
