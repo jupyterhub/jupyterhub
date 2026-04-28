@@ -22,6 +22,29 @@ Contributors to major version bumps in JupyterHub include:
 
 ## 5.4
 
+### 5.4.5 - 2026-04-28
+
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/5.4.4...5.4.5))
+
+#### Bugs fixed
+
+- Do not fail when deleting nonexistent server of nonexistent user [#5350](https://github.com/jupyterhub/jupyterhub/pull/5350) ([@nsychev](https://github.com/nsychev), [@minrk](https://github.com/minrk))
+- Fix red color of failed progress bar [#5342](https://github.com/jupyterhub/jupyterhub/pull/5342) ([@Paul2708](https://github.com/Paul2708), [@minrk](https://github.com/minrk))
+
+#### Maintenance and upkeep improvements
+
+- ci: temporary pin-down cryptography [#5351](https://github.com/jupyterhub/jupyterhub/pull/5351) ([@minrk](https://github.com/minrk))
+- 5.x: backport workflow updates [#5346](https://github.com/jupyterhub/jupyterhub/pull/5346) ([@minrk](https://github.com/minrk))
+
+#### Contributors to this release
+
+The following people contributed discussions, new ideas, code and documentation contributions, and review.
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/use/#how-does-this-tool-define-contributions-in-the-reports).
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2026-03-26&to=2026-04-28&type=c))
+
+@consideRatio ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3AconsideRatio+updated%3A2026-03-26..2026-04-28&type=Issues)) | @manics ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amanics+updated%3A2026-03-26..2026-04-28&type=Issues)) | @meeseeksmachine ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ameeseeksmachine+updated%3A2026-03-26..2026-04-28&type=Issues)) | @minrk ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk+updated%3A2026-03-26..2026-04-28&type=Issues)) | @nsychev ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ansychev+updated%3A2026-03-26..2026-04-28&type=Issues)) | @Paul2708 ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3APaul2708+updated%3A2026-03-26..2026-04-28&type=Issues)) | @rgaiacs ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Argaiacs+updated%3A2026-03-26..2026-04-28&type=Issues)) | @sixonenines ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Asixonenines+updated%3A2026-03-26..2026-04-28&type=Issues)) | @wilkinvr ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Awilkinvr+updated%3A2026-03-26..2026-04-28&type=Issues))
+
 ### 5.4.4 - 2026-03-26
 
 ```{important}
