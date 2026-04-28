@@ -667,6 +667,8 @@ class UserServerAPIHandler(APIHandler):
     @needs_scope('delete:servers')
     async def delete(self, user_name, server_name=''):
         user = self.find_user(user_name)
+        if user is None:
+            raise web.HTTPError(404)
         options = self.get_json_body()
         remove = (options or {}).get('remove', False)
 

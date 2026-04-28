@@ -1247,7 +1247,12 @@ async def test_bad_spawn(app, bad_spawn):
 
 
 async def test_spawn_nosuch_user(app):
-    r = await api_request(app, 'users', "nosuchuser", 'server', method='post')
+    r = await api_request(app, 'users', 'nosuchuser', 'server', method='post')
+    assert r.status_code == 404
+
+
+async def test_stop_nosuch_user(app):
+    r = await api_request(app, 'users', 'nosuchuser', 'server', method='delete')
     assert r.status_code == 404
 
 
