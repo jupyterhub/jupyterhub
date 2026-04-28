@@ -24,6 +24,14 @@ Contributors to major version bumps in JupyterHub include:
 
 ### 5.4.5 - 2026-04-28
 
+```{important}
+5.4.5 is a security release, fixing a moderate-severity CSRF vulnerability in JupyterHub ([CVE-2026-40864]).
+```
+
+The advisory will be published 7 days after release (2026-05-05).
+
+[CVE-2026-40864]: https://github.com/jupyterhub/jupyterhub/security/advisories/GHSA-m68r-v472-jgq9
+
 ([full changelog](https://github.com/jupyterhub/jupyterhub/compare/5.4.4...5.4.5))
 
 #### Bugs fixed
