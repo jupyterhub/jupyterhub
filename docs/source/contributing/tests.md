@@ -63,6 +63,27 @@ you would run:
 pytest -v jupyterhub/tests/test_api.py::test_shutdown
 ```
 
+## Functional browser testing
+
+We use [Playwright for Python](https://playwright.dev/python/) to automate testing of the JupyterHub user interface.
+Playwright requires [specific versions of browsers](https://playwright.dev/python/docs/browsers), which you must download before running the tests:
+
+```bash
+playwright install firefox
+```
+
+You can run the tests by passing the `browser` Pytest marker on the command line:
+
+```bash
+pytest -v jupyterhub/tests/browser/ -mbrowser
+```
+
+You can set some of these custom Pytest command line arguments to help investigate failing tests:
+
+- `--headed` to show the automated browser whilst the tests are run
+- `--slowmo=1000` to insert a `1000` millisecond delay between each step of the test, but be aware this may hide race conditions
+- `--videodir=output-dir` to save videos of tests under the `output-dir` directory
+
 ## Test organisation
 
 The tests live in `jupyterhub/tests` and are organized roughly into:
