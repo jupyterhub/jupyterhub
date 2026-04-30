@@ -485,6 +485,7 @@ c.Spawner.auth_state_hook = auth_state_hook
 ### User info
 
 ```{versionadded} 6.0
+
 ```
 
 JupyterHub provides the ability to store additional, **non-sensitive** user profile information via the `user_info` field. This can be used to supply metadata such as name, display name, initials, or avatar URLs. This information may be used by the Jupyter Server Identity Provider and extensions within the Jupyter ecosystem.
@@ -493,7 +494,7 @@ Unlike `auth_state`, the `user_info` field is intended for non-sensitive data an
 
 #### Populating user_info
 
-`user_info` is populated by the Authenticator, either during authentication or trhough a `post_auth_hook`. This allows administrators to enrich the user model with additional metadata:
+`user_info` is populated by the Authenticator, either during authentication or through a `post_auth_hook`. This allows administrators to enrich the user model with additional metadata:
 
 ```
 def my_hook(authenticator, handler, auth_model):
