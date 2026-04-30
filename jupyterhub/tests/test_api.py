@@ -246,6 +246,7 @@ async def test_get_users(app):
         'admin': False,
         'roles': ['user'],
         'auth_state': None,
+        'user_info': None,
     }
     assert users == [
         fill_user(
@@ -254,6 +255,7 @@ async def test_get_users(app):
                 'admin': True,
                 'roles': ['admin', 'user'],
                 'auth_state': None,
+                'user_info': None,
             }
         ),
         fill_user(user_model),
@@ -683,7 +685,9 @@ async def test_get_user(app):
     r.raise_for_status()
 
     user = normalize_user(r.json())
-    assert user == fill_user({'name': name, 'roles': ['user'], 'auth_state': None})
+    assert user == fill_user(
+        {'name': name, 'roles': ['user'], 'auth_state': None, 'user_info': None}
+    )
 
     # admin request, no such user
     r = await api_request(

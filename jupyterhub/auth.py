@@ -704,6 +704,7 @@ class Authenticator(LoggingConfigurable):
         else:
             authenticated = {'name': authenticated}
         authenticated.setdefault('auth_state', None)
+        authenticated.setdefault('user_info', None)
         # Leave the default as None, but reevaluate later post-allowed-check
         authenticated.setdefault('admin', None)
 
