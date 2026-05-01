@@ -3,7 +3,7 @@ import { useSelector, useDispatch } from "react-redux";
 import PropTypes from "prop-types";
 
 import { Button, Card } from "react-bootstrap";
-import { Link, useNavigate } from "react-router";
+import { Link } from "react-router";
 import { usePaginationParams } from "../../util/paginationParams";
 import PaginationFooter from "../PaginationFooter/PaginationFooter";
 import { MainContainer } from "../../util/layout";
@@ -12,7 +12,6 @@ const Groups = (props) => {
   const groups_data = useSelector((state) => state.groups_data);
   const groups_page = useSelector((state) => state.groups_page);
   const dispatch = useDispatch();
-  const navigate = useNavigate();
 
   const { offset, setOffset, handleLimit, limit } = usePaginationParams();
 
@@ -32,7 +31,7 @@ const Groups = (props) => {
 
   // single callback to reload the page
   // uses current state
-  const loadPageData = (params) => {
+  const loadPageData = (_params) => {
     const abortHandle = { cancelled: false };
     (async () => {
       try {

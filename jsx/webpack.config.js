@@ -15,7 +15,6 @@ module.exports = {
       },
       {
         test: /\.(css)/,
-        exclude: /node_modules/,
         use: ["style-loader", "css-loader"],
       },
       {
@@ -38,54 +37,106 @@ module.exports = {
     client: {
       overlay: false,
     },
-    static: ["build", "testing", "../share/jupyterhub"],
+    // Serve the mock app shell from `/` during local dev.
+    static: ["testing", "build", "../share/jupyterhub"],
+    devMiddleware: {
+      index: "index.html",
+    },
     port: 9000,
-    onBeforeSetupMiddleware: (devServer) => {
+    setupMiddlewares: (middlewares, devServer) => {
       const app = devServer.app;
+      const apiPrefixes = ["/api", "/hub/api"];
+      const forEachApiPrefix = (register) => {
+        apiPrefixes.forEach((prefix) => register(prefix));
+      };
 
       // get user_data
-      app.get("/hub/api/users", (req, res) => {
-        res.set("Content-Type", "application/json").send(user_json);
+      forEachApiPrefix((prefix) => {
+        app.get(`${prefix}/users`, (req, res) => {
+          res.set("Content-Type", "application/json").send(user_json);
+        });
+      });
+      // get single user_data
+      forEachApiPrefix((prefix) => {
+        app.get(`${prefix}/users/*`, (req, res) => {
+          const username = req.path.split("/").pop();
+          const user = (user_json.items || []).find(
+            (item) => item.name === username,
+          );
+          if (user) {
+            res.set("Content-Type", "application/json").send(user);
+          } else {
+            res.status(404).json({ message: `User '${username}' not found` });
+          }
+        });
       });
       // get group_data
-      app.get("/hub/api/groups", (req, res) => {
-        res.set("Content-Type", "application/json").send(group_json);
+      forEachApiPrefix((prefix) => {
+        app.get(`${prefix}/groups`, (req, res) => {
+          res.set("Content-Type", "application/json").send(group_json);
+        });
       });
       // add users to group
-      app.post("/hub/api/groups/*/users", (req, res) => {
-        console.log(req.url, req.body);
-        res.status(200).end();
+      forEachApiPrefix((prefix) => {
+        app.post(`${prefix}/groups/*/users`, (req, res) => {
+          console.log(req.url, req.body);
+          res.status(200).end();
+        });
       });
       // remove users from group
-      app.delete("/hub/api/groups/*", (req, res) => {
-        console.log(req.url, req.body);
-        res.status(200).end();
+      forEachApiPrefix((prefix) => {
+        app.delete(`${prefix}/groups/*`, (req, res) => {
+          console.log(req.url, req.body);
+          res.status(200).end();
+        });
       });
       // add users
-      app.post("/hub/api/users", (req, res) => {
-        console.log(req.url, req.body);
-        res.status(200).end();
+      forEachApiPrefix((prefix) => {
+        app.post(`${prefix}/users`, (req, res) => {
+          console.log(req.url, req.body);
+          res.status(200).end();
+        });
       });
       // delete user
-      app.delete("/hub/api/users", (req, res) => {
-        console.log(req.url, req.body);
-        res.status(200).end();
+      forEachApiPrefix((prefix) => {
+        app.delete(`${prefix}/users`, (req, res) => {
+          console.log(req.url, req.body);
+          res.status(200).end();
+        });
       });
       // start user server
-      app.post("/hub/api/users/*/server", (req, res) => {
-        console.log(req.url, req.body);
-        res.status(200).end();
+      forEachApiPrefix((prefix) => {
+        app.post(`${prefix}/users/*/server`, (req, res) => {
+          console.log(req.url, req.body);
+          res.status(200).end();
+        });
       });
       // stop user server
-      app.delete("/hub/api/users/*/server", (req, res) => {
-        console.log(req.url, req.body);
-        res.status(200).end();
+      forEachApiPrefix((prefix) => {
+        app.delete(`${prefix}/users/*/server`, (req, res) => {
+          console.log(req.url, req.body);
+          res.status(200).end();
+        });
+      });
+      // start/stop named user servers
+      forEachApiPrefix((prefix) => {
+        app.post(`${prefix}/users/*/servers/*`, (req, res) => {
+          console.log(req.url, req.body);
+          res.status(200).end();
+        });
+        app.delete(`${prefix}/users/*/servers/*`, (req, res) => {
+          console.log(req.url, req.body);
+          res.status(200).end();
+        });
       });
       // shutdown hub
-      app.post("/hub/api/shutdown", (req, res) => {
-        console.log(req.url, req.body);
-        res.status(200).end();
+      forEachApiPrefix((prefix) => {
+        app.post(`${prefix}/shutdown`, (req, res) => {
+          console.log(req.url, req.body);
+          res.status(200).end();
+        });
       });
+      return middlewares;
     },
   },
 };
