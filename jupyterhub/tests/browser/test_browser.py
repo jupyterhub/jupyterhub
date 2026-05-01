@@ -729,25 +729,26 @@ async def test_request_token_expiration(
     )
     assert last_used_text == "Never"
 
-    expires_at_text = (
-        await api_token_table_area.locator("tr.token-row")
-        .get_by_role("cell")
-        .nth(4)
-        .text_content()
+    # flaky: moment rendering is async
+    expires_at_cell = (
+        api_token_table_area.locator("tr.token-row").get_by_role("cell").nth(4)
     )
 
     if token_opt == "Never":
         assert orm_token.expires_at is None
-        assert expires_at_text == "Never"
+        expires_at_text = "Never"
     elif token_opt == "1 Hour":
-        assert expires_at_text == "in an hour"
+        expires_at_text = "in an hour"
     elif token_opt == "1 Day":
-        assert expires_at_text == "in a day"
+        expires_at_text = "in a day"
     elif token_opt == "1 Week":
-        assert expires_at_text == "in 7 days"
+        expires_at_text = "in 7 days"
     elif token_opt == "server_up":
         assert orm_token.expires_at is None
-        assert expires_at_text == "Never"
+        expires_at_text = "Never"
+
+    await expect(expires_at_cell).to_have_text(expires_at_text)
+
     # verify that the button for revoke is presented
     revoke_btn = (
         api_token_table_area.locator("tr.token-row").get_by_role("button").nth(0)
