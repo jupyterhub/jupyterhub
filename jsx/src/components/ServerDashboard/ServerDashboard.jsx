@@ -41,8 +41,7 @@ const ServerDashboard = (props) => {
   let user_data = useSelector((state) => state.user_data);
   const user_page = useSelector((state) => state.user_page);
 
-  const { offset, setOffset, setLimit, handleLimit, limit } =
-    usePaginationParams();
+  const { offset, setOffset, handleLimit, limit } = usePaginationParams();
 
   const name_filter = searchParams.get("name_filter") || "";
   const sort = searchParams.get("sort") || "id";

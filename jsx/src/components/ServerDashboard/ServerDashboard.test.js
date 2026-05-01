@@ -532,7 +532,6 @@ test("Shows a UI error dialogue when start user server returns an improper statu
 });
 
 test("Shows a UI error dialogue when stop user servers fails", async () => {
-  let spy = mockAsync();
   let rejectSpy = mockAsyncRejection();
 
   await act(async () => {
@@ -551,7 +550,6 @@ test("Shows a UI error dialogue when stop user servers fails", async () => {
 });
 
 test("Shows a UI error dialogue when stop user server returns an improper status code", async () => {
-  let spy = mockAsync();
   let rejectSpy = mockAsync({ status: 403 });
 
   await act(async () => {
@@ -570,7 +568,6 @@ test("Shows a UI error dialogue when stop user server returns an improper status
 });
 
 test("Search for user calls updateUsers with name filter", async () => {
-  let spy = mockAsync();
   await act(async () => {
     searchParams.set("offset", "2");
     render(serverDashboardJsx());
@@ -608,7 +605,6 @@ test("Interacting with PaginationFooter requests page update", async () => {
 
   expect(mockUpdateUsers).toHaveBeenCalledWith(defaultUpdateUsersParams);
 
-  var n = 3;
   expect(searchParams.get("offset")).toEqual(null);
   expect(searchParams.get("limit")).toEqual("2");
 

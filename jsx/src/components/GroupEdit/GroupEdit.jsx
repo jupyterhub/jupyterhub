@@ -9,7 +9,7 @@ import { MainContainer } from "../../util/layout";
 
 const GroupEdit = (props) => {
   const [selected, setSelected] = useState([]),
-    [changed, setChanged] = useState(false),
+    [, setChanged] = useState(false),
     [errorAlert, setErrorAlert] = useState(null),
     navigate = useNavigate(),
     location = useLocation(),
