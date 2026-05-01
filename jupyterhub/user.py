@@ -391,11 +391,13 @@ class User:
             )
             .all()
         )
+
         for stripped_role in managed_stripped_roles:
             if (
                 not stripped_role.users
                 and not stripped_role.services
                 and not stripped_role.groups
+                and not stripped_role.name in self.settings.get('config_role_names')
             ):
                 self.db.delete(stripped_role)
 
