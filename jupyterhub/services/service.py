@@ -45,6 +45,7 @@ import os
 import shlex
 import shutil
 from subprocess import Popen
+from urllib.parse import urlparse, urlunparse
 
 from traitlets import (
     Any,
@@ -415,15 +416,36 @@ class Service(LoggingConfigurable):
         if not self.managed:
             raise RuntimeError(f"Cannot start unmanaged service {self}")
         self.log.info("Starting service %r: %r", self.name, self.command)
+
+        hub = self.hub
+
         env = {}
         env.update(self.environment)
+        spawn_kwargs = {}
+
+        if self.app.public_url:
+            # strip path part, just the proto://host[:port]
+            hub_public_origin = urlunparse(
+                urlparse(self.app.public_url)._replace(path="")
+            )
+            spawn_kwargs["public_hub_url"] = url_path_join(
+                hub_public_origin, hub.base_url
+            )
+        else:
+            hub_public_origin = None
 
         env['JUPYTERHUB_SERVICE_NAME'] = self.name
         if self.url:
             env['JUPYTERHUB_SERVICE_URL'] = self.url
             env['JUPYTERHUB_SERVICE_PREFIX'] = self.server.base_url
 
-        hub = self.hub
+            # set public url
+            public_origin = self.host or hub_public_origin
+            if public_origin:
+                spawn_kwargs["public_url"] = url_path_join(
+                    public_origin, self.server.base_url
+                )
+
         if self.hub.ip in ('', '0.0.0.0', '::'):
             # if the Hub is listening on all interfaces,
             # tell services to connect via localhost
@@ -450,6 +472,7 @@ class Service(LoggingConfigurable):
             internal_ssl=self.app.internal_ssl,
             internal_certs_location=self.app.internal_certs_location,
             internal_trust_bundles=self.app.internal_trust_bundles,
+            **spawn_kwargs,
         )
         if self.spawner.internal_ssl:
             self.spawner.cert_paths = await self.spawner.create_certs()

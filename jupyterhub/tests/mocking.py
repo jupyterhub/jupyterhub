@@ -369,6 +369,8 @@ class MockHub(JupyterHub):
         self.db_url = os.getenv('JUPYTERHUB_TEST_DB_URL') or self.db_file.name
         if 'mysql' in self.db_url:
             self.db_kwargs['connect_args'] = {'auth_plugin': 'mysql_native_password'}
+        if self.subdomain_host:
+            self.public_url = self.subdomain_host
         await super().initialize([])
 
         # add an initial user
