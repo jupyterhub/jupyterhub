@@ -60,7 +60,9 @@ module.exports = {
       forEachApiPrefix((prefix) => {
         app.get(`${prefix}/users/*`, (req, res) => {
           const username = req.path.split("/").pop();
-          const user = (user_json.items || []).find((item) => item.name === username);
+          const user = (user_json.items || []).find(
+            (item) => item.name === username,
+          );
           if (user) {
             res.set("Content-Type", "application/json").send(user);
           } else {
