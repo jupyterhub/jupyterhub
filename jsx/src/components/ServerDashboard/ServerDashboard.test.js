@@ -168,7 +168,7 @@ var mockReducers = jest.fn((state, action) => {
   return state;
 });
 
-let mockUpdateUsers = jest.fn(({ offset, limit, sort, name_filter, state }) => {
+let mockUpdateUsers = jest.fn(({ offset, limit, name_filter, state }) => {
   /* mock updating users 
   
   this has tom implement the server-side filtering, sorting, etc.

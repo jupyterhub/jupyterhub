@@ -29,7 +29,7 @@ var mockAsync = (data) =>
 var mockAsyncRejection = () =>
   jest.fn().mockImplementation(() => Promise.reject());
 
-var editUserJsx = (callbackSpy, empty) => (
+var editUserJsx = (callbackSpy) => (
   <Provider store={createStore(() => {}, {})}>
     <HashRouter>
       <EditUser

@@ -32,7 +32,7 @@ const Groups = (props) => {
 
   // single callback to reload the page
   // uses current state
-  const loadPageData = (params) => {
+  const loadPageData = (_params) => {
     const abortHandle = { cancelled: false };
     (async () => {
       try {
