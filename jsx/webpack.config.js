@@ -40,7 +40,7 @@ module.exports = {
     },
     static: ["build", "testing", "../share/jupyterhub"],
     port: 9000,
-    onBeforeSetupMiddleware: (devServer) => {
+    setupMiddlewares: (middlewares, devServer) => {
       const app = devServer.app;
 
       // get user_data
@@ -86,6 +86,7 @@ module.exports = {
         console.log(req.url, req.body);
         res.status(200).end();
       });
+      return middlewares;
     },
   },
 };
