@@ -596,6 +596,11 @@ async def test_token_form_expires_in(
         await open_token_page(app, browser, user_special_chars.user)
     # check the list of tokens duration
     dropdown = browser.locator('#token-expiration-seconds')
+    # wait for options to load
+    options = await expect(dropdown.locator('option')).to_have_count(
+        len(expected_options)
+    )
+
     options = await dropdown.locator('option').all()
     actual_values = [
         (await option.text_content(), await option.get_attribute('value'))
@@ -729,25 +734,26 @@ async def test_request_token_expiration(
     )
     assert last_used_text == "Never"
 
-    expires_at_text = (
-        await api_token_table_area.locator("tr.token-row")
-        .get_by_role("cell")
-        .nth(4)
-        .text_content()
+    # flaky: moment rendering is async
+    expires_at_cell = (
+        api_token_table_area.locator("tr.token-row").get_by_role("cell").nth(4)
     )
 
     if token_opt == "Never":
         assert orm_token.expires_at is None
-        assert expires_at_text == "Never"
+        expires_at_text = "Never"
     elif token_opt == "1 Hour":
-        assert expires_at_text == "in an hour"
+        expires_at_text = "in an hour"
     elif token_opt == "1 Day":
-        assert expires_at_text == "in a day"
+        expires_at_text = "in a day"
     elif token_opt == "1 Week":
-        assert expires_at_text == "in 7 days"
+        expires_at_text = "in 7 days"
     elif token_opt == "server_up":
         assert orm_token.expires_at is None
-        assert expires_at_text == "Never"
+        expires_at_text = "Never"
+
+    await expect(expires_at_cell).to_have_text(expires_at_text)
+
     # verify that the button for revoke is presented
     revoke_btn = (
         api_token_table_area.locator("tr.token-row").get_by_role("button").nth(0)
@@ -1388,9 +1394,7 @@ async def test_start_stop_server_on_admin_page(
 
     # click on Start button
     await click_start_server(browser, user1.name)
-    await expect(browser.get_by_role("button", name="Stop Server")).to_have_count(
-        1, timeout=30_000
-    )
+    await expect(browser.get_by_role("button", name="Stop Server")).to_have_count(1)
     await expect(browser.get_by_role("button", name="Start Server")).to_have_count(
         len(users_list) - 1
     )
