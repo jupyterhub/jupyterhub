@@ -596,6 +596,11 @@ async def test_token_form_expires_in(
         await open_token_page(app, browser, user_special_chars.user)
     # check the list of tokens duration
     dropdown = browser.locator('#token-expiration-seconds')
+    # wait for options to load
+    options = await expect(dropdown.locator('option')).to_have_count(
+        len(expected_options)
+    )
+
     options = await dropdown.locator('option').all()
     actual_values = [
         (await option.text_content(), await option.get_attribute('value'))
