@@ -1194,7 +1194,7 @@ def test_expand_scopes(app, user, scopes, expected, mockservice_external):
     if 'server' in str(scopes):
         oauth_client = orm.OAuthClient()
         db.add(oauth_client)
-        spawner = user.spawners[spawner_name]
+        spawner = user.get_or_create_spawner(spawner_name, spawner_name)
         spawner.orm_spawner.oauth_client = oauth_client
         db.commit()
         assert oauth_client.spawner is spawner.orm_spawner
@@ -1275,7 +1275,7 @@ def test_resolve_requested_scopes(
     if '!server' in str(requested_scopes + have_scopes):
         oauth_client = orm.OAuthClient()
         db.add(oauth_client)
-        spawner = user.spawners[spawner_name]
+        spawner = user.get_or_create_spawner(spawner_name, spawner_name)
         spawner.orm_spawner.oauth_client = oauth_client
         db.commit()
         assert oauth_client.spawner is spawner.orm_spawner

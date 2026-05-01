@@ -7,6 +7,7 @@ import time
 from collections import defaultdict
 from datetime import datetime
 from http.client import responses
+from urllib.parse import unquote
 
 from jinja2 import TemplateNotFound
 from tornado import web
@@ -15,6 +16,7 @@ from tornado.httputil import url_concat
 from .. import __version__, orm
 from ..metrics import SERVER_POLL_DURATION_SECONDS, ServerPollStatus
 from ..scopes import describe_raw_scopes, needs_scope
+from ..slugs import is_valid_display_name, is_valid_safe_slug, normalise_unicode
 from ..utils import (
     format_exception,
     maybe_future,
@@ -82,6 +84,13 @@ class HomeHandler(BaseHandler):
             url = url_path_join(self.hub.base_url, 'spawn', user.escaped_name)
 
         auth_state = await user.get_auth_state()
+        # can't use user.spawners because the stop method of User pops named servers from user.spawners when they're stopped
+        spawners = user.orm_user._orm_spawners
+
+        invalid_server_names = [
+            s.name for s in spawners if s.name and not is_valid_safe_slug(s.name)
+        ]
+
         html = await self.render_template(
             'home.html',
             auth_state=auth_state,
@@ -90,9 +99,9 @@ class HomeHandler(BaseHandler):
             allow_named_servers=self.allow_named_servers,
             named_server_limit_per_user=await self.get_current_user_named_server_limit(),
             url_path_join=url_path_join,
-            # can't use user.spawners because the stop method of User pops named servers from user.spawners when they're stopped
-            spawners=user.orm_user._orm_spawners,
+            spawners=spawners,
             default_server=user.spawner,
+            invalid_server_names=invalid_server_names,
         )
         self.finish(html)
 
@@ -133,12 +142,23 @@ class SpawnHandler(BaseHandler):
         # two-stage to get the right signature for @require_scopes filter on user_name
         if user_name is None:
             user_name = self.current_user.name
-        if server_name is None:
-            server_name = ""
-        return self._get(user_name=user_name, server_name=server_name)
+        if server_name:
+            server_displayname = server_name
+            displayname = self.request.arguments.get("display_name")
+            if displayname:
+                server_displayname = unquote(displayname[0])
+            # names are validated in _get()
+        else:
+            server_displayname = server_name = ""
+
+        return self._get(
+            user_name=user_name,
+            server_name=server_name,
+            display_name=server_displayname,
+        )
 
     @needs_scope("servers")
-    async def _get(self, user_name, server_name):
+    async def _get(self, user_name, server_name, display_name):
         for_user = user_name
 
         user = current_user = self.current_user
@@ -155,6 +175,9 @@ class SpawnHandler(BaseHandler):
                 await self.get_current_user_named_server_limit()
             )
 
+            # Allow invalid server names created before JupyterHub 6
+            # if allow_invalid_named_server_start
+            # Prevent creation of new invalid server names
             if named_server_limit_per_user > 0 and server_name not in user.orm_spawners:
                 named_spawners = list(user.all_spawners(include_default=False))
                 if named_server_limit_per_user <= len(named_spawners):
@@ -164,13 +187,33 @@ class SpawnHandler(BaseHandler):
                         "  One must be deleted before a new server can be created",
                     )
 
+                if not is_valid_safe_slug(server_name):
+                    error_message = f"Invalid server_name: {server_name}"
+                    self.log.error(error_message)
+                    raise web.HTTPError(400, error_message)
+
+                if not is_valid_display_name(display_name):
+                    error_message = f"Invalid display_name: {display_name}"
+                    self.log.error(error_message)
+                    raise web.HTTPError(400, error_message)
+                display_name = normalise_unicode(display_name)
+
+            if not self.settings[
+                "allow_invalid_named_server_start"
+            ] and not is_valid_safe_slug(server_name):
+                error_message = f"Starting invalid server_name '{server_name}' is disabled, contact your adminstrator"
+                self.log.error(error_message)
+                raise web.HTTPError(400, error_message)
+
         if not self.allow_named_servers and user.running:
             url = self.get_next_url(user, default=user.server_url(""))
             self.log.info("User is running: %s", user.name)
             self.redirect(url)
             return
 
-        spawner = user.get_spawner(server_name, replace_failed=True)
+        spawner = user.get_or_create_spawner(
+            server_name, display_name, replace_failed=True
+        )
 
         pending_url = self._get_pending_url(user, server_name)
 
@@ -202,6 +245,9 @@ class SpawnHandler(BaseHandler):
         # 'next' is reserved argument for redirect after spawn
         query_options.pop('next', None)
 
+        # display_name is reserved for jupyterhub
+        query_options.pop('display_name', None)
+
         spawn_exc = None
 
         if len(query_options) > 0:
@@ -212,7 +258,7 @@ class SpawnHandler(BaseHandler):
                 )
                 options = await maybe_future(spawner.options_from_query(query_options))
                 return await self._wrap_spawn_single_user(
-                    user, server_name, spawner, pending_url, options
+                    user, server_name, display_name, spawner, pending_url, options
                 )
             except Exception as e:
                 self.log.error(
@@ -254,20 +300,25 @@ class SpawnHandler(BaseHandler):
                 "Triggering spawn with default options for %s", spawner._log_name
             )
             return await self._wrap_spawn_single_user(
-                user, server_name, spawner, pending_url
+                user, server_name, display_name, spawner, pending_url
             )
 
     @web.authenticated
-    def post(self, user_name=None, server_name=''):
+    def post(self, user_name=None, server_name='', display_name=''):
         """POST spawns with user-specified options"""
         if user_name is None:
             user_name = self.current_user.name
         if server_name is None:
             server_name = ""
-        return self._post(user_name=user_name, server_name=server_name)
+        if not display_name:
+            display_name = server_name
+
+        return self._post(
+            user_name=user_name, server_name=server_name, display_name=display_name
+        )
 
     @needs_scope("servers")
-    async def _post(self, user_name, server_name):
+    async def _post(self, user_name, server_name, display_name):
         for_user = user_name
         user = current_user = self.current_user
         if for_user != user.name:
@@ -275,7 +326,9 @@ class SpawnHandler(BaseHandler):
             if user is None:
                 raise web.HTTPError(404, f"No such user: {for_user}")
 
-        spawner = user.get_spawner(server_name, replace_failed=True)
+        spawner = user.get_or_create_spawner(
+            server_name, display_name, replace_failed=True
+        )
 
         if spawner.ready:
             raise web.HTTPError(400, f"{spawner._log_name} is already running")
@@ -296,7 +349,7 @@ class SpawnHandler(BaseHandler):
             options = await maybe_future(spawner.run_options_from_form(form_options))
             pending_url = self._get_pending_url(user, server_name)
             return await self._wrap_spawn_single_user(
-                user, server_name, spawner, pending_url, options
+                user, server_name, display_name, spawner, pending_url, options
             )
         except Exception as e:
             self.log.error(
@@ -336,7 +389,10 @@ class SpawnHandler(BaseHandler):
             url_escape_path(server_name),
         )
 
-        pending_url = self.append_query_parameters(pending_url, exclude=['next'])
+        # display_name is handled by the hub, it shouldn't be passed to the spawner
+        pending_url = self.append_query_parameters(
+            pending_url, exclude=['next', 'display_name']
+        )
 
         if self.get_argument('next', None):
             # preserve `?next=...` through spawn-pending
@@ -345,7 +401,7 @@ class SpawnHandler(BaseHandler):
         return pending_url
 
     async def _wrap_spawn_single_user(
-        self, user, server_name, spawner, pending_url, options=None
+        self, user, server_name, display_name, spawner, pending_url, options=None
     ):
         # Explicit spawn request: clear _spawn_future
         # which may have been saved to prevent implicit spawns
@@ -354,7 +410,7 @@ class SpawnHandler(BaseHandler):
             spawner._spawn_future = None
         # not running, no form. Trigger spawn and redirect back to /user/:name
         f = asyncio.ensure_future(
-            self.spawn_single_user(user, server_name, options=options)
+            self.spawn_single_user(user, server_name, display_name, options=options)
         )
         done, pending = await asyncio.wait([f], timeout=1)
         # If spawn_single_user throws an exception, raise a 500 error

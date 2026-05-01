@@ -59,6 +59,14 @@ def default_server_name(app, named_servers):
         app.default_server_name = ''
 
 
+@pytest.fixture
+def disable_invalid_named_server_start(app, named_servers):
+    with mock.patch.dict(
+        app.tornado_settings, {"allow_invalid_named_server_start": False}
+    ):
+        yield
+
+
 async def test_default_server(app, named_servers):
     """Test the default /users/:user/server handler when named servers are enabled"""
     username = 'rosie'
@@ -88,6 +96,7 @@ async def test_default_server(app, named_servers):
                 '': {
                     'full_name': f"{username}/",
                     'name': '',
+                    'display_name': '',
                     'started': TIMESTAMP,
                     'last_activity': TIMESTAMP,
                     'url': user.url,
@@ -119,16 +128,36 @@ async def test_default_server(app, named_servers):
 
 
 @pytest.mark.parametrize(
-    'servername,escapedname,caller_escape',
+    'servername,displayname,escapedname,caller_escape,start_only',
     [
-        ('trevor', 'trevor', False),
-        ('$p~c|a! ch@rs', '%24p~c%7Ca%21%20ch@rs', False),
-        ('$p~c|a! ch@rs', '%24p~c%7Ca%21%20ch@rs', True),
-        ('hash#?question', 'hash%23%3Fquestion', True),
+        # Servers with a non-compliant name can be started but not created
+        ('$p~c|a! ch@rs', '', '%24p~c%7Ca%21%20ch@rs', True, True),
+        ('hash#?question', '', 'hash%23%3Fquestion', True, True),
+        # New servers can have an optional displayname, defaults to servername
+        ('trevor', None, 'trevor', False, False),
+        ('trevor', 'My name is Trevor', 'trevor', False, False),
+        # Valid server names are alphanumeric, or alphanumeric-HASH8
+        (
+            'server1',
+            "e_êẹèêéøßæṣ-",
+            "server1",
+            False,
+            False,
+        ),
+        (
+            'server-abcdef12',
+            "e_êẹèêéøßæṣ-",
+            "server-abcdef12",
+            False,
+            False,
+        ),
+        # TODO: this only tests the API. We should also test the spawn UI where
+        # the user supplies only a displayname, and the servername is generated
+        # automatically
     ],
 )
-async def test_create_named_server(
-    app, named_servers, servername, escapedname, caller_escape
+async def test_create_or_start_named_server(
+    app, named_servers, servername, displayname, escapedname, caller_escape, start_only
 ):
     username = 'walnut'
     user = add_user(app.db, app, name=username)
@@ -138,8 +167,21 @@ async def test_create_named_server(
     if caller_escape:
         request_servername = url_escape_path(servername)
 
+    # servername is invalid for creating a new server, but valid for
+    # starting existing servers
+    if start_only:
+        user._new_orm_spawner(servername, displayname)
+
+    kwargs = {}
+    user_options = {}
+    expected_displayname = servername
+    if displayname is not None:
+        expected_displayname = displayname
+        user_options = {"display_name": displayname}
+        kwargs["json"] = user_options
+
     r = await api_request(
-        app, 'users', username, 'servers', request_servername, method='post'
+        app, 'users', username, 'servers', request_servername, method='post', **kwargs
     )
     r.raise_for_status()
     assert r.status_code == 201
@@ -185,7 +227,8 @@ async def test_create_named_server(
             'servers': {
                 servername: {
                     'full_name': f"{username}/{servername}",
-                    'name': name,
+                    'name': servername,
+                    'display_name': expected_displayname,
                     'started': TIMESTAMP,
                     'last_activity': TIMESTAMP,
                     'url': url_path_join(user.url, escapedname, '/'),
@@ -194,23 +237,24 @@ async def test_create_named_server(
                     'stopped': False,
                     'progress_url': f'PREFIX/hub/api/users/{username}/servers/{escapedname}/progress',
                     'state': {'pid': 0},
-                    'user_options': {},
-                    'full_url': user.public_url(name) or None,
+                    'user_options': user_options,
+                    'full_url': user.public_url(servername) or None,
                     'full_progress_url': full_progress_url,
                 }
-                for name in [servername]
             },
         }
     )
 
 
-async def test_create_invalid_named_server(app, named_servers):
+@pytest.mark.parametrize(
+    "servername", ["a$/b", "$p~c|a! ch@rs", "hash#?question", "server-abc-def"]
+)
+async def test_create_invalid_named_server(app, named_servers, servername):
     username = 'walnut'
     user = add_user(app.db, app, name=username)
     # assert user.allow_named_servers == True
     cookies = await app.login_user(username)
-    server_name = "a$/b"
-    request_servername = 'a%24%2fb'
+    request_servername = url_escape_path(servername)
 
     r = await api_request(
         app, 'users', username, 'servers', request_servername, method='post'
@@ -220,22 +264,56 @@ async def test_create_invalid_named_server(app, named_servers):
         r.raise_for_status()
     assert exc.value.response.json() == {
         'status': 400,
-        'message': "Invalid server_name (may not contain '/'): a$/b",
+        'message': f"Invalid server_name: {servername}",
     }
 
 
-async def test_delete_named_server(app, named_servers):
+async def test_start_invalid_named_server_disabled(
+    app, disable_invalid_named_server_start
+):
     username = 'donaar'
     user = add_user(app.db, app, name=username)
     assert user.allow_named_servers
     cookies = await app.login_user(username)
-    servername = 'splugoth'
-    r = await api_request(app, 'users', username, 'servers', servername, method='post')
+    servername = "<!>"
+    escapedname = "%3C!%3E"
+
+    user._new_orm_spawner(servername, servername)
+
+    r = await api_request(app, "users", username, "servers", escapedname, method="post")
+    with pytest.raises(HTTPError) as exc:
+        r.raise_for_status()
+    assert exc.value.response.json() == {
+        "status": 400,
+        "message": f"Starting invalid server_name '{servername}' is disabled, contact your adminstrator",
+    }
+
+
+@pytest.mark.parametrize(
+    "servername,escapedname,start_only",
+    [
+        ("splugoth", "splugoth", False),
+        # Servers with a non-compliant name can be started/deleted but not created
+        ("$p~c|a! ch@rs", "%24p~c%7Ca%21%20ch@rs", True),
+    ],
+)
+async def test_delete_named_server(
+    app, named_servers, servername, escapedname, start_only
+):
+    username = 'donaar'
+    user = add_user(app.db, app, name=username)
+    assert user.allow_named_servers
+    cookies = await app.login_user(username)
+
+    if start_only:
+        user._new_orm_spawner(servername, servername)
+
+    r = await api_request(app, 'users', username, 'servers', escapedname, method='post')
     r.raise_for_status()
     assert r.status_code == 201
 
     r = await api_request(
-        app, 'users', username, 'servers', servername, method='delete'
+        app, 'users', username, 'servers', escapedname, method='delete'
     )
     r.raise_for_status()
     assert r.status_code == 204
