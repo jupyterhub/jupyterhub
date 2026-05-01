@@ -104,6 +104,8 @@ jobs:
           - python: "3.13"
             browser: browser
           - python: "3.12"
+            browser: browser
+          - python: "3.12"
             subdomain: subdomain
             browser: browser
           - python: "3.14"
