@@ -64,3 +64,7 @@ addUser().then(() => {
     .then((data) => dispatchPageChange(data, 0));
 });
 ```
+
+## Dependency note
+
+- Added overrides for `uuid` transitive dependency to force to a safer version
