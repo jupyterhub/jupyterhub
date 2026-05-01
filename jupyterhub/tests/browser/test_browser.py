@@ -803,6 +803,8 @@ async def test_request_token_permissions(
         await expect(error_dialog).not_to_be_visible()
         return
 
+    token_result = browser.locator("#token-result")
+    await expect(token_result).to_be_visible()
     await browser.reload(wait_until="load")
 
     # API Tokens table: verify that elements are displayed
@@ -819,7 +821,7 @@ async def test_request_token_permissions(
         await api_token_table_area.locator("tr.token-row")
         .get_by_role("cell")
         .nth(1)
-        .locator('//pre[@class="token-scope"]')
+        .locator('.//pre[@class="token-scope"]')
         .all_text_contents()
     )
     # specifically use list to test that entries don't appear twice
