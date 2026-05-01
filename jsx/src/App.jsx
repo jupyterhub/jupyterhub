@@ -14,6 +14,7 @@ import CreateGroup from "./components/CreateGroup/CreateGroup";
 import AddUser from "./components/AddUser/AddUser";
 import EditUser from "./components/EditUser/EditUser";
 
+import "bootstrap/dist/css/bootstrap.min.css";
 import "./style/root.css";
 
 const store = createStore(reducers, initialState);
