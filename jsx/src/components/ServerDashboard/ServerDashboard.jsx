@@ -7,8 +7,6 @@ import { User, Server } from "../../util/jhapiUtil";
 
 import {
   Button,
-  Col,
-  Row,
   Form,
   FormControl,
   Card,
