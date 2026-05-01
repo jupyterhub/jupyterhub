@@ -108,6 +108,9 @@ jobs:
           - python: "3.12"
             subdomain: subdomain
             browser: browser
+          - python: "3.13"
+            subdomain: subdomain
+            browser: browser
           - python: "3.14"
             main_dependencies: main_dependencies
           - python: "3.14t"
