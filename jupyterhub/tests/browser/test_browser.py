@@ -803,6 +803,8 @@ async def test_request_token_permissions(
         await expect(error_dialog).not_to_be_visible()
         return
 
+    token_result = browser.locator("#token-result")
+    await expect(token_result).to_be_visible()
     await browser.reload(wait_until="load")
 
     # API Tokens table: verify that elements are displayed
