@@ -6,20 +6,25 @@ from playwright.async_api import async_playwright, expect
 from ..conftest import add_user, new_username
 
 
-@pytest.fixture()
-async def browser():
+@pytest.fixture(scope="module")
+async def _browser():
     # browser_type in ["chromium", "firefox", "webkit"]
     async with async_playwright() as playwright:
         browser = await playwright.firefox.launch(headless=True)
-        context = await browser.new_context()
-        # context sets default timeout for a lot of things, but not expect
-        context.set_default_timeout(30_000)
-        # default timeout for expect
-        expect.set_options(timeout=30_000)
-        page = await context.new_page()
-        yield page
-        await context.clear_cookies()
-        await browser.close()
+        yield browser
+
+
+@pytest.fixture
+async def browser(_browser):
+    context = await _browser.new_context()
+    # context sets default timeout for a lot of things, but not expect
+    context.set_default_timeout(30_000)
+    # default timeout for expect
+    expect.set_options(timeout=30_000)
+    page = await context.new_page()
+    yield page
+    await context.clear_cookies()
+    await context.close()
 
 
 @pytest.fixture
