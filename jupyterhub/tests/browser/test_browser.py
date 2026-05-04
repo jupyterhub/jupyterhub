@@ -1176,7 +1176,7 @@ async def test_start_stop_all_servers_on_admin_page(app, browser, admin_user):
 
     users = browser.get_by_test_id("user-row-name")
     # verify that all servers are not started
-    # users´numbers are the same as numbers of the start button and the Spawn page button
+    # users' numbers are the same as numbers of the start button and the Spawn page button
     # no Stop server buttons are displayed
     # no access buttons are displayed
     btns_start = browser.get_by_test_id("user-row-server-activity").get_by_role(
@@ -1192,13 +1192,11 @@ async def test_start_stop_all_servers_on_admin_page(app, browser, admin_user):
         "button", name="Access Server"
     )
 
-    assert (
-        await btns_start.count()
-        == await btns_spawn.count()
-        == await users.count()
-        == users_count_db
-    )
-    assert await btns_stop.count() == await btns_access.count() == 0
+    await expect(btns_start).to_have_count(users_count_db)
+    await expect(btns_spawn).to_have_count(users_count_db)
+    await expect(users).to_have_count(users_count_db)
+    await expect(btns_stop).to_have_count(0)
+    await expect(btns_access).to_have_count(0)
 
     # start all servers via the Start All
     await start_all_btn.click()
