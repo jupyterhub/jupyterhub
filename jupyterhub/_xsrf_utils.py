@@ -204,9 +204,7 @@ def _needs_check_xsrf(handler):
             # same-origin no-cors GET requests
             # e.g. for images and similar resources
             # requesting page doesn't get access to the content
-            fetch_mode == "no-cors"
-            and fetch_site == "same-origin"
-            and read_only
+            fetch_mode == "no-cors" and fetch_site == "same-origin" and read_only
         )
     ):
         # no xsrf check needed for regular page views or same-origin no-cors GETs
