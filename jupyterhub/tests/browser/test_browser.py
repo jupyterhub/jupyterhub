@@ -1159,6 +1159,7 @@ async def open_admin_page(app, browser, login_as=None):
 
 
 def create_list_of_users(create_user_with_scopes, n):
+    """Create a list of n users with "self" scope"""
     return [create_user_with_scopes("self") for i in range(n)]
 
 
@@ -1234,38 +1235,60 @@ async def test_start_stop_all_servers_on_admin_page(app, browser, admin_user):
     )
 
 
-@pytest.mark.parametrize("added_count_users", [10, 49, 50, 51, 99, 100, 101])
+@pytest.mark.parametrize("num_users", [10, 49, 50, 51, 99, 100, 101])
 async def test_paging_on_admin_page(
-    app, browser, admin_user, added_count_users, create_user_with_scopes
+    app, browser, admin_user, num_users, create_user_with_scopes
 ):
-    """verifying of displaying number of total users on the admin page and navigation with "Previous"/"Next" buttons"""
+    """Verify total number of users is displayed on admin page.
 
-    create_list_of_users(create_user_with_scopes, added_count_users)
+    If pagination is needed, make sure that navigation with "Previous"/"Next" buttons
+    works correctly with the right number of users displayed on the page and the buttons are enabled/disabled depending on the number of users on the page.
+    """
+
+    # Set up a list composed of a total of "num_users"
+    create_list_of_users(create_user_with_scopes, num_users)
+
+    # Open the admin page to be tested
     await open_admin_page(app, browser, admin_user)
-    # get total count of users from db
-    users_count_db = app.db.query(orm.User).count()
+
+    # get total number of users from db
+    num_users_in_db = app.db.query(orm.User).count()
+
     # get total count of users from UI page
-    displaying = browser.get_by_text("Displaying")
+    active_page = browser.get_by_text("Displaying")
+
+    # get Previous and Next buttons used for pagination navigation
     btn_previous = browser.get_by_role("button", name="Previous")
     btn_next = browser.get_by_role("button", name="Next")
-    # verify "Previous"/"Next" button clickability depending on users number on the page
-    await expect(displaying).to_have_text(
-        re.compile(".*" + f"1-{min(users_count_db, 50)}" + ".*")
+
+    # verify "Previous"/"Next" button clickability depending on number of users on the page
+    await expect(active_page).to_have_text(
+        re.compile(".*" + f"1-{min(num_users_in_db, 50)}" + ".*")
     )
-    if users_count_db > 50:
+
+    # Case (more than 50 users): Next button is enabled
+    if num_users_in_db > 50:
         await expect(btn_next).to_be_enabled()
         # click on Next button
         await btn_next.click()
-        if users_count_db <= 100:
-            await expect(displaying).to_have_text(
-                re.compile(".*" + f"51-{users_count_db}" + ".*")
+
+        # Case (50-100 users): the number of users displayed should match the total
+        # number of users in the database and Next button should be disabled.
+        if num_users_in_db <= 100:
+            await expect(active_page).to_have_text(
+                re.compile(".*" + f"51-{num_users_in_db}" + ".*")
             )
+        # Case (more than 100 users): the second page shows users from 51 to 100
+        # and Next button is enabled
         else:
-            await expect(displaying).to_have_text(re.compile(".*" + "51-100" + ".*"))
+            await expect(active_page).to_have_text(re.compile(".*" + "51-100" + ".*"))
             await expect(btn_next).to_be_enabled()
+
+        # Second page: Previous should be enabled
         await expect(btn_previous).to_be_enabled()
-        # click on Previous button
         await btn_previous.click()
+
+    # Case (less than 50 users): single page with Previous/Next buttons disabled
     else:
         await expect(btn_next).to_be_disabled()
         await expect(btn_previous).to_be_disabled()
