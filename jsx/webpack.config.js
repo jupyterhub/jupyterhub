@@ -33,6 +33,11 @@ module.exports = {
     extensions: [".css", ".js", ".jsx"],
   },
   plugins: [new webpack.HotModuleReplacementPlugin()],
+  performance: {
+    hints: "warning",
+    maxEntrypointSize: 700000,
+    maxAssetSize: 700000,
+  },
   devServer: {
     client: {
       overlay: false,
