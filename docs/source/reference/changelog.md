@@ -22,6 +22,27 @@ Contributors to major version bumps in JupyterHub include:
 
 ## 5.4
 
+### 5.4.6 - 2026-05-05
+
+5.4.6 fixes a regression in 5.4.5, as well as some other bugs.
+
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/5.4.5...5.4.6))
+
+#### Bugs fixed
+
+- allow no-cors GETs from same-origin [#5380](https://github.com/jupyterhub/jupyterhub/pull/5380) ([@minrk](https://github.com/minrk), [@willingc](https://github.com/willingc))
+- make sure public url env is set for managed services [#5359](https://github.com/jupyterhub/jupyterhub/pull/5359) ([@minrk](https://github.com/minrk), [@willingc](https://github.com/willingc))
+- Prevent treating a role as 'stale' if defined in load_managed_roles [#5344](https://github.com/jupyterhub/jupyterhub/pull/5344) ([@jezwilkinson](https://github.com/jezwilkinson), [@minrk](https://github.com/minrk))
+
+#### Contributors to this release
+
+The following people contributed discussions, new ideas, code and documentation contributions, and review.
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/use/#how-does-this-tool-define-contributions-in-the-reports).
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2026-04-28&to=2026-05-05&type=c))
+
+@jezwilkinson ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ajezwilkinson+updated%3A2026-04-28..2026-05-05&type=Issues)) | @krassowski ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Akrassowski+updated%3A2026-04-28..2026-05-05&type=Issues)) | @kreuzert ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Akreuzert+updated%3A2026-04-28..2026-05-05&type=Issues)) | @manics ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amanics+updated%3A2026-04-28..2026-05-05&type=Issues)) | @minrk ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk+updated%3A2026-04-28..2026-05-05&type=Issues)) | @willingc ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Awillingc+updated%3A2026-04-28..2026-05-05&type=Issues))
+
 ### 5.4.5 - 2026-04-28
 
 ```{important}
