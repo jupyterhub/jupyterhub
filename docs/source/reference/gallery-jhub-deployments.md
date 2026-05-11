@@ -155,6 +155,19 @@ More than 10 general-purpose, and more than 20 course-specific environments are 
 >
 > From: [You can (quickly) count on JupyterHub - vu.nl](https://vu.nl/en/news/2024/you-can-quickly-count-on-jupyterhub)
 
+### bwJupyter for Teaching
+
+[bwJupyter](https://bwjupyter.de) is a collaboration between the [Karlsruhe Institute of Technology (KIT)](https://www.kit.edu/) and the [University of Stuttgart](https://www.uni-stuttgart.de/).
+The project was funded by the Baden-Württemberg Ministry of Science, Research and Arts, and aims to provide a central JupyterHub for all universities in the state of Baden-Württemberg.
+In its first year of operation, over 7.700 active users from 40 universities were registered.
+
+Based on the Kubernetes deployment using [Z2JH](https://z2jh.jupyter.org/en/stable/), bwJupyter provides additional features to support lecturers and students, e.g.:
+
+- Lecturers can create their own profiles to share files with their students.
+- Students can form groups to collaborate in real-time using [jupyter-collaboration](https://jupyterlab-realtime-collaboration.readthedocs.io/en/latest/).
+- JupyterHub covers the assignment and submission lifecycles using [grader-service](https://github.com/TU-Wien-dataLAB/grader-service).
+- AI assistant helps students to understand their errors using [jupyter-ai](https://jupyter-ai.readthedocs.io/en/v3/).
+
 ## Service Providers
 
 ### AWS
