@@ -238,7 +238,7 @@ class UpgradeDB(Application):
         hub = JupyterHub(parent=self)
         hub.load_config_file(hub.config_file)
         self.log = hub.log
-        dbutil.upgrade_if_needed(hub.db_url, log=self.log)
+        dbutil.upgrade_if_needed(hub.db_url, log=self.log, db_kwargs=hub.db_kwargs)
 
 
 class JupyterHub(Application):
@@ -2014,7 +2014,9 @@ class JupyterHub(Application):
             db_log_url = self.db_url
         self.log.debug("Connecting to db: %s", db_log_url)
         if self.upgrade_db:
-            dbutil.upgrade_if_needed(self.db_url, log=self.log)
+            dbutil.upgrade_if_needed(
+                self.db_url, log=self.log, db_kwargs=self.db_kwargs
+            )
 
         try:
             self.session_factory = orm.new_session_factory(
