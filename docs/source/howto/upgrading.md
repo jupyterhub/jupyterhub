@@ -107,6 +107,8 @@ jupyterhub upgrade-db
 This should find the location of your database, and run the necessary upgrades
 for it.
 
+The `jupyterhub upgrade-db` subcommand runs the schema upgrade and exits without starting the Hub. If you would rather have the upgrade run as part of starting the Hub, pass the `--upgrade-db` flag to `jupyterhub` instead, and the Hub will upgrade the schema during startup if one is needed.
+
 ### What happens if I delete my database?
 
 Losing the Hub database is often not a big deal. Information that
