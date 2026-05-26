@@ -1,14 +1,14 @@
 """Add display_name to spawners
 
 Revision ID: f460b0348206
-Revises: afd65840b69e
+Revises: ff1860e38070
 Create Date: 2025-11-05 22:02:38.326220
 
 """
 
 # revision identifiers, used by Alembic.
 revision = 'f460b0348206'
-down_revision = 'afd65840b69e'
+down_revision = 'ff1860e38070'
 branch_labels = None
 depends_on = None
 
