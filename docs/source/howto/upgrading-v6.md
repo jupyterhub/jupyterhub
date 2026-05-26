@@ -29,12 +29,12 @@ JupyterHub 6 imposes strict limits on the naming of named servers:
 - Must start with a lowercase letter
 - Must end with a lowercase letter or digit
 
-A new field `display_name` means users can still provide an arbitrary name, separate from the server name.
+A new field `display_name` means users can still provide an arbitrary name, separate from the server name used in APIs, URLs, etc.
 
 ### Web interface
 
 Users can name a named server as normal.
-This will be used as the display_name, and if this doesn't comply with the above restriction a server name will be automatically generated.
+This will be used as the display_name, and if this doesn't comply with the above restriction, a safe server name will be automatically derived by stripping disallowed characters, truncating, as needed.
 The server name is used in labels, URL, etc.
 
 ### API
