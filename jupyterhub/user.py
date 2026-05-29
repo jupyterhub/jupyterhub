@@ -16,7 +16,7 @@ from ._version import __version__, _check_version
 from .crypto import CryptKeeper, EncryptionUnavailable, InvalidToken, decrypt, encrypt
 from .metrics import RUNNING_SERVERS, TOTAL_USERS
 from .objects import Server
-from .slugs import is_valid_safe_slug
+from .slugs import is_valid_display_name, is_valid_safe_slug
 from .spawner import LocalProcessSpawner
 from .utils import (
     AnyTimeoutError,
@@ -282,7 +282,10 @@ class User:
 
         if server_name and not is_valid_safe_slug(server_name):
             raise ValueError(f"Invalid server_name: {server_name}")
-        if display_name is None:
+        if display_name:
+            if not is_valid_display_name(display_name):
+                raise ValueError(f"Invalid display_name: {display_name}")
+        else:
             display_name = server_name
 
         self._new_orm_spawner(server_name, display_name)
