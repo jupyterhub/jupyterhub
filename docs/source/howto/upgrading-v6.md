@@ -25,7 +25,7 @@ Core JupyterHub components correctly handled these, but names with unsual charac
 JupyterHub 6 imposes strict limits on the naming of named servers:
 
 - Between 1 and 32 characters
-- Consists of lowercase ASCII letters, digits, and zero or one hyphen (`-`)
+- Consists of lowercase ASCII letters, digits, and single hyphens (`-`)
 - Must start with a lowercase letter
 - Must end with a lowercase letter or digit
 
