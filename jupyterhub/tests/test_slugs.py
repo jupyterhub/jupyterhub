@@ -104,7 +104,10 @@ def test_safe_slug_max_length(max_length, length, expected):
         ("eèéêë", True),
         ("EÈÉÊË", True),
         ("北京大学", True),
-        ("🐧 🦆 🐣 🪿", True),
+        # Note we determine valid characters by checking the unicode category but
+        # old Python versions class new unicode symbols as non-characters
+        # E.g. 🪿 won't be accepted in Python 3.10
+        ("🐧 🦆 🐣", True),
         ("∇²φ=0", True),
         ("x x", True),
         ("x  x", False),
@@ -114,7 +117,7 @@ def test_safe_slug_max_length(max_length, length, expected):
         ("x\nx", False),
         ("", False),
         pytest.param("🐧" * 255, True, id="len255"),
-        pytest.param("🐧" * 255, True, id="len256"),
+        pytest.param("🐧" * 256, False, id="len256"),
     ],
 )
 def test_is_valid_display_name(name, expected):

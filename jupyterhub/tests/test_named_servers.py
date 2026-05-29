@@ -247,7 +247,7 @@ async def test_create_or_start_named_server(
 
 
 @pytest.mark.parametrize(
-    "servername", ["a$/b", "$p~c|a! ch@rs", "hash#?question", "server-abc-def"]
+    "servername", ["a$/b", "$p~c|a! ch@rs", "hash#?question", "server--abc-def"]
 )
 async def test_create_invalid_named_server(app, named_servers, servername):
     username = 'walnut'
