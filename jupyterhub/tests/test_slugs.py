@@ -57,24 +57,37 @@ def test_is_valid_simple_name(name, max_length, expected):
 
 @pytest.mark.parametrize(
     "name, expected",
+    # Keep these in sync with share/jupyterhub/static/js/utils.test.js::utils.safe_slug
     [
-        ("jupyter-alex", "jupyter-alex-651dec0a"),
-        ("jupyter-Alex", "jupyter-alex-3a1c285c"),
-        ("jupyter-üni", "jupyter-ni-a5aaf5dd"),
-        ("endswith-", "endswith-165f1166"),
-        ("user@email.com", "user-email-com-0925f997"),
-        ("user-_@_emailß.com", "user-email-com-7e3a7efd"),
-        ("has.dot", "has-dot-03e27fdf"),
-        ("z9", "z9"),
-        ("9z9", "x-9z9-224de202"),
-        ("-start", "start-f587e2dc"),
-        ("end-", "end-89d969cd"),
-        ("üser", "ser-73506260"),
-        ("username-servername", "username-servername-9b109a32"),
-        ("start-f587e2dc", "start-f587e2dc-06b9709d"),
-        ("x" * 30, "x" * 30),
-        ("x" * 31, "xxxxxxxxxxxxxxxxxxxxx-0f46e4b0"),
-        ("x" * 32, "xxxxxxxxxxxxxxxxxxxxx-c62e4615"),
+        # Unchanged
+        ["z9", "z9"],
+        # Contains - so append hash
+        ["jupyter-alex", "jupyter-alex-651dec0a"],
+        ["username-servername", "username-servername-9b109a32"],
+        # Lowercase
+        ["jupyter-Alex", "jupyter-alex-3a1c285c"],
+        # Invalid chars
+        ["jupyter-üni", "jupyter-ni-a5aaf5dd"],
+        ["user@email.com", "user-email-com-0925f997"],
+        ["user-_@_emailß.com", "user-email-com-7e3a7efd"],
+        ["has.dot", "has-dot-03e27fdf"],
+        ["üser", "ser-73506260"],
+        # Multiple -
+        ["a-b--c-d", "a-b-c-d-ee1e7bc7"],
+        # Doesn't start with [a-z]
+        ["9z9", "x-9z9-224de202"],
+        ["-start", "start-f587e2dc"],
+        # Ends with -
+        ["endswith-", "endswith-165f1166"],
+        # Looks like it has a hash appended but that's irrelevant
+        ["start-f587e2dc", "start-f587e2dc-06b9709d"],
+        # Length tests
+        ["x" * 30, "x" * 30],
+        ["x" * 31, "xxxxxxxxxxxxxxxxxxxxx-0f46e4b0"],
+        ["x" * 32, "xxxxxxxxxxxxxxxxxxxxx-c62e4615"],
+        # Length tests with invalid chars
+        ["x" * 29 + "-", "xxxxxxxxxxxxxxxxxxxxx-bf57e3d7"],
+        ["1234567890" * 3, "x-1234567890123456789-f54e5c8f"],
     ],
 )
 def test_safe_slug(name, expected):

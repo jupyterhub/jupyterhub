@@ -139,7 +139,7 @@ define(["jquery", "js-sha256"], function ($, sha256) {
     }
 
     if (
-      name.length < max_length &&
+      name.length <= max_length &&
       /^[a-z]([a-z0-9]*[a-z0-9])?$/.test(name) &&
       name.indexOf("-") < 0
     ) {
@@ -160,7 +160,7 @@ define(["jquery", "js-sha256"], function ($, sha256) {
     // - max length not exceeded
     let safe_name = name
       .toLowerCase()
-      .replaceAll(/[^a-z0-9-]+/g, "")
+      .replaceAll(/[^a-z0-9-]+/g, "-")
       .replaceAll(/-+/g, "-")
       .replace(/^-+/, "")
       .substring(0, name_length)
@@ -169,7 +169,7 @@ define(["jquery", "js-sha256"], function ($, sha256) {
       safe_name = "x";
     }
     if (!/^[a-z]+/.test(safe_name)) {
-      safe_name = "x" + safe_name.substring(0, name_length - 1);
+      safe_name = "x-" + safe_name.substring(0, name_length - 2);
     }
     return `${safe_name}-${name_hash}`;
   };

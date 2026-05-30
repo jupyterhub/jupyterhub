@@ -185,11 +185,13 @@ def _extract_safe_name(name, max_length):
     # cast to lowercase
     # replace any sequence of non-alphanumeric characters with a single '-'
     safe_name = _non_alphanum_pattern.sub("-", name.lower())
-    # truncate to max_length chars, strip '-' off ends
-    safe_name = safe_name.lstrip("-")[:max_length].rstrip("-")
+    # truncate to max_length chars, strip leading '-'
+    safe_name = safe_name.lstrip("-")[:max_length]
     # ensure starts with lowercase letter
     if safe_name and not safe_name.startswith(_alpha_lower):
-        safe_name = "x-" + safe_name[: max_length - 1].rstrip("-")
+        safe_name = "x-" + safe_name[: max_length - 2]
+    # strip trailing '-'
+    safe_name = safe_name.rstrip("-")
     if not safe_name:
         # make sure it's non-empty
         safe_name = 'x'
