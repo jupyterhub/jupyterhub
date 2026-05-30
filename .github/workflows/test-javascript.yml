@@ -19,6 +19,7 @@ on:
       - "pre-commit-ci-update-config"
     tags:
       - "**"
+  # zizmor: ignore[cache-poisoning] not used for publishing
   workflow_dispatch:
 
 permissions:
