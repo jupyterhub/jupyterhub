@@ -660,7 +660,7 @@ class UserServerAPIHandler(APIHandler):
             if not self.settings[
                 "allow_invalid_named_server_start"
             ] and not is_valid_safe_slug(server_name):
-                error_message = f"Starting invalid server_name '{server_name}' is disabled, contact your adminstrator"
+                error_message = f"Starting invalid server_name '{server_name}' is disabled, contact your administrator"
                 self.log.error(error_message)
                 raise web.HTTPError(400, error_message)
 
@@ -730,7 +730,6 @@ class UserServerAPIHandler(APIHandler):
             raise web.HTTPError(400, "Cannot delete the default server")
 
         spawner = user.spawners[server_name]
-
         if spawner.pending == 'stop':
             self.log.debug("%s already stopping", spawner._log_name)
             self.set_header('Content-Type', 'text/plain')

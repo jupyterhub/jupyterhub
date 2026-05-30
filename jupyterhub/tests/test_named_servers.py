@@ -151,9 +151,6 @@ async def test_default_server(app, named_servers):
             False,
             False,
         ),
-        # TODO: this only tests the API. We should also test the spawn UI where
-        # the user supplies only a displayname, and the servername is generated
-        # automatically
     ],
 )
 async def test_create_or_start_named_server(
@@ -285,7 +282,7 @@ async def test_start_invalid_named_server_disabled(
         r.raise_for_status()
     assert exc.value.response.json() == {
         "status": 400,
-        "message": f"Starting invalid server_name '{servername}' is disabled, contact your adminstrator",
+        "message": f"Starting invalid server_name '{servername}' is disabled, contact your administrator",
     }
 
 

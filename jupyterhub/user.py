@@ -265,7 +265,7 @@ class User:
         if replace_failed and spawner._failed:
             self.log.debug(f"Discarding failed spawner {spawner._log_name}")
             # remove failed spawner, create a new one
-            old = self.spawners.pop(server_name)
+            self.spawners.pop(server_name)
             spawner = self._new_spawner(server_name)
         return spawner
 

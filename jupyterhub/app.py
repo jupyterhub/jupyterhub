@@ -1381,11 +1381,11 @@ class JupyterHub(Application):
           - allow-start: existing servers can be started, stopped or deleted by the owner
           - allow-delete: existing servers can be stopped or deleted by the owner
           - autorename: existing servers are automatically renamed at startup.
+
             WARNING: This does not rename external resources linked to the named
             server such as storage volumes. If the spawner does not keep track of
             these resources they will be orphaned. Backup your database before
-            using this option.
-            TODO: What happens if we rename a running server?
+            using this option. Running servers will not be renamed.
         """,
     ).tag(config=True)
 

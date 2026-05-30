@@ -21,6 +21,8 @@ from ..slugs import (
         ("üni", None, False),
         ("a" * 30, None, True),
         ("a" * 31, None, False),
+        ("a" * 10, 10, True),
+        ("a" * 11, 10, False),
     ],
 )
 def test_is_valid_safe_slug(name, max_length, expected):
@@ -42,6 +44,8 @@ def test_is_valid_safe_slug(name, max_length, expected):
         ("üni", None, False),
         ("a" * 30, None, True),
         ("a" * 31, None, False),
+        ("a" * 10, 10, True),
+        ("a" * 11, 10, False),
     ],
 )
 def test_is_valid_simple_name(name, max_length, expected):
@@ -64,6 +68,7 @@ def test_is_valid_simple_name(name, max_length, expected):
         ("z9", "z9"),
         ("9z9", "x-9z9-224de202"),
         ("-start", "start-f587e2dc"),
+        ("end-", "end-89d969cd"),
         ("üser", "ser-73506260"),
         ("username-servername", "username-servername-9b109a32"),
         ("start-f587e2dc", "start-f587e2dc-06b9709d"),
@@ -82,14 +87,14 @@ def test_safe_slug(name, expected):
     [
         (16, 16, "x" * 16),
         (16, 17, "xxxxxxx-d04fd59f"),
-        (9, 10, "error"),
+        (9, 10, "<ERROR>"),
         (12, 16, "xxx-9c572959"),
-        (30, 0, "error"),
+        (30, 0, "<ERROR>"),
     ],
 )
 def test_safe_slug_max_length(max_length, length, expected):
     name = "x" * length
-    if expected == "error":
+    if expected == "<ERROR>":
         with pytest.raises(ValueError):
             safe_slug(name, max_length=max_length)
         return

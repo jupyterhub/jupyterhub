@@ -1043,7 +1043,6 @@ class BaseHandler(RequestHandler):
                 )
                 self.log.error(error_message)
                 raise web.HTTPError(400, error_message)
-
             user_server_name = f'{user.name}:{server_name}'
 
         if server_name in user.spawners and user.spawners[server_name].pending:

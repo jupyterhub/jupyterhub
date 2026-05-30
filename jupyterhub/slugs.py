@@ -1,9 +1,9 @@
-"""Tools for generating slugs like k8s object names and labels
+"""Tools for generating slugs like object names and labels
 
 Requirements:
 
 - always valid for arbitary strings
-- no collisions
+- unintentional collisions are unlikely
 
 # Design choices for safe_slug
 
@@ -44,7 +44,7 @@ distinguish between
 
 The approach currently taken in safe_slug is (b), which has the advantage of allowing
 users to use `-` as a delimiter and still have it appear in the safe_slug.
-Forbidden characters, consecutive `-` are replaced by `-`.
+Forbidden characters and consecutive `-` are replaced by `-`.
 
 The default max length is 30 chars, so that two safe_slugs can be joined with `--`
 and be within the limit for a domain name label (63 chars)
@@ -265,5 +265,8 @@ def is_valid_display_name(s):
     return True
 
 
+# https://docs.python.org/3.10/library/unicodedata.html#unicodedata.normalize
+# https://www.w3.org/TR/charmod-norm/#normalizationChoice
+# Normalise using NFC (Canonical Decomposition followed by Canonical Composition)
 def normalise_unicode(s):
     return unicodedata.normalize("NFC", s)
