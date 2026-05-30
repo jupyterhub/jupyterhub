@@ -122,11 +122,12 @@ define(["jquery", "js-sha256"], function ($, sha256) {
     modal.show();
   };
 
+  // This should be the same as jupyterhub/slugs.py::safe_slug
   var safe_slug = function (name) {
     if (!name) {
       throw new Error("Unable to create safe slug for empty string");
     }
-    const max_length = 32;
+    const max_length = 30;
     const _hash_length = 8;
     // Generate an always-safe, unique string for any input
     // truncates name to max_length - len(hash_suffix) to fit in max_length
@@ -139,7 +140,7 @@ define(["jquery", "js-sha256"], function ($, sha256) {
 
     if (
       name.length < max_length &&
-      /^[a-z]([a-z0-9-]*[a-z0-9])?$/.test(name) &&
+      /^[a-z]([a-z0-9]*[a-z0-9])?$/.test(name) &&
       name.indexOf("-") < 0
     ) {
       return name;
@@ -153,21 +154,23 @@ define(["jquery", "js-sha256"], function ($, sha256) {
     // Guarantees:
     // - always starts with a lowercase letter
     // - always ends with a lowercase letter or number
-    // - no hyphens (so clients are free to use hyphens for other purposes)
+    // - single hyphens
     // - only contains lowercase letters, numbers
     // - length at least 1 ('x' if other rules strips down to empty string)
     // - max length not exceeded
     let safe_name = name
       .toLowerCase()
-      .replaceAll(/[^a-z0-9]+/g, "")
-      .substring(0, name_length);
+      .replaceAll(/[^a-z0-9-]+/g, "")
+      .replaceAll(/-+/g, "-")
+      .replace(/^-+/, "")
+      .substring(0, name_length)
+      .replace(/-+$/, "");
     if (!safe_name) {
       safe_name = "x";
     }
     if (!/^[a-z]+/.test(safe_name)) {
       safe_name = "x" + safe_name.substring(0, name_length - 1);
     }
-    // the result will always have _exactly_ one '-'
     return `${safe_name}-${name_hash}`;
   };
 
