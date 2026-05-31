@@ -628,6 +628,10 @@ class UserServerAPIHandler(APIHandler):
             display_name = body.get("display_name")
             if not display_name:
                 display_name = server_name
+            elif not isinstance(display_name, str):
+                raise web.HTTPError(400, "display_name must be a string")
+
+            # The following is identical to handlers.pages.SpawnHandler._check_named_server_request()
 
             if not self.allow_named_servers:
                 raise web.HTTPError(400, "Named servers are not enabled.")
@@ -645,17 +649,18 @@ class UserServerAPIHandler(APIHandler):
                         "  One must be deleted before a new server can be created",
                     )
 
+            if server_name not in user.orm_spawners:
                 # Prevent creation of new invalid server names
                 if not is_valid_safe_slug(server_name):
                     error_message = f"Invalid server_name: {server_name}"
                     self.log.error(error_message)
                     raise web.HTTPError(400, error_message)
 
+                display_name = normalise_unicode(display_name)
                 if not is_valid_display_name(display_name):
                     error_message = f"Invalid display_name: {display_name}"
                     self.log.error(error_message)
                     raise web.HTTPError(400, error_message)
-                display_name = normalise_unicode(display_name)
 
             if not self.settings[
                 "allow_invalid_named_server_start"

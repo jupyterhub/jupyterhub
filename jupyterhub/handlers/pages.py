@@ -157,6 +157,43 @@ class SpawnHandler(BaseHandler):
             display_name=server_displayname,
         )
 
+    async def _check_named_server_request(self, user, server_name, display_name):
+        if not self.allow_named_servers:
+            raise web.HTTPError(400, "Named servers are not enabled.")
+
+        named_server_limit_per_user = await self.get_current_user_named_server_limit()
+
+        # Allow invalid server names created before JupyterHub 6
+        # if allow_invalid_named_server_start
+        # Prevent creation of new invalid server names
+        if named_server_limit_per_user > 0 and server_name not in user.orm_spawners:
+            named_spawners = list(user.all_spawners(include_default=False))
+            if named_server_limit_per_user <= len(named_spawners):
+                raise web.HTTPError(
+                    400,
+                    f"User {user.name} already has the maximum of {named_server_limit_per_user} named servers."
+                    "  One must be deleted before a new server can be created",
+                )
+
+        if server_name not in user.orm_spawners:
+            if not is_valid_safe_slug(server_name):
+                error_message = f"Invalid server_name: {server_name}"
+                self.log.error(error_message)
+                raise web.HTTPError(400, error_message)
+
+            display_name = normalise_unicode(display_name)
+            if not is_valid_display_name(display_name):
+                error_message = f"Invalid display_name: {display_name}"
+                self.log.error(error_message)
+                raise web.HTTPError(400, error_message)
+
+        if not self.settings[
+            "allow_invalid_named_server_start"
+        ] and not is_valid_safe_slug(server_name):
+            error_message = f"Starting invalid server_name '{server_name}' is disabled, contact your administrator"
+            self.log.error(error_message)
+            raise web.HTTPError(400, error_message)
+
     @needs_scope("servers")
     async def _get(self, user_name, server_name, display_name):
         for_user = user_name
@@ -168,42 +205,7 @@ class SpawnHandler(BaseHandler):
                 raise web.HTTPError(404, f"No such user: {for_user}")
 
         if server_name:
-            if not self.allow_named_servers:
-                raise web.HTTPError(400, "Named servers are not enabled.")
-
-            named_server_limit_per_user = (
-                await self.get_current_user_named_server_limit()
-            )
-
-            # Allow invalid server names created before JupyterHub 6
-            # if allow_invalid_named_server_start
-            # Prevent creation of new invalid server names
-            if named_server_limit_per_user > 0 and server_name not in user.orm_spawners:
-                named_spawners = list(user.all_spawners(include_default=False))
-                if named_server_limit_per_user <= len(named_spawners):
-                    raise web.HTTPError(
-                        400,
-                        f"User {user.name} already has the maximum of {named_server_limit_per_user} named servers."
-                        "  One must be deleted before a new server can be created",
-                    )
-
-                if not is_valid_safe_slug(server_name):
-                    error_message = f"Invalid server_name: {server_name}"
-                    self.log.error(error_message)
-                    raise web.HTTPError(400, error_message)
-
-                if not is_valid_display_name(display_name):
-                    error_message = f"Invalid display_name: {display_name}"
-                    self.log.error(error_message)
-                    raise web.HTTPError(400, error_message)
-                display_name = normalise_unicode(display_name)
-
-            if not self.settings[
-                "allow_invalid_named_server_start"
-            ] and not is_valid_safe_slug(server_name):
-                error_message = f"Starting invalid server_name '{server_name}' is disabled, contact your administrator"
-                self.log.error(error_message)
-                raise web.HTTPError(400, error_message)
+            await self._check_named_server_request(user, server_name, display_name)
 
         if not self.allow_named_servers and user.running:
             url = self.get_next_url(user, default=user.server_url(""))
@@ -325,6 +327,9 @@ class SpawnHandler(BaseHandler):
             user = self.find_user(for_user)
             if user is None:
                 raise web.HTTPError(404, f"No such user: {for_user}")
+
+        if server_name:
+            await self._check_named_server_request(user, server_name, display_name)
 
         spawner = user.get_or_create_spawner(
             server_name, display_name, replace_failed=True
