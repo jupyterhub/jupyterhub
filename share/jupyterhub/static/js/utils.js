@@ -154,10 +154,11 @@ define(["jquery", "js-sha256"], function ($, sha256) {
     // Guarantees:
     // - always starts with a lowercase letter
     // - always ends with a lowercase letter or number
-    // - single hyphens
-    // - only contains lowercase letters, numbers
+    // - only contains lowercase letters, numbers and single hyphens
     // - length at least 1 ('x' if other rules strips down to empty string)
     // - max length not exceeded
+    //
+    // See jupyterhub/slugs.py for a full explanation
     let safe_name = name
       .toLowerCase()
       .replaceAll(/[^a-z0-9-]+/g, "-")
