@@ -13,7 +13,6 @@ from .traitlets import URLPrefix
 from .utils import (
     can_connect,
     fmt_ip_url,
-    make_ssl_context,
     random_port,
     url_path_join,
     wait_for_http_server,
@@ -181,9 +180,11 @@ class Server(HasTraits):
     def wait_up(self, timeout=10, http=False, ssl_context=None, extra_path=""):
         """Wait for this server to come up"""
         if http:
-            ssl_context = ssl_context or make_ssl_context(
-                self.keyfile, self.certfile, cafile=self.cafile
-            )
+            ssl_context = ssl_context or {
+                "keyfile": self.keyfile,
+                "certfile": self.certfile,
+                "cafile": self.cafile,
+            }
 
             return wait_for_http_server(
                 url_path_join(self.url, extra_path),

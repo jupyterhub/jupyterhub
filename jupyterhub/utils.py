@@ -28,7 +28,7 @@ from datetime import datetime, timezone
 from functools import lru_cache
 from hmac import compare_digest
 from operator import itemgetter
-from typing import Any
+from typing import Any, Dict
 from urllib.parse import (
     SplitResult,
     quote,
@@ -72,7 +72,12 @@ def unix_socket_in_use(socket_path: str) -> bool:
 
 @contextmanager
 def _request_for_tornado_client(
-    urlstring: str, method: str = "GET", body: Any = None, headers: Any = None, **kwargs
+    urlstring: str,
+    method: str = "GET",
+    body: Any = None,
+    headers: Any = None,
+    using_pycurl: bool = False,
+    **kwargs,
 ) -> Generator[HTTPRequest, None, None]:
     """A utility that provides a context that handles
     HTTP, HTTPS, and HTTP+UNIX request.
@@ -82,24 +87,18 @@ def _request_for_tornado_client(
     configure the AsyncHTTPClient to resolve the URL
     and connect to the proper socket.
     """
-    request_args = copy.deepcopy(kwargs)
     parts = urlsplit(urlstring)
-
-    if AsyncHTTPClient.configured_class().__name__ == 'CurlAsyncHTTPClient':
-        import pycurl
-
-        using_pycurl = True
-        socket_path = urldecode_unix_socket_path(parts.netloc)
-    else:
-        using_pycurl = False
+    extra_request_args = {}
 
     if parts.scheme in ["http", "https"]:
         pass
     elif "unix" in parts.scheme:
         # If unix socket, mimic HTTP.
+        socket_path = parts.netloc
+        hostname = 'localhost' if using_pycurl else socket_path
         parts = SplitResult(
             scheme="http",
-            netloc='localhost' if using_pycurl else parts.netloc,
+            netloc=hostname,
             path=parts.path,
             query=parts.query,
             fragment=parts.fragment,
@@ -125,8 +124,10 @@ def _request_for_tornado_client(
         # if not using pycurl, we need to use our custom resolver
         # if using pycurl, we can implement a unix socket connection with a curl callback
         if using_pycurl:
-            request_args['prepare_curl_callback'] = lambda curl: curl.setopt(
-                pycurl.UNIX_SOCKET_PATH, socket_path
+            import pycurl
+
+            extra_request_args['prepare_curl_callback'] = lambda curl: curl.setopt(
+                pycurl.UNIX_SOCKET_PATH, urldecode_unix_socket_path(socket_path)
             )
         else:
             resolver = UnixSocketResolver(resolver=Resolver())
@@ -140,7 +141,7 @@ def _request_for_tornado_client(
     # Yield the request for the given client.
     url = urlunsplit(parts)
     request = HTTPRequest(
-        url, method=method, body=body, headers=headers, **request_args
+        url, method=method, body=body, headers=headers, **(kwargs | extra_request_args)
     )
     yield request
 
@@ -151,15 +152,41 @@ async def async_fetch(
     body: Any = None,
     headers: Any = None,
     io_loop: Any = None,
+    ssl_options: Dict[str, Any] = None,
     raise_error: bool = True,
     **kwargs,
 ) -> HTTPResponse:
     """
-    Send an asynchronous HTTP, HTTPS, or HTTP+UNIX request
+    Send an asynchronous HTTP, HTTPS, or UNIX+HTTP request
     to a Tornado Web Server. Returns a tornado HTTPResponse.
     """
+
+    if AsyncHTTPClient.configured_class().__name__ == 'CurlAsyncHTTPClient':
+        using_pycurl = True
+    else:
+        using_pycurl = False
+
+    if ssl_options:
+        request_ssl_options = {k: v for k, v in ssl_options.items() if v is not None}
+        keyfile = request_ssl_options.pop("keyfile")
+        certfile = request_ssl_options.pop("certfile")
+        request_ssl_options = make_ssl_context(keyfile, certfile, **request_ssl_options)
+    else:
+        request_ssl_options = None
+    # ssl_options not allowed on pycurl
+    if not using_pycurl:
+        request_args = copy.deepcopy(kwargs)
+        request_args['ssl_options'] = request_ssl_options
+    else:
+        request_args = kwargs
+
     with _request_for_tornado_client(
-        urlstring, method=method, body=body, headers=headers, **kwargs
+        urlstring,
+        method=method,
+        body=body,
+        headers=headers,
+        using_pycurl=using_pycurl,
+        **request_args,
     ) as request:
         response = await AsyncHTTPClient(io_loop).fetch(
             request, raise_error=raise_error
@@ -280,6 +307,7 @@ def make_ssl_context(
     Client sockets are created with `purpose=ssl.Purpose.SERVER_AUTH` (default),
     Server sockets are created with `purpose=ssl.Purpose.CLIENT_AUTH`.
     """
+
     if not keyfile or not certfile:
         return None
     if verify is not None:
