@@ -30,13 +30,13 @@ repos:
 
   # Autoformat: python imports
   - repo: https://github.com/pycqa/isort
-    rev: a333737ed43df02b18e6c95477ea1b285b3de15a # frozen: 8.0.1
+    rev: dac090ce4d9ee313d086e2e89ab1acb8c2664fa1  # frozen: 9.0.0a3
     hooks:
       - id: isort
 
   # Autoformat: Python code
   - repo: https://github.com/psf/black-pre-commit-mirror
-    rev: fa505ab9c3e0fedafe1709fd7ac2b5f8996c670d # frozen: 26.3.1
+    rev: 4160603246a6b365d4a2af661c6d71b0a0f50478  # frozen: 26.5.1
     hooks:
       - id: black
 
@@ -67,7 +67,7 @@ repos:
 
   # github actions security checks
   - repo: https://github.com/zizmorcore/zizmor-pre-commit
-    rev: a4727cbbcd26d7098e96b9cb738169b59711ae51 # frozen: v1.24.1
+    rev: 9257c6050c0261b8c57e712f632dc4a8010109a9  # frozen: v1.25.2
     hooks:
       - id: zizmor
         args:
