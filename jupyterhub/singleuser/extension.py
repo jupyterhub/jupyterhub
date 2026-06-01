@@ -349,16 +349,16 @@ class JupyterHubSingleUser(ExtensionApp):
     @default('hub_http_client_opts')
     def _default_client_opts(self):
         # can't use ssl_options in case of pycurl
-        defaults = dict(validate_cert=True)
+        client_opts = dict(validate_cert=True)
         # don't set falsy empty strings,
         # which tornado interprets as paths
         if self.hub_auth.client_ca:
-            defaults["ca_certs"] = self.hub_auth.client_ca
+            client_opts["ca_certs"] = self.hub_auth.client_ca
         if self.hub_auth.keyfile:
-            defaults["client_key"] = self.hub_auth.keyfile
+            client_opts["client_key"] = self.hub_auth.keyfile
         if self.hub_auth.certfile:
-            defaults["client_cert"] = self.hub_auth.certfile
-        return defaults
+            client_opts["client_cert"] = self.hub_auth.certfile
+        return client_opts
 
     async def check_hub_version(self):
         """Test a connection to my Hub
@@ -464,8 +464,8 @@ class JupyterHubSingleUser(ExtensionApp):
                             'last_activity': last_activity_timestamp,
                         }
                     ),
-                    defaults=self.hub_http_client_opts,
                     io_loop=self.serverapp.io_loop,
+                    **self.hub_http_client_opts,
                 )
             except Exception as e:
                 failure_count += 1
