@@ -9,8 +9,8 @@ from .utils import auth_header
 
 async def test_unix_socket_proxy(request, tmp_path):
     cfg = Config()
-    proxy_sock = str(tmp_path / 'proxy.sock')
-    api_sock = str(tmp_path / 'api.sock')
+    proxy_sock = '/tmp/proxy.sock'  # str(tmp_path / 'proxy.sock')
+    api_sock = '/tmp/api.sock'  # str(tmp_path / 'api.sock')
 
     auth_token = 'secret!'
 
