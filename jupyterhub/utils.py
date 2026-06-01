@@ -4,6 +4,7 @@
 # Distributed under the terms of the Modified BSD License.
 import asyncio
 import concurrent.futures
+import copy
 import errno
 import functools
 import hashlib
@@ -81,14 +82,24 @@ def _request_for_tornado_client(
     configure the AsyncHTTPClient to resolve the URL
     and connect to the proper socket.
     """
+    request_args = copy.deepcopy(kwargs)
     parts = urlsplit(urlstring)
+
+    if AsyncHTTPClient.configured_class().__name__ == 'CurlAsyncHTTPClient':
+        import pycurl
+
+        using_pycurl = True
+        socket_path = urldecode_unix_socket_path(parts.netloc)
+    else:
+        using_pycurl = False
+
     if parts.scheme in ["http", "https"]:
         pass
     elif "unix" in parts.scheme:
         # If unix socket, mimic HTTP.
         parts = SplitResult(
             scheme="http",
-            netloc=parts.netloc,
+            netloc='localhost' if using_pycurl else parts.netloc,
             path=parts.path,
             query=parts.query,
             fragment=parts.fragment,
@@ -98,7 +109,7 @@ def _request_for_tornado_client(
             """A resolver that routes HTTP requests to unix sockets
             in tornado HTTP clients.
             Due to constraints in Tornados' API, the scheme of the
-            must be `http` (not `http+unix`). Applications should replace
+            must be `http` (not `unix+http`). Applications should replace
             the scheme in URLS before making a request to the HTTP client.
             """
 
@@ -111,15 +122,26 @@ def _request_for_tornado_client(
             async def resolve(self, host, port, *args, **kwargs):
                 return [(socket.AF_UNIX, urldecode_unix_socket_path(host))]
 
-        resolver = UnixSocketResolver(resolver=Resolver())
-        AsyncHTTPClient.configure(AsyncHTTPClient.configured_class(), resolver=resolver)
+        # if not using pycurl, we need to use our custom resolver
+        # if using pycurl, we can implement a unix socket connection with a curl callback
+        if using_pycurl:
+            request_args['prepare_curl_callback'] = lambda curl: curl.setopt(
+                pycurl.UNIX_SOCKET_PATH, socket_path
+            )
+        else:
+            resolver = UnixSocketResolver(resolver=Resolver())
+            AsyncHTTPClient.configure(
+                AsyncHTTPClient.configured_class(), resolver=resolver
+            )
     else:
         msg = "Unknown URL scheme."
         raise Exception(msg)
 
     # Yield the request for the given client.
     url = urlunsplit(parts)
-    request = HTTPRequest(url, method=method, body=body, headers=headers, **kwargs)
+    request = HTTPRequest(
+        url, method=method, body=body, headers=headers, **request_args
+    )
     yield request
 
 
