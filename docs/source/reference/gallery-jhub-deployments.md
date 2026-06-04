@@ -157,7 +157,7 @@ More than 10 general-purpose, and more than 20 course-specific environments are 
 
 ### bwJupyter for Teaching
 
-[bwJupyter](https://bwjupyter.de) is a collaboration between the [Karlsruhe Institute of Technology (KIT)](https://www.kit.edu/) and the [University of Stuttgart](https://www.uni-stuttgart.de/).
+[bwJupyter](https://www.bwjupyter.de) is a collaboration between the [Karlsruhe Institute of Technology (KIT)](https://www.kit.edu/) and the [University of Stuttgart](https://www.uni-stuttgart.de/).
 The project was funded by the Baden-Württemberg Ministry of Science, Research and Arts, and aims to provide a central JupyterHub for all universities in the state of Baden-Württemberg.
 In its first year of operation, over 7.700 active users from 40 universities were registered.
 
