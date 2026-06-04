@@ -213,9 +213,15 @@ class LoginHandler(BaseHandler):
             self._jupyterhub_user = user
             self.redirect(self.get_next_url(user))
         else:
+            username = data['username']
+            # username failed login, don't log full invalid user input
+            log_username = username
+            if len(username) > 32:
+                log_username = f"{username[:16]}...({len(username)} chars)"
+
             self.set_status(403)
             html = await self._render(
-                login_error='Invalid username or password', username=data['username']
+                login_error='Invalid username or password', username=log_username
             )
             self.finish(html)
 
