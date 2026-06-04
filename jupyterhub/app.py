@@ -3370,11 +3370,16 @@ class JupyterHub(Application):
         to_modify = []
         cant_modify = []
 
+        user_namedserver_map = {}
         for spawner in (
             self.db.query(orm.Spawner)
             .filter(orm.Spawner.name != "")
             .options(selectinload(orm.Spawner.user))
         ):
+            if spawner.user.name not in user_namedserver_map:
+                user_namedserver_map[spawner.user.name] = set()
+            user_namedserver_map[spawner.user.name].add(spawner.name)
+
             if not is_valid_safe_slug(spawner.name):
                 if spawner.display_name:
                     # Is this excessively defensive?
@@ -3399,7 +3404,16 @@ class JupyterHub(Application):
                 )
 
             for spawner in to_modify:
-                safe_name = safe_slug(spawner.name)
+                safe_name = safe_slug(spawner.name, avoid_collisions=False)
+
+                # In the unlikely event that a user has multiple named servers
+                # with clashing safe_name generate a hashed safe_name.
+                # This is easier than adding a numeric suffix due to the edge
+                # case where len(safe_name) == max_length
+                if safe_name in user_namedserver_map[spawner.user.name]:
+                    safe_name = safe_slug(spawner.name, avoid_collisions=True)
+                user_namedserver_map[spawner.user.name].add(safe_name)
+
                 self.log.info(
                     "Renaming server user='%s' server='%s' to '%s'",
                     spawner.user.name,
