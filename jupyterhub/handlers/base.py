@@ -991,9 +991,11 @@ class BaseHandler(RequestHandler):
         else:
             self.statsd.incr('login.failure')
             self.statsd.timing('login.authenticate.failure', auth_timer.ms)
-            self.log.warning(
-                "Failed login for %s", (data or {}).get('username', 'unknown user')
-            )
+            log_username = username = (data or {}).get('username', 'unknown user')
+            # username failed login, don't log full invalid user input
+            if len(username) > 32:
+                log_username = f"{username[:16]}...({len(username)} chars)"
+            self.log.warning("Failed login for %r", log_username)
 
     # ---------------------------------------------------------------
     # spawning-related
