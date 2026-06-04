@@ -10,33 +10,33 @@ define(["share/jupyterhub/static/js/utils"], function (utils) {
     const testCases = [
       // Unchanged
       ["z9", "z9"],
-      // Contains - so append hash
-      ["jupyter-alex", "jupyter-alex-651dec0a"],
-      ["username-servername", "username-servername-9b109a32"],
+      // Contains -
+      ["jupyter-alex", "jupyter-alex"],
+      ["username-servername", "username-servername"],
       // Lowercase
-      ["jupyter-Alex", "jupyter-alex-3a1c285c"],
+      ["jupyter-Alex", "jupyter-alex"],
       // Invalid chars
-      ["jupyter-üni", "jupyter-ni-a5aaf5dd"],
-      ["user@email.com", "user-email-com-0925f997"],
-      ["user-_@_emailß.com", "user-email-com-7e3a7efd"],
-      ["has.dot", "has-dot-03e27fdf"],
-      ["üser", "ser-73506260"],
+      ["jupyter-üni", "jupyter-uni"],
+      ["user@email.com", "user-email-com"],
+      ["user-_@_emailß.com", "user-email-com"],
+      ["has.dot", "has-dot"],
+      ["üser-🐧½", "user-1-2"],
       // Multiple -
-      ["a-b--c-d", "a-b-c-d-ee1e7bc7"],
+      ["a-b--c-d", "a-b-c-d"],
       // Doesn't start with [a-z]
-      ["9z9", "x-9z9-224de202"],
-      ["-start", "start-f587e2dc"],
+      ["9z9", "x-9z9"],
+      ["-start", "start"],
       // Ends with -
-      ["endswith-", "endswith-165f1166"],
+      ["endswith-", "endswith"],
       // Looks like it has a hash appended but that's irrelevant
-      ["start-f587e2dc", "start-f587e2dc-06b9709d"],
+      ["start-f587e2dc", "start-f587e2dc"],
       // Length tests
       ["x".repeat(30), "x".repeat(30)],
-      ["x".repeat(31), "xxxxxxxxxxxxxxxxxxxxx-0f46e4b0"],
-      ["x".repeat(32), "xxxxxxxxxxxxxxxxxxxxx-c62e4615"],
+      ["x".repeat(31), "x".repeat(30)],
+      ["x".repeat(32), "x".repeat(30)],
       // Length tests with invalid chars
-      ["x".repeat(29) + "-", "xxxxxxxxxxxxxxxxxxxxx-bf57e3d7"],
-      ["1234567890".repeat(3), "x-1234567890123456789-f54e5c8f"],
+      ["x".repeat(29) + "-", "x".repeat(29)],
+      ["1234567890".repeat(3), "x-1234567890123456789012345678"],
     ];
     testCases.forEach(([input, expected]) => {
       it(`creates a safe slug: ${input}`, () => {

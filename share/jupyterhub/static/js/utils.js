@@ -5,7 +5,7 @@
 // Modifications Copyright (c) Jupyter Development Team.
 // Distributed under the terms of the Modified BSD License.
 
-define(["jquery", "js-sha256"], function ($, sha256) {
+define(["jquery"], function ($) {
   "use strict";
 
   var url_path_join = function () {
@@ -122,21 +122,14 @@ define(["jquery", "js-sha256"], function ($, sha256) {
     modal.show();
   };
 
-  // This should be the same as jupyterhub/slugs.py::safe_slug
+  // This should be the same as jupyterhub/slugs.py::safe_slug(avoid_collisions=False)
   var safe_slug = function (name) {
+    // Generate a safe slug that can be used in most places e.g. URLs
+
     if (!name) {
       throw new Error("Unable to create safe slug for empty string");
     }
     const max_length = 30;
-    const _hash_length = 8;
-    // Generate an always-safe, unique string for any input
-    // truncates name to max_length - len(hash_suffix) to fit in max_length
-    // after adding hash suffix
-    const name_length = max_length - (_hash_length + 1);
-
-    if (name_length < 1) {
-      throw Error(`Cannot make safe names shorter than ${_hash_length + 2}`);
-    }
 
     if (
       name.length <= max_length &&
@@ -145,9 +138,6 @@ define(["jquery", "js-sha256"], function ($, sha256) {
     ) {
       return name;
     }
-
-    // quick, short hash to avoid name collisions
-    const name_hash = sha256(name).substring(0, _hash_length);
 
     // const safe_name = _extract_safe_name(name, name_length)
     // Generate safe substring of a name
@@ -160,19 +150,20 @@ define(["jquery", "js-sha256"], function ($, sha256) {
     //
     // See jupyterhub/slugs.py for a full explanation
     let safe_name = name
+      .normalize("NFKD")
+      .replace(/\p{M}/gu, "")
       .toLowerCase()
       .replaceAll(/[^a-z0-9-]+/g, "-")
       .replaceAll(/-+/g, "-")
-      .replace(/^-+/, "")
-      .substring(0, name_length)
-      .replace(/-+$/, "");
+      .replace(/^-+/, "");
+    if (!/^[a-z]+/.test(safe_name)) {
+      safe_name = "x-" + safe_name;
+    }
+    safe_name = safe_name.substring(0, max_length).replace(/-+$/, "");
     if (!safe_name) {
       safe_name = "x";
     }
-    if (!/^[a-z]+/.test(safe_name)) {
-      safe_name = "x-" + safe_name.substring(0, name_length - 2);
-    }
-    return `${safe_name}-${name_hash}`;
+    return safe_name;
   };
 
   var sanitise_display_name = function (name) {

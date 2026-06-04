@@ -365,10 +365,10 @@ async def test_spawn_named_server_with_form(
     user = user_special_chars.user
     urlname = user_special_chars.urlname
     urlname_js = user_special_chars.urlname_js
-    entered_display_name = " <  🐧  > "
-    expected_display_name = "< 🐧 >"
-    expected_encoded_display_name = "%3C%20%F0%9F%90%A7%20%3E"
-    expected_server_name = "x-dc14c4a4"
+    entered_display_name = " <  🐧  >\tÅ=Ⅷ"
+    expected_display_name = "< 🐧 > Å=Ⅷ"
+    expected_encoded_display_name = "%3C%20%F0%9F%90%A7%20%3E%C3%85%3D%E2%85%A7"
+    expected_server_name = "a-viii"
 
     entered_form_input = "😇 <&!&> 😇"
 
