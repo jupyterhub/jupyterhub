@@ -67,7 +67,6 @@ from .auth import Authenticator, PAMAuthenticator
 from .crypto import CryptKeeper
 
 # For faking stats
-from .emptyclass import EmptyClass
 from .handlers.static import CacheControlStaticFilesHandler, LogoHandler
 from .log import CoroutineLogFormatter, log_request
 from .metrics import (
@@ -1574,18 +1573,6 @@ class JupyterHub(Application):
         """,
     ).tag(config=True)
 
-    statsd_host = Unicode(
-        help="Host to send statsd metrics to. An empty string (the default) disables sending metrics."
-    ).tag(config=True)
-
-    statsd_port = Integer(
-        8125, help="Port on which to send statsd metrics about the hub"
-    ).tag(config=True)
-
-    statsd_prefix = Unicode(
-        'jupyterhub', help="Prefix to use for all metrics sent by jupyterhub to statsd"
-    ).tag(config=True)
-
     handlers = List()
 
     config_role_names = List(
@@ -1638,27 +1625,9 @@ class JupyterHub(Application):
         Instance(logging.Handler), help="Extra log handlers to set on JupyterHub logger"
     ).tag(config=True)
 
-    statsd = Any(
-        allow_none=False,
-        help="The statsd client, if any. A mock will be used if we aren't using statsd",
-    )
-
     shutdown_on_logout = Bool(
         False, help="""Shuts down all user servers on logout"""
     ).tag(config=True)
-
-    @default('statsd')
-    def _statsd(self):
-        if self.statsd_host:
-            import statsd
-
-            client = statsd.StatsClient(
-                self.statsd_host, self.statsd_port, self.statsd_prefix
-            )
-            return client
-        else:
-            # return an empty mock object!
-            return EmptyClass()
 
     def init_logging(self):
         # This prevents double log messages because tornado use a root logger that
@@ -3282,7 +3251,6 @@ class JupyterHub(Application):
             version_hash=version_hash,
             subdomain_host=self.subdomain_host,
             domain=self.domain,
-            statsd=self.statsd,
             implicit_spawn_seconds=self.implicit_spawn_seconds,
             allow_named_servers=self.allow_named_servers,
             default_server_name=self._default_server_name,
@@ -3597,8 +3565,6 @@ class JupyterHub(Application):
                 spawner.last_activity = dt
             if (now - user.last_activity).total_seconds() < self.active_user_window:
                 active_users_count += 1
-        self.statsd.gauge('users.running', users_count)
-        self.statsd.gauge('users.active', active_users_count)
 
         try:
             self.db.commit()

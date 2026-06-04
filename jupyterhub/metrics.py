@@ -28,7 +28,7 @@ import time
 from datetime import timedelta
 from enum import Enum
 
-from prometheus_client import Gauge, Histogram
+from prometheus_client import Counter, Gauge, Histogram
 from tornado.ioloop import PeriodicCallback
 from traitlets import Any, Bool, Dict, Float, Integer
 from traitlets.config import LoggingConfigurable
@@ -146,6 +146,31 @@ INIT_SPAWNERS_DURATION_SECONDS = Histogram(
 PROXY_POLL_DURATION_SECONDS = Histogram(
     'proxy_poll_duration_seconds',
     'Duration for polling all routes from proxy',
+    namespace=metrics_prefix,
+)
+
+LOGIN_DURATION_SECONDS = Histogram(
+    'login_duration_seconds',
+    'duration for all authentication attempts',
+    ['status'],
+    namespace=metrics_prefix,
+)
+
+
+class LoginStatus(Enum):
+    success = 'success'
+    failure = 'failure'
+
+
+LOGOUT_DURATION_SECONDS = Histogram(
+    'logout_duration_seconds',
+    'duration for all logout requests',
+    namespace=metrics_prefix,
+)
+
+CSP_REPORT_COUNT = Counter(
+    'csp_reports',
+    'content security policy violation reports',
     namespace=metrics_prefix,
 )
 

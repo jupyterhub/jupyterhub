@@ -31,6 +31,8 @@ from .._xsrf_utils import (
     get_xsrf_token,
 )
 from ..metrics import (
+    CSP_REPORT_COUNT,
+    LOGIN_DURATION_SECONDS,
     PROXY_ADD_DURATION_SECONDS,
     PROXY_DELETE_DURATION_SECONDS,
     RUNNING_SERVERS,
@@ -38,6 +40,7 @@ from ..metrics import (
     SERVER_SPAWN_DURATION_SECONDS,
     SERVER_STOP_DURATION_SECONDS,
     TOTAL_USERS,
+    LoginStatus,
     ProxyDeleteStatus,
     ServerPollStatus,
     ServerSpawnStatus,
@@ -178,10 +181,6 @@ class BaseHandler(RequestHandler):
     @property
     def proxy(self):
         return self.settings['proxy']
-
-    @property
-    def statsd(self):
-        return self.settings['statsd']
 
     @property
     def authenticator(self):
@@ -976,22 +975,23 @@ class BaseHandler(RequestHandler):
 
     async def login_user(self, data=None):
         """Login a user"""
-        auth_timer = self.statsd.timer('login.authenticate').start()
+        login_start_time = time.perf_counter()
         authenticated = await self.authenticate(data)
-        auth_timer.stop(send=False)
 
         if authenticated:
             user = await self.auth_to_user(authenticated)
             self.set_login_cookie(user)
-            self.statsd.incr('login.success')
-            self.statsd.timing('login.authenticate.success', auth_timer.ms)
+            LOGIN_DURATION_SECONDS.labels(status=LoginStatus.success).observe(
+                time.perf_counter() - login_start_time
+            )
 
             self.log.info("User logged in: %s", user.name)
             user._auth_refreshed = time.monotonic()
             return user
         else:
-            self.statsd.incr('login.failure')
-            self.statsd.timing('login.authenticate.failure', auth_timer.ms)
+            LOGIN_DURATION_SECONDS.labels(status=LoginStatus.failure).observe(
+                time.perf_counter() - login_start_time
+            )
             self.log.warning(
                 "Failed login for %s", (data or {}).get('username', 'unknown user')
             )
@@ -1142,7 +1142,6 @@ class BaseHandler(RequestHandler):
             self.log.info(
                 "User %s took %.3f seconds to start", user_server_name, toc - tic
             )
-            self.statsd.timing('spawner.success', (toc - tic) * 1000)
             SERVER_SPAWN_DURATION_SECONDS.labels(
                 status=ServerSpawnStatus.success
             ).observe(time.perf_counter() - spawn_start_time)
@@ -1258,8 +1257,6 @@ class BaseHandler(RequestHandler):
             ).observe(time.perf_counter() - poll_start_time)
 
             if status is not None:
-                toc = IOLoop.current().time()
-                self.statsd.timing('spawner.failure', (toc - tic) * 1000)
                 SERVER_SPAWN_DURATION_SECONDS.labels(
                     status=ServerSpawnStatus.failure
                 ).observe(time.perf_counter() - spawn_start_time)
@@ -1381,7 +1378,6 @@ class BaseHandler(RequestHandler):
                 self.log.info(
                     "User %s server took %.3f seconds to stop", user.name, toc - tic
                 )
-                self.statsd.timing('spawner.stop', (toc - tic) * 1000)
                 SERVER_STOP_DURATION_SECONDS.labels(
                     status=ServerStopStatus.success
                 ).observe(toc - tic)
@@ -1914,7 +1910,6 @@ class UserUrlHandler(BaseHandler):
             target = url_concat(target, {'redirects': 1})
 
         self.redirect(target)
-        self.statsd.incr('redirects.user_after_login')
 
 
 class UserRedirectHandler(BaseHandler):
@@ -1985,8 +1980,8 @@ class CSPReportHandler(BaseHandler):
             "Content security violation: %s",
             self.request.body.decode('utf8', 'replace'),
         )
-        # Report it to statsd as well
-        self.statsd.incr('csp_report')
+        # Report it to metrics as well
+        CSP_REPORT_COUNT.inc()
 
 
 class AddSlashHandler(BaseHandler):
