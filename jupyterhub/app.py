@@ -3382,7 +3382,6 @@ class JupyterHub(Application):
 
             if not is_valid_safe_slug(spawner.name):
                 if spawner.display_name:
-                    # Is this excessively defensive?
                     raise ValueError(
                         f"Inconsistent named server: user='{spawner.user.name}' "
                         f"server='{spawner.name}' has an invalid name indicating it "
@@ -3424,10 +3423,9 @@ class JupyterHub(Application):
                 spawner.name = safe_name
 
             self.db.commit()
-            # TODO: Do we need to handle errors and rollback?
 
             if not to_modify and not cant_modify:
-                self.log.info("All named servers have valid names")
+                self.log.debug("All named servers have valid names")
 
         elif cant_modify or to_modify:
             self.log.warning(
