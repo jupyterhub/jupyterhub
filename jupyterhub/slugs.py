@@ -182,9 +182,22 @@ def _extract_safe_name(name, max_length):
     - max length not exceeded
     """
     # compute safe slug from name (don't worry about collisions, hash handles that)
+
+    # Make a reasonable effort to convert unicode chars to ascii
+    # NFKD splits some chars into components, e.g.
+    #     ü = [u, combining diaeresis]
+    #     ½ = [1, /, 2]
+    #
+    # Accents (Unicode class Mn, Nonspacing Mark) are then removed.
+    # All other chars are unchanged.
+    nfkd_no_accents = "".join(
+        c
+        for c in unicodedata.normalize("NFKD", name)
+        if not unicodedata.category(c) == "Mn"
+    )
     # cast to lowercase
     # replace any sequence of non-alphanumeric characters with a single '-'
-    safe_name = _non_alphanum_pattern.sub("-", name.lower())
+    safe_name = _non_alphanum_pattern.sub("-", nfkd_no_accents.lower())
     # truncate to max_length chars, strip leading '-'
     safe_name = safe_name.lstrip("-")[:max_length]
     # ensure starts with lowercase letter
@@ -198,7 +211,7 @@ def _extract_safe_name(name, max_length):
     return safe_name
 
 
-def strip_and_hash(name, max_length=_max_length):
+def _strip_and_hash(name, max_length=_max_length):
     """Generate an always-safe, unique string for any input
 
     truncates name to max_length - len(hash_suffix) to fit in max_length
@@ -213,7 +226,13 @@ def strip_and_hash(name, max_length=_max_length):
     return f"{safe_name}-{name_hash}"
 
 
-def safe_slug(name, is_valid=is_valid_simple_name, max_length=_max_length):
+def safe_slug(
+    name,
+    avoid_collisions=True,
+    max_length=_max_length,
+    *,
+    is_valid=is_valid_simple_name,
+):
     """Always generate a safe slug for a non-empty string
 
     The returned slug will:
@@ -235,12 +254,18 @@ def safe_slug(name, is_valid=is_valid_simple_name, max_length=_max_length):
     - it is always possible to tell whether a safe_slug required changing the input:
       if it was modified it will always end in `-HASH` where `HASH` is determined by
       JupyterHub, not the input e.g. `user-suffix` will become `user-suffix-HASH`
+
+    avoid_collisions=False
+    - As an exception to the above, if you do not need to worry about collisions you
+      can set this to False to never add a HASH
     """
     if not name:
         raise ValueError("Unable to create safe slug for empty string")
     if is_valid(name, max_length):
         return name
-    return strip_and_hash(name, max_length)
+    if avoid_collisions:
+        return _strip_and_hash(name, max_length)
+    return _extract_safe_name(name, max_length)
 
 
 def is_valid_display_name(s):

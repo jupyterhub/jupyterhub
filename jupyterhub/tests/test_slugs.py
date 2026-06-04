@@ -56,43 +56,49 @@ def test_is_valid_simple_name(name, max_length, expected):
 
 
 @pytest.mark.parametrize(
-    "name, expected",
+    "name, expected_hash, expected_nohash",
     # Keep these in sync with share/jupyterhub/static/js/utils.test.js::utils.safe_slug
     [
         # Unchanged
-        ["z9", "z9"],
+        ["z9", "z9", "z9"],
         # Contains - so append hash
-        ["jupyter-alex", "jupyter-alex-651dec0a"],
-        ["username-servername", "username-servername-9b109a32"],
+        ["jupyter-alex", "jupyter-alex-651dec0a", "jupyter-alex"],
+        ["username-servername", "username-servername-9b109a32", "username-servername"],
         # Lowercase
-        ["jupyter-Alex", "jupyter-alex-3a1c285c"],
+        ["jupyter-Alex", "jupyter-alex-3a1c285c", "jupyter-alex"],
         # Invalid chars
-        ["jupyter-üni", "jupyter-ni-a5aaf5dd"],
-        ["user@email.com", "user-email-com-0925f997"],
-        ["user-_@_emailß.com", "user-email-com-7e3a7efd"],
-        ["has.dot", "has-dot-03e27fdf"],
-        ["üser", "ser-73506260"],
+        ["jupyter-üni", "jupyter-uni-a5aaf5dd", "jupyter-uni"],
+        ["user@email.com", "user-email-com-0925f997", "user-email-com"],
+        ["user-_@_emailß.com", "user-email-com-7e3a7efd", "user-email-com"],
+        ["has.dot", "has-dot-03e27fdf", "has-dot"],
+        ["üser-🐧½", "user-1-2-f3e0bac6", "user-1-2"],
         # Multiple -
-        ["a-b--c-d", "a-b-c-d-ee1e7bc7"],
+        ["a-b--c-d", "a-b-c-d-ee1e7bc7", "a-b-c-d"],
         # Doesn't start with [a-z]
-        ["9z9", "x-9z9-224de202"],
-        ["-start", "start-f587e2dc"],
+        ["9z9", "x-9z9-224de202", "x-9z9"],
+        ["-start", "start-f587e2dc", "start"],
         # Ends with -
-        ["endswith-", "endswith-165f1166"],
+        ["endswith-", "endswith-165f1166", "endswith"],
         # Looks like it has a hash appended but that's irrelevant
-        ["start-f587e2dc", "start-f587e2dc-06b9709d"],
+        ["start-f587e2dc", "start-f587e2dc-06b9709d", "start-f587e2dc"],
         # Length tests
-        ["x" * 30, "x" * 30],
-        ["x" * 31, "xxxxxxxxxxxxxxxxxxxxx-0f46e4b0"],
-        ["x" * 32, "xxxxxxxxxxxxxxxxxxxxx-c62e4615"],
+        ["x" * 30, "x" * 30, "x" * 30],
+        ["x" * 31, "xxxxxxxxxxxxxxxxxxxxx-0f46e4b0", "x" * 30],
+        ["x" * 32, "xxxxxxxxxxxxxxxxxxxxx-c62e4615", "x" * 30],
         # Length tests with invalid chars
-        ["x" * 29 + "-", "xxxxxxxxxxxxxxxxxxxxx-bf57e3d7"],
-        ["1234567890" * 3, "x-1234567890123456789-f54e5c8f"],
+        ["x" * 29 + "-", "xxxxxxxxxxxxxxxxxxxxx-bf57e3d7", "x" * 29],
+        [
+            "1234567890" * 3,
+            "x-1234567890123456789-f54e5c8f",
+            "x-1234567890123456789012345678",
+        ],
     ],
 )
-def test_safe_slug(name, expected):
-    slug = safe_slug(name)
-    assert slug == expected
+def test_safe_slug(name, expected_hash, expected_nohash):
+    slug_with_hash = safe_slug(name)
+    assert expected_hash == slug_with_hash
+    slug_without_hash = safe_slug(name, avoid_collisions=False)
+    assert expected_nohash == slug_without_hash
 
 
 @pytest.mark.parametrize(
