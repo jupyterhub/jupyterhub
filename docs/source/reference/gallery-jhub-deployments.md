@@ -176,7 +176,6 @@ Based on the Kubernetes deployment using [Z2JH](https://z2jh.jupyter.org/en/stab
 
 ### Google Cloud Platform
 
-- [Using Tensorflow and JupyterHub in Classrooms](https://cloud.google.com/solutions/using-tensorflow-jupyterhub-classrooms)
 - [using-tensorflow-and-jupyterhub blog post](https://opensource.googleblog.com/2016/10/using-tensorflow-and-jupyterhub.html)
 
 ### Everware
