@@ -122,7 +122,7 @@ class SharedPasswordAuthenticator(Authenticator):
 
         if not new:
             # Not set, is ok
-            return
+            return new
 
         if not self.manage_groups:
             # It is always a mistake to have password_groups set without manage_groups set
