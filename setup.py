@@ -106,7 +106,14 @@ class NPM(BaseCommand):
         )
         os.utime(self.node_modules)
 
+        # autorunning postinstall scripts may be disabled for security
+        check_call(
+            ['npm', 'run', 'postinstall'],
+            cwd=here,
+            shell=shell,
+        )
         os.utime(self.bower_dir)
+
         # update data-files in case this created new files
         self.distribution.data_files = get_data_files()
         assert not self.should_run(), 'NPM.run failed'
