@@ -101,14 +101,14 @@ def backup_db_file(db_file, log=None):
     shutil.copy(db_file, backup_db_file)
 
 
-def upgrade_if_needed(db_url, backup=True, log=None):
+def upgrade_if_needed(db_url, *, db_kwargs=None, backup=True, log=None):
     """Upgrade a database if needed
 
     If the database is sqlite, a backup file will be created with a timestamp.
     Other database systems should perform their own backups prior to calling this.
     """
     # run check-db-revision first
-    engine = create_engine(db_url)
+    engine = create_engine(db_url, **db_kwargs or {})
     try:
         orm.check_db_revision(engine)
     except orm.DatabaseSchemaMismatch:

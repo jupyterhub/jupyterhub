@@ -2,7 +2,7 @@ alembic>=1.4
 certipy>=0.1.2
 idna
 jinja2>=2.11.0
-jupyter_events
+jupyter_events>=0.11.0
 oauthlib>=3.0
 packaging
 pamela>=1.1.0; sys_platform != 'win32'

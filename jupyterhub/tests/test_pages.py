@@ -1472,3 +1472,36 @@ async def test_spawn_fails_custom_message(app, user, kind, speed):
             assert "unhandle me" not in error.text
         else:
             raise ValueError(f"unexpected {kind=}")
+
+
+async def test_session_id(app):
+    # `cookies` is our request cookies
+    # `r.cookies` is the _new_ cookies set by any given response
+    cookies = await app.login_user('ursula')
+    # session id set on login
+    assert 'jupyterhub-session-id' in cookies
+    # cookie-authenticated request for any page without a session id
+    # sets a new session id cookie
+    cookies.pop("jupyterhub-session-id")
+    r = await async_requests.get(ujoin(public_url(app), "hub/token"), cookies=cookies)
+    assert r.ok
+    # requesting token page sets new session id and xsrf token
+    assert "_xsrf" in r.cookies
+    assert "jupyterhub-session-id" in r.cookies
+    for cookie in r.cookies:
+        cookies.pop(cookie.name, None)
+        cookies[cookie.name] = cookie.value
+
+    # second request for same page doesn't set any new cookies
+    r = await async_requests.get(ujoin(public_url(app), "hub/token"), cookies=cookies)
+    assert r.ok
+    assert not r.cookies
+
+    # POST a token with the cookies
+    r = await async_requests.post(
+        ujoin(public_url(app), f"hub/api/users/ursula/tokens?_xsrf={cookies['_xsrf']}"),
+        cookies=cookies,
+    )
+    assert r.ok
+    # request shouldn't set any new cookies
+    assert not r.cookies

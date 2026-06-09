@@ -303,6 +303,7 @@ class User(Base):
     def orm_spawners(self):
         return {s.name: s for s in self._orm_spawners}
 
+    user_info = Column(JSONDict)
     admin = Column(Boolean(create_constraint=False), default=False)
     created = Column(DateTime, default=utcnow)
     last_activity = Column(DateTime, nullable=True)

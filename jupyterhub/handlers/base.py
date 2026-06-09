@@ -270,20 +270,25 @@ class BaseHandler(RequestHandler):
         """
         # cases:
         # 1. logged in, session id (session_id:user_id)
-        # 2. logged in, no session id (anonymous_id:user_id)
+        # 2. logged in, no session id (shouldn't happen!) sets new session id, same as 1.
         # 3. not logged in, session id (session_id:anonymous_id)
         # 4. no cookies at all, use single anonymous value (:anonymous_id)
         session_id = self.get_session_cookie()
         if self.current_user:
             if isinstance(self.current_user, User):
                 user_id = self.current_user.cookie_id
+                if not session_id:
+                    # this shouldn't happen if cookie-authenticated
+                    self.log.warning(
+                        "session id not set for %s, setting a new one",
+                        self.current_user.name,
+                    )
+                    self.set_session_cookie()
+                    session_id = self._session_id
             else:
                 # this shouldn't happen, but may if e.g. a Service attempts to fetch a page,
                 # which usually won't work, but this method should not be what raises
-                user_id = ""
-            if not session_id:
-                # no session id, use non-portable anonymous id
-                session_id = _anonymous_xsrf_id(self)
+                user_id = session_id = ""
         else:
             # not logged in yet, use non-portable anonymous id
             user_id = _anonymous_xsrf_id(self)
@@ -490,6 +495,7 @@ class BaseHandler(RequestHandler):
             # have cookie, but it's not valid. Clear it and start over.
             clear()
             return
+
         # update user activity
         if self._record_activity(user):
             self.db.commit()
@@ -503,7 +509,12 @@ class BaseHandler(RequestHandler):
 
     def get_current_user_cookie(self):
         """get_current_user from a cookie token"""
-        return self._user_for_cookie(self.hub.cookie_name)
+        user = self._user_for_cookie(self.hub.cookie_name)
+        if user and not self.get_session_cookie():
+            # make sure session cookie is set for cookie-authenticated requests
+            self.log.debug("Setting new session id for %s", user.name)
+            self.set_session_cookie()
+        return user
 
     async def get_current_user(self):
         """get current username"""
@@ -692,6 +703,8 @@ class BaseHandler(RequestHandler):
 
         Returns None if no session id is stored
         """
+        if hasattr(self, "_session_id"):
+            return self._session_id
         return self.get_cookie(SESSION_COOKIE_NAME, None)
 
     def set_session_cookie(self):
@@ -910,6 +923,7 @@ class BaseHandler(RequestHandler):
         if isinstance(authenticated, str):
             authenticated = {'name': authenticated}
         username = authenticated['name']
+        user_info = authenticated.get('user_info', None)
         auth_state = authenticated.get('auth_state')
         admin = authenticated.get('admin')
         refreshing = user is not None

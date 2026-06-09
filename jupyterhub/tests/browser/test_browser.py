@@ -353,6 +353,45 @@ async def test_spawn_pending_server_ready(app, browser, user_special_chars):
     await expect(stop_start_btns.nth(1)).to_have_id("start")
 
 
+async def test_spawn_named_server_with_form(
+    app,
+    browser,
+    user_special_chars,
+    form_spawn,
+    named_servers,  # noqa: F811
+):
+    """verify that a new named server with special characters is slugified and launched with custom form inputs"""
+
+    user = user_special_chars.user
+    urlname = user_special_chars.urlname
+    urlname_js = user_special_chars.urlname_js
+    entered_display_name = " <  🐧  > "
+    expected_encoded_display_name = "%20%3C%20%20%F0%9F%90%A7%20%20%3E"
+    expected_server_name = " <  🐧  >"
+
+    entered_form_input = "😇 <&!&> 😇"
+
+    await login_home(browser, app, user.name)
+    await browser.get_by_role("textbox", name="server name").fill(entered_display_name)
+    await browser.get_by_role("button", name="Add New Server").click()
+
+    await browser.wait_for_url(
+        f"**/hub/spawn/{urlname_js}/{expected_encoded_display_name}"
+    )
+
+    await browser.get_by_role("textbox", name="energy").fill(entered_form_input)
+    await browser.get_by_role("button", name="Start").click()
+
+    await browser.wait_for_url(f"**/user/{urlname}/{expected_encoded_display_name}/")
+
+    user_server_env_url = url_path_join(
+        public_url(app, user), expected_server_name, "/env"
+    )
+    response = await browser.goto(user_server_env_url)
+    env = await response.json()
+    assert env["ENERGY"] == entered_form_input
+
+
 # HOME PAGE
 
 
@@ -557,6 +596,11 @@ async def test_token_form_expires_in(
         await open_token_page(app, browser, user_special_chars.user)
     # check the list of tokens duration
     dropdown = browser.locator('#token-expiration-seconds')
+    # wait for options to load
+    options = await expect(dropdown.locator('option')).to_have_count(
+        len(expected_options)
+    )
+
     options = await dropdown.locator('option').all()
     actual_values = [
         (await option.text_content(), await option.get_attribute('value'))
@@ -690,25 +734,26 @@ async def test_request_token_expiration(
     )
     assert last_used_text == "Never"
 
-    expires_at_text = (
-        await api_token_table_area.locator("tr.token-row")
-        .get_by_role("cell")
-        .nth(4)
-        .text_content()
+    # flaky: moment rendering is async
+    expires_at_cell = (
+        api_token_table_area.locator("tr.token-row").get_by_role("cell").nth(4)
     )
 
     if token_opt == "Never":
         assert orm_token.expires_at is None
-        assert expires_at_text == "Never"
+        expires_at_text = "Never"
     elif token_opt == "1 Hour":
-        assert expires_at_text == "in an hour"
+        expires_at_text = "in an hour"
     elif token_opt == "1 Day":
-        assert expires_at_text == "in a day"
+        expires_at_text = "in a day"
     elif token_opt == "1 Week":
-        assert expires_at_text == "in 7 days"
+        expires_at_text = "in 7 days"
     elif token_opt == "server_up":
         assert orm_token.expires_at is None
-        assert expires_at_text == "Never"
+        expires_at_text = "Never"
+
+    await expect(expires_at_cell).to_have_text(expires_at_text)
+
     # verify that the button for revoke is presented
     revoke_btn = (
         api_token_table_area.locator("tr.token-row").get_by_role("button").nth(0)
@@ -764,6 +809,8 @@ async def test_request_token_permissions(
         await expect(error_dialog).not_to_be_visible()
         return
 
+    token_result = browser.locator("#token-result")
+    await expect(token_result).to_be_visible()
     await browser.reload(wait_until="load")
 
     # API Tokens table: verify that elements are displayed
@@ -1129,7 +1176,7 @@ async def test_start_stop_all_servers_on_admin_page(app, browser, admin_user):
 
     users = browser.get_by_test_id("user-row-name")
     # verify that all servers are not started
-    # users´numbers are the same as numbers of the start button and the Spawn page button
+    # users' numbers are the same as numbers of the start button and the Spawn page button
     # no Stop server buttons are displayed
     # no access buttons are displayed
     btns_start = browser.get_by_test_id("user-row-server-activity").get_by_role(
@@ -1145,13 +1192,11 @@ async def test_start_stop_all_servers_on_admin_page(app, browser, admin_user):
         "button", name="Access Server"
     )
 
-    assert (
-        await btns_start.count()
-        == await btns_spawn.count()
-        == await users.count()
-        == users_count_db
-    )
-    assert await btns_stop.count() == await btns_access.count() == 0
+    await expect(btns_start).to_have_count(users_count_db)
+    await expect(btns_spawn).to_have_count(users_count_db)
+    await expect(users).to_have_count(users_count_db)
+    await expect(btns_stop).to_have_count(0)
+    await expect(btns_access).to_have_count(0)
 
     # start all servers via the Start All
     await start_all_btn.click()
@@ -1347,9 +1392,7 @@ async def test_start_stop_server_on_admin_page(
 
     # click on Start button
     await click_start_server(browser, user1.name)
-    await expect(browser.get_by_role("button", name="Stop Server")).to_have_count(
-        1, timeout=30_000
-    )
+    await expect(browser.get_by_role("button", name="Stop Server")).to_have_count(1)
     await expect(browser.get_by_role("button", name="Start Server")).to_have_count(
         len(users_list) - 1
     )

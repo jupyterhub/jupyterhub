@@ -391,11 +391,13 @@ class User:
             )
             .all()
         )
+
         for stripped_role in managed_stripped_roles:
             if (
                 not stripped_role.users
                 and not stripped_role.services
                 and not stripped_role.groups
+                and not stripped_role.name in self.settings.get('config_role_names')
             ):
                 self.db.delete(stripped_role)
 
@@ -1000,6 +1002,12 @@ class User:
                 )
                 e.reason = 'timeout'
                 self.settings['statsd'].incr('spawner.failure.timeout')
+            elif isinstance(e, web.HTTPError):
+                # avoid logging noisy traceback on HTTPError,
+                # since this should be informative and will be relayed to the user
+                self.log.error(f"Error starting {self.name}'s server: {e}")
+                self.settings['statsd'].incr('spawner.failure.error')
+                e.reason = 'error'
             else:
                 self.log.exception(
                     f"Unhandled error starting {self.name}'s server: {e}"

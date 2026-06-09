@@ -20,9 +20,6 @@ jest.mock("react-router", () => ({
   useSearchParams: jest.fn(),
 }));
 
-var mockAsync = () =>
-  jest.fn().mockImplementation(() => Promise.resolve({ key: "value" }));
-
 var groupsJsx = (callbackSpy) => (
   <Provider store={createStore(mockReducers, mockAppState())}>
     <HashRouter>

@@ -15,6 +15,7 @@ import pytest
 from dateutil.parser import parse as parse_date
 from pytest import fixture, mark
 from tornado.httputil import url_concat
+from tornado.web import HTTPError
 
 import jupyterhub
 
@@ -246,6 +247,7 @@ async def test_get_users(app):
         'admin': False,
         'roles': ['user'],
         'auth_state': None,
+        'user_info': None,
     }
     assert users == [
         fill_user(
@@ -254,6 +256,7 @@ async def test_get_users(app):
                 'admin': True,
                 'roles': ['admin', 'user'],
                 'auth_state': None,
+                'user_info': None,
             }
         ),
         fill_user(user_model),
@@ -683,7 +686,9 @@ async def test_get_user(app):
     r.raise_for_status()
 
     user = normalize_user(r.json())
-    assert user == fill_user({'name': name, 'roles': ['user'], 'auth_state': None})
+    assert user == fill_user(
+        {'name': name, 'roles': ['user'], 'auth_state': None, 'user_info': None}
+    )
 
     # admin request, no such user
     r = await api_request(
@@ -1246,8 +1251,40 @@ async def test_bad_spawn(app, bad_spawn):
     assert not getattr(spawner, 'reused', False)
 
 
+async def test_spawn_error_log(app, bad_spawn, caplog):
+    db = app.db
+    name = "castor"
+    user = add_user(db, app=app, name=name)
+
+    def pre_spawn_http(spawner):
+        raise HTTPError(418, "Teapot alert!")
+
+    def pre_spawn_unhandled(spawner):
+        raise ValueError("Not on my watch")
+
+    with mock.patch.dict(app.config.Spawner, {"pre_spawn_hook": pre_spawn_http}):
+        r = await api_request(app, 'users', name, 'server', method='post')
+    assert r.status_code == 418
+    assert "Traceback" not in caplog.text
+    assert r.json() == {"status": 418, "message": "Teapot alert!"}
+
+    with mock.patch.dict(app.config.Spawner, {"pre_spawn_hook": pre_spawn_unhandled}):
+        r = await api_request(app, 'users', name, 'server', method='post')
+    assert r.status_code == 500
+    assert r.json() == {"status": 500, "message": "error"}
+    # unhandled error logs a traceback
+    assert "Traceback" in caplog.text
+    # unhandled error logs a traceback
+    assert "Not on my watch" in caplog.text
+
+
 async def test_spawn_nosuch_user(app):
-    r = await api_request(app, 'users', "nosuchuser", 'server', method='post')
+    r = await api_request(app, 'users', 'nosuchuser', 'server', method='post')
+    assert r.status_code == 404
+
+
+async def test_stop_nosuch_user(app):
+    r = await api_request(app, 'users', 'nosuchuser', 'server', method='delete')
     assert r.status_code == 404
 
 

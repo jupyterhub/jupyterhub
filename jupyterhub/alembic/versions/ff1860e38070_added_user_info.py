@@ -1,0 +1,27 @@
+"""added_user_info
+
+Revision ID: ff1860e38070
+Revises: afd65840b69e
+Create Date: 2026-03-23 09:56:06.799973
+
+"""
+
+# revision identifiers, used by Alembic.
+revision = 'ff1860e38070'
+down_revision = 'afd65840b69e'
+branch_labels = None
+depends_on = None
+
+
+import sqlalchemy as sa
+from alembic import op
+
+from jupyterhub.orm import JSONDict
+
+
+def upgrade():
+    op.add_column('users', sa.Column('user_info', JSONDict, nullable=True))
+
+
+def downgrade():
+    op.drop_column('users', 'user_info')

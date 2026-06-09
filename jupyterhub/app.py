@@ -237,7 +237,7 @@ class UpgradeDB(Application):
         hub = JupyterHub(parent=self)
         hub.load_config_file(hub.config_file)
         self.log = hub.log
-        dbutil.upgrade_if_needed(hub.db_url, log=self.log)
+        dbutil.upgrade_if_needed(hub.db_url, log=self.log, db_kwargs=hub.db_kwargs)
 
 
 class JupyterHub(Application):
@@ -1588,6 +1588,11 @@ class JupyterHub(Application):
 
     handlers = List()
 
+    config_role_names = List(
+        [],
+        help="Cached list of authenticator-managed roles loaded by load_managed_roles on startup",
+    )
+
     _log_formatter_cls = CoroutineLogFormatter
     http_server = None
     proxy_process = None
@@ -2009,7 +2014,9 @@ class JupyterHub(Application):
             db_log_url = self.db_url
         self.log.debug("Connecting to db: %s", db_log_url)
         if self.upgrade_db:
-            dbutil.upgrade_if_needed(self.db_url, log=self.log)
+            dbutil.upgrade_if_needed(
+                self.db_url, log=self.log, db_kwargs=self.db_kwargs
+            )
 
         try:
             self.session_factory = orm.new_session_factory(
@@ -2342,10 +2349,9 @@ class JupyterHub(Application):
             for role in managed_roles:
                 role['managed_by_auth'] = True
             roles_to_load.extend(managed_roles)
-
         self.log.debug('Loading roles into database')
         default_roles = roles.get_default_roles()
-        config_role_names = [r['name'] for r in roles_to_load]
+        self.config_role_names = [r['name'] for r in roles_to_load]
 
         default_roles_dict = {role["name"]: role for role in default_roles}
         init_roles = []
@@ -2364,7 +2370,7 @@ class JupyterHub(Application):
                 role_spec = merged_role_spec
 
             # Check for duplicates
-            if config_role_names.count(role_name) > 1:
+            if self.config_role_names.count(role_name) > 1:
                 raise ValueError(
                     f"Role {role_name} multiply defined. Please check the `load_roles` configuration"
                 )
@@ -3299,6 +3305,7 @@ class JupyterHub(Application):
             eventlog=self.eventlog,
             app=self,
             xsrf_cookies=True,
+            config_role_names=self.config_role_names,
         )
         # allow configured settings to have priority
         settings.update(self.tornado_settings)

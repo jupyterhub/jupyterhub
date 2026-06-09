@@ -193,11 +193,23 @@ def _needs_check_xsrf(handler):
         return False
 
     fetch_mode = handler.request.headers.get("Sec-Fetch-Mode", "unspecified")
-    if fetch_mode in {"websocket", "no-cors"} or (
-        fetch_mode in {"navigate", "unspecified"}
-        and handler.request.method.lower() in {"get", "head", "options"}
+    fetch_site = handler.request.headers.get("Sec-Fetch-Site", "unspecified")
+    method = handler.request.method.lower()
+    read_only = method in {"get", "head", "options"}
+
+    if (
+        fetch_mode == "websocket"
+        or (fetch_mode in {"navigate", "unspecified"} and read_only)
+        or (
+            # same-origin no-cors GET requests
+            # e.g. for images and similar resources
+            # requesting page doesn't get access to the content
+            fetch_mode == "no-cors"
+            and fetch_site == "same-origin"
+            and read_only
+        )
     ):
-        # no xsrf check needed for regular page views or no-cors
+        # no xsrf check needed for regular page views or same-origin no-cors GETs
         # or websockets after allow_websocket_cookie_auth passes
         if fetch_mode == "unspecified":
             app_log.warning(
