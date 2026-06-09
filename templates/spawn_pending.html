@@ -1,0 +1,94 @@
+{% extends "page.html" %}
+{% block main %}
+  <div class="container">
+    <div class="text-center" style="margin: 40px 0;">
+      <img src="{{ static_url('img/logo-estin.png') }}" alt="ESTIN" style="height:70px; margin-bottom:20px;" />
+      <h3 style="color:#34495E;">Démarrage de votre serveur...</h3>
+      {% block message %}
+        <p style="color:#666;">Votre serveur est en cours de démarrage.</p>
+        <p style="color:#666;">Vous serez redirigé automatiquement.</p>
+      {% endblock message %}
+      <div class="progress" style="margin: 20px auto; max-width: 500px; height: 12px; border-radius: 6px;">
+        <div id="progress-bar"
+             class="progress-bar"
+             role="progressbar"
+             style="background-color: #E54C3F;"
+             aria-valuenow="0"
+             aria-valuemin="0"
+             aria-valuemax="100">
+          <span class="visually-hidden"><span id="sr-progress">0%</span> Complete</span>
+        </div>
+      </div>
+      <p id="progress-message" style="color:#34495E; font-weight:600;"></p>
+    </div>
+    <div class="row justify-content-center">
+      <div class="col-md-8">
+        <details id="progress-details">
+          <summary style="color:#34495E; cursor:pointer;">Journal des événements</summary>
+          <div id="progress-log"></div>
+        </details>
+        <div class="text-center mt-3">
+          <button id="stop-server-btn" class="btn btn-danger btn-sm">Arrêter le serveur</button>
+          <div id="stop-server-status" class="mt-2" style="display: none;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock main %}
+{% block script %}
+  {{ super() }}
+  <script type="text/javascript">
+    require(["jquery", "jhapi"], function($, JHAPI) {
+      var base_url = window.jhdata ? window.jhdata.base_url : "{{ base_url }}";
+      var user = window.jhdata ? window.jhdata.user : "{{ user.name }}";
+      var api = new JHAPI(base_url);
+
+      $("#stop-server-btn").click(function() {
+        var button = $(this);
+        var statusDiv = $("#stop-server-status");
+        button.prop('disabled', true).text('Arrêt en cours...');
+        statusDiv.show().removeClass('alert-success alert-danger').addClass('alert alert-info').text('Arrêt du serveur...');
+        api.stop_server(user, {
+          success: function() {
+            statusDiv.removeClass('alert-info alert-danger').addClass('alert-success').text('Serveur arrêté.');
+            setTimeout(function() { window.location.reload(); }, 2000);
+          },
+          error: function(xhr, status, error) {
+            statusDiv.removeClass('alert-info alert-success').addClass('alert-danger').text('Erreur: ' + error);
+            button.prop('disabled', false).text('Arrêter le serveur');
+          }
+        });
+      });
+
+      var evtSource = new EventSource("{{ progress_url }}");
+      var progressMessage = $("#progress-message");
+      var progressBar = $("#progress-bar");
+      var srProgress = $("#sr-progress");
+      var progressLog = $("#progress-log");
+
+      evtSource.onmessage = function(e) {
+        var evt = JSON.parse(e.data);
+        if (evt.progress !== undefined) {
+          var progText = evt.progress.toString();
+          progressBar.attr('aria-valuenow', progText);
+          srProgress.text(progText + '%');
+          progressBar.css('width', progText + '%');
+        }
+        var html_message;
+        if (evt.html_message !== undefined) {
+          progressMessage.html(evt.html_message);
+          html_message = evt.html_message;
+        } else if (evt.message !== undefined) {
+          progressMessage.text(evt.message);
+          html_message = progressMessage.html();
+        }
+        if (html_message) {
+          progressLog.append($("<div>").addClass('progress-log-event').html(html_message));
+        }
+        if (evt.ready) { evtSource.close(); window.location.reload(); }
+        if (evt.failed) { evtSource.close(); progressBar.addClass('bg-danger'); $('#progress-details').prop('open', true); }
+      };
+      window._jupyterhub_page_loaded = true;
+    });
+  </script>
+{% endblock script %}
