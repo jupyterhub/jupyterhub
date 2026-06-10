@@ -22,6 +22,34 @@ Contributors to major version bumps in JupyterHub include:
 
 ## 5.4
 
+### 5.5.0 - 2026-06-10
+
+5.5.0 backports more bugfixes from the upcoming 6.0 release,
+as well as the new {attr}`.SharedPasswordAuthenticator.password_groups` option.
+
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/5.4.6...5.5.0))
+
+#### New features added
+
+- Backport PR #5298 on branch 5.x (Add ability to assign groups to users in SharedPasswordAuthenticator) [#5411](https://github.com/jupyterhub/jupyterhub/pull/5411) ([@yuvipanda](https://github.com/yuvipanda), [@minrk](https://github.com/minrk))
+
+#### Bugs fixed
+
+- Backport PR #5391 on branch 5.x (pass db_kwargs to engine during upgrade-db) [#5417](https://github.com/jupyterhub/jupyterhub/pull/5417) ([@manics](https://github.com/manics), [@minrk](https://github.com/minrk))
+- Backport PR #5386 on branch 5.x (ensure jupyterhub session id is set for cookie-authenticated requests) [#5416](https://github.com/jupyterhub/jupyterhub/pull/5416) ([@minrk](https://github.com/minrk))
+- Backport PR #5290 on branch 5.x (add external_ssl_authorities to trust bundles) [#5415](https://github.com/jupyterhub/jupyterhub/pull/5415) ([@kreuzert](https://github.com/kreuzert), [@minrk](https://github.com/minrk))
+- Backport PR #5251 on branch 5.x (Fix internal server error of HEAD /hub/logo) [#5412](https://github.com/jupyterhub/jupyterhub/pull/5412) ([@Paul2708](https://github.com/Paul2708), [@manics](https://github.com/manics), [@minrk](https://github.com/minrk))
+- Backport PR #5405 on branch 5.x (avoid logging traceback on HTTPError raised in spawn) [#5410](https://github.com/jupyterhub/jupyterhub/pull/5410) ([@minrk](https://github.com/minrk))
+
+#### Contributors to this release
+
+The following people contributed discussions, new ideas, code and documentation contributions, and review.
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/use/#how-does-this-tool-define-contributions-in-the-reports).
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2026-04-28&to=2026-06-10&type=c))
+
+@manics ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amanics)) | @minrk ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk)) | @yuvipanda ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ayuvipanda)) | @kreuzert ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Akreuzert)) | @Paul2708 ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3APaul2708))
+
 ### 5.4.6 - 2026-05-05
 
 5.4.6 fixes a regression in 5.4.5, as well as some other bugs.
