@@ -989,6 +989,11 @@ class BaseHandler(RequestHandler):
             user._auth_refreshed = time.monotonic()
             return user
         else:
+            log_username = username = (data or {}).get('username', 'unknown user')
+            # username failed login, don't log full invalid user input
+            if len(username) > 32:
+                log_username = f"{username[:16]}...({len(username)} chars)"
+            self.log.warning("Failed login for %r", log_username)
             LOGIN_DURATION_SECONDS.labels(status=LoginStatus.failure).observe(
                 time.perf_counter() - login_start_time
             )
