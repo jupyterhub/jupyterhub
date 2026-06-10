@@ -1057,18 +1057,15 @@ class User:
                     f"\n{start_timeout_message}"
                 )
                 e.reason = 'timeout'
-                self.settings['statsd'].incr('spawner.failure.timeout')
             elif isinstance(e, web.HTTPError):
                 # avoid logging noisy traceback on HTTPError,
                 # since this should be informative and will be relayed to the user
                 self.log.error(f"Error starting {self.name}'s server: {e}")
-                self.settings['statsd'].incr('spawner.failure.error')
                 e.reason = 'error'
             else:
                 self.log.exception(
                     f"Unhandled error starting {self.name}'s server: {e}"
                 )
-                self.settings['statsd'].incr('spawner.failure.error')
                 e.reason = 'error'
             try:
                 await self.stop(spawner.name)
@@ -1119,13 +1116,11 @@ class User:
                     f"\n{http_timeout_message}"
                 )
                 e.reason = 'timeout'
-                self.settings['statsd'].incr('spawner.failure.http_timeout')
             else:
                 e.reason = 'error'
                 self.log.exception(
                     f"Unhandled error waiting for {self.name}'s server to show up at {server.url}: {e}"
                 )
-                self.settings['statsd'].incr('spawner.failure.http_error')
             try:
                 await self.stop(spawner.name)
             except Exception:
