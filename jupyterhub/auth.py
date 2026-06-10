@@ -1417,10 +1417,14 @@ class PAMAuthenticator(LocalAuthenticator):
                 encoding=self.encoding,
             )
         except pamela.PAMError as e:
+            # username failed login, don't log full invalid user input
+            log_username = username
+            if len(username) > 32:
+                log_username = f"{username[:16]}...({len(username)} chars)"
             if handler is not None:
                 self.log.warning(
-                    "PAM Authentication failed (%s@%s): %s",
-                    username,
+                    "PAM Authentication failed (%r@%s): %s",
+                    log_username,
                     handler.request.remote_ip,
                     e,
                 )
