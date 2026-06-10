@@ -1,7 +1,12 @@
 // Copyright (c) Jupyter Development Team.
 // Distributed under the terms of the Modified BSD License.
 
-require(["jquery", "moment", "jhapi"], function ($, moment, JHAPI) {
+require(["jquery", "moment", "jhapi", "utils"], function (
+  $,
+  moment,
+  JHAPI,
+  utils,
+) {
   "use strict";
 
   var base_url = window.jhdata.base_url;
@@ -48,7 +53,16 @@ require(["jquery", "moment", "jhapi"], function ($, moment, JHAPI) {
       // ../spawn/user/ causes a 404, ../spawn/user redirects correctly to the default server
       window.location.href = "./spawn/" + user;
     } else {
-      window.location.href = "./spawn/" + user + "/" + serverName;
+      let display_name = utils.sanitise_display_name(serverName);
+      serverName = utils.safe_slug(display_name);
+
+      window.location.href =
+        "./spawn/" +
+        user +
+        "/" +
+        serverName +
+        "?display_name=" +
+        encodeURIComponent(display_name);
     }
   }
 
