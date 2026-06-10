@@ -20,12 +20,18 @@ Contributors to major version bumps in JupyterHub include:
 
 ## [Unreleased]
 
-## 5.4
+## 5.5
 
 ### 5.5.0 - 2026-06-10
 
 5.5.0 backports more bugfixes from the upcoming 6.0 release,
 as well as the new {attr}`.SharedPasswordAuthenticator.password_groups` option.
+
+One moderate-level security vulnerability is patched:
+
+- [GHSA-p43p-whwx-q52h](https://github.com/jupyterhub/jupyterhub/security/advisories/GHSA-p43p-whwx-q52h) (CVE pending): Unauthenticated Denial of Service via Unbounded Username Logging on Failed Login
+
+Security advisories are published 7 days after release.
 
 ([full changelog](https://github.com/jupyterhub/jupyterhub/compare/5.4.6...5.5.0))
 
@@ -49,6 +55,8 @@ See [our definition of contributors](https://github-activity.readthedocs.io/en/l
 ([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2026-04-28&to=2026-06-10&type=c))
 
 @manics ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amanics)) | @minrk ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk)) | @yuvipanda ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ayuvipanda)) | @kreuzert ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Akreuzert)) | @Paul2708 ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3APaul2708))
+
+## 5.4
 
 ### 5.4.6 - 2026-05-05
 
