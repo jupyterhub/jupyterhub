@@ -64,7 +64,7 @@ easy to do with RStudio too.
 Within CERN, there are two noteworthy JupyterHub deployments in operation:
 
 - [SWAN](https://swan.web.cern.ch/swan/), which stands for Service for Web based Analysis, serves as an interactive data analysis platform primarily utilized at CERN.
-- [VRE](https://vre-hub.github.io/), which stands for Virtual Research Environment, is an analysis platform developed within the [EOSC Project](https://eoscfuture.eu/) to cater to the needs of scientific communities involved in European projects.
+- [VRE](https://vre-hub.github.io/), which stands for Virtual Research Environment, is an analysis platform developed within the [EOSC Project](https://eosc.eu/) to cater to the needs of scientific communities involved in European projects.
 
 ### Chameleon
 
