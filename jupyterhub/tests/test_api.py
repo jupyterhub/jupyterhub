@@ -15,6 +15,7 @@ import pytest
 from dateutil.parser import parse as parse_date
 from pytest import fixture, mark
 from tornado.httputil import url_concat
+from tornado.web import HTTPError
 
 import jupyterhub
 
@@ -442,7 +443,7 @@ async def test_get_users_state_filter(app, state):
         If active and ready, should turn up in a ready query
         If not active, should turn up in an inactive query
         """
-        spawner = user.spawners[name]
+        spawner = user.get_or_create_spawner(name, name)
         db.commit()
         if active:
             orm_server = orm.Server()
@@ -1248,6 +1249,33 @@ async def test_bad_spawn(app, bad_spawn):
     # check that we don't re-use spawners that failed
     spawner = user.spawners['']
     assert not getattr(spawner, 'reused', False)
+
+
+async def test_spawn_error_log(app, bad_spawn, caplog):
+    db = app.db
+    name = "castor"
+    user = add_user(db, app=app, name=name)
+
+    def pre_spawn_http(spawner):
+        raise HTTPError(418, "Teapot alert!")
+
+    def pre_spawn_unhandled(spawner):
+        raise ValueError("Not on my watch")
+
+    with mock.patch.dict(app.config.Spawner, {"pre_spawn_hook": pre_spawn_http}):
+        r = await api_request(app, 'users', name, 'server', method='post')
+    assert r.status_code == 418
+    assert "Traceback" not in caplog.text
+    assert r.json() == {"status": 418, "message": "Teapot alert!"}
+
+    with mock.patch.dict(app.config.Spawner, {"pre_spawn_hook": pre_spawn_unhandled}):
+        r = await api_request(app, 'users', name, 'server', method='post')
+    assert r.status_code == 500
+    assert r.json() == {"status": 500, "message": "error"}
+    # unhandled error logs a traceback
+    assert "Traceback" in caplog.text
+    # unhandled error logs a traceback
+    assert "Not on my watch" in caplog.text
 
 
 async def test_spawn_nosuch_user(app):
@@ -2681,7 +2709,7 @@ async def test_update_server_activity(app, user, server_name, fresh):
     # we use naive utc internally
     # initialize last_activity for one named and the default server
     for name in ("", "exists"):
-        user.spawners[name].orm_spawner.last_activity = internal_now
+        user.get_or_create_spawner(name, name).orm_spawner.last_activity = internal_now
     app.db.commit()
 
     td = timedelta(minutes=1)

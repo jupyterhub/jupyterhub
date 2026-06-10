@@ -19,6 +19,7 @@ For specific version migrations:
 ```{toctree}
 :maxdepth: 1
 
+./upgrading-v6
 ./upgrading-v5
 ```
 
