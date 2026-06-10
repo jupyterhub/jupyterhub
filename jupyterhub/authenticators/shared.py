@@ -111,6 +111,8 @@ class SharedPasswordAuthenticator(Authenticator):
 
         Based on the password used, assign the user a set of groups.
         Key is the password, and value is the list of groups that should be assigned.
+
+        .. versionadded: 5.5
         """,
     )
 
