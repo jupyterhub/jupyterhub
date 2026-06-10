@@ -25,7 +25,7 @@ from urllib.parse import urlparse
 
 from jinja2 import ChoiceLoader, FunctionLoader
 from tornado import ioloop
-from tornado.httpclient import AsyncHTTPClient, HTTPRequest
+from tornado.httpclient import HTTPRequest
 from tornado.web import RequestHandler
 from traitlets import (
     Any,
@@ -47,6 +47,7 @@ from ..log import log_request
 from ..services.auth import HubOAuth, HubOAuthCallbackHandler, HubOAuthenticated
 from ..utils import (
     _bool_env,
+    async_fetch,
     exponential_backoff,
     isoformat,
     url_path_join,
@@ -394,27 +395,19 @@ class SingleUserNotebookAppMixin(Configurable):
             path = list(_exclude_home(path))
         return path
 
-    # create dynamic default http client,
-    # configured with any relevant ssl config
-    hub_http_client = Any()
-
-    @default('hub_http_client')
-    def _default_client(self):
+    @default('hub_http_client_opts')
+    def _default_client_opts(self):
         # can't use ssl_options in case of pycurl
-        defaults = dict(validate_cert=True)
+        client_opts = dict(validate_cert=True)
         # don't set falsy empty strings,
         # which tornado interprets as paths
-        if self.client_ca:
-            defaults["ca_certs"] = self.client_ca
-        if self.keyfile:
-            defaults["client_key"] = self.keyfile
-        if self.certfile:
-            defaults["client_cert"] = self.certfile
-        AsyncHTTPClient.configure(
-            AsyncHTTPClient.configured_class(),
-            defaults=defaults,
-        )
-        return AsyncHTTPClient()
+        if self.hub_auth.client_ca:
+            client_opts["ca_certs"] = self.hub_auth.client_ca
+        if self.hub_auth.keyfile:
+            client_opts["client_key"] = self.hub_auth.keyfile
+        if self.hub_auth.certfile:
+            client_opts["client_cert"] = self.hub_auth.certfile
+        return client_opts
 
     async def check_hub_version(self):
         """Test a connection to my Hub
@@ -422,11 +415,10 @@ class SingleUserNotebookAppMixin(Configurable):
         - exit if I can't connect at all
         - check version and warn on sufficient mismatch
         """
-        client = self.hub_http_client
         RETRIES = 5
         for i in range(1, RETRIES + 1):
             try:
-                resp = await client.fetch(self.hub_api_url)
+                resp = await async_fetch(self.hub_api_url, **self.hub_http_client_opts)
             except Exception:
                 self.log.exception(
                     "Failed to connect to my Hub at %s (attempt %i/%i). Is it running?",
@@ -515,7 +507,7 @@ class SingleUserNotebookAppMixin(Configurable):
                 ),
             )
             try:
-                await client.fetch(req)
+                await async_fetch(req, **self.hub_http_client_opts)
             except Exception:
                 self.log.exception("Error notifying Hub of activity")
                 return False

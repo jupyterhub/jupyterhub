@@ -13,7 +13,6 @@ from .traitlets import URLPrefix
 from .utils import (
     can_connect,
     fmt_ip_url,
-    make_ssl_context,
     random_port,
     url_path_join,
     wait_for_http_server,
@@ -33,6 +32,7 @@ class Server(HasTraits):
     ip = Unicode()
     connect_ip = Unicode()
     connect_port = Integer()
+    connect_addr = Unicode()
     proto = Unicode('http')
     port = Integer()
     base_url = URLPrefix('/')
@@ -57,15 +57,22 @@ class Server(HasTraits):
     @observe('bind_url')
     def _bind_url_changed(self, change):
         urlinfo = urlparse(change.new)
-        self.proto = urlinfo.scheme
-        self.ip = urlinfo.hostname or ''
-        port = urlinfo.port
-        if port is None:
-            if self.proto == 'https':
-                port = 443
-            else:
-                port = 80
-        self.port = port
+        if urlinfo.scheme:
+            self.proto = urlinfo.scheme
+
+        if self.proto == 'unix+http':
+            self.connect_url = f'unix+http://{urlinfo.netloc}'
+            self.port = 0
+            self.connect_addr = urlinfo.netloc
+        else:
+            self.ip = urlinfo.hostname or ''
+            port = urlinfo.port
+            if port is None:
+                if self.proto == 'https':
+                    port = 443
+                else:
+                    port = 80
+            self.port = port
 
     @validate('connect_url')
     def _connect_url_add_prefix(self, proposal):
@@ -78,6 +85,10 @@ class Server(HasTraits):
             urlinfo = urlinfo._replace(path=self.base_url)
             return urlunparse(urlinfo)
         return proposal.value
+
+    @default('connect_addr')
+    def _connect_addr(self):
+        return self._connect_ip
 
     @property
     def _connect_ip(self):
@@ -169,9 +180,11 @@ class Server(HasTraits):
     def wait_up(self, timeout=10, http=False, ssl_context=None, extra_path=""):
         """Wait for this server to come up"""
         if http:
-            ssl_context = ssl_context or make_ssl_context(
-                self.keyfile, self.certfile, cafile=self.cafile
-            )
+            ssl_context = ssl_context or {
+                "keyfile": self.keyfile,
+                "certfile": self.certfile,
+                "cafile": self.cafile,
+            }
 
             return wait_for_http_server(
                 url_path_join(self.url, extra_path),
@@ -180,7 +193,7 @@ class Server(HasTraits):
             )
         else:
             return wait_for_server(
-                self._connect_ip, self._connect_port, timeout=timeout
+                self.connect_addr, self._connect_port, timeout=timeout
             )
 
     def is_up(self):
