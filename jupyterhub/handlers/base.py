@@ -997,9 +997,6 @@ class BaseHandler(RequestHandler):
             LOGIN_DURATION_SECONDS.labels(status=LoginStatus.failure).observe(
                 time.perf_counter() - login_start_time
             )
-            self.log.warning(
-                "Failed login for %s", (data or {}).get('username', 'unknown user')
-            )
 
     # ---------------------------------------------------------------
     # spawning-related
