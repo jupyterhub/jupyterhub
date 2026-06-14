@@ -3668,20 +3668,24 @@ class JupyterHub(Application):
                 wait_for_stop_task = asyncio.create_task(wait_for_stop())
                 futures.append(wait_for_stop_task)
 
-            done, pending = await asyncio.wait(
-                futures, return_when=asyncio.FIRST_EXCEPTION
-            )
-            # cancel pending
-            [f.cancel() for f in pending if not f.done()]
-            if service.managed and wait_for_stop_task in done:
-                # service process exited while we were waiting to connect
-                status = await wait_for_stop_task
-                self.log.critical(
-                    "Service %s exited with status %s",
-                    service_name,
-                    status,
+            # For external (unmanaged) services there is no process to watch,
+            # so `futures` is empty — asyncio.wait([]) would raise. Only wait
+            # on the stop-watcher when there actually is one.
+            if futures:
+                done, pending = await asyncio.wait(
+                    futures, return_when=asyncio.FIRST_EXCEPTION
                 )
-                return False
+                # cancel pending
+                [f.cancel() for f in pending if not f.done()]
+                if service.managed and wait_for_stop_task in done:
+                    # service process exited while we were waiting to connect
+                    status = await wait_for_stop_task
+                    self.log.critical(
+                        "Service %s exited with status %s",
+                        service_name,
+                        status,
+                    )
+                    return False
 
             try:
                 await wait_up_task
