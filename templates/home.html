@@ -1,31 +1,46 @@
 {% extends "page.html" %}
 {% if announcement_home is string %}
-  {% set announcement = announcement_home %}
+  {% set
+  announcement = announcement_home %}
 {% endif %}
 {% block main %}
   <div class="container">
-    <div class="saiep-home-header text-center" style="margin: 30px 0 40px 0; padding: 30px; background: #34495E; border-radius: 10px; border-bottom: 4px solid #E54C3F;">
-      <img src="{{ static_url('img/logo-estin.png') }}" alt="ESTIN" style="height:70px; margin-bottom:15px;" />
-      <h2 style="color:#fff; margin:0;">Bienvenue sur la Plateforme SAIEP</h2>
-      <p style="color:#ccc; margin-top:8px;">Espace de travail interactif — ESTIN</p>
+    <div class="saiep-home-header text-center"
+         style="margin: 30px 0 40px 0;
+                padding: 30px;
+                background: #34495e;
+                border-radius: 10px;
+                border-bottom: 4px solid #e54c3f">
+      <img src="{{ static_url('img/logo-estin.png') }}"
+           alt="ESTIN"
+           style="height: 70px;
+                  margin-bottom: 15px" />
+      <h2 style="color: #fff; margin: 0">Bienvenue sur la Plateforme SAIEP</h2>
+      <p style="color: #ccc; margin-top: 8px">Espace de travail interactif — ESTIN</p>
     </div>
     <div class="row">
       <div class="text-center">
         {% if default_server.active %}
-          <a id="stop" role="button" class="btn btn-lg btn-danger" style="margin-right:10px;">Arrêter mon serveur</a>
+          <a id="stop"
+             role="button"
+             class="btn btn-lg btn-danger"
+             style="margin-right: 10px">Arrêter mon serveur</a>
         {% endif %}
-        <a id="start" role="button" class="btn btn-lg btn-jupyter" href="{{ url }}">
+        <a id="start"
+           role="button"
+           class="btn btn-lg btn-jupyter"
+           href="{{ url }}">
           {% if not default_server.active %}Démarrer{% endif %}
           Mon Serveur
         </a>
       </div>
     </div>
     {% if allow_named_servers %}
-      <h2 style="color:#34495E; margin-top:40px;">Serveurs nommés</h2>
+      <h2 style="color: #34495e; margin-top: 40px">Serveurs nommés</h2>
       <p>Vous pouvez avoir plusieurs serveurs actifs simultanément.</p>
       {% set named_spawners = user.all_spawners(include_default=False)|list %}
       <table class="server-table table table-striped">
-        <thead style="background:#34495E; color:#fff;">
+        <thead style="background: #34495e; color: #fff">
           <tr>
             <th>Nom</th>
             <th>URL</th>
@@ -37,8 +52,12 @@
           <tr class="home-server-row add-server-row">
             <td colspan="4">
               <div class="input-group">
-                <input class="new-server-name form-control" aria-label="server name" placeholder="nom-du-serveur">
-                <button role="button" type="button" class="new-server-btn btn btn-xs btn-jupyter">Ajouter</button>
+                <input class="new-server-name form-control"
+                       aria-label="server name"
+                       placeholder="nom-du-serveur" />
+                <button role="button"
+                        type="button"
+                        class="new-server-btn btn btn-xs btn-jupyter">Ajouter</button>
               </div>
             </td>
           </tr>
@@ -46,23 +65,41 @@
             <tr class="home-server-row" data-server-name="{{ spawner.name }}">
               <td>{{ spawner.name }}</td>
               <td>
-                <a class="server-link {% if not spawner.ready %}hidden{% endif %}" href="{{ user.server_url(spawner.name) }}">{{ user.server_url(spawner.name) }}</a>
+                <a class="server-link {% if not spawner.ready %}hidden{% endif %}"
+                   href="{{ user.server_url(spawner.name) }}">{{ user.server_url(spawner.name) }}</a>
               </td>
-              <td class='time-col'>
-                {% if spawner.last_activity %}{{ spawner.last_activity.isoformat() + 'Z' }}{% else %}Jamais{% endif %}
+              <td class="time-col">
+                {% if spawner.last_activity %}
+                  {{ spawner.last_activity.isoformat() +
+                  'Z' }}
+                {% else %}
+                  Jamais
+                {% endif %}
               </td>
               <td>
-                <a role="button" class="stop-server btn btn-xs btn-danger{% if not spawner.active %} hidden{% endif %}" id="stop-{{ spawner.name }}">stop</a>
-                <a role="button" class="start-server btn btn-xs btn-jupyter {% if spawner.active %}hidden{% endif %}" id="start-{{ spawner.name }}" href="{{ base_url }}spawn/{{ user.name }}/{{ spawner.name }}">start</a>
-                <button role="button" class="delete-server btn btn-xs btn-danger{% if spawner.active %} hidden{% endif %}" id="delete-{{ spawner.name }}">supprimer</button>
+                <a role="button"
+                   class="stop-server btn btn-xs btn-danger{% if not spawner.active %} hidden{% endif %}"
+                   id="stop-{{ spawner.name }}">stop</a>
+                <a role="button"
+                   class="start-server btn btn-xs btn-jupyter {% if spawner.active %}hidden{% endif %}"
+                   id="start-{{ spawner.name }}"
+                   href="{{ base_url }}spawn/{{ user.name }}/{{ spawner.name }}">start</a>
+                <button role="button"
+                        class="delete-server btn btn-xs btn-danger{% if spawner.active %} hidden{% endif %}"
+                        id="delete-{{ spawner.name }}">supprimer</button>
               </td>
             </tr>
           {% endfor %}
         </tbody>
       </table>
     {% endif %}
-    <footer style="text-align:center; margin-top:60px; padding:20px; color:#888; border-top:1px solid #eee;">
-      ESTIN — École Supérieure en Sciences et Technologies de l'Informatique et du Numérique
+    <footer style="text-align: center;
+                   margin-top: 60px;
+                   padding: 20px;
+                   color: #888;
+                   border-top: 1px solid #eee">
+      ESTIN — École Supérieure en Sciences et Technologies de l'Informatique et du
+      Numérique
     </footer>
   </div>
 {% endblock main %}
