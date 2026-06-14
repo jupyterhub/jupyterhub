@@ -125,9 +125,17 @@ def upgrade():
             # oauth clients have allowed_roles, evaluate to allowed_scopes
             db = Session(bind=c)
             for oauth_client in db.query(orm.OAuthClient).options(
-                selectinload(orm.OAuthClient.allowed_roles).defer(
-                    orm.Role.managed_by_auth
-                )
+                [
+                    selectinload(orm.OAuthClient.allowed_roles).defer(
+                        orm.Role.managed_by_auth
+                    ),
+                    # access_scopes() loads the orm.Spawner object, but the new
+                    # display_name column isn't added until a subsequent db upgrade
+                    # script runs, so we need to ignore the new column here
+                    selectinload(orm.OAuthClient.spawner).defer(
+                        orm.Spawner.display_name
+                    ),
+                ]
             ):
                 allowed_scopes = set(roles.roles_to_scopes(oauth_client.allowed_roles))
                 allowed_scopes.update(access_scopes(oauth_client, db))

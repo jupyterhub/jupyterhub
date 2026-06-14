@@ -122,6 +122,60 @@ define(["jquery"], function ($) {
     modal.show();
   };
 
+  // This should be the same as jupyterhub/slugs.py::safe_slug(avoid_collisions=False)
+  var safe_slug = function (name) {
+    // Generate a safe slug that can be used in most places e.g. URLs
+
+    if (!name) {
+      throw new Error("Unable to create safe slug for empty string");
+    }
+    const max_length = 30;
+
+    if (
+      name.length <= max_length &&
+      /^[a-z]([a-z0-9]*[a-z0-9])?$/.test(name) &&
+      name.indexOf("-") < 0
+    ) {
+      return name;
+    }
+
+    // const safe_name = _extract_safe_name(name, name_length)
+    // Generate safe substring of a name
+    // Guarantees:
+    // - always starts with a lowercase letter
+    // - always ends with a lowercase letter or number
+    // - only contains lowercase letters, numbers and single hyphens
+    // - length at least 1 ('x' if other rules strips down to empty string)
+    // - max length not exceeded
+    //
+    // See jupyterhub/slugs.py for a full explanation
+    let safe_name = name
+      .normalize("NFKD")
+      .replace(/\p{M}/gu, "")
+      .toLowerCase()
+      .replaceAll(/[^a-z0-9-]+/g, "-")
+      .replaceAll(/-+/g, "-")
+      .replace(/^-+/, "");
+    if (!/^[a-z]+/.test(safe_name)) {
+      safe_name = "x-" + safe_name;
+    }
+    safe_name = safe_name.substring(0, max_length).replace(/-+$/, "");
+    if (!safe_name) {
+      safe_name = "x";
+    }
+    return safe_name;
+  };
+
+  var sanitise_display_name = function (name) {
+    let s = name.normalize("NFC");
+
+    // Allow letters, marks, numbers, punctuation, symbols, and spaces
+    s = s.replace(/[^\p{L}\p{M}\p{N}\p{P}\p{S} ]+/gu, "");
+    // Collapse multiple spaces, and leading/trailing
+    s = s.replace(/ {2,}/g, " ").trim();
+    return s;
+  };
+
   var utils = {
     url_path_join: url_path_join,
     url_join_encode: url_join_encode,
@@ -134,6 +188,8 @@ define(["jquery"], function ($) {
     ajax_error_msg: ajax_error_msg,
     log_ajax_error: log_ajax_error,
     ajax_error_dialog: ajax_error_dialog,
+    safe_slug: safe_slug,
+    sanitise_display_name: sanitise_display_name,
   };
 
   return utils;

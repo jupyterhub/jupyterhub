@@ -13,9 +13,14 @@
     "css": "sass --style compressed -I share/jupyterhub/static/components --source-map share/jupyterhub/static/scss/style.scss:share/jupyterhub/static/css/style.min.css",
     "build:watch": "npm run css -- --watch",
     "jsx:install-run": "npm install --prefix jsx && npm run --prefix jsx",
-    "jsx:run": "npm run --prefix jsx"
+    "jsx:run": "npm run --prefix jsx",
+    "test": "karma start"
   },
   "devDependencies": {
+    "karma": "^6.4.4",
+    "karma-chrome-launcher": "^3.2.0",
+    "karma-jasmine": "^5.1.0",
+    "karma-requirejs": "^1.1.0",
     "sass": "^1.74.1"
   },
   "dependencies": {
