@@ -1505,3 +1505,30 @@ async def test_session_id(app):
     assert r.ok
     # request shouldn't set any new cookies
     assert not r.cookies
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        # test one page, one api handler
+        # since they have separate write_error
+        "login",
+        "api/users",
+    ],
+)
+async def test_malformed_form(app, caplog, path):
+    r = await async_requests.post(
+        ujoin(public_url(app), "hub", path),
+        headers={"Content-Type": "multipart/form-data; boundary=---BOUNDARY"},
+        data="\r\n".join(
+            [
+                "---BOUNDARY",
+                "field1=value1",
+                "field2=value2",
+                "---BOUNDARY--",
+                "",
+            ]
+        ),
+    )
+    assert r.status_code == 400
+    assert "Traceback" not in caplog.text
