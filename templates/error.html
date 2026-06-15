@@ -18,7 +18,7 @@
       {% endif %}
       {% if extra_error_html %}<p>{{ extra_error_html | safe }}</p>{% endif %}
     {% endblock error_detail %}
-    <a href="/hub/home" class="btn btn-jupyter" style="margin-top: 20px">Retour à l'accueil</a>
+    <a href="{{ base_url }}home" class="btn btn-jupyter" style="margin-top: 20px">Retour à l'accueil</a>
   </div>
 {% endblock main %}
 {% block script %}
