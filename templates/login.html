@@ -4,14 +4,15 @@
   announcement = announcement_login %}
 {% endif %}
 {% block login_widget %}
-{% endblock login_widget %}
-{% block main %}
+  {%
+  endblock login_widget %}
+  {% block main %}
     {% block login %}
       <div id="login-main" class="container">
         {% block login_container %}
           {% if custom_html %}
-            {{ custom_html | safe }}
-          {% elif login_service %}
+            {{ custom_html | safe }} {%
+            elif login_service %}
             <div class="service-login">
               <a role="button"
                  class="btn btn-jupyter btn-lg"
