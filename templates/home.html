@@ -76,10 +76,10 @@
                 {% endif %}
               </td>
               <td>
-                <a role="button"
-                   class="stop-server btn btn-xs btn-danger{% if not spawner.active %} hidden{% endif %}"
-                   id="stop-{{ spawner.name }}">stop</a>
-                <a role="button"
+                <button role="button"
+                        type="button"
+                        class="stop-server btn btn-xs btn-danger{% if not spawner.active %} hidden{% endif %}"
+                        id="stop-{{ spawner.name }}">stop</button>
                    class="start-server btn btn-xs btn-jupyter {% if spawner.active %}hidden{% endif %}"
                    id="start-{{ spawner.name }}"
                    href="{{ base_url }}spawn/{{ user.name }}/{{ spawner.name }}">start</a>
