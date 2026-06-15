@@ -10,6 +10,7 @@ from tornado.escape import url_escape
 from tornado.httputil import url_concat
 
 from .._xsrf_utils import _set_xsrf_cookie
+from ..metrics import LOGOUT_DURATION_SECONDS
 from ..utils import maybe_future
 from .base import BaseHandler
 
@@ -45,7 +46,6 @@ class LogoutHandler(BaseHandler):
         """
         self.log.info("User logged out: %s", name)
         self.clear_login_cookie()
-        self.statsd.incr('logout')
 
     async def default_handle_logout(self):
         """The default logout action
@@ -84,12 +84,13 @@ class LogoutHandler(BaseHandler):
         """Log the user out, call the custom action, forward the user
         to the logout page
         """
-        await self.default_handle_logout()
-        await self.handle_logout()
-        # clear jupyterhub user before rendering logout page
-        # ensures the login button is shown instead of logout
-        self._jupyterhub_user = None
-        await self.render_logout_page()
+        with LOGOUT_DURATION_SECONDS.time():
+            await self.default_handle_logout()
+            await self.handle_logout()
+            # clear jupyterhub user before rendering logout page
+            # ensures the login button is shown instead of logout
+            self._jupyterhub_user = None
+            await self.render_logout_page()
 
 
 class LoginHandler(BaseHandler):
@@ -151,7 +152,6 @@ class LoginHandler(BaseHandler):
         )
 
     async def get(self):
-        self.statsd.incr('login.request')
         user = self.current_user
         if user:
             # set new login cookie
@@ -204,18 +204,22 @@ class LoginHandler(BaseHandler):
             # which should be allowed to start or end with space
             data[arg] = self.get_argument(arg, strip=arg == "username")
 
-        auth_timer = self.statsd.timer('login.authenticate').start()
         user = await self.login_user(data)
-        auth_timer.stop(send=False)
 
         if user:
             # register current user for subsequent requests to user (e.g. logging the request)
             self._jupyterhub_user = user
             self.redirect(self.get_next_url(user))
         else:
+            username = data['username']
+            # username failed login, don't log full invalid user input
+            log_username = username
+            if len(username) > 32:
+                log_username = f"{username[:16]}...({len(username)} chars)"
+
             self.set_status(403)
             html = await self._render(
-                login_error='Invalid username or password', username=data['username']
+                login_error='Invalid username or password', username=log_username
             )
             self.finish(html)
 

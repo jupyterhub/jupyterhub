@@ -41,6 +41,7 @@ from traitlets import (
     Bool,
     Bytes,
     Dict,
+    Enum,
     Float,
     Instance,
     Integer,
@@ -67,7 +68,6 @@ from .auth import Authenticator, PAMAuthenticator
 from .crypto import CryptKeeper
 
 # For faking stats
-from .emptyclass import EmptyClass
 from .handlers.static import CacheControlStaticFilesHandler, LogoHandler
 from .log import CoroutineLogFormatter, log_request
 from .metrics import (
@@ -81,6 +81,7 @@ from .oauth.provider import make_provider
 from .objects import Hub, Server
 from .proxy import ConfigurableHTTPProxy, Proxy
 from .services.service import Service
+from .slugs import is_valid_safe_slug, safe_slug
 from .spawner import LocalProcessSpawner, Spawner
 from .traitlets import Callable, Command, EntryPointType, URLPrefix
 from .user import UserDict
@@ -1367,6 +1368,26 @@ class JupyterHub(Application):
         """,
     ).tag(config=True)
 
+    allow_existing_invalid_named_servers = Enum(
+        ("allow-start", "allow-delete", "autorename"),
+        "allow-start",
+        help="""
+        How to handle existing named servers with invalid names.
+
+        JupyterHub 6 restricts the format of named servers. This controls how
+        named servers created with older versions are handled:
+
+          - allow-start: existing servers can be started, stopped or deleted by the owner
+          - allow-delete: existing servers can be stopped or deleted by the owner
+          - autorename: existing servers are automatically renamed at startup.
+
+            WARNING: This does not rename external resources linked to the named
+            server such as storage volumes. If the spawner does not keep track of
+            these resources they will be orphaned. Backup your database before
+            using this option. Running servers will not be renamed.
+        """,
+    ).tag(config=True)
+
     default_server_name = Unicode(
         "",
         help="""
@@ -1574,18 +1595,6 @@ class JupyterHub(Application):
         """,
     ).tag(config=True)
 
-    statsd_host = Unicode(
-        help="Host to send statsd metrics to. An empty string (the default) disables sending metrics."
-    ).tag(config=True)
-
-    statsd_port = Integer(
-        8125, help="Port on which to send statsd metrics about the hub"
-    ).tag(config=True)
-
-    statsd_prefix = Unicode(
-        'jupyterhub', help="Prefix to use for all metrics sent by jupyterhub to statsd"
-    ).tag(config=True)
-
     handlers = List()
 
     config_role_names = List(
@@ -1638,27 +1647,9 @@ class JupyterHub(Application):
         Instance(logging.Handler), help="Extra log handlers to set on JupyterHub logger"
     ).tag(config=True)
 
-    statsd = Any(
-        allow_none=False,
-        help="The statsd client, if any. A mock will be used if we aren't using statsd",
-    )
-
     shutdown_on_logout = Bool(
         False, help="""Shuts down all user servers on logout"""
     ).tag(config=True)
-
-    @default('statsd')
-    def _statsd(self):
-        if self.statsd_host:
-            import statsd
-
-            client = statsd.StatsClient(
-                self.statsd_host, self.statsd_port, self.statsd_prefix
-            )
-            return client
-        else:
-            # return an empty mock object!
-            return EmptyClass()
 
     def init_logging(self):
         # This prevents double log messages because tornado use a root logger that
@@ -3282,11 +3273,13 @@ class JupyterHub(Application):
             version_hash=version_hash,
             subdomain_host=self.subdomain_host,
             domain=self.domain,
-            statsd=self.statsd,
             implicit_spawn_seconds=self.implicit_spawn_seconds,
             allow_named_servers=self.allow_named_servers,
             default_server_name=self._default_server_name,
             named_server_limit_per_user=self.named_server_limit_per_user,
+            allow_invalid_named_server_start=(
+                self.allow_existing_invalid_named_servers == "allow-start"
+            ),
             oauth_provider=self.oauth_provider,
             oauth_no_confirm_list=oauth_no_confirm_list,
             concurrent_spawn_limit=self.concurrent_spawn_limit,
@@ -3337,6 +3330,79 @@ class JupyterHub(Application):
 
         for schema in (Path(here) / "event-schemas").glob("**/*.yaml"):
             self.eventlog.register_event_schema(schema)
+
+    def check_invalid_named_servers(self):
+        """
+        Rename named servers that don't conform to the JupyterHub 6 restrictions
+        """
+        to_modify = []
+        cant_modify = []
+
+        user_namedserver_map = {}
+        for spawner in (
+            self.db.query(orm.Spawner)
+            .filter(orm.Spawner.name != "")
+            .options(selectinload(orm.Spawner.user))
+        ):
+            if spawner.user.name not in user_namedserver_map:
+                user_namedserver_map[spawner.user.name] = set()
+            user_namedserver_map[spawner.user.name].add(spawner.name)
+
+            if not is_valid_safe_slug(spawner.name):
+                if spawner.display_name:
+                    raise ValueError(
+                        f"Inconsistent named server: user='{spawner.user.name}' "
+                        f"server='{spawner.name}' has an invalid name indicating it "
+                        "was created with JupyterHub<6, but new property "
+                        f"display_name='{spawner.display_name}' is also set"
+                    )
+                if spawner.started:
+                    cant_modify.append(spawner)
+                else:
+                    to_modify.append(spawner)
+
+        if self.allow_existing_invalid_named_servers == "autorename":
+            for spawner in cant_modify:
+                self.log.error(
+                    "Named server user='%s' server='%s' has an "
+                    "invalid name but is already running, not renaming",
+                    spawner.user.name,
+                    spawner.name,
+                )
+
+            for spawner in to_modify:
+                safe_name = safe_slug(spawner.name, avoid_collisions=False)
+
+                # In the unlikely event that a user has multiple named servers
+                # with clashing safe_name generate a hashed safe_name.
+                # This is easier than adding a numeric suffix due to the edge
+                # case where len(safe_name) == max_length
+                if safe_name in user_namedserver_map[spawner.user.name]:
+                    safe_name = safe_slug(spawner.name, avoid_collisions=True)
+                user_namedserver_map[spawner.user.name].add(safe_name)
+
+                self.log.info(
+                    "Renaming server user='%s' server='%s' to '%s'",
+                    spawner.user.name,
+                    spawner.name,
+                    safe_name,
+                )
+                spawner.display_name = spawner.name
+                spawner.name = safe_name
+
+            self.db.commit()
+
+            if not to_modify and not cant_modify:
+                self.log.debug("All named servers have valid names")
+
+        elif cant_modify or to_modify:
+            self.log.warning(
+                "%d named servers have names that do not comply with restrictions "
+                "introduced in JupyterHub 6. See "
+                "https://jupyterhub.readthedocs.io/en/6.0.0/howto/upgrading-v6.html "
+                "for migration instructions.",
+                len(cant_modify) + len(to_modify),
+            )
 
     def write_pid_file(self):
         pid = os.getpid()
@@ -3422,6 +3488,8 @@ class JupyterHub(Application):
         self.init_tornado_settings()
         self.init_handlers()
         self.init_tornado_application()
+
+        self.check_invalid_named_servers()
 
         # init_spawners can take a while
         init_spawners_timeout = self.init_spawners_timeout
@@ -3597,8 +3665,6 @@ class JupyterHub(Application):
                 spawner.last_activity = dt
             if (now - user.last_activity).total_seconds() < self.active_user_window:
                 active_users_count += 1
-        self.statsd.gauge('users.running', users_count)
-        self.statsd.gauge('users.active', active_users_count)
 
         try:
             self.db.commit()

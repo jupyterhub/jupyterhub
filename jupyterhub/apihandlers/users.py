@@ -17,6 +17,7 @@ from tornado.iostream import StreamClosedError
 from .. import orm, scopes
 from ..roles import assign_default_roles
 from ..scopes import needs_scope
+from ..slugs import is_valid_display_name, is_valid_safe_slug, normalise_unicode
 from ..user import User
 from ..utils import (
     format_exception,
@@ -623,6 +624,15 @@ class UserServerAPIHandler(APIHandler):
             raise web.HTTPError(404)
 
         if server_name:
+            body = self.get_json_body() or {}
+            display_name = body.get("display_name")
+            if not display_name:
+                display_name = server_name
+            elif not isinstance(display_name, str):
+                raise web.HTTPError(400, "display_name must be a string")
+
+            # The following is identical to handlers.pages.SpawnHandler._check_named_server_request()
+
             if not self.allow_named_servers:
                 raise web.HTTPError(400, "Named servers are not enabled.")
 
@@ -638,7 +648,33 @@ class UserServerAPIHandler(APIHandler):
                         f"User {user_name} already has the maximum of {named_server_limit_per_user} named servers."
                         "  One must be deleted before a new server can be created",
                     )
-        spawner = user.get_spawner(server_name, replace_failed=True)
+
+            if server_name not in user.orm_spawners:
+                # Prevent creation of new invalid server names
+                if not is_valid_safe_slug(server_name):
+                    error_message = f"Invalid server_name: {server_name}"
+                    self.log.error(error_message)
+                    raise web.HTTPError(400, error_message)
+
+                display_name = normalise_unicode(display_name)
+                if not is_valid_display_name(display_name):
+                    error_message = f"Invalid display_name: {display_name}"
+                    self.log.error(error_message)
+                    raise web.HTTPError(400, error_message)
+
+            if not self.settings[
+                "allow_invalid_named_server_start"
+            ] and not is_valid_safe_slug(server_name):
+                error_message = f"Starting invalid server_name '{server_name}' is disabled, contact your administrator"
+                self.log.error(error_message)
+                raise web.HTTPError(400, error_message)
+
+        else:
+            display_name = ''
+
+        spawner = user.get_or_create_spawner(
+            server_name, display_name, replace_failed=True
+        )
         pending = spawner.pending
         if pending == 'spawn':
             self.set_header('Content-Type', 'text/plain')
@@ -659,7 +695,7 @@ class UserServerAPIHandler(APIHandler):
                 raise web.HTTPError(400, f"{spawner._log_name} is already running")
 
         options = self.get_json_body()
-        await self.spawn_single_user(user, server_name, options=options)
+        await self.spawn_single_user(user, server_name, display_name, options=options)
         status = 202 if spawner.pending == 'spawn' else 201
         self.set_header('Content-Type', 'text/plain')
         self.set_status(status)
