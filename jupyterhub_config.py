@@ -14,9 +14,12 @@ INTERNAL_HUB_URL = 'http://172.17.0.1:8000'
 
 # Secrets are injected from secrets.env (sourced by start-hub.sh) and are NOT
 # committed to git. See secrets.env.example for the expected variables.
-PROMETHEUS_TOKEN = os.environ['SAIEP_PROMETHEUS_TOKEN']
-MONITORING_TOKEN = os.environ['SAIEP_MONITORING_TOKEN']
-
+PROMETHEUS_TOKEN = os.environ.get('SAIEP_PROMETHEUS_TOKEN')
+MONITORING_TOKEN = os.environ.get('SAIEP_MONITORING_TOKEN')
+if not PROMETHEUS_TOKEN or not MONITORING_TOKEN:
+    raise RuntimeError(
+        "Missing SAIEP_PROMETHEUS_TOKEN/SAIEP_MONITORING_TOKEN (see secrets.env.example)"
+    )
 c.JupyterHub.template_paths = [os.path.join(base_dir, 'templates')]
 
 # Bind to the Docker bridge gateway only — reachable by the Caddy HTTPS proxy
