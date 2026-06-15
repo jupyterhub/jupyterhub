@@ -136,6 +136,7 @@
             pwd.getAttribute("type") === "password" ? "text" : "password";
           pwd.setAttribute("type", type);
           pwdc.setAttribute("type", type);
+          button.setAttribute("aria-pressed", type === "text");
         });
       }
     });
