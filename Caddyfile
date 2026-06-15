@@ -5,7 +5,7 @@
 {
 	auto_https disable_redirects
 	http_port 8080
-	email r_boucheraine@estin.dz
+	email {env.CADDY_EMAIL}
 }
 
 104.248.22.193.sslip.io {
