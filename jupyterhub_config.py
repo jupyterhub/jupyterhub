@@ -10,8 +10,6 @@ from jupyterhub.handlers import BaseHandler
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
 PUBLIC_URL = 'https://104.248.22.193.sslip.io'
-INTERNAL_HUB_URL = 'http://172.17.0.1:8000'
-
 # Secrets are injected from secrets.env (sourced by start-hub.sh) and are NOT
 # committed to git. See secrets.env.example for the expected variables.
 PROMETHEUS_TOKEN = os.environ.get('SAIEP_PROMETHEUS_TOKEN')
