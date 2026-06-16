@@ -1530,5 +1530,9 @@ async def test_malformed_form(app, caplog, path):
             ]
         ),
     )
-    assert r.status_code == 400
+    # tornado might validate form-data before calling prepare,
+    # which would lead to 400.
+    # seems to be a change in 6.5.0, but this is an implementation detail
+    # the main goal is no traceback.
+    assert r.status_code in {400, 403}
     assert "Traceback" not in caplog.text
