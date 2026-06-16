@@ -5,7 +5,7 @@
 {
 	auto_https disable_redirects
 	http_port 8080
-	email {env.CADDY_EMAIL}
+	email r_boucheraine@estin.dz
 }
 
 104.248.22.193.sslip.io {
@@ -13,10 +13,4 @@
 	# lui-même sous /services/monitoring (SSO JupyterHub) — il n'est plus
 	# exposé en direct.
 	reverse_proxy 172.17.0.1:8000
-}
-
-# Espace super-admin des ressources : Portainer (voir / ajouter / supprimer
-# les ressources et conteneurs). Sous-domaine dédié, login Portainer propre.
-portainer.104.248.22.193.sslip.io {
-	reverse_proxy 127.0.0.1:9000
 }

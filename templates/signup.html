@@ -1,144 +1,100 @@
 {% extends "page.html" %}
 {% block login_widget %}
 {% endblock login_widget %}
+
 {% block main %}
-  {% block login %}
-    <div id="login-main" class="container">
-      <form action="{{ post_url }}" method="post" role="form">
-        <div class="auth-form-header saiep-header">
-          <img src="{{ static_url('img/logo-estin.png') }}"
-               alt="ESTIN Logo"
-               style="height: 80px;
-                      margin-bottom: 10px" />
-          <h1>Plateforme SAIEP</h1>
-          <p>
-            Demande d'inscription — votre compte sera activé après vérification par
-            l'administrateur
-          </p>
-        </div>
-        <div class="auth-form-body m-auto">
-          {% if alert %}
-            <div class="alert {{ alert }}" role="alert">
-              <p>{{ result_message }}</p>
-            </div>
-          {% endif %}
-          <input type="hidden" name="_xsrf" value="{{ xsrf }}" />
-          <label for="username_input">Nom d'utilisateur :</label>
-          <input id="username_input"
-                 type="text"
-                 name="username"
-                 value="{{ username }}"
-                 autocapitalize="off"
-                 autocorrect="off"
-                 autocomplete="username"
-                 class="form-control"
-                 autofocus="autofocus"
-                 required />
-          {% if ask_email %}
-            <label for="email_input">Email ESTIN :</label>
-            <input id="email_input"
-                   type="email"
-                   name="email"
-                   value="{{ email }}"
-                   placeholder="prenom_nom@estin.dz"
-                   class="form-control"
-                   required />
-          {% endif %}
-          <label for="password_input">Mot de passe (8 caractères minimum) :</label>
-          <div class="input-group">
-            <input id="password_input"
-                   type="password"
-                   class="form-control"
-                   autocomplete="new-password"
-                   name="signup_password" />
-            <button type="button"
-                    id="toggle_password_visibility"
-                    class="input-group-text"
-                    aria-controls="password_input"
-                    aria-pressed="false"
-                    title="Show password">
-              <i class="fa fa-eye" aria-hidden="true"></i>
-            </button>
-          </div>
-          <label for="password_confirmation_input">Confirmer le mot de passe :</label>
-          <div class="input-group">
-            <input id="password_confirmation_input"
-                   type="password"
-                   class="form-control"
-                   autocomplete="new-password"
-                   name="signup_password_confirmation" />
-          </div>
-          <hr style="border-color: rgba(255, 255, 255, 0.15); margin: 18px 0" />
-          <p style="font-weight: 600; margin-bottom: 10px">Informations sur votre projet de recherche</p>
-          <label for="project_type_input">Type de projet :</label>
-          <select id="project_type_input"
-                  name="project_type"
-                  class="form-control"
-                  required>
-            <option value="" disabled selected>-- Choisir --</option>
-            <option value="NLP">NLP (traitement du langage naturel)</option>
-            <option value="Vision">Vision par ordinateur</option>
-            <option value="Time series">Séries temporelles</option>
-            <option value="Tabular/ML">Données tabulaires / ML classique</option>
-            <option value="Audio/Speech">Audio / Parole</option>
-            <option value="Other">Autre</option>
-          </select>
-          <label for="project_theme_input">Thématique du projet :</label>
-          <input id="project_theme_input"
-                 type="text"
-                 name="project_theme"
-                 class="form-control"
-                 placeholder="Ex: détection de fraude, traduction automatique..."
-                 required />
-          <label for="lab_input">Laboratoire / Équipe :</label>
-          <input id="lab_input"
-                 type="text"
-                 name="lab"
-                 class="form-control"
-                 placeholder="Ex: LITAN" />
-          <label for="supervisor_input">Encadrant / Responsable :</label>
-          <input id="supervisor_input"
-                 type="text"
-                 name="supervisor"
-                 class="form-control"
-                 placeholder="Nom de l'encadrant" />
-          <label for="research_description_input">Description (objectifs, données, librairies) :</label>
-          <textarea id="research_description_input"
-                    name="research_description"
-                    class="form-control"
-                    rows="3"
-                    placeholder="Décrivez brièvement vos travaux et vos besoins de calcul"></textarea>
-          <div class="feedback-container">
-            <input type="submit"
-                   id="signup_submit"
-                   class="btn btn-jupyter form-control"
-                   value="Envoyer la demande d'inscription" />
-          </div>
-          <div class="signup-link" style="text-align: center; margin-top: 15px">
-            <span>Déjà un compte ?</span>
-            <a href="{{ base_url }}login">Se connecter</a>
-          </div>
-        </div>
-      </form>
+{% block login %}
+<div id="login-main" class="container">
+  <form action="{{ post_url }}" method="post" role="form">
+    <div class="auth-form-header saiep-header">
+      <img src="{{ static_url('img/logo-estin.png') }}" alt="ESTIN Logo" style="height:80px; margin-bottom:10px;" />
+      <h1>Plateforme SAIEP</h1>
+      <p>Demande d'inscription — votre compte sera activé après vérification par l'administrateur</p>
     </div>
-  {% endblock login %}
+    <div class='auth-form-body m-auto'>
+      {% if alert %}
+      <div class="alert {{ alert }}" role="alert">
+        <p>{{ result_message }}</p>
+      </div>
+      {% endif %}
+      <input type="hidden" name="_xsrf" value="{{ xsrf }}" />
+
+      <label for="username_input">Nom d'utilisateur :</label>
+      <input id="username_input" type="text" name="username" value="{{ username }}" autocapitalize="off" autocorrect="off" autocomplete="username" class="form-control" autofocus="autofocus" required />
+
+      {% if ask_email %}
+      <label for="email_input">Email ESTIN :</label>
+      <input id="email_input" type="email" name="email" value="{{ email }}" placeholder="prenom_nom@estin.dz" class="form-control" required />
+      {% endif %}
+
+      <label for="password_input">Mot de passe (8 caractères minimum) :</label>
+      <div class="input-group">
+        <input id="password_input" type="password" class="form-control" autocomplete="new-password" name="signup_password" />
+        <button type="button" id="toggle_password_visibility" class="input-group-text" aria-controls="password_input" aria-pressed="false" title="Show password">
+          <i class="fa fa-eye" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <label for="password_confirmation_input">Confirmer le mot de passe :</label>
+      <div class="input-group">
+        <input id="password_confirmation_input" type="password" class="form-control" autocomplete="new-password" name="signup_password_confirmation" />
+      </div>
+
+      <hr style="border-color:rgba(255,255,255,0.15); margin:18px 0;" />
+      <p style="font-weight:600; margin-bottom:10px;">Informations sur votre projet de recherche</p>
+
+      <label for="project_type_input">Type de projet :</label>
+      <select id="project_type_input" name="project_type" class="form-control" required>
+        <option value="" disabled selected>-- Choisir --</option>
+        <option value="NLP">NLP (traitement du langage naturel)</option>
+        <option value="Vision">Vision par ordinateur</option>
+        <option value="Time series">Séries temporelles</option>
+        <option value="Tabular/ML">Données tabulaires / ML classique</option>
+        <option value="Audio/Speech">Audio / Parole</option>
+        <option value="Other">Autre</option>
+      </select>
+
+      <label for="project_theme_input">Thématique du projet :</label>
+      <input id="project_theme_input" type="text" name="project_theme" class="form-control"
+             placeholder="Ex: détection de fraude, traduction automatique..." required />
+
+      <label for="lab_input">Laboratoire / Équipe :</label>
+      <input id="lab_input" type="text" name="lab" class="form-control" placeholder="Ex: LITAN" />
+
+      <label for="supervisor_input">Encadrant / Responsable :</label>
+      <input id="supervisor_input" type="text" name="supervisor" class="form-control" placeholder="Nom de l'encadrant" />
+
+      <label for="research_description_input">Description (objectifs, données, librairies) :</label>
+      <textarea id="research_description_input" name="research_description" class="form-control" rows="3"
+                placeholder="Décrivez brièvement vos travaux et vos besoins de calcul"></textarea>
+
+      <div class="feedback-container">
+        <input type="submit" id="signup_submit" class='btn btn-jupyter form-control' value="Envoyer la demande d'inscription" />
+      </div>
+      <div class="signup-link" style="text-align:center; margin-top:15px;">
+        <span>Déjà un compte ?</span>
+        <a href="{{ base_url }}login">Se connecter</a>
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock login %}
 {% endblock main %}
+
 {% block script %}
-  {{ super() }}
-  <script>
-    document.addEventListener("DOMContentLoaded", function() {
-      var button = document.getElementById("toggle_password_visibility");
-      if (button) {
-        button.addEventListener("click", function() {
-          var pwd = document.getElementById("password_input");
-          var pwdc = document.getElementById("password_confirmation_input");
-          var type =
-            pwd.getAttribute("type") === "password" ? "text" : "password";
-          pwd.setAttribute("type", type);
-          pwdc.setAttribute("type", type);
-          button.setAttribute("aria-pressed", type === "text");
-        });
-      }
-    });
-  </script>
+{{ super() }}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var button = document.getElementById('toggle_password_visibility');
+    if (button) {
+      button.addEventListener('click', function () {
+        var pwd = document.getElementById('password_input');
+        var pwdc = document.getElementById('password_confirmation_input');
+        var type = pwd.getAttribute('type') === 'password' ? 'text' : 'password';
+        pwd.setAttribute('type', type);
+        pwdc.setAttribute('type', type);
+      });
+    }
+  });
+</script>
 {% endblock script %}

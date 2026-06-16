@@ -28,7 +28,7 @@
   </div>
 {% endmacro %}
 <!DOCTYPE HTML>
-<html lang="fr">
+<html lang="en">
   <head>
     <meta charset="utf-8">
     <title>
@@ -43,10 +43,8 @@
             href="{{ static_url('css/style.min.css') }}"
             type="text/css" />
     {% endblock stylesheet %}
-    <link rel="stylesheet"
-          href="{{ static_url('css/saiep.css') }}"
-          type="text/css" />
-    {# Removed duplicate <title>; override the `{% block title %}` above instead. #}
+    <link rel="stylesheet" href="{{ static_url('css/saiep.css') }}" type="text/css" />
+    <title>ESTIN - SAIEP</title>
     {% block favicon %}
       <link rel="icon" href="{{ static_url('favicon.ico') }}" type="image/x-icon">
     {% endblock favicon %}
@@ -153,6 +151,12 @@
                   {% if 'admin-ui' in parsed_scopes %}
                     <li class="nav-item">
                       <a class="nav-link" href="{{ base_url }}admin">Admin</a>
+                    </li>
+                    <li class="nav-item">
+                      <a class="nav-link" href="{{ base_url }}swarm">Ressources</a>
+                    </li>
+                    <li class="nav-item">
+                      <a class="nav-link" href="{{ base_url }}monitoring">Monitoring</a>
                     </li>
                   {% endif %}
                   {% if services %}

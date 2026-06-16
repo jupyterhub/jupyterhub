@@ -1,105 +1,74 @@
 {% extends "page.html" %}
 {% if announcement_login is string %}
-  {% set
-  announcement = announcement_login %}
+  {% set announcement = announcement_login %}
 {% endif %}
 {% block login_widget %}
-  {%
-  endblock login_widget %}
-  {% block main %}
-    {% block login %}
-      <div id="login-main" class="container">
-        {% block login_container %}
-          <form action="{{ login_url }}?next={{ next }}" method="post" role="form">
-            <div class="auth-form-header saiep-header">
-              <img src="{{ static_url('img/logo-estin.png') }}"
-                   alt="ESTIN Logo"
-                   style="height: 80px;
-                          margin-bottom: 10px" />
-              <h1>Plateforme SAIEP</h1>
-              <p>
-                Ecole Superieure en Sciences et Technologies de l Informatique et du
-                Numerique
-              </p>
-            </div>
-            <div class="auth-form-body m-auto">
-              {% if login_error %}<p class="login_error">{{ login_error }}</p>{% endif %}
-              <input type="hidden" name="_xsrf" value="{{ xsrf }}" />
-              {% block username_input %}
-                <label for="username_input">Username:</label>
-                <input id="username_input"
-                       type="text"
-                       autocapitalize="off"
-                       autocorrect="off"
-                       autocomplete="username"
-                       class="form-control"
-                       name="username"
-                       value="{{ username }}"
-                       autofocus="autofocus" />
-              {% endblock username_input %}
-              {% block password_input %}
-                <label for="password_input">Password:</label>
-                <div class="input-group">
-                  <input id="password_input"
-                         type="password"
-                         class="form-control"
-                         autocomplete="current-password"
-                         name="password" />
-                  <button type="button"
-                          id="toggle_password_visibility"
-                          class="input-group-text"
-                          aria-controls="password_input"
-                          aria-pressed="false"
-                          title="Show password">
-                    <i class="fa fa-eye" aria-hidden="true"></i>
-                  </button>
-                </div>
-              {% endblock password_input %}
-              <div class="feedback-container">
-                <input id="login_submit"
-                       type="submit"
-                       class="btn btn-jupyter form-control"
-                       value="Se connecter"
-                       tabindex="3" />
-                <div class="feedback-widget hidden">
-                  <i class="fa fa-spinner"></i>
-                </div>
+{% endblock login_widget %}
+{% block main %}
+  {% block login %}
+    <div id="login-main" class="container">
+      {% block login_container %}
+        <form action="{{ login_url }}?next={{ next }}" method="post" role="form">
+          <div class="auth-form-header saiep-header">
+            <img src="{{ static_url('img/logo-estin.png') }}" alt="ESTIN Logo" style="height:80px; margin-bottom:10px;" />
+            <h1>Plateforme SAIEP</h1>
+            <p>Ecole Superieure en Sciences et Technologies de l Informatique et du Numerique</p>
+          </div>
+          <div class='auth-form-body m-auto'>
+            {% if login_error %}<p class="login_error">{{ login_error }}</p>{% endif %}
+            <input type="hidden" name="_xsrf" value="{{ xsrf }}" />
+            {% block username_input %}
+              <label for="username_input">Username:</label>
+              <input id="username_input" type="text" autocapitalize="off" autocorrect="off" autocomplete="username" class="form-control" name="username" value="{{ username }}" autofocus="autofocus" />
+            {% endblock username_input %}
+            {% block password_input %}
+              <label for="password_input">Password:</label>
+              <div class="input-group">
+                <input id="password_input" type="password" class="form-control" autocomplete="current-password" name="password" />
+                <button type="button" id="toggle_password_visibility" class="input-group-text" aria-controls="password_input" aria-pressed="false" title="Show password">
+                  <i class="fa fa-eye" aria-hidden="true"></i>
+                </button>
               </div>
-              <div class="signup-link" style="text-align: center; margin-top: 15px">
-                <span>Pas encore de compte ?</span>
-                <a href="{{ base_url }}signup">Demander une inscription</a>
+            {% endblock password_input %}
+            <div class="feedback-container">
+              <input id="login_submit" type="submit" class='btn btn-jupyter form-control' value='Se connecter' tabindex="3" />
+              <div class="feedback-widget hidden">
+                <i class="fa fa-spinner"></i>
               </div>
             </div>
-          </form>
-        {% endblock login_container %}
-      </div>
-    {% endblock login %}
-  {% endblock main %}
-  {% block script %}
-    {{ super() }}
-    <script>
-      if (!window.isSecureContext) {
-        var warning = document.getElementById("insecure-login-warning");
-        if (warning)
-          warning.className = warning.className.replace(/\bhidden\b/, "");
+            <div class="signup-link" style="text-align:center; margin-top:15px;">
+              <span>Pas encore de compte ?</span>
+              <a href="{{ base_url }}signup">Demander une inscription</a>
+            </div>
+          </div>
+        </form>
+      {% endblock login_container %}
+    </div>
+  {% endblock login %}
+{% endblock main %}
+{% block script %}
+  {{ super() }}
+  <script>
+    if (!window.isSecureContext) {
+      var warning = document.getElementById('insecure-login-warning');
+      if (warning) warning.className = warning.className.replace(/\bhidden\b/, '');
+    }
+    document.addEventListener('DOMContentLoaded', function () {
+      var button = document.getElementById('toggle_password_visibility');
+      if (button) {
+        button.addEventListener('click', function () {
+          var pwd = document.getElementById('password_input');
+          var type = pwd.getAttribute('type') === 'password' ? 'text' : 'password';
+          pwd.setAttribute('type', type);
+          button.setAttribute('aria-pressed', type === 'text');
+        });
       }
-      document.addEventListener("DOMContentLoaded", function() {
-        var button = document.getElementById("toggle_password_visibility");
-        if (button) {
-          button.addEventListener("click", function() {
-            var pwd = document.getElementById("password_input");
-            var type =
-              pwd.getAttribute("type") === "password" ? "text" : "password";
-            pwd.setAttribute("type", type);
-            button.setAttribute("aria-pressed", type === "text");
-          });
-        }
-      });
-      $("form").submit((e) => {
-        var form = $(e.target);
-        form.find(".feedback-container>input").attr("disabled", true);
-        form.find(".feedback-container>*").toggleClass("hidden");
-        form.find(".feedback-widget>*").toggleClass("fa-pulse");
-      });
-    </script>
-  {% endblock script %}
+    });
+    $('form').submit((e) => {
+      var form = $(e.target);
+      form.find('.feedback-container>input').attr('disabled', true);
+      form.find('.feedback-container>*').toggleClass('hidden');
+      form.find('.feedback-widget>*').toggleClass('fa-pulse');
+    });
+  </script>
+{% endblock script %}

@@ -1,23 +1,25 @@
 import json
 import os
+import sys
 from datetime import datetime, timezone
 
+from jupyterhub.handlers import BaseHandler
 from nativeauthenticator import NativeAuthenticator
 from nativeauthenticator.handlers import SignUpHandler
 
-from jupyterhub.handlers import BaseHandler
-
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
+# Native SAIEP admin interface (resources + monitoring) lives in saiep_admin.py
+sys.path.insert(0, base_dir)
+import saiep_admin
+
 PUBLIC_URL = 'https://104.248.22.193.sslip.io'
+INTERNAL_HUB_URL = 'http://172.17.0.1:8000'
+
 # Secrets are injected from secrets.env (sourced by start-hub.sh) and are NOT
 # committed to git. See secrets.env.example for the expected variables.
-PROMETHEUS_TOKEN = os.environ.get('SAIEP_PROMETHEUS_TOKEN')
-MONITORING_TOKEN = os.environ.get('SAIEP_MONITORING_TOKEN')
-if not PROMETHEUS_TOKEN or not MONITORING_TOKEN:
-    raise RuntimeError(
-        "Missing SAIEP_PROMETHEUS_TOKEN/SAIEP_MONITORING_TOKEN (see secrets.env.example)"
-    )
+PROMETHEUS_TOKEN = os.environ['SAIEP_PROMETHEUS_TOKEN']
+
 c.JupyterHub.template_paths = [os.path.join(base_dir, 'templates')]
 
 # Bind to the Docker bridge gateway only — reachable by the Caddy HTTPS proxy
@@ -53,25 +55,17 @@ class SAIEPSignUpHandler(SignUpHandler):
                 'timestamp': datetime.now(timezone.utc).isoformat(),
                 'username': username,
                 'email': self.get_body_argument('email', '', strip=True),
-                'project_theme': self.get_body_argument(
-                    'project_theme', '', strip=True
-                )[:500],
+                'project_theme': self.get_body_argument('project_theme', '', strip=True)[:500],
                 'project_type': self.get_body_argument('project_type', '', strip=True),
                 'lab': self.get_body_argument('lab', '', strip=True)[:200],
-                'supervisor': self.get_body_argument('supervisor', '', strip=True)[
-                    :200
-                ],
-                'description': self.get_body_argument(
-                    'research_description', '', strip=True
-                )[:2000],
+                'supervisor': self.get_body_argument('supervisor', '', strip=True)[:200],
+                'description': self.get_body_argument('research_description', '', strip=True)[:2000],
             }
             try:
                 with open(RESEARCHER_PROFILES_LOG, 'a') as f:
                     f.write(json.dumps(profile, ensure_ascii=False) + '\n')
             except OSError:
-                self.log.warning(
-                    'Could not persist researcher profile for %s', username
-                )
+                self.log.warning('Could not persist researcher profile for %s', username)
         await super().post()
 
 
@@ -92,12 +86,11 @@ c.Authenticator.admin_users = {'r4y4n3', 'litan'}
 # authenticate(); JupyterHub >= 5 additionally requires an explicit allow
 # rule, so allow_all here does NOT bypass the admin-approval workflow.
 c.Authenticator.allow_all = True
-c.NativeAuthenticator.open_signup = False  # activation by admin required
-c.NativeAuthenticator.ask_email_on_signup = True  # ESTIN email for identity check
+c.NativeAuthenticator.open_signup = False          # activation by admin required
+c.NativeAuthenticator.ask_email_on_signup = True   # ESTIN email for identity check
 c.NativeAuthenticator.minimum_password_length = 8
 c.NativeAuthenticator.allowed_failed_logins = 5
 c.NativeAuthenticator.seconds_before_next_try = 600
-
 
 # --- Page d'accueil publique (landing) -------------------------------------
 # Page de présentation SAIEP affichée aux visiteurs (intégrée depuis le
@@ -105,14 +98,17 @@ c.NativeAuthenticator.seconds_before_next_try = 600
 class LandingHandler(BaseHandler):
     async def get(self):
         landing = os.path.join(base_dir, 'static', 'landing', 'index.html')
-        with open(landing, encoding='utf-8') as f:
+        with open(landing, 'r', encoding='utf-8') as f:
             self.finish(f.read())
 
 
+# --- Gestion des ressources (interface NATIVE SAIEP) -----------------------
+# Remplace l'outil tiers Portainer : interface complète intégrée à JupyterHub
+# (conteneurs, cluster Swarm, volumes, réseaux, monitoring interne). Code dans
+# saiep_admin.py. Réservée aux administrateurs.
 c.JupyterHub.extra_handlers = [
     (r'/landing', LandingHandler),
-]
-
+] + saiep_admin.resource_handlers()
 
 # --- Redirection par rôle après connexion ----------------------------------
 # Les visiteurs non connectés voient la page d'accueil ; après connexion,
@@ -128,7 +124,6 @@ def default_url(handler):
     if user.name == 'litan':
         return '/hub/authorize'
     return '/hub/spawn'
-
 
 c.JupyterHub.default_url = default_url
 
@@ -170,7 +165,6 @@ SIZING_FORM = """
 </div>
 """
 
-
 def options_from_form(formdata):
     options = {
         'cpu': formdata.get('cpu', ['1'])[0],
@@ -179,7 +173,6 @@ def options_from_form(formdata):
         'usage': formdata.get('usage', [''])[0][:2000],
     }
     return options
-
 
 def pre_spawn_hook(spawner):
     """Record every sizing request (training data for the future AI model)
@@ -195,13 +188,10 @@ def pre_spawn_hook(spawner):
             f.write(json.dumps(record, ensure_ascii=False) + '\n')
     except OSError:
         spawner.log.warning('Could not persist spawn sizing request')
-    spawner.environment.update(
-        {
-            'SAIEP_CPU_REQUEST': str(options.get('cpu', '')),
-            'SAIEP_MEM_REQUEST': str(options.get('memory', '')),
-        }
-    )
-
+    spawner.environment.update({
+        'SAIEP_CPU_REQUEST': str(options.get('cpu', '')),
+        'SAIEP_MEM_REQUEST': str(options.get('memory', '')),
+    })
 
 c.JupyterHub.spawner_class = 'simple'
 c.Spawner.cmd = [os.path.join(base_dir, 'venv/bin/jupyterhub-singleuser')]
@@ -210,25 +200,15 @@ c.Spawner.options_form = SIZING_FORM
 c.Spawner.options_from_form = options_from_form
 c.Spawner.pre_spawn_hook = pre_spawn_hook
 
-# --- Monitoring intégré DANS JupyterHub (demande de Dalil) -----------------
-# Grafana n'est plus une application indépendante : il est servi par le hub
-# sous /services/monitoring et utilise JupyterHub comme fournisseur d'identité
-# (Single Sign-On). On se connecte une seule fois à JupyterHub ; Grafana
-# reconnaît automatiquement l'utilisateur et son rôle (Admin pour r4y4n3 /
-# litan, Viewer pour les autres). Prometheus reste interne (non exposé).
+# --- Monitoring : interface NATIVE SAIEP (Grafana supprimé) ----------------
+# Plus aucun outil tiers : le monitoring est notre propre interface
+# (/hub/monitoring, voir saiep_admin.py) alimentée directement par Prometheus.
+# Prometheus reste interne (127.0.0.1:9090) et scrute /hub/metrics avec ce
+# jeton de service.
 c.JupyterHub.services = [
     {
-        # Service token used by Prometheus to scrape /hub/metrics.
         'name': 'prometheus',
         'api_token': PROMETHEUS_TOKEN,
-    },
-    {
-        # Grafana, proxied by the hub at /services/monitoring with hub OAuth.
-        'name': 'monitoring',
-        'url': 'http://127.0.0.1:3000',
-        'api_token': MONITORING_TOKEN,
-        'oauth_redirect_uri': PUBLIC_URL + '/services/monitoring/login/generic_oauth',
-        'oauth_no_confirm': True,
     },
 ]
 c.JupyterHub.load_roles = [
@@ -236,11 +216,5 @@ c.JupyterHub.load_roles = [
         'name': 'metrics-scraper',
         'scopes': ['read:metrics'],
         'services': ['prometheus'],
-    },
-    {
-        # Only the admins (LITAN + super admin) may open the monitoring space.
-        'name': 'monitoring-access',
-        'scopes': ['access:services!service=monitoring'],
-        'users': ['r4y4n3', 'litan'],
     },
 ]
