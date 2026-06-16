@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SAIEP — Administration des ressources</title>
+<style>
+  :root{ --bg:#0e1420; --panel:#161f2e; --panel2:#1d293b; --line:#27344a;
+         --txt:#e6edf3; --muted:#8aa0b8; --accent:#e8542f; --blue:#3b9ad6;
+         --green:#2ecc71; --red:#e74c3c; --yellow:#f1c40f; }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--txt);}
+  a{color:var(--blue);text-decoration:none}
+  .layout{display:flex;min-height:100vh}
+  .sidebar{width:230px;background:#0a0f18;border-right:1px solid var(--line);padding:18px 0;position:fixed;height:100vh}
+  .brand{padding:0 20px 18px;border-bottom:1px solid var(--line);margin-bottom:12px}
+  .brand h1{font-size:1.15em;margin:0;color:#fff}
+  .brand span{color:var(--accent);font-weight:700}
+  .brand small{color:var(--muted);font-size:.72em}
+  .nav a{display:flex;align-items:center;gap:10px;padding:11px 20px;color:var(--muted);font-size:.93em;cursor:pointer;border-left:3px solid transparent}
+  .nav a:hover{background:var(--panel);color:var(--txt)}
+  .nav a.active{background:var(--panel);color:#fff;border-left-color:var(--accent)}
+  .nav .ico{width:18px;text-align:center}
+  .sidebar .foot{position:absolute;bottom:16px;left:20px;font-size:.8em}
+  .main{margin-left:230px;flex:1;padding:26px 32px;max-width:1200px}
+  h2.title{margin:0 0 4px;font-weight:600}
+  .sub{color:var(--muted);margin-bottom:22px;font-size:.9em}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:24px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px}
+  .card .big{font-size:2em;font-weight:700}
+  .card .lbl{color:var(--muted);font-size:.85em;margin-top:4px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px;margin-bottom:22px}
+  .panel h3{margin:0 0 14px;font-size:1.05em}
+  table{width:100%;border-collapse:collapse;font-size:.9em}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);font-weight:600;font-size:.82em;text-transform:uppercase;letter-spacing:.4px}
+  tr:hover td{background:var(--panel2)}
+  .badge{padding:3px 9px;border-radius:20px;font-size:.78em;font-weight:600}
+  .b-run{background:rgba(46,204,113,.15);color:var(--green)}
+  .b-stop{background:rgba(231,76,60,.15);color:var(--red)}
+  .b-other{background:rgba(138,160,184,.15);color:var(--muted)}
+  .btn{background:var(--accent);color:#fff;border:none;padding:8px 14px;border-radius:7px;cursor:pointer;font-size:.85em;font-weight:600}
+  .btn:hover{filter:brightness(1.1)}
+  .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--txt)}
+  .btn.sm{padding:5px 9px;font-size:.8em}
+  .btn.danger{background:var(--red)}
+  .btn.blue{background:var(--blue)}
+  .act{display:inline-flex;gap:6px}
+  pre.logs{background:#05080d;border:1px solid var(--line);border-radius:8px;padding:14px;max-height:420px;overflow:auto;font-size:.82em;white-space:pre-wrap}
+  .join{background:#05080d;border:1px solid var(--line);border-radius:8px;padding:12px;font-family:monospace;font-size:.82em;word-break:break-all}
+  .empty{color:var(--muted);padding:14px}
+  /* modal */
+  .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50}
+  .modal{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:24px;width:440px;max-width:92vw}
+  .modal h3{margin:0 0 16px}
+  .modal label{display:block;color:var(--muted);font-size:.85em;margin:12px 0 5px}
+  .modal input,.modal select{width:100%;padding:9px 11px;background:var(--bg);border:1px solid var(--line);border-radius:7px;color:var(--txt)}
+  .modal .row{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
+  #toast{position:fixed;bottom:24px;right:24px;background:var(--panel2);border:1px solid var(--line);border-left:4px solid var(--green);padding:13px 18px;border-radius:8px;display:none;z-index:60;max-width:340px}
+  .charts{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+  @media(max-width:800px){.charts{grid-template-columns:1fr}.sidebar{display:none}.main{margin-left:0}}
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand">
+      <h1><span>SAIEP</span> Admin</h1>
+      <small>Gestion des ressources</small>
+    </div>
+    <nav class="nav" id="nav">
+      <a data-s="dashboard" class="active"><span class="ico">▦</span> Tableau de bord</a>
+      <a data-s="containers"><span class="ico">▥</span> Conteneurs</a>
+      <a data-s="images"><span class="ico">▣</span> Images</a>
+      <a data-s="cluster"><span class="ico">⬡</span> Cluster (Swarm)</a>
+      <a data-s="volumes"><span class="ico">⬢</span> Volumes</a>
+      <a data-s="networks"><span class="ico">⇄</span> Réseaux</a>
+    </nav>
+    <div class="foot"><a href="/hub/home">← Retour à JupyterHub</a></div>
+  </aside>
+  <main class="main" id="view"><p class="empty">Chargement…</p></main>
+</div>
+
+<div class="modal-bg" id="modalBg"><div class="modal" id="modal"></div></div>
+<div id="toast"></div>
+
+<script>
+const API='/hub/swarm';
+function xsrf(){const m=document.cookie.match(/_xsrf=([^;]+)/);return m?m[1]:'';}
+async function getData(s){const r=await fetch(`${API}/api/${s}`);return r.json();}
+async function doAction(action,target,params){
+  const r=await fetch(`${API}/action`,{method:'POST',headers:{'Content-Type':'application/json','X-XSRFToken':xsrf()},
+    body:JSON.stringify({action,target,params:params||{}})});
+  return r.json();
+}
+function toast(msg,ok=true){const t=document.getElementById('toast');t.textContent=msg;
+  t.style.borderLeftColor=ok?'var(--green)':'var(--red)';t.style.display='block';
+  setTimeout(()=>t.style.display='none',3200);}
+function badge(s){const v=(s||'').toLowerCase();
+  if(v==='running'||v==='ready'||v==='active')return `<span class="badge b-run">● ${s}</span>`;
+  if(v==='exited'||v==='dead'||v==='down')return `<span class="badge b-stop">● ${s}</span>`;
+  return `<span class="badge b-other">${s}</span>`;}
+function esc(s){return (s==null?'':''+s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+function modal(title,fields,onOk){
+  const bg=document.getElementById('modalBg');
+  document.getElementById('modal').innerHTML=`<h3>${title}</h3>${fields}
+    <div class="row"><button class="btn ghost" onclick="closeModal()">Annuler</button>
+    <button class="btn" id="mok">Valider</button></div>`;
+  bg.style.display='flex';
+  document.getElementById('mok').onclick=async()=>{await onOk();};
+}
+function closeModal(){document.getElementById('modalBg').style.display='none';}
+function field(id,label,type='text',ph=''){return `<label>${label}</label><input id="${id}" type="${type}" placeholder="${ph}">`;}
+
+async function act(action,target,params,confirmMsg){
+  if(confirmMsg && !confirm(confirmMsg))return;
+  const r=await doAction(action,target,params);
+  if(r.ok){toast(r.result||'OK');render(current);}
+  else toast(r.error||'Erreur',false);
+}
+
+let current='dashboard';
+
+const views={
+  async dashboard(){
+    const o=await getData('overview');
+    return `<h2 class="title">Tableau de bord</h2>
+    <div class="sub">Serveur ${esc(o.hostname)} · Docker ${esc(o.docker_version)}</div>
+    <div class="cards">
+      <div class="card"><div class="big" style="color:var(--accent)">${o.ncpu}</div><div class="lbl">vCPU</div></div>
+      <div class="card"><div class="big" style="color:var(--accent)">${o.mem_gb} Go</div><div class="lbl">Mémoire</div></div>
+      <div class="card"><div class="big" style="color:var(--blue)">${o.running}</div><div class="lbl">Conteneurs actifs</div></div>
+      <div class="card"><div class="big">${o.images}</div><div class="lbl">Images</div></div>
+      <div class="card"><div class="big">${o.nodes}</div><div class="lbl">Nœud(s)</div></div>
+      <div class="card"><div class="big" style="font-size:1.2em;margin-top:10px">${o.swarm_active?'<span style="color:var(--green)">● Cluster actif</span>':'<span style="color:var(--muted)">○ Serveur unique</span>'}</div><div class="lbl">État</div></div>
+    </div>
+    <div class="panel"><h3>Raccourcis</h3>
+      <div class="act">
+        <button class="btn" onclick="go('containers')">Gérer les conteneurs</button>
+        <button class="btn ghost" onclick="go('cluster')">Cluster & serveurs</button>
+      </div></div>`;
+  },
+  async containers(){
+    const d=await getData('containers');
+    const rows=d.containers.map(c=>`<tr>
+      <td><b>${esc(c.name)}</b><br><span style="color:var(--muted);font-size:.85em">${esc(c.id)}</span></td>
+      <td>${esc(c.image)}</td><td>${esc(c.ports)||'—'}</td><td>${badge(c.state)}</td>
+      <td class="act">
+        ${c.state==='running'
+          ? `<button class="btn sm ghost" onclick="act('container.stop','${c.id}')">Arrêter</button>
+             <button class="btn sm ghost" onclick="act('container.restart','${c.id}')">Redémarrer</button>`
+          : `<button class="btn sm" onclick="act('container.start','${c.id}')">Démarrer</button>`}
+        <button class="btn sm ghost" onclick="showDetails('${c.id}','${esc(c.name)}')">Détails</button>
+        <button class="btn sm blue" onclick="showLogs('${c.id}','${esc(c.name)}')">Logs</button>
+        <button class="btn sm ghost" onclick="editLimits('${c.id}','${esc(c.name)}')">Limites</button>
+        <button class="btn sm danger" onclick="act('container.remove','${c.id}',{},'Supprimer le conteneur ${esc(c.name)} ?')">✕</button>
+      </td></tr>`).join('');
+    return `<h2 class="title">Conteneurs</h2><div class="sub">${d.containers.length} conteneur(s)</div>
+    <div class="panel"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <h3 style="margin:0">Liste</h3><button class="btn" onclick="createContainer()">+ Nouveau conteneur</button></div>
+    <table><thead><tr><th>Nom</th><th>Image</th><th>Ports</th><th>État</th><th>Actions</th></tr></thead>
+    <tbody>${rows||'<tr><td colspan=5 class=empty>Aucun conteneur</td></tr>'}</tbody></table></div>`;
+  },
+  async cluster(){
+    const d=await getData('nodes');
+    if(!d.swarm_active){
+      return `<h2 class="title">Cluster (Docker Swarm)</h2>
+      <div class="sub">La plateforme tourne sur un seul serveur.</div>
+      <div class="panel"><h3>Activer le mode cluster</h3>
+      <p style="color:var(--muted)">Activez le cluster pour pouvoir <b>ajouter d'autres serveurs</b> et mettre leur puissance (CPU/RAM) en commun.</p>
+      <button class="btn" onclick="act('swarm.init','',{},'Activer le mode cluster Swarm sur ce serveur ?')">Activer le mode cluster</button></div>`;
+    }
+    const rows=d.nodes.map(n=>`<tr>
+      <td><b>${esc(n.hostname)}</b>${n.leader?' <span class="badge b-run">leader</span>':''}</td>
+      <td>${esc(n.role)}</td><td>${badge(n.state)}</td><td>${esc(n.availability)}</td>
+      <td>${n.cpu} vCPU</td><td>${n.mem_gb} Go</td>
+      <td class="act">
+        ${n.availability==='active'
+          ? `<button class="btn sm ghost" onclick="act('node.drain','${n.id}','','Drainer ce nœud ?')">Drainer</button>`
+          : `<button class="btn sm" onclick="act('node.activate','${n.id}')">Activer</button>`}
+        ${n.role!=='manager'?`<button class="btn sm danger" onclick="act('node.remove','${n.id}',{},'Retirer ce nœud du cluster ?')">Retirer</button>`:''}
+      </td></tr>`).join('');
+    return `<h2 class="title">Cluster (Docker Swarm)</h2>
+    <div class="sub">${d.nodes.length} nœud(s) · ${d.total_cpu} vCPU · ${d.total_mem_gb} Go au total</div>
+    <div class="panel"><h3>Nœuds</h3>
+    <table><thead><tr><th>Serveur</th><th>Rôle</th><th>État</th><th>Dispo.</th><th>CPU</th><th>RAM</th><th>Actions</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>
+    <div class="panel"><h3>Ajouter un serveur</h3>
+    <p style="color:var(--muted)">Installez Docker sur le nouveau serveur puis exécutez cette commande dessus :</p>
+    <div class="join">${esc(d.join_command||'(indisponible)')}</div>
+    <p style="margin-top:14px"><button class="btn ghost danger" onclick="act('swarm.leave','',{},'Désactiver le cluster Swarm ?')">Désactiver le cluster</button></p></div>`;
+  },
+  async volumes(){
+    const d=await getData('volumes');
+    const rows=d.volumes.map(v=>`<tr><td><b>${esc(v.name)}</b></td><td>${esc(v.driver)}</td>
+      <td style="color:var(--muted);font-size:.85em">${esc(v.mountpoint)}</td>
+      <td><button class="btn sm danger" onclick="act('volume.remove','${esc(v.name)}',{},'Supprimer le volume ${esc(v.name)} ?')">Supprimer</button></td></tr>`).join('');
+    return `<h2 class="title">Volumes</h2><div class="sub">${d.volumes.length} volume(s)</div>
+    <div class="panel"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><h3 style="margin:0">Liste</h3>
+    <button class="btn" onclick="createVolume()">+ Nouveau volume</button></div>
+    <table><thead><tr><th>Nom</th><th>Pilote</th><th>Point de montage</th><th></th></tr></thead>
+    <tbody>${rows||'<tr><td colspan=4 class=empty>Aucun volume</td></tr>'}</tbody></table></div>`;
+  },
+  async networks(){
+    const d=await getData('networks');
+    const rows=d.networks.map(n=>`<tr><td><b>${esc(n.name)}</b></td><td>${esc(n.driver)}</td><td>${esc(n.scope)}</td>
+      <td>${['bridge','host','none','ingress'].includes(n.name)?'<span style="color:var(--muted)">système</span>':`<button class="btn sm danger" onclick="act('network.remove','${n.id}',{},'Supprimer le réseau ${esc(n.name)} ?')">Supprimer</button>`}</td></tr>`).join('');
+    return `<h2 class="title">Réseaux</h2><div class="sub">${d.networks.length} réseau(x)</div>
+    <div class="panel"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><h3 style="margin:0">Liste</h3>
+    <button class="btn" onclick="createNetwork()">+ Nouveau réseau</button></div>
+    <table><thead><tr><th>Nom</th><th>Pilote</th><th>Portée</th><th></th></tr></thead>
+    <tbody>${rows||'<tr><td colspan=4 class=empty>Aucun réseau</td></tr>'}</tbody></table></div>`;
+  },
+  async images(){
+    const d=await getData('images');
+    const rows=d.images.map(i=>`<tr><td>${i.tags.map(esc).join('<br>')}</td>
+      <td style="color:var(--muted);font-size:.85em">${esc(i.id)}</td><td>${i.size_mb} Mo</td>
+      <td><button class="btn sm danger" onclick="act('image.remove','${i.id}',{},'Supprimer cette image ?')">Supprimer</button></td></tr>`).join('');
+    return `<h2 class="title">Images</h2><div class="sub">${d.images.length} image(s)</div>
+    <div class="panel"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><h3 style="margin:0">Liste</h3>
+    <button class="btn" onclick="pullImage()">+ Télécharger une image</button></div>
+    <table><thead><tr><th>Tags</th><th>ID</th><th>Taille</th><th></th></tr></thead>
+    <tbody>${rows||'<tr><td colspan=4 class=empty>Aucune image</td></tr>'}</tbody></table></div>`;
+  },
+};
+
+// modal-driven create/edit
+function createContainer(){modal('Nouveau conteneur',
+  field('f_img','Image','text','ex: jupyter/base-notebook')+field('f_name','Nom (optionnel)')+field('f_cmd','Commande (optionnel)'),
+  async()=>{const p={image:val('f_img'),name:val('f_name'),command:val('f_cmd')};if(!p.image)return toast('Image requise',false);
+    closeModal();await act('container.create','',p);});}
+function createVolume(){modal('Nouveau volume',field('f_vn','Nom du volume'),
+  async()=>{if(!val('f_vn'))return toast('Nom requis',false);closeModal();await act('volume.create','',{name:val('f_vn')});});}
+function createNetwork(){modal('Nouveau réseau',field('f_nn','Nom')+`<label>Pilote</label><select id="f_nd"><option>bridge</option><option>overlay</option></select>`,
+  async()=>{if(!val('f_nn'))return toast('Nom requis',false);closeModal();await act('network.create','',{name:val('f_nn'),driver:val('f_nd')});});}
+function editLimits(id,name){modal('Limites — '+name,
+  field('f_cpu','CPU (vCPU, ex: 1.5)','text')+field('f_mem','Mémoire (Go, ex: 2)','text'),
+  async()=>{closeModal();await act('container.update',id,{cpus:val('f_cpu'),mem_gb:val('f_mem')});});}
+async function showLogs(id,name){const r=await doAction('container.logs',id);
+  modal('Logs — '+name,`<pre class="logs">${esc(r.result||r.error||'(vide)')}</pre>`,()=>closeModal());
+  document.getElementById('mok').textContent='Fermer';}
+function pullImage(){modal('Télécharger une image',field('f_pi','Image','text','ex: python:3.12-slim'),
+  async()=>{if(!val('f_pi'))return toast('Image requise',false);closeModal();toast('Téléchargement en cours…');await act('image.pull','',{name:val('f_pi')});});}
+async function showDetails(id,name){
+  const [info,st]=await Promise.all([doAction('container.inspect',id),doAction('container.stats',id)]);
+  const d=info.result||{}, s=st.result||{};
+  const kv=(k,v)=>`<tr><td style="color:var(--muted);width:120px;vertical-align:top">${k}</td><td>${v||'—'}</td></tr>`;
+  const html=`<div style="max-height:62vh;overflow:auto"><table>
+    ${kv('Image',esc(d.image))}
+    ${kv('État',d.state?badge(d.state):'')}
+    ${kv('Créé',esc(d.created))}
+    ${kv('Commande',esc(d.command))}
+    ${kv('Redémarrage',esc(d.restart_policy))}
+    ${kv('CPU',s.cpu_pct!=null?('<b>'+s.cpu_pct+' %</b>'):'')}
+    ${kv('Mémoire',s.mem_mb!=null?('<b>'+s.mem_mb+' Mo</b>'+(s.mem_limit_mb?(' / '+s.mem_limit_mb+' Mo'):'')+(s.mem_pct?(' ('+s.mem_pct+' %)'):'')):'')}
+    ${kv('Réseau',s.net_rx_mb!=null?('↓ '+s.net_rx_mb+' Mo&nbsp;&nbsp;↑ '+s.net_tx_mb+' Mo'):'')}
+    ${kv('Ports',(d.ports||[]).map(esc).join('<br>'))}
+    ${kv('Volumes',(d.mounts||[]).map(esc).join('<br>'))}
+    ${kv('Réseaux',(d.networks||[]).map(esc).join(', '))}
+    ${kv('Variables',(d.env||[]).map(esc).join('<br>'))}
+  </table></div>`;
+  modal('Détails — '+name,html,()=>closeModal());
+  document.getElementById('mok').textContent='Fermer';
+}
+function val(id){return document.getElementById(id).value.trim();}
+
+function go(s){document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('active',a.dataset.s===s));render(s);}
+async function render(s){current=s;const v=document.getElementById('view');
+  try{v.innerHTML=await views[s]();}catch(e){v.innerHTML=`<p class="empty">Erreur: ${esc(e.message)}</p>`;}}
+document.getElementById('nav').addEventListener('click',e=>{const a=e.target.closest('a');if(a)go(a.dataset.s);});
+render('dashboard');
+</script>
+</body>
+</html>

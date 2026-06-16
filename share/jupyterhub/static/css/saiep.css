@@ -1,32 +1,130 @@
-body { background-color: #ffffff !important; }
-#login-main { background: #ffffff; }
-.auth-form-header.saiep-header { background-color: #34495E; color: #ffffff; padding: 30px 20px; border-radius: 8px 8px 0 0; text-align: center; border-bottom: 4px solid #E54C3F; }
-.auth-form-header.saiep-header h1 { color: #ffffff; font-size: 1.6em; margin: 10px 0 5px 0; }
-.auth-form-header.saiep-header p { color: #ccc; font-size: 0.85em; }
-.auth-form-body { border: 1px solid #ddd; border-top: none; border-radius: 0 0 8px 8px; padding: 25px; background: #fff; }
-.btn-jupyter { background-color: #E54C3F !important; border-color: #E54C3F !important; color: #fff !important; }
-.btn-jupyter:hover { background-color: #34495E !important; border-color: #34495E !important; }
-label { color: #34495E; font-weight: 600; }
-nav.navbar { background-color: #34495E !important; }
-nav.navbar a.nav-link { color: #ffffff !important; }
-nav.navbar .navbar-brand { color: #ffffff !important; }
-.btn-outline-contrast { color: #ffffff !important; border-color: #ffffff !important; }
-.btn-outline-contrast:hover { background-color: #E54C3F !important; border-color: #E54C3F !important; }
-#dark-theme-toggle { color: #ffffff !important; }
-:root { --jp-orange: #34495E !important; }
-.btn-jupyter, .btn-orange, [class*="btn-jupyter"] { background-color: #E54C3F !important; border-color: #E54C3F !important; }
-a { color: #34495E !important; }
-a:hover { color: #E54C3F !important; }
-.form-control:focus { box-shadow: inset 0 1px 1px rgba(0,0,0,.075), 0 0 8px #34495E !important; border-color: #34495E !important; outline-color: #34495E !important; }
-.btn-jupyter { --bs-btn-bg: #E54C3F !important; --bs-btn-border-color: #E54C3F !important; --bs-btn-hover-bg: #34495E !important; --bs-btn-hover-border-color: #34495E !important; }
-#login-main .auth-form-header { background: #34495E !important; }
-[data-bs-theme="dark"] body { background-color: #1a1a2e !important; color: #fff !important; }
-[data-bs-theme="dark"] #login-main { background: #1a1a2e !important; }
-[data-bs-theme="dark"] .auth-form-body { background: #16213e !important; border-color: #34495E !important; color: #fff !important; }
-[data-bs-theme="dark"] .auth-form-body label { color: #fff !important; }
-[data-bs-theme="dark"] .form-control { background-color: #0f3460 !important; color: #fff !important; border-color: #34495E !important; }
-[data-bs-theme="dark"] .container { color: #fff !important; }
-[data-bs-theme="dark"] nav.navbar { background-color: #16213e !important; }
-[data-bs-theme="dark"] .version_footer { background-color: #16213e !important; color: #fff !important; }
-[data-bs-theme="dark"] table { color: #fff !important; }
-[data-bs-theme="dark"] .table-striped>tbody>tr:nth-of-type(odd) { background-color: #16213e !important; }
+body {
+  background-color: #ffffff !important;
+}
+#login-main {
+  background: #ffffff;
+}
+.auth-form-header.saiep-header {
+  background-color: #34495e;
+  color: #ffffff;
+  padding: 30px 20px;
+  border-radius: 8px 8px 0 0;
+  text-align: center;
+  border-bottom: 4px solid #e54c3f;
+}
+.auth-form-header.saiep-header h1 {
+  color: #ffffff;
+  font-size: 1.6em;
+  margin: 10px 0 5px 0;
+}
+.auth-form-header.saiep-header p {
+  color: #ccc;
+  font-size: 0.85em;
+}
+.auth-form-body {
+  border: 1px solid #ddd;
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  padding: 25px;
+  background: #fff;
+}
+.btn-jupyter {
+  background-color: #e54c3f !important;
+  border-color: #e54c3f !important;
+  color: #fff !important;
+}
+.btn-jupyter:hover {
+  background-color: #34495e !important;
+  border-color: #34495e !important;
+}
+label {
+  color: #34495e;
+  font-weight: 600;
+}
+nav.navbar {
+  background-color: #34495e !important;
+}
+nav.navbar a.nav-link {
+  color: #ffffff !important;
+}
+nav.navbar .navbar-brand {
+  color: #ffffff !important;
+}
+.btn-outline-contrast {
+  color: #ffffff !important;
+  border-color: #ffffff !important;
+}
+.btn-outline-contrast:hover {
+  background-color: #e54c3f !important;
+  border-color: #e54c3f !important;
+}
+#dark-theme-toggle {
+  color: #ffffff !important;
+}
+:root {
+  --jp-orange: #34495e !important;
+}
+.btn-jupyter,
+.btn-orange,
+[class*="btn-jupyter"] {
+  background-color: #e54c3f !important;
+  border-color: #e54c3f !important;
+}
+a {
+  color: #34495e !important;
+}
+a:hover {
+  color: #e54c3f !important;
+}
+.form-control:focus {
+  box-shadow:
+    inset 0 1px 1px rgba(0, 0, 0, 0.075),
+    0 0 8px #34495e !important;
+  border-color: #34495e !important;
+  outline-color: #34495e !important;
+}
+.btn-jupyter {
+  --bs-btn-bg: #e54c3f !important;
+  --bs-btn-border-color: #e54c3f !important;
+  --bs-btn-hover-bg: #34495e !important;
+  --bs-btn-hover-border-color: #34495e !important;
+}
+#login-main .auth-form-header {
+  background: #34495e !important;
+}
+[data-bs-theme="dark"] body {
+  background-color: #1a1a2e !important;
+  color: #fff !important;
+}
+[data-bs-theme="dark"] #login-main {
+  background: #1a1a2e !important;
+}
+[data-bs-theme="dark"] .auth-form-body {
+  background: #16213e !important;
+  border-color: #34495e !important;
+  color: #fff !important;
+}
+[data-bs-theme="dark"] .auth-form-body label {
+  color: #fff !important;
+}
+[data-bs-theme="dark"] .form-control {
+  background-color: #0f3460 !important;
+  color: #fff !important;
+  border-color: #34495e !important;
+}
+[data-bs-theme="dark"] .container {
+  color: #fff !important;
+}
+[data-bs-theme="dark"] nav.navbar {
+  background-color: #16213e !important;
+}
+[data-bs-theme="dark"] .version_footer {
+  background-color: #16213e !important;
+  color: #fff !important;
+}
+[data-bs-theme="dark"] table {
+  color: #fff !important;
+}
+[data-bs-theme="dark"] .table-striped > tbody > tr:nth-of-type(odd) {
+  background-color: #16213e !important;
+}
