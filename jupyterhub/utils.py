@@ -142,7 +142,6 @@ async def async_fetch(
     method: str = "GET",
     body: Any = None,
     headers: Any = None,
-    io_loop: Any = None,
     ssl_options: Dict[str, Any] = None,
     raise_error: bool = True,
     **kwargs,
@@ -179,9 +178,7 @@ async def async_fetch(
         using_pycurl=using_pycurl,
         **request_args,
     ) as request:
-        response = await AsyncHTTPClient(io_loop).fetch(
-            request, raise_error=raise_error
-        )
+        response = await AsyncHTTPClient().fetch(request, raise_error=raise_error)
     return response
 
 

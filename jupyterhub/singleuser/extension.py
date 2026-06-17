@@ -371,7 +371,6 @@ class JupyterHubSingleUser(ExtensionApp):
             try:
                 resp = await async_fetch(
                     self.hub_auth.api_url,
-                    io_loop=self.serverapp.io_loop,
                     **self.hub_http_client_opts,
                 )
             except Exception:
@@ -464,7 +463,6 @@ class JupyterHubSingleUser(ExtensionApp):
                             'last_activity': last_activity_timestamp,
                         }
                     ),
-                    io_loop=self.serverapp.io_loop,
                     **self.hub_http_client_opts,
                 )
             except Exception as e:

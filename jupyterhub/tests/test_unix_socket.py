@@ -50,7 +50,6 @@ async def test_unix_socket_proxy(request, tmp_path):
     r = await async_fetch(
         f'{cfg.bind_url}/hub/api/info',
         method="GET",
-        io_loop=app.io_loop,
         headers=headers,
     )
     assert r.code == 200
@@ -59,7 +58,6 @@ async def test_unix_socket_proxy(request, tmp_path):
     r = await async_fetch(
         f'{app.proxy.api_url}/api/routes',
         method="GET",
-        io_loop=app.io_loop,
         headers={"Authorization": f'token {app.proxy.auth_token}'},
     )
     assert r.code == 200

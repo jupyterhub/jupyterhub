@@ -958,7 +958,6 @@ class ConfigurableHTTPProxy(Proxy):
                 async with self.semaphore:
                     return await async_fetch(
                         url,
-                        io_loop=asyncio.get_running_loop(),
                         method=method,
                         headers={'Authorization': f'token {self.auth_token}'},
                         body=body,
