@@ -60,9 +60,8 @@ class Server(HasTraits):
         if urlinfo.scheme:
             self.proto = urlinfo.scheme
 
-        if self.proto == 'unix+http':
-            self.connect_url = f'unix+http://{urlinfo.netloc}'
-            self.port = 0
+        if self._unix_socket:
+            self.connect_url = f'{self.proto}://{urlinfo.netloc}'  # only proto and netloc, without path
             self.connect_addr = urlinfo.netloc
         else:
             self.ip = urlinfo.hostname or ''
@@ -117,6 +116,10 @@ class Server(HasTraits):
         if self.connect_port:
             return self.connect_port
         return self.port
+
+    @property
+    def _unix_socket(self):
+        return self.proto == 'unix+http'
 
     @classmethod
     def from_orm(cls, orm_server):
@@ -193,7 +196,10 @@ class Server(HasTraits):
             )
         else:
             return wait_for_server(
-                self.connect_addr, self._connect_port, timeout=timeout
+                self.connect_addr,
+                self._connect_port,
+                timeout=timeout,
+                unix_socket=self._unix_socket,
             )
 
     def is_up(self):

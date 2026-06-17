@@ -249,15 +249,15 @@ def isoformat(dt):
     return dt.isoformat() + 'Z'
 
 
-def can_connect(address, port=None):
+def can_connect(address, port=None, unix_socket=False):
     """Check if we can connect to an address (ip or socket path) and optional port.
 
     Return True if we can connect, False otherwise.
     """
-    if port:
-        return can_connect_ip(address, port)
-    else:
+    if unix_socket:
         return unix_socket_in_use(unquote_plus(address))
+    else:
+        return can_connect_ip(address, port)
 
 
 def can_connect_ip(ip, port):
@@ -426,17 +426,17 @@ async def exponential_backoff(
     raise asyncio.TimeoutError(fail_message)
 
 
-async def wait_for_server(address, port, timeout=10):
+async def wait_for_server(address, port, timeout=10, unix_socket=False):
     """Wait for any server to show up at address:port."""
-    if port:
-        display_address = f"{fmt_ip_url(address)}:{port}"
-    else:
+    if unix_socket:
         display_address = address
+    else:
+        display_address = f"{fmt_ip_url(address)}:{port}"
 
     app_log.debug("Waiting %ss for server at %s", timeout, display_address)
     tic = time.perf_counter()
     await exponential_backoff(
-        lambda: can_connect(address, port),
+        lambda: can_connect(address, port, unix_socket),
         f"Server at {display_address} didn't respond in {timeout} seconds",
         timeout=timeout,
     )

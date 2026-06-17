@@ -728,7 +728,7 @@ class ConfigurableHTTPProxy(Proxy):
         env['CONFIGPROXY_AUTH_TOKEN'] = self.auth_token
 
         proxy_server = Server.from_url(self.public_url)
-        if proxy_server.proto == 'unix+http':
+        if proxy_server._unix_socket:
             server_args = (
                 '--socket',
                 unquote_plus(proxy_server.connect_addr),
@@ -742,7 +742,7 @@ class ConfigurableHTTPProxy(Proxy):
             )
 
         api_server = Server.from_url(self.api_url)
-        if api_server.proto == 'unix+http':
+        if api_server._unix_socket:
             api_args = (
                 '--api-socket',
                 unquote_plus(api_server.connect_addr),
