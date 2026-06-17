@@ -120,7 +120,7 @@ class Server(HasTraits):
 
     @property
     def _unix_socket(self):
-        return self.proto == 'unix+http'
+        return self.proto == 'http+unix'
 
     @classmethod
     def from_orm(cls, orm_server):

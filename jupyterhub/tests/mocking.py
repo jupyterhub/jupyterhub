@@ -286,7 +286,7 @@ class MockHub(JupyterHub):
     @default('bind_url')
     def _default_bind_url(self):
         if self.socket:
-            return f"unix+http://{self.socket}"
+            return f"http+unix://{self.socket}"
         if self.subdomain_host:
             port = urlparse(self.subdomain_host).port
         else:

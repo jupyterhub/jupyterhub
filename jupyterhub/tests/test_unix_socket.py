@@ -16,8 +16,8 @@ async def test_unix_socket_proxy(request, tmp_path):
 
     auth_token = 'secret!'
 
-    cfg.bind_url = f'unix+http://{quote_plus(proxy_sock)}'
-    cfg.ConfigurableHTTPProxy.api_url = f'unix+http://{quote_plus(api_sock)}'
+    cfg.bind_url = f'http+unix://{quote_plus(proxy_sock)}'
+    cfg.ConfigurableHTTPProxy.api_url = f'http+unix://{quote_plus(api_sock)}'
     cfg.ConfigurableHTTPProxy.should_start = True
     cfg.ConfigurableHTTPProxy.auth_token = auth_token
 

@@ -749,7 +749,7 @@ class JupyterHub(Application):
         For example:
 
             ""http://:8000""
-            "unix+http://%2Fsrv%2Fjupyterhub%2Fproxy.sock"
+            "http+unix://%2Fsrv%2Fjupyterhub%2Fproxy.sock"
         """,
     ).tag(config=True)
 
@@ -759,6 +759,11 @@ class JupyterHub(Application):
         v = proposal['value']
         proto, sep, rest = v.partition('://')
         if proto == 'unix+http':
+            self.log.warning(
+                "Using deprecated 'unix+http' protocol. Please use 'http+unix' instead."
+            )
+            return f'http+unix://{rest}'
+        elif proto == 'http+unix':
             return v
         elif self.ssl_cert and proto != 'https':
             return 'https' + sep + rest
@@ -1057,7 +1062,7 @@ class JupyterHub(Application):
         to talk to the Hub.
 
         Only needs to be specified if the default hub URL is not
-        connectable (e.g. using a unix+http:// bind url).
+        connectable (e.g. using a http+unix:// bind url).
 
         .. seealso::
             JupyterHub.hub_connect_ip
@@ -1078,7 +1083,7 @@ class JupyterHub(Application):
         For example:
 
             "http://127.0.0.1:8081"
-            "unix+http://%2Fsrv%2Fjupyterhub%2Fjupyterhub.sock"
+            "http+unix://%2Fsrv%2Fjupyterhub%2Fjupyterhub.sock"
 
         .. versionadded:: 0.9
         """,
@@ -3838,7 +3843,7 @@ class JupyterHub(Application):
         )
         bind_url = urlparse(self.hub.bind_url)
         try:
-            if bind_url.scheme.startswith('unix+'):
+            if bind_url.scheme.startswith('http+unix'):
                 from tornado.netutil import bind_unix_socket
 
                 socket = bind_unix_socket(unquote(bind_url.netloc))

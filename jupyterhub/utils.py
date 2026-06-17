@@ -82,7 +82,7 @@ def _request_for_tornado_client(
 
     if parts.scheme in ["http", "https"]:
         pass
-    elif parts.scheme == "unix+http":
+    elif parts.scheme == 'http+unix':
         # If unix socket, mimic HTTP.
         socket_path = parts.netloc
         hostname = 'localhost' if using_pycurl else socket_path
@@ -98,7 +98,7 @@ def _request_for_tornado_client(
             """A resolver that routes HTTP requests to unix sockets
             in tornado HTTP clients.
             Due to constraints in Tornados' API, the scheme of the
-            must be `http` (not `unix+http`). Applications should replace
+            must be `http` (not `http+unix`). Applications should replace
             the scheme in URLS before making a request to the HTTP client.
             """
 
@@ -146,7 +146,7 @@ async def async_fetch(
     **kwargs,
 ) -> HTTPResponse:
     """
-    Send an asynchronous HTTP, HTTPS, or UNIX+HTTP request
+    Send an asynchronous HTTP, HTTPS, or http+unix request
     to a Tornado Web Server. Returns a tornado HTTPResponse.
     """
 

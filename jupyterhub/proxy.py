@@ -682,7 +682,7 @@ class ConfigurableHTTPProxy(Proxy):
         paths = [self.pid_file]
         for socket_url in [self.public_url, self.api_url]:
             proto, sep, rest = socket_url.partition('://')
-            if proto == 'unix+http':
+            if proto == 'http+unix':
                 paths.append(unquote_plus(rest))
         for path in paths:
             try:
