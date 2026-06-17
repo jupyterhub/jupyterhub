@@ -592,9 +592,11 @@ class HubAuth(SingletonConfigurable):
             self.cache[cache_key] = data
         return data
 
-    async def _api_request(self, method, url, headers={}, **kwargs):
+    async def _api_request(self, method, url, headers=None, **kwargs):
         """Make an API request"""
         allow_403 = kwargs.pop('allow_403', False)
+        if headers is None:
+            headers = {}
         headers.setdefault('Authorization', f'token {self.api_token}')
         # translate requests args to tornado's
         if self.certfile:
