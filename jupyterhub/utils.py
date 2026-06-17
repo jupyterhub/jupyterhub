@@ -4,7 +4,6 @@
 # Distributed under the terms of the Modified BSD License.
 import asyncio
 import concurrent.futures
-import copy
 import errno
 import functools
 import hashlib
@@ -156,19 +155,9 @@ async def async_fetch(
     else:
         using_pycurl = False
 
-    if ssl_options:
-        request_ssl_options = {k: v for k, v in ssl_options.items() if v is not None}
-        keyfile = request_ssl_options.pop("keyfile")
-        certfile = request_ssl_options.pop("certfile")
-        request_ssl_options = make_ssl_context(keyfile, certfile, **request_ssl_options)
-    else:
-        request_ssl_options = None
     # ssl_options not allowed on pycurl
     if not using_pycurl:
-        request_args = copy.deepcopy(kwargs)
-        request_args['ssl_options'] = request_ssl_options
-    else:
-        request_args = kwargs
+        kwargs['ssl_options'] = ssl_options
 
     with _request_for_tornado_client(
         urlstring,
@@ -176,7 +165,7 @@ async def async_fetch(
         body=body,
         headers=headers,
         using_pycurl=using_pycurl,
-        **request_args,
+        **kwargs,
     ) as request:
         response = await AsyncHTTPClient().fetch(request, raise_error=raise_error)
     return response

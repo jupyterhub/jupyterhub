@@ -21,6 +21,7 @@ from .spawner import LocalProcessSpawner
 from .utils import (
     AnyTimeoutError,
     _strict_dns_safe,
+    make_ssl_context,
     maybe_future,
     subdomain_hook_legacy,
     url_escape_path,
@@ -1096,11 +1097,10 @@ class User:
         spawner.http_timeout.
         """
         server = spawner.server
-        ssl_context = {
-            'keyfile': self.settings.get('internal_ssl_key'),
-            'certfile': self.settings.get('internal_ssl_cert'),
-            'cafile': self.settings.get('internal_ssl_ca'),
-        }
+        key = self.settings.get('internal_ssl_key')
+        cert = self.settings.get('internal_ssl_cert')
+        ca = self.settings.get('internal_ssl_ca')
+        ssl_context = make_ssl_context(key, cert, cafile=ca)
         try:
             resp = await server.wait_up(
                 http=True,
