@@ -681,8 +681,9 @@ class ConfigurableHTTPProxy(Proxy):
             return
         paths = [self.pid_file]
         for socket_url in [self.public_url, self.api_url]:
-            if socket_url.startswith('unix+http://'):
-                paths.append(unquote_plus(socket_url[12:]))
+            proto, sep, rest = socket_url.partition('://')
+            if proto == 'unix+http':
+                paths.append(unquote_plus(rest))
         for path in paths:
             try:
                 os.remove(path)
