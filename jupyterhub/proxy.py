@@ -24,7 +24,7 @@ import signal
 import time
 from functools import wraps
 from subprocess import Popen
-from urllib.parse import quote, urlparse
+from urllib.parse import quote, unquote_plus, urlparse
 from weakref import WeakKeyDictionary
 
 from tornado.httpclient import AsyncHTTPClient, HTTPError
@@ -54,7 +54,6 @@ from .utils import (
     exponential_backoff,
     url_escape_path,
     url_path_join,
-    urldecode_unix_socket_path,
 )
 
 
@@ -683,7 +682,7 @@ class ConfigurableHTTPProxy(Proxy):
         paths = [self.pid_file]
         for socket_url in [self.public_url, self.api_url]:
             if socket_url.startswith('unix+http://'):
-                paths.append(urldecode_unix_socket_path(socket_url[12:]))
+                paths.append(unquote_plus(socket_url[12:]))
         for path in paths:
             try:
                 os.remove(path)
@@ -732,7 +731,7 @@ class ConfigurableHTTPProxy(Proxy):
         if proxy_server.proto == 'unix+http':
             server_args = (
                 '--socket',
-                urldecode_unix_socket_path(proxy_server.connect_addr),
+                unquote_plus(proxy_server.connect_addr),
             )
         else:
             server_args = (
@@ -746,7 +745,7 @@ class ConfigurableHTTPProxy(Proxy):
         if api_server.proto == 'unix+http':
             api_args = (
                 '--api-socket',
-                urldecode_unix_socket_path(api_server.connect_addr),
+                unquote_plus(api_server.connect_addr),
             )
         else:
             api_args = (

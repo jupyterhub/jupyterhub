@@ -84,7 +84,6 @@ def test_ip_port(ip, port, attrs):
             'unix+http://%2Ftmp%2Ftest.sock',
             {
                 'ip': '',
-                'port': 0,
                 'bind_url': 'unix+http://%2Ftmp%2Ftest.sock',
                 'connect_addr': '%2Ftmp%2Ftest.sock',
                 'connect_url': 'unix+http://%2Ftmp%2Ftest.sock/',
@@ -97,7 +96,6 @@ def test_ip_port(ip, port, attrs):
             'unix+http://%2Ftmp%2Ftest.sock/foo',
             {
                 'ip': '',
-                'port': 0,
                 'bind_url': 'unix+http://%2Ftmp%2Ftest.sock/foo',
                 'connect_addr': '%2Ftmp%2Ftest.sock',
                 'connect_url': 'unix+http://%2Ftmp%2Ftest.sock/foo/',

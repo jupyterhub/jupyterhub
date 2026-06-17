@@ -1,8 +1,10 @@
 """Test managing a ConfigurableHTTPProxy running on unix sockets."""
 
+from urllib.parse import quote_plus
+
 from traitlets.config import Config
 
-from ..utils import async_fetch, urlencode_unix_socket_path
+from ..utils import async_fetch
 from .mocking import MockHub
 from .utils import auth_header
 
@@ -14,10 +16,8 @@ async def test_unix_socket_proxy(request, tmp_path):
 
     auth_token = 'secret!'
 
-    cfg.bind_url = f'unix+http://{urlencode_unix_socket_path(proxy_sock)}'
-    cfg.ConfigurableHTTPProxy.api_url = (
-        f'unix+http://{urlencode_unix_socket_path(api_sock)}'
-    )
+    cfg.bind_url = f'unix+http://{quote_plus(proxy_sock)}'
+    cfg.ConfigurableHTTPProxy.api_url = f'unix+http://{quote_plus(api_sock)}'
     cfg.ConfigurableHTTPProxy.should_start = True
     cfg.ConfigurableHTTPProxy.auth_token = auth_token
 

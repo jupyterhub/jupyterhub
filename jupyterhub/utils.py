@@ -32,6 +32,7 @@ from typing import Any, Dict
 from urllib.parse import (
     SplitResult,
     quote,
+    unquote_plus,
     urlsplit,
     urlunsplit,
 )
@@ -42,16 +43,6 @@ from tornado import gen, ioloop, web
 from tornado.httpclient import AsyncHTTPClient, HTTPError, HTTPRequest, HTTPResponse
 from tornado.log import app_log
 from tornado.netutil import Resolver
-
-
-def urlencode_unix_socket_path(socket_path: str) -> str:
-    """Encodes a UNIX socket path string from a socket path for the `http+unix` URI form."""
-    return socket_path.replace("/", "%2F")
-
-
-def urldecode_unix_socket_path(socket_path: str) -> str:
-    """Decodes a UNIX sock path string from an encoded sock path for the `http+unix` URI form."""
-    return socket_path.replace("%2F", "/")
 
 
 def unix_socket_in_use(socket_path: str) -> bool:
@@ -119,7 +110,7 @@ def _request_for_tornado_client(
                 self.resolver.close()
 
             async def resolve(self, host, port, *args, **kwargs):
-                return [(socket.AF_UNIX, urldecode_unix_socket_path(host))]
+                return [(socket.AF_UNIX, unquote_plus(host))]
 
         # if not using pycurl, we need to use our custom resolver
         # if using pycurl, we can implement a unix socket connection with a curl callback
@@ -127,7 +118,7 @@ def _request_for_tornado_client(
             import pycurl
 
             extra_request_args['prepare_curl_callback'] = lambda curl: curl.setopt(
-                pycurl.UNIX_SOCKET_PATH, urldecode_unix_socket_path(socket_path)
+                pycurl.UNIX_SOCKET_PATH, unquote_plus(socket_path)
             )
         else:
             resolver = UnixSocketResolver(resolver=Resolver())
@@ -266,7 +257,7 @@ def can_connect(address, port=None):
     if port:
         return can_connect_ip(address, port)
     else:
-        return unix_socket_in_use(urldecode_unix_socket_path(address))
+        return unix_socket_in_use(unquote_plus(address))
 
 
 def can_connect_ip(ip, port):
