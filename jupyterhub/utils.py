@@ -82,7 +82,7 @@ def _request_for_tornado_client(
 
     if parts.scheme in ["http", "https"]:
         pass
-    elif "unix" in parts.scheme:
+    elif parts.scheme == "unix+http":
         # If unix socket, mimic HTTP.
         socket_path = parts.netloc
         hostname = 'localhost' if using_pycurl else socket_path
