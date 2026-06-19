@@ -9,6 +9,7 @@ interface (no third-party branding). Exposes:
                                      create/update/swarm init...)
 All endpoints require an authenticated JupyterHub admin.
 """
+
 import asyncio
 import json
 import math
@@ -52,7 +53,7 @@ class ResourcesIndexHandler(_AdminBase):
     async def get(self):
         self._require_admin()
         path = os.path.join(BASE_DIR, 'static', 'admin', 'index.html')
-        with open(path, 'r', encoding='utf-8') as f:
+        with open(path, encoding='utf-8') as f:
             self.finish(f.read())
 
 
@@ -84,7 +85,9 @@ class ResourcesApiHandler(_AdminBase):
             'images': info.get('Images', 0),
             'docker_version': info.get('ServerVersion', ''),
             'swarm_active': swarm.get('LocalNodeState') == 'active',
-            'nodes': swarm.get('Nodes', 1) if swarm.get('LocalNodeState') == 'active' else 1,
+            'nodes': (
+                swarm.get('Nodes', 1) if swarm.get('LocalNodeState') == 'active' else 1
+            ),
             'hostname': info.get('Name', ''),
         }
 
@@ -99,57 +102,75 @@ class ResourcesApiHandler(_AdminBase):
                 for cont, binds in (x.attrs['NetworkSettings']['Ports'] or {}).items():
                     if binds:
                         for b in binds:
-                            ports.append('%s->%s' % (b.get('HostPort', ''), cont))
+                            ports.append('{}->{}'.format(b.get('HostPort', ''), cont))
             except Exception:
                 pass
-            out.append({
-                'id': x.short_id,
-                'name': x.name,
-                'image': image,
-                'status': x.status,
-                'state': x.attrs.get('State', {}).get('Status', x.status),
-                'ports': ', '.join(ports),
-            })
+            out.append(
+                {
+                    'id': x.short_id,
+                    'name': x.name,
+                    'image': image,
+                    'status': x.status,
+                    'state': x.attrs.get('State', {}).get('Status', x.status),
+                    'ports': ', '.join(ports),
+                }
+            )
         return {'containers': out}
 
     async def _section_volumes(self):
         c = _client()
         vols = await _run(c.volumes.list)
-        return {'volumes': [
-            {'name': v.name, 'driver': v.attrs.get('Driver', ''),
-             'mountpoint': v.attrs.get('Mountpoint', '')}
-            for v in vols
-        ]}
+        return {
+            'volumes': [
+                {
+                    'name': v.name,
+                    'driver': v.attrs.get('Driver', ''),
+                    'mountpoint': v.attrs.get('Mountpoint', ''),
+                }
+                for v in vols
+            ]
+        }
 
     async def _section_networks(self):
         c = _client()
         nets = await _run(c.networks.list)
-        return {'networks': [
-            {'id': n.short_id, 'name': n.name,
-             'driver': n.attrs.get('Driver', ''),
-             'scope': n.attrs.get('Scope', '')}
-            for n in nets
-        ]}
+        return {
+            'networks': [
+                {
+                    'id': n.short_id,
+                    'name': n.name,
+                    'driver': n.attrs.get('Driver', ''),
+                    'scope': n.attrs.get('Scope', ''),
+                }
+                for n in nets
+            ]
+        }
 
     async def _section_images(self):
         c = _client()
         imgs = await _run(c.images.list)
         out = []
         for i in imgs:
-            out.append({
-                'id': i.short_id.replace('sha256:', ''),
-                'tags': i.tags or ['<none>'],
-                'size_mb': round(i.attrs.get('Size', 0) / 1048576, 1),
-            })
+            out.append(
+                {
+                    'id': i.short_id.replace('sha256:', ''),
+                    'tags': i.tags or ['<none>'],
+                    'size_mb': round(i.attrs.get('Size', 0) / 1048576, 1),
+                }
+            )
         return {'images': out}
 
     async def _section_nodes(self):
         c = _client()
         info = await _run(c.info)
         active = info.get('Swarm', {}).get('LocalNodeState') == 'active'
-        result = {'swarm_active': active, 'nodes': [], 'join_command': None,
-                  'total_cpu': info.get('NCPU', 0),
-                  'total_mem_gb': round(info.get('MemTotal', 0) / GiB, 1)}
+        result = {
+            'swarm_active': active,
+            'nodes': [],
+            'join_command': None,
+            'total_cpu': info.get('NCPU', 0),
+            'total_mem_gb': round(info.get('MemTotal', 0) / GiB, 1),
+        }
         if not active:
             return result
         nodes = await _run(c.nodes.list)
@@ -163,21 +184,25 @@ class ResourcesApiHandler(_AdminBase):
             role = a.get('Spec', {}).get('Role', '')
             if role == 'manager' and a.get('ManagerStatus', {}).get('Addr'):
                 manager_addr = a['ManagerStatus']['Addr']
-            result['nodes'].append({
-                'id': n.id,
-                'hostname': a.get('Description', {}).get('Hostname', ''),
-                'role': role,
-                'state': a.get('Status', {}).get('State', ''),
-                'availability': a.get('Spec', {}).get('Availability', ''),
-                'leader': a.get('ManagerStatus', {}).get('Leader', False),
-                'cpu': ncpu,
-                'mem_gb': round(res.get('MemoryBytes', 0) / GiB, 1),
-            })
+            result['nodes'].append(
+                {
+                    'id': n.id,
+                    'hostname': a.get('Description', {}).get('Hostname', ''),
+                    'role': role,
+                    'state': a.get('Status', {}).get('State', ''),
+                    'availability': a.get('Spec', {}).get('Availability', ''),
+                    'leader': a.get('ManagerStatus', {}).get('Leader', False),
+                    'cpu': ncpu,
+                    'mem_gb': round(res.get('MemoryBytes', 0) / GiB, 1),
+                }
+            )
         result['total_cpu'] = total_cpu
         result['total_mem_gb'] = round(total_mem / GiB, 1)
         token = c.swarm.attrs.get('JoinTokens', {}).get('Worker')
         if token and manager_addr:
-            result['join_command'] = 'docker swarm join --token %s %s' % (token, manager_addr)
+            result['join_command'] = 'docker swarm join --token {} {}'.format(
+                token, manager_addr
+            )
         return result
 
 
@@ -188,9 +213,14 @@ async def _prom(query, rng=False, hours=3):
         start = end - hours * 3600
         step = max(60, int(hours * 3600 / 90))
         url = '%s/api/v1/query_range?query=%s&start=%d&end=%d&step=%d' % (
-            PROM_URL, quote(query), start, end, step)
+            PROM_URL,
+            quote(query),
+            start,
+            end,
+            step,
+        )
     else:
-        url = '%s/api/v1/query?query=%s' % (PROM_URL, quote(query))
+        url = '{}/api/v1/query?query={}'.format(PROM_URL, quote(query))
     try:
         resp = await http.fetch(url, request_timeout=8)
         return json.loads(resp.body)
@@ -242,18 +272,34 @@ async def gather_metrics(hours=3):
         'total_users': total_users,
         'hours': hours,
         'servers_series': _series(
-            await _prom('jupyterhub_running_servers', rng=True, hours=hours), 0),
+            await _prom('jupyterhub_running_servers', rng=True, hours=hours), 0
+        ),
         'request_rate': _series(
-            await _prom('sum(rate(jupyterhub_request_duration_seconds_count[5m]))',
-                        rng=True, hours=hours), 3),
+            await _prom(
+                'sum(rate(jupyterhub_request_duration_seconds_count[5m]))',
+                rng=True,
+                hours=hours,
+            ),
+            3,
+        ),
         'latency_p95': _series(
-            await _prom('histogram_quantile(0.95, sum(rate('
-                        'jupyterhub_request_duration_seconds_bucket[5m])) by (le))',
-                        rng=True, hours=hours), 3),
+            await _prom(
+                'histogram_quantile(0.95, sum(rate('
+                'jupyterhub_request_duration_seconds_bucket[5m])) by (le))',
+                rng=True,
+                hours=hours,
+            ),
+            3,
+        ),
         'spawn_p95': _series(
-            await _prom('histogram_quantile(0.95, sum(rate('
-                        'jupyterhub_server_spawn_duration_seconds_bucket[10m])) by (le))',
-                        rng=True, hours=hours), 2),
+            await _prom(
+                'histogram_quantile(0.95, sum(rate('
+                'jupyterhub_server_spawn_duration_seconds_bucket[10m])) by (le))',
+                rng=True,
+                hours=hours,
+            ),
+            2,
+        ),
     }
 
 
@@ -280,13 +326,17 @@ class ResourcesActionHandler(_AdminBase):
     async def _do(self, c, action, target, params):
         # --- containers ---
         if action == 'container.start':
-            await _run((await _run(c.containers.get, target)).start); return 'démarré'
+            await _run((await _run(c.containers.get, target)).start)
+            return 'démarré'
         if action == 'container.stop':
-            await _run((await _run(c.containers.get, target)).stop); return 'arrêté'
+            await _run((await _run(c.containers.get, target)).stop)
+            return 'arrêté'
         if action == 'container.restart':
-            await _run((await _run(c.containers.get, target)).restart); return 'redémarré'
+            await _run((await _run(c.containers.get, target)).restart)
+            return 'redémarré'
         if action == 'container.remove':
-            await _run((await _run(c.containers.get, target)).remove, force=True); return 'supprimé'
+            await _run((await _run(c.containers.get, target)).remove, force=True)
+            return 'supprimé'
         if action == 'container.logs':
             x = await _run(c.containers.get, target)
             logs = await _run(x.logs, tail=300)
@@ -297,20 +347,30 @@ class ResourcesActionHandler(_AdminBase):
             cfg = a.get('Config', {})
             hostcfg = a.get('HostConfig', {})
             ports = []
-            for cont, binds in (a.get('NetworkSettings', {}).get('Ports') or {}).items():
+            for cont, binds in (
+                a.get('NetworkSettings', {}).get('Ports') or {}
+            ).items():
                 if binds:
-                    ports += ['%s→%s' % (b.get('HostPort', ''), cont) for b in binds]
+                    ports += [
+                        '{}→{}'.format(b.get('HostPort', ''), cont) for b in binds
+                    ]
                 else:
                     ports.append(cont)
-            mounts = ['%s → %s' % (m.get('Source', m.get('Name', '')), m.get('Destination', ''))
-                      for m in a.get('Mounts', [])]
+            mounts = [
+                '{} → {}'.format(
+                    m.get('Source', m.get('Name', '')), m.get('Destination', '')
+                )
+                for m in a.get('Mounts', [])
+            ]
             nets = list((a.get('NetworkSettings', {}).get('Networks') or {}).keys())
             return {
                 'name': a.get('Name', '').lstrip('/'),
                 'image': cfg.get('Image', ''),
                 'state': a.get('State', {}).get('Status', ''),
                 'created': (a.get('Created', '') or '')[:19].replace('T', ' '),
-                'command': ' '.join(cfg.get('Cmd') or []) or (cfg.get('Entrypoint') and ' '.join(cfg['Entrypoint'])) or '',
+                'command': ' '.join(cfg.get('Cmd') or [])
+                or (cfg.get('Entrypoint') and ' '.join(cfg['Entrypoint']))
+                or '',
                 'restart_policy': (hostcfg.get('RestartPolicy') or {}).get('Name', ''),
                 'mem_limit_mb': round((hostcfg.get('Memory') or 0) / 1048576, 1),
                 'nano_cpus': round((hostcfg.get('NanoCpus') or 0) / 1e9, 2),
@@ -323,16 +383,23 @@ class ResourcesActionHandler(_AdminBase):
         if action == 'container.stats':
             x = await _run(c.containers.get, target)
             s = await _run(x.stats, stream=False)
-            cpu = s.get('cpu_stats', {}); pre = s.get('precpu_stats', {})
-            cd = cpu.get('cpu_usage', {}).get('total_usage', 0) - pre.get('cpu_usage', {}).get('total_usage', 0)
+            cpu = s.get('cpu_stats', {})
+            pre = s.get('precpu_stats', {})
+            cd = cpu.get('cpu_usage', {}).get('total_usage', 0) - pre.get(
+                'cpu_usage', {}
+            ).get('total_usage', 0)
             sd = cpu.get('system_cpu_usage', 0) - pre.get('system_cpu_usage', 0)
-            ncpu = cpu.get('online_cpus') or len(cpu.get('cpu_usage', {}).get('percpu_usage') or [1])
+            ncpu = cpu.get('online_cpus') or len(
+                cpu.get('cpu_usage', {}).get('percpu_usage') or [1]
+            )
             cpu_pct = round((cd / sd) * ncpu * 100, 1) if sd > 0 else 0.0
             mem = s.get('memory_stats', {})
-            usage = mem.get('usage', 0); limit = mem.get('limit', 0)
+            usage = mem.get('usage', 0)
+            limit = mem.get('limit', 0)
             rx = tx = 0
             for n in (s.get('networks') or {}).values():
-                rx += n.get('rx_bytes', 0); tx += n.get('tx_bytes', 0)
+                rx += n.get('rx_bytes', 0)
+                tx += n.get('tx_bytes', 0)
             return {
                 'cpu_pct': cpu_pct,
                 'mem_mb': round(usage / 1048576, 1),
@@ -348,43 +415,65 @@ class ResourcesActionHandler(_AdminBase):
                 kw['mem_limit'] = int(float(params['mem_gb']) * GiB)
             if params.get('cpus'):
                 kw['nano_cpus'] = int(float(params['cpus']) * 1e9)
-            await _run(x.update, **kw); return 'limites mises à jour'
+            await _run(x.update, **kw)
+            return 'limites mises à jour'
         if action == 'container.create':
-            await _run(c.containers.run, params['image'], name=params.get('name') or None,
-                       command=params.get('command') or None, detach=True,
-                       restart_policy={'Name': 'unless-stopped'})
+            await _run(
+                c.containers.run,
+                params['image'],
+                name=params.get('name') or None,
+                command=params.get('command') or None,
+                detach=True,
+                restart_policy={'Name': 'unless-stopped'},
+            )
             return 'conteneur créé'
         # --- images ---
         if action == 'image.pull':
-            await _run(c.images.pull, params['name']); return 'image téléchargée'
+            await _run(c.images.pull, params['name'])
+            return 'image téléchargée'
         if action == 'image.remove':
-            await _run(c.images.remove, target, force=True); return 'image supprimée'
+            await _run(c.images.remove, target, force=True)
+            return 'image supprimée'
         # --- volumes ---
         if action == 'volume.create':
-            await _run(c.volumes.create, name=params['name']); return 'volume créé'
+            await _run(c.volumes.create, name=params['name'])
+            return 'volume créé'
         if action == 'volume.remove':
-            await _run((await _run(c.volumes.get, target)).remove, force=True); return 'volume supprimé'
+            await _run((await _run(c.volumes.get, target)).remove, force=True)
+            return 'volume supprimé'
         # --- networks ---
         if action == 'network.create':
-            await _run(c.networks.create, params['name'],
-                       driver=params.get('driver') or 'bridge'); return 'réseau créé'
+            await _run(
+                c.networks.create,
+                params['name'],
+                driver=params.get('driver') or 'bridge',
+            )
+            return 'réseau créé'
         if action == 'network.remove':
-            await _run((await _run(c.networks.get, target)).remove); return 'réseau supprimé'
+            await _run((await _run(c.networks.get, target)).remove)
+            return 'réseau supprimé'
         # --- swarm / nodes ---
         if action == 'swarm.init':
-            await _run(c.swarm.init, advertise_addr=PUBLIC_IP); return 'cluster activé'
+            await _run(c.swarm.init, advertise_addr=PUBLIC_IP)
+            return 'cluster activé'
         if action == 'swarm.leave':
-            await _run(c.swarm.leave, force=True); return 'cluster désactivé'
+            await _run(c.swarm.leave, force=True)
+            return 'cluster désactivé'
         if action == 'node.drain':
             n = await _run(c.nodes.get, target)
-            spec = dict(n.attrs['Spec']); spec['Availability'] = 'drain'
-            await _run(n.update, spec); return 'nœud drainé'
+            spec = dict(n.attrs['Spec'])
+            spec['Availability'] = 'drain'
+            await _run(n.update, spec)
+            return 'nœud drainé'
         if action == 'node.activate':
             n = await _run(c.nodes.get, target)
-            spec = dict(n.attrs['Spec']); spec['Availability'] = 'active'
-            await _run(n.update, spec); return 'nœud activé'
+            spec = dict(n.attrs['Spec'])
+            spec['Availability'] = 'active'
+            await _run(n.update, spec)
+            return 'nœud activé'
         if action == 'node.remove':
-            await _run((await _run(c.nodes.get, target)).remove, force=True); return 'nœud retiré'
+            await _run((await _run(c.nodes.get, target)).remove, force=True)
+            return 'nœud retiré'
         raise web.HTTPError(400, 'Action inconnue: %s' % action)
 
 
@@ -393,7 +482,7 @@ class MonitoringIndexHandler(_AdminBase):
     async def get(self):
         self._require_admin()
         path = os.path.join(BASE_DIR, 'static', 'admin', 'monitoring.html')
-        with open(path, 'r', encoding='utf-8') as f:
+        with open(path, encoding='utf-8') as f:
             self.finish(f.read())
 
 

@@ -25,64 +25,66 @@
                   type="button"
                   class="btn btn-lg btn-danger"
                   style="margin-right: 10px">Arrêter mon serveur</button>
-        <a id="start"
-           role="button"
-           class="btn btn-lg btn-jupyter"
-           href="{{ url }}">
-          {% if not default_server.active %}Démarrer{% endif %}
-          Mon Serveur
-        </a>
+          <a id="start"
+             role="button"
+             class="btn btn-lg btn-jupyter"
+             href="{{ url }}">
+            {% if not default_server.active %}Démarrer{% endif %}
+            Mon Serveur
+          </a>
+        </div>
       </div>
-    </div>
-    {% if allow_named_servers %}
-      <h2 style="color: #34495e; margin-top: 40px">Serveurs nommés</h2>
-      <p>Vous pouvez avoir plusieurs serveurs actifs simultanément.</p>
-      {% set named_spawners = user.all_spawners(include_default=False)|list %}
-      <table class="server-table table table-striped">
-        <thead style="background: #34495e; color: #fff">
-          <tr>
-            <th>Nom</th>
-            <th>URL</th>
-            <th>Dernière activité</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr class="home-server-row add-server-row">
-            <td colspan="4">
-              <div class="input-group">
-                <input class="new-server-name form-control"
-                       aria-label="server name"
-                       placeholder="nom-du-serveur" />
-                <button role="button"
-                        type="button"
-                        class="new-server-btn btn btn-xs btn-jupyter">Ajouter</button>
-              </div>
-            </td>
-          </tr>
-          {% for spawner in named_spawners %}
-            <tr class="home-server-row" data-server-name="{{ spawner.name }}">
-              <td>{{ spawner.name }}</td>
-              <td>
-                <a class="server-link {% if not spawner.ready %}hidden{% endif %}"
-                   href="{{ user.server_url(spawner.name) }}">{{ user.server_url(spawner.name) }}</a>
+      {% if allow_named_servers %}
+        <h2 style="color: #34495e; margin-top: 40px">Serveurs nommés</h2>
+        <p>Vous pouvez avoir plusieurs serveurs actifs simultanément.</p>
+        {% set named_spawners = user.all_spawners(include_default=False)|list %}
+        <table class="server-table table table-striped">
+          <thead style="background: #34495e; color: #fff">
+            <tr>
+              <th>Nom</th>
+              <th>URL</th>
+              <th>Dernière activité</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="home-server-row add-server-row">
+              <td colspan="4">
+                <div class="input-group">
+                  <input class="new-server-name form-control"
+                         aria-label="server name"
+                         placeholder="nom-du-serveur" />
+                  <button role="button"
+                          type="button"
+                          class="new-server-btn btn btn-xs btn-jupyter">Ajouter</button>
+                </div>
               </td>
-              <td class="time-col">
-                {% if spawner.last_activity %}
-                  {{ spawner.last_activity.isoformat() +
-                  'Z' }}
-                {% else %}
-                  Jamais
-                {% endif %}
-              </td>
-              <td>
-                <button role="button"
-                        type="button"
-                        class="stop-server btn btn-xs btn-danger{% if not spawner.active %} hidden{% endif %}"
-                        id="stop-{{ spawner.name }}">stop</button>
-                   class="start-server btn btn-xs btn-jupyter {% if spawner.active %}hidden{% endif %}"
-                   id="start-{{ spawner.name }}"
-                   href="{{ base_url }}spawn/{{ user.name }}/{{ spawner.name }}">start</a>
+            </tr>
+            {% for spawner in named_spawners %}
+              <tr class="home-server-row" data-server-name="{{ spawner.name }}">
+                <td>{{ spawner.name }}</td>
+                <td>
+                  <a class="server-link {% if not spawner.ready %}hidden{% endif %}"
+                     href="{{ user.server_url(spawner.name) }}">{{ user.server_url(spawner.name) }}</a>
+                </td>
+                <td class="time-col">
+                  {% if spawner.last_activity %}
+                    {{ spawner.last_activity.isoformat() +
+                    'Z' }}
+                  {% else %}
+                    Jamais
+                  {% endif %}
+                </td>
+                <td>
+                  <button role="button"
+                          type="button"
+                          class="stop-server btn btn-xs btn-danger{% if not spawner.active %} hidden{% endif %}"
+                          id="stop-{{ spawner.name }}">stop</button>
+                  class="start-server btn btn-xs btn-jupyter
+                  {% if spawner.active %}hidden{% endif %}
+                  "
+                  id="start-{{ spawner.name }}"
+                href="{{ base_url }}spawn/{{ user.name }}/{{ spawner.name }}">start</a>
                 <button role="button"
                         class="delete-server btn btn-xs btn-danger{% if spawner.active %} hidden{% endif %}"
                         id="delete-{{ spawner.name }}">supprimer</button>

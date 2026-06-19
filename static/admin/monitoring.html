@@ -1,120 +1,309 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>SAIEP — Monitoring</title>
-<style>
-  :root{ --bg:#0e1420; --panel:#161f2e; --panel2:#1d293b; --line:#27344a;
-         --txt:#e6edf3; --muted:#8aa0b8; --accent:#e8542f; --blue:#3b9ad6; --green:#2ecc71; }
-  *{box-sizing:border-box}
-  body{margin:0;font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--txt)}
-  a{color:var(--blue);text-decoration:none}
-  .topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 32px;background:#0a0f18;border-bottom:1px solid var(--line)}
-  .topbar h1{font-size:1.15em;margin:0}
-  .topbar h1 span{color:var(--accent);font-weight:700}
-  .topbar .links a{margin-left:18px;font-size:.9em}
-  .wrap{padding:26px 32px;max-width:1100px;margin:0 auto}
-  h2.title{margin:0 0 4px;font-weight:600}
-  .sub{color:var(--muted);margin-bottom:8px;font-size:.9em}
-  #err{color:var(--accent);font-size:.85em;min-height:18px;margin-bottom:14px}
-  select{background:var(--panel);color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:3px 8px}
-  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:24px}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px;text-align:center}
-  .card .big{font-size:2.2em;font-weight:700}
-  .card .lbl{color:var(--muted);font-size:.85em;margin-top:6px}
-  .charts{display:grid;grid-template-columns:1fr 1fr;gap:22px}
-  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px}
-  .panel h3{margin:0 0 14px;font-size:1.02em}
-  .chart{width:100%;height:170px}
-  .nodata{color:var(--muted);text-align:center;padding-top:66px;font-size:.9em}
-  @media(max-width:820px){.charts{grid-template-columns:1fr}}
-</style>
-</head>
-<body>
-  <div class="topbar">
-    <h1><span>SAIEP</span> · Monitoring</h1>
-    <div class="links">
-      <a href="/hub/swarm">Ressources</a>
-      <a href="/hub/home">← JupyterHub</a>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SAIEP — Monitoring</title>
+    <style>
+      :root {
+        --bg: #0e1420;
+        --panel: #161f2e;
+        --panel2: #1d293b;
+        --line: #27344a;
+        --txt: #e6edf3;
+        --muted: #8aa0b8;
+        --accent: #e8542f;
+        --blue: #3b9ad6;
+        --green: #2ecc71;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: "Segoe UI", system-ui, sans-serif;
+        background: var(--bg);
+        color: var(--txt);
+      }
+      a {
+        color: var(--blue);
+        text-decoration: none;
+      }
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 32px;
+        background: #0a0f18;
+        border-bottom: 1px solid var(--line);
+      }
+      .topbar h1 {
+        font-size: 1.15em;
+        margin: 0;
+      }
+      .topbar h1 span {
+        color: var(--accent);
+        font-weight: 700;
+      }
+      .topbar .links a {
+        margin-left: 18px;
+        font-size: 0.9em;
+      }
+      .wrap {
+        padding: 26px 32px;
+        max-width: 1100px;
+        margin: 0 auto;
+      }
+      h2.title {
+        margin: 0 0 4px;
+        font-weight: 600;
+      }
+      .sub {
+        color: var(--muted);
+        margin-bottom: 8px;
+        font-size: 0.9em;
+      }
+      #err {
+        color: var(--accent);
+        font-size: 0.85em;
+        min-height: 18px;
+        margin-bottom: 14px;
+      }
+      select {
+        background: var(--panel);
+        color: var(--txt);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 3px 8px;
+      }
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+      }
+      .card .big {
+        font-size: 2.2em;
+        font-weight: 700;
+      }
+      .card .lbl {
+        color: var(--muted);
+        font-size: 0.85em;
+        margin-top: 6px;
+      }
+      .charts {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 22px;
+      }
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 20px;
+      }
+      .panel h3 {
+        margin: 0 0 14px;
+        font-size: 1.02em;
+      }
+      .chart {
+        width: 100%;
+        height: 170px;
+      }
+      .nodata {
+        color: var(--muted);
+        text-align: center;
+        padding-top: 66px;
+        font-size: 0.9em;
+      }
+      @media (max-width: 820px) {
+        .charts {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="topbar">
+      <h1><span>SAIEP</span> · Monitoring</h1>
+      <div class="links">
+        <a href="/hub/swarm">Ressources</a>
+        <a href="/hub/home">← JupyterHub</a>
+      </div>
     </div>
-  </div>
-  <div class="wrap">
-    <h2 class="title">Supervision de la plateforme</h2>
-    <div class="sub">Métriques en temps réel · actualisé toutes les 30 s · source : Prometheus
-      &nbsp;·&nbsp; Période :
-      <select id="range">
-        <option value="1">1 h</option><option value="3" selected>3 h</option>
-        <option value="12">12 h</option><option value="24">24 h</option>
-        <option value="72">3 j</option><option value="168">7 j</option><option value="360">15 j</option>
-      </select>
+    <div class="wrap">
+      <h2 class="title">Supervision de la plateforme</h2>
+      <div class="sub">
+        Métriques en temps réel · actualisé toutes les 30 s · source :
+        Prometheus &nbsp;·&nbsp; Période :
+        <select id="range">
+          <option value="1">1 h</option>
+          <option value="3" selected>3 h</option>
+          <option value="12">12 h</option>
+          <option value="24">24 h</option>
+          <option value="72">3 j</option>
+          <option value="168">7 j</option>
+          <option value="360">15 j</option>
+        </select>
+      </div>
+      <div id="err"></div>
+
+      <div class="cards">
+        <div class="card">
+          <div class="big" style="color: var(--blue)" id="c_servers">—</div>
+          <div class="lbl">Serveurs en cours</div>
+        </div>
+        <div class="card">
+          <div class="big" style="color: var(--accent)" id="c_u24">—</div>
+          <div class="lbl">Actifs (24 h)</div>
+        </div>
+        <div class="card">
+          <div class="big" id="c_u7">—</div>
+          <div class="lbl">Actifs (7 j)</div>
+        </div>
+        <div class="card">
+          <div class="big" id="c_u30">—</div>
+          <div class="lbl">Actifs (30 j)</div>
+        </div>
+        <div class="card">
+          <div class="big" id="c_total">—</div>
+          <div class="lbl">Comptes au total</div>
+        </div>
+      </div>
+
+      <div class="charts">
+        <div class="panel">
+          <h3>Serveurs actifs</h3>
+          <div id="cA" class="chart"></div>
+        </div>
+        <div class="panel">
+          <h3>Débit de requêtes /s</h3>
+          <div id="cB" class="chart"></div>
+        </div>
+        <div class="panel">
+          <h3>Latence des requêtes p95 (s)</h3>
+          <div id="cC" class="chart"></div>
+        </div>
+        <div class="panel">
+          <h3>Temps de démarrage serveur p95 (s)</h3>
+          <div id="cD" class="chart"></div>
+        </div>
+      </div>
     </div>
-    <div id="err"></div>
 
-    <div class="cards">
-      <div class="card"><div class="big" style="color:var(--blue)" id="c_servers">—</div><div class="lbl">Serveurs en cours</div></div>
-      <div class="card"><div class="big" style="color:var(--accent)" id="c_u24">—</div><div class="lbl">Actifs (24 h)</div></div>
-      <div class="card"><div class="big" id="c_u7">—</div><div class="lbl">Actifs (7 j)</div></div>
-      <div class="card"><div class="big" id="c_u30">—</div><div class="lbl">Actifs (30 j)</div></div>
-      <div class="card"><div class="big" id="c_total">—</div><div class="lbl">Comptes au total</div></div>
-    </div>
+    <script>
+      const API = "/hub/monitoring/api/metrics";
+      function fmt(n) {
+        return n == null ? "—" : Number.isInteger(n) ? n : Math.round(n);
+      }
+      function num(v) {
+        return v % 1 === 0 ? v : (+v).toFixed(2);
+      }
+      function setT(id, v) {
+        const e = document.getElementById(id);
+        if (e) e.textContent = v;
+      }
+      function hours() {
+        return document.getElementById("range").value;
+      }
 
-    <div class="charts">
-      <div class="panel"><h3>Serveurs actifs</h3><div id="cA" class="chart"></div></div>
-      <div class="panel"><h3>Débit de requêtes /s</h3><div id="cB" class="chart"></div></div>
-      <div class="panel"><h3>Latence des requêtes p95 (s)</h3><div id="cC" class="chart"></div></div>
-      <div class="panel"><h3>Temps de démarrage serveur p95 (s)</h3><div id="cD" class="chart"></div></div>
-    </div>
-  </div>
+      // Dependency-free SVG line chart (no external CDN — robust against blockers).
+      function svgLine(id, pts, color) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (!pts || !pts.length) {
+          el.innerHTML =
+            '<div class="nodata">Aucune donnée pour cette période</div>';
+          return;
+        }
+        const W = 600,
+          H = 160,
+          P = 22;
+        const ys = pts.map((p) => p.y);
+        let maxY = Math.max.apply(null, ys),
+          minY = Math.min.apply(null, ys, 0);
+        if (maxY === minY) maxY = minY + 1;
+        const X = (i) => P + (i / (pts.length - 1 || 1)) * (W - 2 * P);
+        const Y = (v) => H - P - ((v - minY) / (maxY - minY)) * (H - 2 * P);
+        let line = "",
+          area = "M" + X(0).toFixed(1) + "," + (H - P).toFixed(1) + " ";
+        pts.forEach((p, i) => {
+          const c = X(i).toFixed(1) + "," + Y(p.y).toFixed(1);
+          line += (i ? " L" : "M") + c;
+          area += "L" + c + " ";
+        });
+        area +=
+          "L" + X(pts.length - 1).toFixed(1) + "," + (H - P).toFixed(1) + " Z";
+        const last = pts[pts.length - 1].y;
+        el.innerHTML =
+          '<svg viewBox="0 0 ' +
+          W +
+          " " +
+          H +
+          '" width="100%" height="170" preserveAspectRatio="none">' +
+          '<path d="' +
+          area +
+          '" fill="' +
+          color +
+          '" opacity="0.12"/>' +
+          '<path d="' +
+          line +
+          '" fill="none" stroke="' +
+          color +
+          '" stroke-width="2" vector-effect="non-scaling-stroke"/>' +
+          '<text x="' +
+          (W - 4) +
+          '" y="13" fill="#8aa0b8" font-size="11" text-anchor="end">max ' +
+          num(maxY) +
+          "</text>" +
+          '<text x="6" y="13" fill="#e6edf3" font-size="13" font-weight="700">' +
+          num(last) +
+          "</text>" +
+          "</svg>";
+      }
 
-<script>
-const API='/hub/monitoring/api/metrics';
-function fmt(n){return (n==null)?'—':(Number.isInteger(n)?n:Math.round(n));}
-function num(v){return (v%1===0)?v:(+v).toFixed(2);}
-function setT(id,v){const e=document.getElementById(id); if(e)e.textContent=v;}
-function hours(){return document.getElementById('range').value;}
-
-// Dependency-free SVG line chart (no external CDN — robust against blockers).
-function svgLine(id,pts,color){
-  const el=document.getElementById(id); if(!el)return;
-  if(!pts||!pts.length){el.innerHTML='<div class="nodata">Aucune donnée pour cette période</div>';return;}
-  const W=600,H=160,P=22;
-  const ys=pts.map(p=>p.y);
-  let maxY=Math.max.apply(null,ys), minY=Math.min.apply(null,ys,0);
-  if(maxY===minY)maxY=minY+1;
-  const X=i=>P+(i/((pts.length-1)||1))*(W-2*P);
-  const Y=v=>H-P-((v-minY)/(maxY-minY))*(H-2*P);
-  let line='',area='M'+X(0).toFixed(1)+','+(H-P).toFixed(1)+' ';
-  pts.forEach((p,i)=>{const c=X(i).toFixed(1)+','+Y(p.y).toFixed(1); line+=(i?' L':'M')+c; area+='L'+c+' ';});
-  area+='L'+X(pts.length-1).toFixed(1)+','+(H-P).toFixed(1)+' Z';
-  const last=pts[pts.length-1].y;
-  el.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" width="100%" height="170" preserveAspectRatio="none">'
-    +'<path d="'+area+'" fill="'+color+'" opacity="0.12"/>'
-    +'<path d="'+line+'" fill="none" stroke="'+color+'" stroke-width="2" vector-effect="non-scaling-stroke"/>'
-    +'<text x="'+(W-4)+'" y="13" fill="#8aa0b8" font-size="11" text-anchor="end">max '+num(maxY)+'</text>'
-    +'<text x="6" y="13" fill="#e6edf3" font-size="13" font-weight="700">'+num(last)+'</text>'
-    +'</svg>';
-}
-
-async function load(){
-  let m;
-  try{
-    const r=await fetch(API+'?hours='+hours(),{credentials:'same-origin'});
-    if(!r.ok){document.getElementById('err').textContent='Erreur HTTP '+r.status;return;}
-    m=await r.json();
-  }catch(e){ document.getElementById('err').textContent='Erreur de chargement : '+e.message; return; }
-  if(m.error){document.getElementById('err').textContent='Erreur : '+m.error;return;}
-  document.getElementById('err').textContent='';
-  setT('c_servers',fmt(m.servers)); setT('c_u24',fmt(m.users_24h));
-  setT('c_u7',fmt(m.users_7d)); setT('c_u30',fmt(m.users_30d));
-  setT('c_total',fmt(m.total_users));
-  svgLine('cA',m.servers_series,'#3b9ad6');
-  svgLine('cB',m.request_rate,'#e8542f');
-  svgLine('cC',m.latency_p95,'#2ecc71');
-  svgLine('cD',m.spawn_p95,'#f1c40f');
-}
-document.getElementById('range').addEventListener('change',load);
-load(); setInterval(load,30000);
-</script>
-</body>
+      async function load() {
+        let m;
+        try {
+          const r = await fetch(API + "?hours=" + hours(), {
+            credentials: "same-origin",
+          });
+          if (!r.ok) {
+            document.getElementById("err").textContent =
+              "Erreur HTTP " + r.status;
+            return;
+          }
+          m = await r.json();
+        } catch (e) {
+          document.getElementById("err").textContent =
+            "Erreur de chargement : " + e.message;
+          return;
+        }
+        if (m.error) {
+          document.getElementById("err").textContent = "Erreur : " + m.error;
+          return;
+        }
+        document.getElementById("err").textContent = "";
+        setT("c_servers", fmt(m.servers));
+        setT("c_u24", fmt(m.users_24h));
+        setT("c_u7", fmt(m.users_7d));
+        setT("c_u30", fmt(m.users_30d));
+        setT("c_total", fmt(m.total_users));
+        svgLine("cA", m.servers_series, "#3b9ad6");
+        svgLine("cB", m.request_rate, "#e8542f");
+        svgLine("cC", m.latency_p95, "#2ecc71");
+        svgLine("cD", m.spawn_p95, "#f1c40f");
+      }
+      document.getElementById("range").addEventListener("change", load);
+      load();
+      setInterval(load, 30000);
+    </script>
+  </body>
 </html>
