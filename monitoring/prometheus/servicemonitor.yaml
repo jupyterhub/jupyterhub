@@ -1,0 +1,29 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: saiep-jupyterhub
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: jupyterhub
+    app.kubernetes.io/instance: saiep
+    app.kubernetes.io/component: monitoring
+    app.kubernetes.io/part-of: saiep
+spec:
+  namespaceSelector:
+    matchNames:
+      - saiep
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: jupyterhub
+      app.kubernetes.io/component: hub
+      app.kubernetes.io/instance: saiep
+  endpoints:
+    - port: http
+      path: /hub/metrics
+      interval: 30s
+      scrapeTimeout: 10s
+      scheme: http
+      honorLabels: true
+      bearerTokenSecret:
+        name: saiep-prometheus-token
+        key: token

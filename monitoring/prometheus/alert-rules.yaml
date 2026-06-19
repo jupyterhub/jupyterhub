@@ -1,0 +1,56 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: saiep-monitoring-alerts
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: saiep-monitoring
+    app.kubernetes.io/component: alerting
+    app.kubernetes.io/part-of: saiep
+spec:
+  groups:
+    - name: saiep.monitoring.rules
+      rules:
+        - alert: HighCPUUsage
+          expr: rate(process_cpu_seconds_total{namespace="saiep",service=~"jupyterhub|hub"}[5m]) > 0.8
+          for: 10m
+          labels:
+            severity: warning
+            module: monitoring
+            service: jupyterhub
+          annotations:
+            summary: JupyterHub CPU usage is high
+            description: JupyterHub has been consuming more than 80% of one CPU core for 10 minutes.
+
+        - alert: HighMemoryUsage
+          expr: process_resident_memory_bytes{namespace="saiep",service=~"jupyterhub|hub"} > 805306368
+          for: 10m
+          labels:
+            severity: warning
+            module: monitoring
+            service: jupyterhub
+          annotations:
+            summary: JupyterHub memory usage is high
+            description: JupyterHub resident memory has been above 768 MiB for 10 minutes.
+
+        - alert: LowDiskSpace
+          expr: (node_filesystem_avail_bytes{mountpoint="/",fstype!~"tmpfs|overlay|squashfs"} / node_filesystem_size_bytes{mountpoint="/",fstype!~"tmpfs|overlay|squashfs"}) < 0.15
+          for: 10m
+          labels:
+            severity: critical
+            module: monitoring
+            service: node
+          annotations:
+            summary: Disk space is running low
+            description: Less than 15% of the root filesystem is available for 10 minutes.
+
+        - alert: ServiceDown
+          expr: absent(up{namespace="saiep",service=~"jupyterhub|hub"}) or up{namespace="saiep",service=~"jupyterhub|hub"} == 0
+          for: 5m
+          labels:
+            severity: critical
+            module: monitoring
+            service: jupyterhub
+          annotations:
+            summary: JupyterHub is down
+            description: Prometheus cannot scrape the JupyterHub metrics endpoint for 5 minutes.
