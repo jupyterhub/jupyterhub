@@ -31,7 +31,15 @@ def access_scopes(oauth_client: orm.OAuthClient, db: Session):
         return frozenset()
     spawner = oauth_client.spawner
     if spawner:
-        scopes.add(f"access:servers!server={spawner.user.name}/{spawner.name}")
+        # Avoid spawner.user.name: it lazy-loads the User ORM object, whose
+        # selectin relationships (User.roles, User.shared_with_me) reference
+        # columns/tables added in later schema versions (roles.managed_by_auth,
+        # shares) that do not exist yet at this migration step. Use raw SQL.
+        user_name = db.execute(
+            text("SELECT name FROM users WHERE id = :user_id"),
+            {"user_id": spawner.user_id},
+        ).scalar()
+        scopes.add(f"access:servers!server={user_name}/{spawner.name}")
     else:
         statement = "SELECT * FROM services WHERE oauth_client_id = :identifier"
         service = db.execute(
@@ -127,7 +135,17 @@ def upgrade():
             for oauth_client in db.query(orm.OAuthClient).options(
                 selectinload(orm.OAuthClient.allowed_roles).defer(
                     orm.Role.managed_by_auth
-                )
+                ),
+                # access_scopes() loads the orm.Spawner object, but the new
+                # display_name column isn't added until a subsequent db upgrade
+                # script runs, so we need to ignore the new column here
+                selectinload(orm.OAuthClient.spawner).defer(
+                    orm.Spawner.display_name
+                ),
+                # block every other relationship load (e.g. Spawner.user ->
+                # User.roles / User.shared_with_me selectin) that would touch
+                # not-yet-existing schema — same guard as the api_tokens loop
+                raiseload("*"),
             ):
                 allowed_scopes = set(roles.roles_to_scopes(oauth_client.allowed_roles))
                 allowed_scopes.update(access_scopes(oauth_client, db))
