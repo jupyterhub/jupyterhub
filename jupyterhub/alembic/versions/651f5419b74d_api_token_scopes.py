@@ -136,12 +136,9 @@ def upgrade():
                 selectinload(orm.OAuthClient.allowed_roles).defer(
                     orm.Role.managed_by_auth
                 ),
-                # access_scopes() loads the orm.Spawner object, but the new
-                # display_name column isn't added until a subsequent db upgrade
-                # script runs, so we need to ignore the new column here
-                selectinload(orm.OAuthClient.spawner).defer(
-                    orm.Spawner.display_name
-                ),
+                # eager-load the spawner so access_scopes() doesn't lazy-load it
+                # (lazy loads are blocked by raiseload("*") below)
+                selectinload(orm.OAuthClient.spawner),
                 # block every other relationship load (e.g. Spawner.user ->
                 # User.roles / User.shared_with_me selectin) that would touch
                 # not-yet-existing schema — same guard as the api_tokens loop
