@@ -267,7 +267,4 @@ A handy website for testing your deployment is
 ## Vulnerability reporting
 
 If you believe you have found a security vulnerability in JupyterHub, or any
-Jupyter project, please report it to
-[security@ipython.org](mailto:security@ipython.org). If you prefer to encrypt
-your security reports, you can use [this PGP public
-key](https://jupyter.org/assets/ipython_security.asc).
+Jupyter project, please report it by following the guide on https://jupyter.org/security.
