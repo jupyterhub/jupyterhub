@@ -990,3 +990,14 @@ def format_exception(exc, *, only_jupyterhub=False):
     return getattr(exc, "jupyterhub_message", default_message), getattr(
         exc, "jupyterhub_html_message", None
     )
+
+
+def safe_log(s, max_length=1024):
+    """
+    Ensure an untrusted string is safe for logging by calling repr(),
+    and truncating if too long
+    """
+    r = repr(s)
+    if len(r) > max_length:
+        r = r[: (max_length - 2)] + " …"
+    return r
