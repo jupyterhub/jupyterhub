@@ -48,14 +48,14 @@ repos:
 
   # Autoformat: markdown, yaml, javascript (see the file .prettierignore)
   - repo: https://github.com/rbubley/mirrors-prettier
-    rev: 515f543f5718ebfd6ce22e16708bb32c68ff96e1 # frozen: v3.8.3
+    rev: 39e2973981e6d2f9b6c543b0086a2d2393abdc89  # frozen: v3.9.4
     hooks:
       - id: prettier
         exclude: .*/templates/.*|docs/source/_static/rest-api.yml|docs/source/rbac/scope-table.md
 
   # autoformat HTML templates
   - repo: https://github.com/djlint/djLint
-    rev: 9112cb64851c95a7802358af285d21ad8b7f6437 # frozen: v1.36.4
+    rev: df39c89b663e0ef6292e461bb5fb283ddd0680dd  # frozen: v1.40.3
     hooks:
       - id: djlint-reformat-jinja
         files: ".*templates/.*.html"
@@ -67,7 +67,7 @@ repos:
 
   # github actions security checks
   - repo: https://github.com/zizmorcore/zizmor-pre-commit
-    rev: 9257c6050c0261b8c57e712f632dc4a8010109a9 # frozen: v1.25.2
+    rev: e3eebf65325ccc992422292cb7a4baee967cf815  # frozen: v1.26.1
     hooks:
       - id: zizmor
         args:
