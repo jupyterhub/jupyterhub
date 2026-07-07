@@ -3,6 +3,7 @@ node_modules
 *~
 .cache
 .DS_Store
+.venv
 /build
 dist
 docs/_build
