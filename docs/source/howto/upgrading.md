@@ -110,20 +110,20 @@ for it.
 
 ### What happens if I delete my database?
 
-Losing the Hub database is often not a big deal. Information that
-resides only in the Hub database includes:
+Information that resides only in the Hub database includes:
 
 - active login tokens (user cookies, service tokens)
-- users added via JupyterHub UI, instead of config files
+- users added via JupyterHub UI or API, instead of config files
 - info about running servers
+- resources associated with user servers (for example storage volumes or containers)
 
-If the following conditions are true, you should be fine clearing the
-Hub database and starting over:
+If you do not have a database backup and need to start from a fresh database:
 
-- users specified in the config file, or login using an external
-  authentication provider (Google, GitHub, LDAP, etc)
-- user servers are stopped during the upgrade
-- don't mind causing users to log in again after the upgrade
+- Users/groups specified in the configuration file will be automatically created
+- Users/groups managed by an external authentication provider should be automatically created when they first login
+- Some resources associated with user servers may be orphaned.
+  For example, some spawners create and mount external storage volumes and record the volume name in the database.
+  If a new volume is automatically created in the new database you may need to manually synchronise or clean up the old resources.
 
 ## Start JupyterHub
 
