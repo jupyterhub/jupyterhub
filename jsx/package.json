@@ -72,8 +72,8 @@
     "prettier": "^3.9.4",
     "style-loader": "^4.0.0",
     "webpack": "^5.108.3",
-    "webpack-cli": "^7.1.0",
-    "webpack-dev-server": "^5.2.5"
+    "webpack-cli": "^7.2.1",
+    "webpack-dev-server": "^6.0.0"
   },
   "overrides": {
     "uuid": "^14.0.0",
