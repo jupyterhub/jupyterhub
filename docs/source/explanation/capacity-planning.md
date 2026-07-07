@@ -69,7 +69,6 @@ but elastic resources (like [zero-to-jupyterhub][]) tend to provide **lower over
 but which are **less predictable**.
 
 [the-littlest-jupyterhub]: https://tljh.jupyter.org
-
 [zero-to-jupyterhub]: https://z2jh.jupyter.org
 
 (limits-requests)=

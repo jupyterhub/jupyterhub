@@ -23,7 +23,9 @@
             <div class="card-body">
               <input type="hidden" name="_xsrf" value="{{ xsrf }}" />
               {# these are the 'real' inputs to the form -#}
-              {% for scope in allowed_scopes %}<input type="hidden" name="scopes" value="{{ scope }}" />{% endfor %}
+              {% for scope in allowed_scopes %}
+                <input type="hidden" name="scopes" value="{{ scope }}" />
+              {% endfor %}
               {% for scope_info in scope_descriptions %}
                 <div class="checkbox input-group">
                   <label>
