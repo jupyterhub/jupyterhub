@@ -261,7 +261,7 @@ async def test_create_invalid_named_server(app, named_servers, servername):
         r.raise_for_status()
     assert exc.value.response.json() == {
         'status': 400,
-        'message': f"Invalid server_name: {servername}",
+        'message': f"Invalid server_name: '{servername}'",
     }
 
 
@@ -272,8 +272,9 @@ async def test_start_invalid_named_server_disabled(
     user = add_user(app.db, app, name=username)
     assert user.allow_named_servers
     cookies = await app.login_user(username)
-    servername = "<!>"
-    escapedname = "%3C!%3E"
+    servername = "<!\n>"
+    escapedname = "%3C!%0A%3E"
+    expected_log_servername = "'<!\\n>'"
 
     user._new_orm_spawner(servername, servername)
 
@@ -282,7 +283,7 @@ async def test_start_invalid_named_server_disabled(
         r.raise_for_status()
     assert exc.value.response.json() == {
         "status": 400,
-        "message": f"Starting invalid server_name '{servername}' is disabled, contact your administrator",
+        "message": f"Starting invalid server_name {expected_log_servername} is disabled, contact your administrator",
     }
 
 

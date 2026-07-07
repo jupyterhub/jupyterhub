@@ -20,6 +20,7 @@ from ..slugs import is_valid_display_name, is_valid_safe_slug, normalise_unicode
 from ..utils import (
     format_exception,
     maybe_future,
+    safe_log,
     url_escape_path,
     url_path_join,
     utcnow,
@@ -177,20 +178,20 @@ class SpawnHandler(BaseHandler):
 
         if server_name not in user.orm_spawners:
             if not is_valid_safe_slug(server_name):
-                error_message = f"Invalid server_name: {server_name}"
+                error_message = f"Invalid server_name: {safe_log(server_name)}"
                 self.log.error(error_message)
                 raise web.HTTPError(400, error_message)
 
             display_name = normalise_unicode(display_name)
             if not is_valid_display_name(display_name):
-                error_message = f"Invalid display_name: {display_name}"
+                error_message = f"Invalid display_name: {safe_log(display_name)}"
                 self.log.error(error_message)
                 raise web.HTTPError(400, error_message)
 
         if not self.settings[
             "allow_invalid_named_server_start"
         ] and not is_valid_safe_slug(server_name):
-            error_message = f"Starting invalid server_name '{server_name}' is disabled, contact your administrator"
+            error_message = f"Starting invalid server_name {safe_log(server_name)} is disabled, contact your administrator"
             self.log.error(error_message)
             raise web.HTTPError(400, error_message)
 

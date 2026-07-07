@@ -23,6 +23,7 @@ from .utils import (
     _strict_dns_safe,
     make_ssl_context,
     maybe_future,
+    safe_log,
     subdomain_hook_legacy,
     url_escape_path,
     url_path_join,
@@ -281,10 +282,10 @@ class User:
             return self.get_spawner(server_name, replace_failed)
 
         if server_name and not is_valid_safe_slug(server_name):
-            raise ValueError(f"Invalid server_name: {server_name}")
+            raise ValueError(f"Invalid server_name: {safe_log(server_name)}")
         if display_name:
             if not is_valid_display_name(display_name):
-                raise ValueError(f"Invalid display_name: {display_name}")
+                raise ValueError(f"Invalid display_name: {safe_log(display_name)}")
         else:
             display_name = server_name
 
