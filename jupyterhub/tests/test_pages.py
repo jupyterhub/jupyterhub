@@ -1505,3 +1505,34 @@ async def test_session_id(app):
     assert r.ok
     # request shouldn't set any new cookies
     assert not r.cookies
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        # test one page, one api handler
+        # since they have separate write_error
+        "login",
+        "api/users",
+    ],
+)
+async def test_malformed_form(app, caplog, path):
+    r = await async_requests.post(
+        ujoin(public_url(app), "hub", path),
+        headers={"Content-Type": "multipart/form-data; boundary=---BOUNDARY"},
+        data="\r\n".join(
+            [
+                "---BOUNDARY",
+                "field1=value1",
+                "field2=value2",
+                "---BOUNDARY--",
+                "",
+            ]
+        ),
+    )
+    # tornado might validate form-data before calling prepare,
+    # which would lead to 400.
+    # seems to be a change in 6.5.0, but this is an implementation detail
+    # the main goal is no traceback.
+    assert r.status_code in {400, 403}
+    assert "Traceback" not in caplog.text

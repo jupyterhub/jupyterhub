@@ -1516,6 +1516,12 @@ class BaseHandler(RequestHandler):
 
     def write_error(self, status_code, **kwargs):
         """render custom error pages"""
+        # it is possible (rare) to send an error before .prepare() is called
+        # this is generally only for malformed requests at the HTTP-level
+        if not hasattr(self, '_jupyterhub_user'):
+            self._jupyterhub_user = None
+            self._resolve_roles_and_scopes()
+
         exc_info = kwargs.get('exc_info')
         message = ''
         message_html = ''
