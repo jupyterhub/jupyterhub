@@ -27,7 +27,7 @@ from datetime import datetime, timezone
 from functools import lru_cache
 from hmac import compare_digest
 from operator import itemgetter
-from typing import Any, Dict
+from typing import Any, Dict, List, Tuple
 from urllib.parse import (
     SplitResult,
     quote,
@@ -102,14 +102,13 @@ def _request_for_tornado_client(
             the scheme in URLS before making a request to the HTTP client.
             """
 
-            def initialize(self, resolver):
-                self.resolver = resolver
+            def initialize(self, socket_path: str):
+                self.socket_path = socket_path
 
-            def close(self):
-                self.resolver.close()
-
-            async def resolve(self, host, port, *args, **kwargs):
-                return [(socket.AF_UNIX, unquote_plus(host))]
+            async def resolve(
+                self, host: str, port: int, *args, **kwargs
+            ) -> List[Tuple[int, Any]]:
+                return [(socket.AF_UNIX, self.socket_path)]
 
         # if not using pycurl, we need to use our custom resolver
         # if using pycurl, we can implement a unix socket connection with a curl callback
@@ -120,9 +119,9 @@ def _request_for_tornado_client(
                 pycurl.UNIX_SOCKET_PATH, unquote_plus(socket_path)
             )
         else:
-            resolver = UnixSocketResolver(resolver=Resolver())
             AsyncHTTPClient.configure(
-                AsyncHTTPClient.configured_class(), resolver=resolver
+                AsyncHTTPClient.configured_class(),
+                resolver=UnixSocketResolver(unquote_plus(socket_path)),
             )
     else:
         msg = "Unknown URL scheme."
