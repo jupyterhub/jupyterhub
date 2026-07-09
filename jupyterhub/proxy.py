@@ -306,7 +306,7 @@ class Proxy(LoggingConfigurable):
 
     # Most basic implementers must only implement above methods
 
-    async def add_service(self, service, client=None):
+    async def add_service(self, service):
         """Add a service's server to the proxy table."""
         if not service.server:
             raise RuntimeError(
@@ -325,12 +325,12 @@ class Proxy(LoggingConfigurable):
             service.proxy_spec, service.server.host, {'service': service.name}
         )
 
-    async def delete_service(self, service, client=None):
+    async def delete_service(self, service):
         """Remove a service's server from the proxy table."""
         self.log.info("Removing service %s from proxy", service.name)
         await self.delete_route(service.proxy_spec)
 
-    async def add_user(self, user, server_name='', client=None):
+    async def add_user(self, user, server_name=''):
         """Add a user's server to the proxy table."""
         spawner = user.spawners[server_name]
         self.log.info(
@@ -945,9 +945,8 @@ class ConfigurableHTTPProxy(Proxy):
             routespec = routespec + '/'
         return routespec
 
-    async def api_request(self, path, method='GET', body=None, client=None):
+    async def api_request(self, path, method='GET', body=None):
         """Make an authenticated API request of the proxy."""
-        client = client or AsyncHTTPClient()
         url = url_path_join(self.api_url, 'api/routes', path)
 
         if isinstance(body, dict):
@@ -1012,10 +1011,10 @@ class ConfigurableHTTPProxy(Proxy):
         chp_data.pop('jupyterhub')
         return {'routespec': routespec, 'target': target, 'data': chp_data}
 
-    async def get_all_routes(self, client=None):
+    async def get_all_routes(self):
         """Fetch the proxy's routes."""
         proxy_poll_start_time = time.perf_counter()
-        resp = await self.api_request('', client=client)
+        resp = await self.api_request('')
         chp_routes = json.loads(resp.body.decode('utf8', 'replace'))
         all_routes = {}
         for chp_path, chp_data in chp_routes.items():
