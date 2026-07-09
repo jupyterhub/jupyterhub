@@ -580,6 +580,12 @@ class ConfigurableHTTPProxy(Proxy):
         help="""The command to start the proxy""",
     )
 
+    command_umask = Integer(
+        0o007,  # mask no permissions for owner and group, mask all permissions for other.
+        config=True,
+        help="""The umask to be applied before running the proxy command. This can be helpful when controlling permissions for Unix Domain Sockets.""",
+    )
+
     pid_file = Unicode(
         "jupyterhub-proxy.pid",
         config=True,
@@ -784,7 +790,11 @@ class ConfigurableHTTPProxy(Proxy):
         shell = os.name == 'nt'
         try:
             self.proxy_process = Popen(
-                cmd, env=env, start_new_session=True, shell=shell
+                cmd,
+                env=env,
+                start_new_session=True,
+                shell=shell,
+                umask=self.command_umask,
             )
         except FileNotFoundError as e:
             self.log.error(

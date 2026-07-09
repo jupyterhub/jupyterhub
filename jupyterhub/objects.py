@@ -34,6 +34,7 @@ class Server(HasTraits):
     connect_ip = Unicode()
     connect_port = Integer()
     connect_addr = Unicode()
+    socket_mode = Integer()
     proto = Unicode('http')
     port = Integer()
     base_url = URLPrefix('/')

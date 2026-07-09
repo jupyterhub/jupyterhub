@@ -1104,6 +1104,14 @@ class JupyterHub(Application):
         """,
     ).tag(config=True)
 
+    hub_socket_mode = Integer(
+        0o600,  # socket only read- and writeable by owner
+        help="""
+        If hub_bind_url is set to a unix socket path, use this mode for the socket's file permissions.
+        """,
+        config=True,
+    )
+
     hub_prefix = URLPrefix(
         '/hub/', help="The prefix for the hub server.  Always /base_url/hub/"
     )
@@ -2073,6 +2081,7 @@ class JupyterHub(Application):
             public_host = self.subdomain_host
         hub_args = dict(
             base_url=self.hub_prefix,
+            socket_mode=self.hub_socket_mode,
             routespec=self.hub_routespec,
             public_host=public_host,
             certfile=self.internal_ssl_cert,
@@ -3846,7 +3855,9 @@ class JupyterHub(Application):
             if bind_url.scheme.startswith('http+unix'):
                 from tornado.netutil import bind_unix_socket
 
-                socket = bind_unix_socket(unquote(bind_url.netloc))
+                socket = bind_unix_socket(
+                    unquote(bind_url.netloc), mode=self.hub.socket_mode
+                )
                 self.http_server.add_socket(socket)
             else:
                 ip = bind_url.hostname
