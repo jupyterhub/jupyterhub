@@ -654,7 +654,7 @@ class ConfigurableHTTPProxy(Proxy):
                     os.kill(pid, sig_list[i])
             except ProcessLookupError:
                 break
-            time.sleep(4)
+            time.sleep(1)
             try:
                 self._check_pid(pid)
             except ProcessLookupError:
