@@ -28,7 +28,7 @@ async def test_unix_socket_proxy(request, tmp_path):
 
     def fin():
         MockHub.clear_instance()
-        app.http_server.stop()
+        app.stop()
 
     request.addfinalizer(fin)
 
