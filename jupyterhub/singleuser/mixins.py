@@ -32,6 +32,7 @@ from traitlets import (
     Bool,
     Bytes,
     CUnicode,
+    Dict,
     Integer,
     TraitError,
     Unicode,
@@ -394,6 +395,8 @@ class SingleUserNotebookAppMixin(Configurable):
         if self.disable_user_config:
             path = list(_exclude_home(path))
         return path
+
+    hub_http_client_opts = Dict()
 
     @default('hub_http_client_opts')
     def _default_client_opts(self):
