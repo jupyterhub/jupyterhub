@@ -21,15 +21,6 @@ pytestmark = pytest.mark.ssl(pytest.mark.db)
 
 
 @pytest.fixture
-def named_servers(app):
-    with mock.patch.dict(
-        app.tornado_settings,
-        {'allow_named_servers': True, 'named_server_limit_per_user': 2},
-    ):
-        yield
-
-
-@pytest.fixture
 def named_servers_with_callable_limit(app):
     def named_server_limit_per_user_fn(handler):
         """Limit number of named servers to `2` for non-admin users. No limit for admin users."""
@@ -174,8 +165,7 @@ async def test_create_or_start_named_server(
     expected_displayname = servername
     if displayname is not None:
         expected_displayname = displayname
-        user_options = {"display_name": displayname}
-        kwargs["json"] = user_options
+        kwargs["json"] = {"display_name": displayname}
 
     r = await api_request(
         app, 'users', username, 'servers', request_servername, method='post', **kwargs
@@ -607,6 +597,60 @@ async def test_named_server_stop_server(app, username, named_servers):
     assert user.spawners[server_name].server is None
     assert user.spawners[''].server
     assert user.running
+
+
+@pytest.mark.parametrize(
+    "body, message",
+    [
+        pytest.param(
+            {"display_name": 5},
+            "display_name",
+            id="display_name_int",
+        ),
+        pytest.param(
+            {"display_name": "x" * 257},
+            "display_name",
+            id="display_name_invalid",
+        ),
+        pytest.param(
+            {"display_name": "x", "user_options": 5},
+            "user_options",
+            id="user_options_int",
+        ),
+    ],
+)
+async def test_named_server_create_server_invalid(
+    app, user, named_servers, body, message
+):
+    r = await api_request(
+        app, 'users', user.name, 'servers/named', method='put', json=body
+    )
+    assert r.status_code == 400
+    response = r.json()
+    assert message in response["message"]
+
+
+async def test_named_server_create_server(app, user, named_servers):
+    server_name = "named"
+    body = {"display_name": "My Named Server", "user_options": {"key": "value"}}
+    r = await api_request(
+        app, 'users', user.name, 'servers', server_name, method='put', json=body
+    )
+    assert r.status_code == 201
+    assert not user.spawners[server_name].server
+    server_model = r.json()
+    assert server_model["name"] == server_name
+    assert server_model["display_name"] == body["display_name"]
+    assert server_model["user_options"] == body["user_options"]
+    assert server_model["stopped"]
+
+    r = await api_request(app, 'users', user.name, 'servers', server_name)
+    assert r.status_code == 200
+    server_model = r.json()
+    assert server_model["name"] == server_name
+    assert server_model["display_name"] == body["display_name"]
+    assert server_model["user_options"] == body["user_options"]
+    assert server_model["stopped"]
 
 
 @pytest.mark.parametrize(

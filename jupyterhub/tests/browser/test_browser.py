@@ -13,7 +13,6 @@ from tornado.escape import url_escape
 from tornado.httputil import url_concat
 
 from jupyterhub import orm, roles, scopes
-from jupyterhub.tests.test_named_servers import named_servers  # noqa
 from jupyterhub.tests.utils import async_requests, public_host, public_url, ujoin
 from jupyterhub.utils import url_escape_path, url_path_join
 

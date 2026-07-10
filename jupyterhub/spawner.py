@@ -1600,6 +1600,17 @@ class Spawner(LoggingConfigurable):
         """
         yield {"progress": 50, "message": "Spawning server..."}
 
+    async def rename(self, old_name, new_name):
+        """
+        Called when an existing server's name is about to be changed.
+
+        Override in subclasses if any state needs to be changed based on the server's name.
+
+        If an error is raised here, it is propagated to the user and rename is prevented.
+
+        .. versionadded:: 6.0
+        """
+
     async def start(self):
         """Start the single-user server
 

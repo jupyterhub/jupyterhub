@@ -354,12 +354,10 @@ paths:
           when spawning via the API instead of spawn form.
           The structure of the options
           will depend on the Spawner's configuration.
-          The body itself will be available as `user_options` for the
-          Spawner.
         content:
           application/json:
             schema:
-              type: object
+              $ref: "#/components/schemas/ServerRequest"
         required: false
       responses:
         201:
@@ -390,6 +388,59 @@ paths:
         - oauth2:
             - delete:servers
   /users/{name}/servers/{server_name}:
+    get:
+      operationId: get-user-server-name
+      summary: Get a user's server
+      description: |
+        Get the model for a single server, by name.
+
+        Added in JupyterHub 6.0.
+      parameters:
+        - $ref: "#/components/parameters/userName"
+        - $ref: "#/components/parameters/serverName"
+      responses:
+        200:
+          description: The requested server
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Server"
+        404:
+          description: No such server
+      security:
+        - oauth2:
+            - read:servers
+
+    put:
+      operationId: put-user-server-name
+      summary: Create a named server
+      description: |
+        Creates a named server without starting it.
+        Will return HTTP 409 if a server with the specified name already exists.
+
+        Added in JupyterHub 6.0.
+      parameters:
+        - $ref: "#/components/parameters/userName"
+        - $ref: "#/components/parameters/serverName"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServerRequest"
+        required: false
+      responses:
+        201:
+          description: The server has been created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Server"
+        409:
+          description: A server with that name already exists
+      security:
+        - oauth2:
+            - start:servers
+
     post:
       operationId: post-user-server-name
       summary: Start a user's named server
@@ -405,7 +456,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
+              $ref: "#/components/schemas/ServerRequest"
         required: false
       responses:
         201:
@@ -417,7 +468,7 @@ paths:
           content: {}
       security:
         - oauth2:
-            - servers
+            - start:servers
     delete:
       operationId: delete-user-server-name
       summary: Stop a user's named server
@@ -457,7 +508,58 @@ paths:
       security:
         - oauth2:
             - delete:servers
+    patch:
+      operationId: patch-user-server-name
+      summary: Modify a user's named server
+      description: |
+        Rename or modify a user's server without starting it.
+        Each field is optional, but at least one field must be specified.
+        To rename a server, PATCH /users/$username/servers/$oldname with
 
+        ```json
+        {"name": "new_name"}
+        ```
+
+        A server must exist and be stopped before it can be modified.
+
+        New in JupyterHub 6.
+      parameters:
+        - $ref: "#/components/parameters/userName"
+        - $ref: "#/components/parameters/serverName"
+      requestBody:
+        description: |
+          Set one or more fields to modify the server.
+          Most options are the same as those in a POST request to start a server.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServerRequest"
+              properties:
+                name:
+                  type: string
+                  description: |
+                    If specified, rename the server.
+                display_name:
+                  type: string
+                  description: |
+                    Set the Human-readable name to represent the server in UI.
+                    Does not have to follow the strict rules of the server's name in the API.
+                user_options:
+                  type: object
+                  description: |
+                    These will be passed to the Spawner as `user_options`.
+                    What options are available will be defined by the Spawner and deployment.
+      responses:
+        200:
+          description: The server has been modified
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Server"
+
+      security:
+        - oauth2:
+            - start:servers
   /users/{name}/shared:
     get:
       operationId: get-user-shared
@@ -1543,7 +1645,11 @@ components:
       description: |
         name given to a named-server (empty string for default server).
 
-        Note that depending on your JupyterHub infrastructure there are limitations to `server_name`. Default spawner with K8s pod will not allow Jupyter Notebooks to be spawned with a name that contains more than 253 characters (keep in mind that the pod will be spawned with extra characters to identify the user and hub).
+        Changed in 6.0: server names must be simple, short, url-safe strings:
+
+        - ony contain lowercase letters, numbers, hyphens
+        - start with a letter
+        - no longer than 30 characters
       required: true
       schema:
         type: string
@@ -1771,6 +1877,31 @@ components:
           properties: {}
           description: User specified options for the user's spawned instance of
             a single-user server.
+    ServerRequest:
+      description: |
+        A request to create or start a Server.
+      type: object
+      properties:
+        display_name:
+          type: string
+          description: |
+            Added in JupyterHub 6.0.
+
+            The Human-readable name to represent the server in UI.
+            Does not have to follow the strict rules of the server's name in the API.
+        user_options:
+          type: object
+          description: |
+            Added in JupyterHub 6.0.
+
+            These will be passed to the Spawner as `user_options`.
+            What options are available will be defined by the Spawner and deployment.
+
+            For backward-compatibility, if neither `user_options` nor `display_name` is defined,
+            the whole JSON body is passed as `user_options`, which was the behavior prior to JupyterHub 6.
+            If specified as `null`, or no JSON body is given,
+            `user_options` will be used unmodified from the previous launch.
+
     RequestIdentity:
       description: |
         The model for the entity making the request.
@@ -2153,7 +2284,8 @@ components:
             servers: Start and stop user servers.
             read:servers: Read users’ names and their server models (excluding 
               the server state).
-            start:servers: Start users' servers. (added in JupyterHub 6)
+            start:servers: Start and edit users' servers. (added in JupyterHub 
+              6)
             delete:servers: Stop and delete users' servers.
             tokens: Read, write, create and delete user tokens.
             read:tokens: Read user tokens.

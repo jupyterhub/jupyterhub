@@ -101,7 +101,9 @@ scope_definitions = {
         'description': 'Read users’ names and their server models (excluding the server state).',
         'subscopes': ['read:users:name'],
     },
-    'start:servers': {'description': "Start users' servers. (added in JupyterHub 6)"},
+    'start:servers': {
+        'description': "Start and edit users' servers. (added in JupyterHub 6)"
+    },
     'delete:servers': {'description': "Stop and delete users' servers."},
     'tokens': {
         'description': 'Read, write, create and delete user tokens.',

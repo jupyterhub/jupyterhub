@@ -2747,6 +2747,48 @@ async def test_update_server_activity(app, user, server_name, fresh):
     assert user.spawners[server_name].orm_spawner.last_activity == expected
 
 
+@mark.parametrize(
+    "src_name, dst_name, status_code, active",
+    [
+        ("exists", "valid", 200, False),
+        ("not_exists", "valid", 404, False),
+        ("exists", "valid", 400, True),
+        ("exists", "invalid name", 400, False),
+        ("", "valid", 200, False),
+    ],
+)
+async def test_rename_server(
+    app, user, named_servers, src_name, dst_name, status_code, active, no_patience
+):
+    if active:
+        r = await api_request(
+            app, 'users', user.name, 'servers', src_name, method='post'
+        )
+        spawner = user.get_spawner(src_name)
+        assert r.ok
+        await spawner._spawn_future
+    else:
+        spawner = user.get_or_create_spawner("exists", "exists")
+
+    r = await api_request(
+        app,
+        f"users/{user.name}/servers/{src_name}",
+        data=json.dumps({"name": dst_name}),
+        method="patch",
+    )
+    assert r.status_code == status_code
+    if r.status_code == 200:
+        assert src_name not in user.orm_spawners
+        assert dst_name in user.orm_spawners
+    if active:
+        assert src_name in user.orm_spawners
+        assert dst_name not in user.orm_spawners
+
+
+async def test_patch_server(app, user, named_servers):
+    pass
+
+
 # -----------------
 # General API tests
 # -----------------
