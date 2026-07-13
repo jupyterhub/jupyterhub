@@ -35,16 +35,16 @@ from urllib.parse import urlparse
 from jupyter_server.auth import Authorizer, IdentityProvider, User
 from jupyter_server.auth.logout import LogoutHandler
 from jupyter_server.extension.application import ExtensionApp
-from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 from tornado.httputil import url_concat
 from tornado.web import HTTPError
-from traitlets import Any, Bool, Instance, Integer, Unicode, default
+from traitlets import Any, Bool, Dict, Instance, Integer, Unicode, default
 
 from jupyterhub._version import __version__, _check_version
 from jupyterhub.log import log_request
 from jupyterhub.services.auth import HubOAuth, HubOAuthCallbackHandler
 from jupyterhub.utils import (
     _bool_env,
+    async_fetch,
     exponential_backoff,
     isoformat,
     url_path_join,
@@ -342,27 +342,23 @@ class JupyterHubSingleUser(ExtensionApp):
         # HubAuth gets most of its config from the environment
         return HubOAuth(parent=self)
 
-    # create dynamic default http client,
+    # create options for default http client,
     # configured with any relevant ssl config
-    hub_http_client = Any()
+    hub_http_client_opts = Dict()
 
-    @default('hub_http_client')
-    def _default_client(self):
+    @default('hub_http_client_opts')
+    def _default_client_opts(self):
         # can't use ssl_options in case of pycurl
-        defaults = dict(validate_cert=True)
+        client_opts = dict(validate_cert=True)
         # don't set falsy empty strings,
         # which tornado interprets as paths
         if self.hub_auth.client_ca:
-            defaults["ca_certs"] = self.hub_auth.client_ca
+            client_opts["ca_certs"] = self.hub_auth.client_ca
         if self.hub_auth.keyfile:
-            defaults["client_key"] = self.hub_auth.keyfile
+            client_opts["client_key"] = self.hub_auth.keyfile
         if self.hub_auth.certfile:
-            defaults["client_cert"] = self.hub_auth.certfile
-        AsyncHTTPClient.configure(
-            AsyncHTTPClient.configured_class(),
-            defaults=defaults,
-        )
-        return AsyncHTTPClient()
+            client_opts["client_cert"] = self.hub_auth.certfile
+        return client_opts
 
     async def check_hub_version(self):
         """Test a connection to my Hub
@@ -370,11 +366,13 @@ class JupyterHubSingleUser(ExtensionApp):
         - exit if I can't connect at all
         - check version and warn on sufficient mismatch
         """
-        client = self.hub_http_client
         RETRIES = 5
         for i in range(1, RETRIES + 1):
             try:
-                resp = await client.fetch(self.hub_auth.api_url)
+                resp = await async_fetch(
+                    self.hub_auth.api_url,
+                    **self.hub_http_client_opts,
+                )
             except Exception:
                 self.log.exception(
                     "Failed to connect to my Hub at %s (attempt %i/%i). Is it running?",
@@ -426,7 +424,6 @@ class JupyterHubSingleUser(ExtensionApp):
 
     async def notify_activity(self):
         """Notify jupyterhub of activity"""
-        client = self.hub_http_client
         last_activity = self.serverapp.web_app.last_activity()
         if not last_activity:
             self.log.debug("No activity to send to the Hub")
@@ -448,25 +445,26 @@ class JupyterHubSingleUser(ExtensionApp):
         async def notify():
             nonlocal failure_count
             self.log.debug("Notifying Hub of activity %s", last_activity_timestamp)
-
-            req = HTTPRequest(
-                url=self.hub_activity_url,
-                method='POST',
-                headers={
-                    "Authorization": f"token {self.hub_auth.api_token}",
-                    "Content-Type": "application/json",
-                },
-                body=json.dumps(
-                    {
-                        'servers': {
-                            self.server_name: {'last_activity': last_activity_timestamp}
-                        },
-                        'last_activity': last_activity_timestamp,
-                    }
-                ),
-            )
             try:
-                await client.fetch(req)
+                await async_fetch(
+                    self.hub_activity_url,
+                    method='POST',
+                    headers={
+                        "Authorization": f"token {self.hub_auth.api_token}",
+                        "Content-Type": "application/json",
+                    },
+                    body=json.dumps(
+                        {
+                            'servers': {
+                                self.server_name: {
+                                    'last_activity': last_activity_timestamp
+                                }
+                            },
+                            'last_activity': last_activity_timestamp,
+                        }
+                    ),
+                    **self.hub_http_client_opts,
+                )
             except Exception as e:
                 failure_count += 1
                 # log traceback at debug-level

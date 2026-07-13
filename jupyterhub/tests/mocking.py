@@ -264,6 +264,7 @@ class MockHub(JupyterHub):
     external_certs = Dict()
 
     def __init__(self, *args, **kwargs):
+        self.socket = kwargs.get('unix_socket', False)
         if 'internal_certs_location' in kwargs:
             cert_location = kwargs['internal_certs_location']
             kwargs['external_certs'] = ssl_setup(cert_location, 'hub-ca')
@@ -284,6 +285,8 @@ class MockHub(JupyterHub):
 
     @default('bind_url')
     def _default_bind_url(self):
+        if self.socket:
+            return f"http+unix://{self.socket}"
         if self.subdomain_host:
             port = urlparse(self.subdomain_host).port
         else:

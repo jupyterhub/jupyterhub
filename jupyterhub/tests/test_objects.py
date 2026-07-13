@@ -17,6 +17,7 @@ from jupyterhub.objects import Server
                 'port': 123,
                 'host': 'http://abc:123',
                 'url': 'http://abc:123/x/',
+                'connect_addr': 'abc',
             },
         ),
         (
@@ -27,6 +28,7 @@ from jupyterhub.objects import Server
                 'proto': 'https',
                 'host': 'https://abc:443',
                 'url': 'https://abc:443/x/',
+                'connect_addr': 'abc',
             },
         ),
     ],
@@ -52,6 +54,7 @@ _hostname = socket.gethostname()
                 'host': f'http://{_hostname}:123',
                 'url': f'http://{_hostname}:123/x/',
                 'bind_url': 'http://*:123/x/',
+                'connect_addr': f'{_hostname}',
             },
         ),
         (
@@ -63,11 +66,47 @@ _hostname = socket.gethostname()
                 'host': 'http://127.0.0.1:999',
                 'url': 'http://127.0.0.1:999/x/',
                 'bind_url': 'http://127.0.0.1:999/x/',
+                'connect_addr': '127.0.0.1',
             },
         ),
     ],
 )
 def test_ip_port(ip, port, attrs):
     s = Server(ip=ip, port=port, base_url='/x/')
+    for attr, value in attrs.items():
+        assert getattr(s, attr) == value
+
+
+@pytest.mark.parametrize(
+    'bind_url, attrs',
+    [
+        (
+            'http+unix://%2Ftmp%2Ftest.sock',
+            {
+                'ip': '',
+                'bind_url': 'http+unix://%2Ftmp%2Ftest.sock',
+                'connect_addr': '%2Ftmp%2Ftest.sock',
+                'connect_url': 'http+unix://%2Ftmp%2Ftest.sock/',
+                'connect_port': 0,
+                'host': 'http+unix://%2Ftmp%2Ftest.sock',
+                'base_url': '/',
+            },
+        ),
+        (
+            'http+unix://%2Ftmp%2Ftest.sock/foo',
+            {
+                'ip': '',
+                'bind_url': 'http+unix://%2Ftmp%2Ftest.sock/foo',
+                'connect_addr': '%2Ftmp%2Ftest.sock',
+                'connect_url': 'http+unix://%2Ftmp%2Ftest.sock/foo/',
+                'connect_port': 0,
+                'host': 'http+unix://%2Ftmp%2Ftest.sock',
+                'base_url': '/foo/',
+            },
+        ),
+    ],
+)
+def test_unix_socket(bind_url, attrs):
+    s = Server.from_url(bind_url)
     for attr, value in attrs.items():
         assert getattr(s, attr) == value

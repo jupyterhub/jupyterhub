@@ -24,10 +24,10 @@ import signal
 import time
 from functools import wraps
 from subprocess import Popen
-from urllib.parse import quote, urlparse
+from urllib.parse import quote, unquote_plus, urlparse
 from weakref import WeakKeyDictionary
 
-from tornado.httpclient import AsyncHTTPClient, HTTPError, HTTPRequest
+from tornado.httpclient import AsyncHTTPClient, HTTPError
 from tornado.ioloop import PeriodicCallback
 from traitlets import (
     Any,
@@ -45,11 +45,16 @@ from traitlets import (
 from traitlets.config import LoggingConfigurable
 
 from jupyterhub.traitlets import Command
+from jupyterhub.utils import async_fetch
 
 from . import utils
 from .metrics import CHECK_ROUTES_DURATION_SECONDS, PROXY_POLL_DURATION_SECONDS
 from .objects import Server
-from .utils import exponential_backoff, url_escape_path, url_path_join
+from .utils import (
+    exponential_backoff,
+    url_escape_path,
+    url_path_join,
+)
 
 
 def _one_at_a_time(method):
@@ -301,7 +306,7 @@ class Proxy(LoggingConfigurable):
 
     # Most basic implementers must only implement above methods
 
-    async def add_service(self, service, client=None):
+    async def add_service(self, service):
         """Add a service's server to the proxy table."""
         if not service.server:
             raise RuntimeError(
@@ -320,12 +325,12 @@ class Proxy(LoggingConfigurable):
             service.proxy_spec, service.server.host, {'service': service.name}
         )
 
-    async def delete_service(self, service, client=None):
+    async def delete_service(self, service):
         """Remove a service's server from the proxy table."""
         self.log.info("Removing service %s from proxy", service.name)
         await self.delete_route(service.proxy_spec)
 
-    async def add_user(self, user, server_name='', client=None):
+    async def add_user(self, user, server_name=''):
         """Add a user's server to the proxy table."""
         spawner = user.spawners[server_name]
         self.log.info(
@@ -556,7 +561,8 @@ class ConfigurableHTTPProxy(Proxy):
         return token
 
     api_url = Unicode(
-        config=True, help="""The ip (or hostname) of the proxy's API endpoint"""
+        config=True,
+        help="""The ip, hostname, or unix socket on which the proxy's API endpoint listens""",
     )
 
     @default('api_url')
@@ -572,6 +578,12 @@ class ConfigurableHTTPProxy(Proxy):
         'configurable-http-proxy',
         config=True,
         help="""The command to start the proxy""",
+    )
+
+    command_umask = Integer(
+        0o007,  # mask no permissions for owner and group, mask all permissions for other.
+        config=True,
+        help="""The umask to be applied before running the proxy command. This can be helpful when controlling permissions for Unix Domain Sockets.""",
     )
 
     pid_file = Unicode(
@@ -626,14 +638,14 @@ class ConfigurableHTTPProxy(Proxy):
                 pid = int(f.read().strip())
         except ValueError:
             self.log.warning("%s did not appear to contain a pid", pid_file)
-            self._remove_pid_file()
+            self._remove_process_files()
             return
 
         try:
             self._check_pid(pid)
         except ProcessLookupError:
             self.log.warning("Proxy no longer running at pid=%s", pid)
-            self._remove_pid_file()
+            self._remove_process_files()
             return
 
         # if we got here, CHP is still running
@@ -658,7 +670,7 @@ class ConfigurableHTTPProxy(Proxy):
             self._check_pid(pid)
         except ProcessLookupError:
             self.log.warning("Stopped proxy at pid=%s", pid)
-            self._remove_pid_file()
+            self._remove_process_files()
             return
         else:
             raise RuntimeError("Failed to stop proxy at pid=%s", pid)
@@ -669,15 +681,21 @@ class ConfigurableHTTPProxy(Proxy):
         with open(self.pid_file, "w") as f:
             f.write(str(self.proxy_process.pid))
 
-    def _remove_pid_file(self):
-        """Cleanup pid file for proxy after stopping"""
+    def _remove_process_files(self):
+        """Cleanup process files for proxy after stopping"""
         if not self.pid_file:
             return
-        self.log.debug("Removing proxy pid file %s", self.pid_file)
-        try:
-            os.remove(self.pid_file)
-        except FileNotFoundError:
-            self.log.debug("PID file %s already removed", self.pid_file)
+        paths = [self.pid_file]
+        for socket_url in [self.public_url, self.api_url]:
+            proto, sep, rest = socket_url.partition('://')
+            if proto == 'http+unix':
+                paths.append(unquote_plus(rest))
+        for path in paths:
+            try:
+                os.remove(path)
+                self.log.debug("Removing proxy process file %s", path)
+            except FileNotFoundError:
+                self.log.debug("File %s already removed", path)
 
     def _get_ssl_options(self):
         """List of cmd proxy options to use internal SSL"""
@@ -713,24 +731,46 @@ class ConfigurableHTTPProxy(Proxy):
         self._check_previous_process()
 
         # build the command to launch
-        public_server = Server.from_url(self.public_url)
-        api_server = Server.from_url(self.api_url)
         env = os.environ.copy()
         env['CONFIGPROXY_AUTH_TOKEN'] = self.auth_token
+
+        proxy_server = Server.from_url(self.public_url)
+        if proxy_server._unix_socket:
+            server_args = (
+                '--socket',
+                unquote_plus(proxy_server.connect_addr),
+            )
+        else:
+            server_args = (
+                '--ip',
+                proxy_server.connect_addr,
+                '--port',
+                str(proxy_server.port),
+            )
+
+        api_server = Server.from_url(self.api_url)
+        if api_server._unix_socket:
+            api_args = (
+                '--api-socket',
+                unquote_plus(api_server.connect_addr),
+            )
+        else:
+            api_args = (
+                '--api-ip',
+                api_server.connect_addr,
+                '--api-port',
+                str(api_server.port),
+            )
+
         cmd = self.command + [
-            '--ip',
-            public_server.ip,
-            '--port',
-            str(public_server.port),
-            '--api-ip',
-            api_server.ip,
-            '--api-port',
-            str(api_server.port),
+            *server_args,
+            *api_args,
             '--error-target',
             url_path_join(self.hub.url, 'error'),
             '--log-level',
             self.log_level,
         ]
+
         if self.app.subdomain_host:
             cmd.append('--host-routing')
         if self.ssl_key:
@@ -745,12 +785,16 @@ class ConfigurableHTTPProxy(Proxy):
                 "Running JupyterHub without SSL."
                 "  I hope there is SSL termination happening somewhere else..."
             )
-        self.log.info("Starting proxy @ %s", public_server.bind_url)
+        self.log.info("Starting proxy @ %s", proxy_server.bind_url)
         self.log.debug("Proxy cmd: %s", cmd)
         shell = os.name == 'nt'
         try:
             self.proxy_process = Popen(
-                cmd, env=env, start_new_session=True, shell=shell
+                cmd,
+                env=env,
+                start_new_session=True,
+                shell=shell,
+                umask=self.command_umask,
             )
         except FileNotFoundError as e:
             self.log.error(
@@ -791,7 +835,7 @@ class ConfigurableHTTPProxy(Proxy):
         # wait for both servers to be ready (or one server to fail)
         server_futures = [
             asyncio.ensure_future(server.wait_up(10))
-            for server in (public_server, api_server)
+            for server in (proxy_server, api_server)
         ]
         servers_ready = asyncio.gather(*server_futures)
 
@@ -866,7 +910,7 @@ class ConfigurableHTTPProxy(Proxy):
                 self._terminate()
             except Exception as e:
                 self.log.error("Failed to terminate proxy process: %s", e)
-        self._remove_pid_file()
+        self._remove_process_files()
 
     async def check_running(self):
         """Check if the proxy is still running"""
@@ -876,7 +920,7 @@ class ConfigurableHTTPProxy(Proxy):
             "Proxy stopped with exit code %r",
             'unknown' if self.proxy_process is None else self.proxy_process.poll(),
         )
-        self._remove_pid_file()
+        self._remove_process_files()
         await self.start()
         await self.restore_routes()
 
@@ -911,27 +955,25 @@ class ConfigurableHTTPProxy(Proxy):
             routespec = routespec + '/'
         return routespec
 
-    async def api_request(self, path, method='GET', body=None, client=None):
+    async def api_request(self, path, method='GET', body=None):
         """Make an authenticated API request of the proxy."""
-        client = client or AsyncHTTPClient()
         url = url_path_join(self.api_url, 'api/routes', path)
 
         if isinstance(body, dict):
             body = json.dumps(body)
         self.log.debug("Proxy: Fetching %s %s", method, url)
-        req = HTTPRequest(
-            url,
-            method=method,
-            headers={'Authorization': f'token {self.auth_token}'},
-            body=body,
-            connect_timeout=3,  # default: 20s
-            request_timeout=10,  # default: 20s
-        )
 
         async def _wait_for_api_request():
             try:
                 async with self.semaphore:
-                    return await client.fetch(req)
+                    return await async_fetch(
+                        url,
+                        method=method,
+                        headers={'Authorization': f'token {self.auth_token}'},
+                        body=body,
+                        connect_timeout=3,  # default: 20s
+                        request_timeout=10,  # default: 20s
+                    )
             except HTTPError as e:
                 # Retry on potentially transient errors in CHP, typically
                 # numbered 500 and up. Note that CHP isn't able to emit 429
@@ -979,10 +1021,10 @@ class ConfigurableHTTPProxy(Proxy):
         chp_data.pop('jupyterhub')
         return {'routespec': routespec, 'target': target, 'data': chp_data}
 
-    async def get_all_routes(self, client=None):
+    async def get_all_routes(self):
         """Fetch the proxy's routes."""
         proxy_poll_start_time = time.perf_counter()
-        resp = await self.api_request('', client=client)
+        resp = await self.api_request('')
         chp_routes = json.loads(resp.body.decode('utf8', 'replace'))
         all_routes = {}
         for chp_path, chp_data in chp_routes.items():
