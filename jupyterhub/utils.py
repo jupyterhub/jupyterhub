@@ -21,13 +21,12 @@ import time
 import uuid
 import warnings
 from binascii import b2a_hex
-from collections.abc import Generator
-from contextlib import aclosing, contextmanager
+from contextlib import aclosing
 from datetime import datetime, timezone
 from functools import lru_cache
 from hmac import compare_digest
 from operator import itemgetter
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict
 from urllib.parse import (
     SplitResult,
     quote,
@@ -60,79 +59,16 @@ def unix_socket_in_use(socket_path: str) -> bool:
         sock.close()
 
 
-@contextmanager
-def _request_for_tornado_client(
-    urlstring: str,
-    method: str = "GET",
-    body: Any = None,
-    headers: Any = None,
-    using_pycurl: bool = False,
-    **kwargs,
-) -> Generator[HTTPRequest, None, None]:
-    """A utility that provides a context that handles
-    HTTP, HTTPS, and HTTP+UNIX request.
-    Creates a tornado HTTPRequest object with a URL
-    that tornado's HTTPClients can accept.
-    If the request is made to a unix socket, temporarily
-    configure the AsyncHTTPClient to resolve the URL
-    and connect to the proper socket.
+class UnixSocketResolver(Resolver):
+    """A resolver that routes HTTP requests to unix sockets
+    in tornado HTTP clients.
+    Due to constraints in Tornados' API, the scheme of the
+    must be `http` (not `http+unix`). Applications should replace
+    the scheme in URLS before making a request to the HTTP client.
     """
-    parts = urlsplit(urlstring)
-    extra_request_args = {}
 
-    if parts.scheme in ["http", "https"]:
-        pass
-    elif parts.scheme == 'http+unix':
-        # If unix socket, mimic HTTP.
-        socket_path = parts.netloc
-        hostname = 'localhost' if using_pycurl else socket_path
-        parts = SplitResult(
-            scheme="http",
-            netloc=hostname,
-            path=parts.path,
-            query=parts.query,
-            fragment=parts.fragment,
-        )
-
-        class UnixSocketResolver(Resolver):
-            """A resolver that routes HTTP requests to unix sockets
-            in tornado HTTP clients.
-            Due to constraints in Tornados' API, the scheme of the
-            must be `http` (not `http+unix`). Applications should replace
-            the scheme in URLS before making a request to the HTTP client.
-            """
-
-            def initialize(self, socket_path: str):
-                self.socket_path = socket_path
-
-            async def resolve(
-                self, host: str, port: int, *args, **kwargs
-            ) -> List[Tuple[int, Any]]:
-                return [(socket.AF_UNIX, self.socket_path)]
-
-        # if not using pycurl, we need to use our custom resolver
-        # if using pycurl, we can implement a unix socket connection with a curl callback
-        if using_pycurl:
-            import pycurl
-
-            extra_request_args['prepare_curl_callback'] = lambda curl: curl.setopt(
-                pycurl.UNIX_SOCKET_PATH, unquote_plus(socket_path)
-            )
-        else:
-            AsyncHTTPClient.configure(
-                AsyncHTTPClient.configured_class(),
-                resolver=UnixSocketResolver(unquote_plus(socket_path)),
-            )
-    else:
-        msg = "Unknown URL scheme."
-        raise Exception(msg)
-
-    # Yield the request for the given client.
-    url = urlunsplit(parts)
-    request = HTTPRequest(
-        url, method=method, body=body, headers=headers, **(kwargs | extra_request_args)
-    )
-    yield request
+    async def resolve(self, host, port, *args, **kwargs):
+        return [(socket.AF_UNIX, unquote_plus(host))]
 
 
 async def async_fetch(
@@ -151,22 +87,46 @@ async def async_fetch(
 
     if AsyncHTTPClient.configured_class().__name__ == 'CurlAsyncHTTPClient':
         using_pycurl = True
+        import pycurl
     else:
         using_pycurl = False
+
+    parts = urlsplit(urlstring)
+    if parts.scheme == 'http+unix':
+        # If unix socket, mimic scheme HTTP.
+        socket_path = parts.netloc
+        hostname = 'localhost' if using_pycurl else socket_path
+        parts = SplitResult(
+            scheme="http",
+            netloc=hostname,
+            path=parts.path,
+            query=parts.query,
+            fragment=parts.fragment,
+        )
+        if using_pycurl:
+            kwargs['prepare_curl_callback'] = lambda curl: curl.setopt(
+                pycurl.UNIX_SOCKET_PATH, unquote_plus(socket_path)
+            )
+            client = AsyncHTTPClient(force_instance=True)
+        else:
+            client = AsyncHTTPClient(force_instance=True, resolver=UnixSocketResolver())
+    elif parts.scheme in ['http', 'https']:
+        client = AsyncHTTPClient(force_instance=True)
+    else:
+        msg = "Unknown URL scheme."
+        raise Exception(msg)
 
     # ssl_options not allowed on pycurl
     if not using_pycurl:
         kwargs['ssl_options'] = ssl_options
 
-    with _request_for_tornado_client(
-        urlstring,
-        method=method,
-        body=body,
-        headers=headers,
-        using_pycurl=using_pycurl,
-        **kwargs,
-    ) as request:
-        response = await AsyncHTTPClient().fetch(request, raise_error=raise_error)
+    request = HTTPRequest(
+        urlunsplit(parts), method=method, body=body, headers=headers, **kwargs
+    )
+    try:
+        response = await client.fetch(request, raise_error=raise_error)
+    finally:
+        client.close()
     return response
 
 
