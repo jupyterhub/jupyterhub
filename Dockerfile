@@ -11,13 +11,13 @@ FROM $BASE_IMAGE AS builder
   
 USER root
 
-ENV CUDNN_VERSION 8.0.5.39
+# ENV CUDNN_VERSION 8.0.5.39
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libcudnn8=$CUDNN_VERSION-1+cuda11.0 \
-    libcudnn8-dev=$CUDNN_VERSION-1+cuda11.0 \
-    && apt-mark hold libcudnn8 && \
-    rm -rf /var/lib/apt/lists/*
+# RUN apt-get update && apt-get install -y --no-install-recommends \
+#     libcudnn8=$CUDNN_VERSION-1+cuda11.0 \
+#     libcudnn8-dev=$CUDNN_VERSION-1+cuda11.0 \
+#     && apt-mark hold libcudnn8 && \
+#     rm -rf /var/lib/apt/lists/*
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update && apt-get install -yq --no-install-recommends \
@@ -32,7 +32,7 @@ RUN apt-get update && apt-get install -yq --no-install-recommends \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
-RUN python3 -m pip install --upgrade setuptools pip wheel
+# RUN python3 -m pip install --upgrade setuptools pip wheel
 
 # copy everything except whats in .dockerignore, its a
 # compromise between needing to rebuild and maintaining
@@ -43,7 +43,7 @@ WORKDIR /src/jupyterhub
 # Build client component packages (they will be copied into ./share and
 # packaged with the built wheel.)
 RUN python3 setup.py bdist_wheel
-RUN python3 -m pip wheel --wheel-dir wheelhouse dist/*.whl
+# RUN python3 -m pip wheel --wheel-dir wheelhouse dist/*.whl
 
 #========================================================#
 #         Final Image (JupyterHub) Installation          #
@@ -89,17 +89,18 @@ ENV SHELL=/bin/bash \
 RUN  locale-gen $LC_ALL
 
 # always make sure pip is up to date!
-RUN python3 -m pip install --no-cache --upgrade setuptools pip
+# RUN python3 -m pip install --no-cache --upgrade setuptools pip
 
 RUN npm install -g configurable-http-proxy@^4.2.0 \
  && rm -rf ~/.npm
 
 # install the wheels we built in the first stage
-COPY --from=builder /src/jupyterhub/wheelhouse /tmp/wheelhouse
-RUN python3 -m pip install --no-cache /tmp/wheelhouse/*
+# COPY --from=builder /src/jupyterhub/wheelhouse /tmp/wheelhouse
+# RUN python3 -m pip install --no-cache /tmp/wheelhouse/*
 
 # To use Jupyter Lab, we should install jupyterlab
-RUN python3 -m pip install jupyterlab
+RUN apt-get update && apt-get install -y pipx \
+    && pipx install jupyterlab
 
 RUN mkdir -p /srv/jupyterhub/
 WORKDIR /srv/jupyterhub/
