@@ -8,7 +8,7 @@
 # ARG BASE_IMAGE=nvidia/cuda:11.0.3-devel-ubuntu20.04
 ARG BASE_IMAGE=nvidia/cuda:12.6.3-cudnn-devel-ubuntu24.04
 FROM $BASE_IMAGE AS builder
-
+  
 USER root
 
 # ENV CUDNN_VERSION 8.0.5.39
