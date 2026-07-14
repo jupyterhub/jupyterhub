@@ -11,13 +11,13 @@ FROM $BASE_IMAGE AS builder
   
 USER root
 
-# ENV CUDNN_VERSION 8.0.5.39
+ENV CUDNN_VERSION 8.0.5.39
 
-# RUN apt-get update && apt-get install -y --no-install-recommends \
-#     libcudnn8=$CUDNN_VERSION-1+cuda11.0 \
-#     libcudnn8-dev=$CUDNN_VERSION-1+cuda11.0 \
-#     && apt-mark hold libcudnn8 && \
-#     rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libcudnn8=$CUDNN_VERSION-1+cuda11.0 \
+    libcudnn8-dev=$CUDNN_VERSION-1+cuda11.0 \
+    && apt-mark hold libcudnn8 && \
+    rm -rf /var/lib/apt/lists/*
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update && apt-get install -yq --no-install-recommends \
