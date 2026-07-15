@@ -748,8 +748,8 @@ class JupyterHub(Application):
 
         For example:
 
-            ""http://:8000""
-            "http+unix://%2Fsrv%2Fjupyterhub%2Fproxy.sock"
+        - `http://:8000`
+        - `http+unix://%2Fsrv%2Fjupyterhub%2Fproxy.sock`
         """,
     ).tag(config=True)
 
