@@ -355,17 +355,18 @@ async def test_spawn_pending_server_ready(app, browser, user_special_chars):
 async def test_spawn_named_server_with_form(
     app,
     browser,
+    named_servers,
     user_special_chars,
     form_spawn,
-    named_servers,  # noqa: F811
 ):
     """verify that a new named server with special characters is slugified and launched with custom form inputs"""
 
     user = user_special_chars.user
+    assert user.allow_named_servers
     urlname = user_special_chars.urlname
     urlname_js = user_special_chars.urlname_js
     entered_display_name = " <  🐧  >\tÅ=Ⅷ"
-    expected_display_name = "< 🐧 > Å=Ⅷ"
+    expected_display_name = "< 🐧 >Å=Ⅷ"
     expected_encoded_display_name = "%3C%20%F0%9F%90%A7%20%3E%C3%85%3D%E2%85%A7"
     expected_server_name = "a-viii"
 
@@ -374,10 +375,22 @@ async def test_spawn_named_server_with_form(
     await login_home(browser, app, user.name)
     await browser.get_by_role("textbox", name="server name").fill(entered_display_name)
     await browser.get_by_role("button", name="Add New Server").click()
+    # this creates a server, but doesn't launch it
+    # wait for named server row
+    server_rows = browser.locator('tr.home-server-row')
+    await expect(server_rows).to_have_count(2)
 
-    await browser.wait_for_url(
-        f"**/hub/spawn/{urlname_js}/{expected_server_name}?display_name={expected_encoded_display_name}"
-    )
+    server_row = server_rows.nth(1)
+    server_name = await server_row.get_attribute("data-server-name")
+    assert server_name == expected_server_name
+    start_button = server_row.get_by_role("button", name="start")
+    name_cell = server_row.locator("td").nth(0)
+    await expect(name_cell).to_contain_text(expected_display_name, timeout=500)
+    await expect(start_button).to_have_id(f"start-{expected_server_name}")
+    # launch the named server
+    await start_button.click()
+
+    await browser.wait_for_url(f"**/hub/spawn/{urlname_js}/{expected_server_name}")
 
     await browser.get_by_role("textbox", name="energy").fill(entered_form_input)
     await browser.get_by_role("button", name="Start").click()
