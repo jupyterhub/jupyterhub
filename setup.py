@@ -100,7 +100,7 @@ class NPM(BaseCommand):
 
         print("installing js dependencies with npm")
         check_call(
-            ['npm', 'install', '--progress=false', '--unsafe-perm'],
+            ['npm', 'install', '--progress=false'],
             cwd=here,
             shell=shell,
         )
@@ -198,7 +198,7 @@ class JSX(BaseCommand):
 
         print("Installing JSX admin app requirements")
         check_call(
-            ['npm', 'install', '--progress=false', '--unsafe-perm'],
+            ['npm', 'install', '--progress=false'],
             cwd=self.jsx_dir,
             shell=shell,
         )
