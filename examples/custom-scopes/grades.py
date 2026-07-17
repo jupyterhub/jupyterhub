@@ -78,8 +78,9 @@ class GradesHandler(HubOAuthenticated, RequestHandler):
                 """)
         if WRITE_SCOPE in self.current_user["scopes"]:
             self.write("Enter grade:")
-            self.write("""
+            self.write(f"""
                 <form action=. method=POST>
+                    {self.xsrf_form_html()}
                     <input name=student placeholder=student></input>
                     <input kind=number name=grade placeholder=grade></input>
                     <input type="submit" value="Submit">
@@ -112,6 +113,9 @@ def main():
         ],
         cookie_secret=os.urandom(32),
         grades={"student": 53},
+        settings={
+            "xsrf_cookies": True,
+        },
     )
 
     http_server = HTTPServer(app)
