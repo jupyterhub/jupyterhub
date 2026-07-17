@@ -3740,7 +3740,7 @@ class JupyterHub(Application):
                     http=True, timeout=service.timeout, ssl_context=ssl_context
                 )
             )
-            futures = []
+            futures = [wait_up_task]
             if service.managed:
 
                 async def wait_for_stop():
@@ -3756,7 +3756,7 @@ class JupyterHub(Application):
                 futures.append(wait_for_stop_task)
 
             done, pending = await asyncio.wait(
-                futures, return_when=asyncio.FIRST_EXCEPTION
+                futures, return_when=asyncio.FIRST_COMPLETED
             )
             # cancel pending
             [f.cancel() for f in pending if not f.done()]
