@@ -212,7 +212,7 @@ minor Windows compatibility issues (such as basic installation) **may** be accep
 however. For Windows-based systems, we would recommend running JupyterHub in a
 docker container or Linux VM.
 
-[Additional Reference:](http://www.tornadoweb.org/en/stable/#installation) Tornado's documentation on Windows platform support
+[Additional Reference:](https://www.tornadoweb.org/en/stable/#installation) Tornado's documentation on Windows platform support
 
 ## License
 
@@ -230,7 +230,7 @@ You can also talk with us on our JupyterHub [Gitter](https://gitter.im/jupyterhu
 - [JupyterHub tutorial](https://github.com/jupyterhub/jupyterhub-tutorial)
 - [Documentation for JupyterHub](https://jupyterhub.readthedocs.io/en/latest/)
 - [Documentation for JupyterHub's REST API][rest api]
-- [Documentation for Project Jupyter](http://jupyter.readthedocs.io/en/latest/index.html)
+- [Documentation for Project Jupyter](https://jupyter.readthedocs.io/en/latest/index.html)
 - [Project Jupyter website](https://jupyter.org)
 - [Project Jupyter community](https://jupyter.org/community)
 
