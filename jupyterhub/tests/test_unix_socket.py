@@ -4,7 +4,7 @@ from urllib.parse import quote_plus
 
 from traitlets.config import Config
 
-from ..utils import async_fetch
+from ..httpclient import fetch
 from .mocking import MockHub
 from .utils import auth_header
 
@@ -47,17 +47,17 @@ async def test_unix_socket_proxy(request, tmp_path):
     # test proxy
     headers = {}
     headers.update(auth_header(app.db, 'admin'))
-    r = await async_fetch(
-        f'{cfg.bind_url}/hub/api/info',
+    r = await fetch(
+        f'{cfg.JupyterHub.bind_url}/hub/api/info',
         method="GET",
         headers=headers,
     )
-    assert r.code == 200
+    assert r.status == 200
 
     # test proxy api
-    r = await async_fetch(
+    r = await fetch(
         f'{app.proxy.api_url}/api/routes',
         method="GET",
         headers={"Authorization": f'token {app.proxy.auth_token}'},
     )
-    assert r.code == 200
+    assert r.status == 200

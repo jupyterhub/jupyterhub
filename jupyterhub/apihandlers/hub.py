@@ -14,7 +14,7 @@ from .base import APIHandler
 
 class ShutdownAPIHandler(APIHandler):
     @needs_scope('shutdown')
-    def post(self):
+    async def post(self):
         """POST /api/shutdown triggers a clean shutdown
 
         POST (JSON) parameters:
@@ -48,7 +48,10 @@ class ShutdownAPIHandler(APIHandler):
         self.finish(json.dumps({"message": "Shutting down Hub"}))
 
         # instruct the app to stop, which will trigger cleanup
-        app.stop()
+        f = app.stop()
+        if f is not None:
+            # app.stop() is awaitable in tests, but not the 'real' stop
+            await f
 
 
 class RootAPIHandler(APIHandler):
