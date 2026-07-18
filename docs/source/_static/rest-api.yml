@@ -350,10 +350,11 @@ paths:
         - $ref: "#/components/parameters/userName"
       requestBody:
         description: |
-          Spawn options can be passed as a JSON body
+          Spawn options and the display name can be set in the JSON body
           when spawning via the API instead of spawn form.
           The structure of the options
           will depend on the Spawner's configuration.
+          If options are not specified, the values from the most recent spawn will be re-used.
         content:
           application/json:
             schema:

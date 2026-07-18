@@ -2786,7 +2786,30 @@ async def test_rename_server(
 
 
 async def test_patch_server(app, user, named_servers):
-    pass
+    src_name = "named"
+    spawner = user.get_or_create_spawner(src_name, "display name")
+
+    r = await api_request(
+        app,
+        f"users/{user.name}/servers/{src_name}",
+        data=json.dumps(
+            {
+                "name": "newname",
+                "display_name": "New Name!",
+                "user_options": {
+                    "key": "value",
+                },
+            }
+        ),
+        method="patch",
+    )
+    r.raise_for_status()
+    server_model = r.json()
+    assert src_name not in user.orm_spawners
+    assert spawner.name == "newname"
+    assert spawner.display_name == "New Name!"
+    assert spawner.orm_spawner.user_options == {"key": "value"}
+    assert spawner.user_options == {"key": "value"}
 
 
 # -----------------

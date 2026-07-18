@@ -617,6 +617,7 @@ class UserServerAPIHandler(APIHandler):
 
     - GET: single server model
     - PUT: create new server (don't start it)
+    - PATCH: edit server (must exist)
     - POST: start server (create if not exists)
     - DELETE: stop server (and delete it)
     """
@@ -706,7 +707,8 @@ class UserServerAPIHandler(APIHandler):
         spawner = user.get_or_create_spawner(server_name, display_name)
         user_options = body.get("user_options")
         if user_options:
-            spawner.user_options = user_options
+            # spawner.user_options is not synced with orm_spawner
+            spawner.user_options = spawner.orm_spawner.user_options = user_options
             self.db.commit()
         self.set_status(201)
         self.write(json.dumps(self.server_model(spawner, user=user)))
@@ -749,6 +751,13 @@ class UserServerAPIHandler(APIHandler):
                 spawner._spawn_pending = False
             if state is None:
                 raise web.HTTPError(400, f"{spawner._log_name} is already running")
+
+        if body.get("display_name") and spawner.display_name != display_name:
+            self.log.info(
+                f"Updating display_name for {spawner._log_name} {spawner.display_name} -> {display_name}"
+            )
+            spawner.display_name = display_name
+            self.db.commit()
 
         options = body["user_options"]
         await self.spawn_single_user(user, server_name, display_name, options=options)
@@ -803,20 +812,42 @@ class UserServerAPIHandler(APIHandler):
         # actions:
         # 1. new name, rename
         if new_server_name:
+            if new_server_name in user.orm_spawners:
+                raise web.HTTPError(
+                    409, f"User {user.name} already has server {new_server_name!r}"
+                )
             self.log.info(
                 f"Renaming spawner {user.name}/{server_name} -> {new_server_name}"
             )
             await spawner.rename(server_name, new_server_name)
             orm_spawner.name = new_server_name
+            if server_name in user.spawners:
+                # rename in .servers dict
+                user.spawners[new_server_name] = user.spawners.pop(server_name)
             self.db.commit()
-            assert spawner.name == new_server_name
+            server_name = new_server_name
 
-        # 2. set user options
-        user_options = body.get("user")
+        # 2. set user options, display_name
         if "user_options" in body:
             if not isinstance(body["user_options"], dict):
                 raise web.HTTPError(400, "user_options must be a dict")
+            self.log.info(
+                f"Setting user_options on {user.name}/{server_name} {body["user_options"]}"
+            )
             orm_spawner.user_options = body["user_options"]
+            if server_name in user.spawners:
+                # user_options not synced between orm.Spawner and Spawner wrapper class
+                user.spawners[server_name].user_options = body["user_options"]
+            self.db.commit()
+
+        # update display_name
+        if body.get("display_name") and orm_spawner.display_name != display_name:
+            if not isinstance(body["display_name"], str):
+                raise web.HTTPError(400, "display_name must be a string")
+            self.log.info(
+                f"Updating display_name for {user.name}/{server_name} {orm_spawner.display_name!r} -> {display_name!r}"
+            )
+            orm_spawner.display_name = display_name
             self.db.commit()
 
         # 3. (not yet) directly modify server state?
