@@ -832,7 +832,7 @@ class UserServerAPIHandler(APIHandler):
             if not isinstance(body["user_options"], dict):
                 raise web.HTTPError(400, "user_options must be a dict")
             self.log.info(
-                f"Setting user_options on {user.name}/{server_name} {body["user_options"]}"
+                f"Setting user_options on {user.name}/{server_name} {body['user_options']}"
             )
             orm_spawner.user_options = body["user_options"]
             if server_name in user.spawners:
