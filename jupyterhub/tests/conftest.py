@@ -190,52 +190,51 @@ async def cleanup_after(request):
     without having to launch a whole new app
     """
 
-    try:
-        yield
-    finally:
-        if _db is not None:
-            # cleanup after failed transactions
-            _db.rollback()
+    yield
 
-        if not MockHub.initialized():
-            return
-        app = MockHub.instance()
-        if app.db_file.closed:
-            return
+    if _db is not None:
+        # cleanup after failed transactions
+        _db.rollback()
 
-        # cleanup users
-        for orm_user in app.db.query(orm.User):
-            user = app.users[orm_user]
-            for name, spawner in list(user.spawners.items()):
-                if spawner.active:
-                    try:
-                        await app.proxy.delete_user(user, name)
-                    except HTTPError:
-                        pass
-                    print(f"Stopping leftover server {spawner._log_name}")
-                    await user.stop(name)
-            if user.name not in {'admin', 'user'}:
-                app.log.debug(f"Deleting test user {user.name}")
-                app.users.delete(user.id)
-        # delete groups
-        for group in app.db.query(orm.Group):
-            app.log.debug(f"Deleting test group {group.name}")
-            app.db.delete(group)
-        # delete shares
-        for share in app.db.query(orm.Share):
-            app.log.debug(f"Deleting test share {share}")
-            app.db.delete(share)
+    if not MockHub.initialized():
+        return
+    app = MockHub.instance()
+    if app.db_file.closed:
+        return
 
-        # clear services
-        for name, service in app._service_map.items():
-            if service.managed:
-                service.stop()
-        for orm_service in app.db.query(orm.Service):
-            if orm_service.oauth_client:
-                app.oauth_provider.remove_client(orm_service.oauth_client_id)
-            app.db.delete(orm_service)
-        app._service_map.clear()
-        app.db.commit()
+    # cleanup users
+    for orm_user in app.db.query(orm.User):
+        user = app.users[orm_user]
+        for name, spawner in list(user.spawners.items()):
+            if spawner.active:
+                try:
+                    await app.proxy.delete_user(user, name)
+                except HTTPError:
+                    pass
+                print(f"Stopping leftover server {spawner._log_name}")
+                await user.stop(name)
+        if user.name not in {'admin', 'user'}:
+            app.log.debug(f"Deleting test user {user.name}")
+            app.users.delete(user.id)
+    # delete groups
+    for group in app.db.query(orm.Group):
+        app.log.debug(f"Deleting test group {group.name}")
+        app.db.delete(group)
+    # delete shares
+    for share in app.db.query(orm.Share):
+        app.log.debug(f"Deleting test share {share}")
+        app.db.delete(share)
+
+    # clear services
+    for name, service in app._service_map.items():
+        if service.managed:
+            service.stop()
+    for orm_service in app.db.query(orm.Service):
+        if orm_service.oauth_client:
+            app.oauth_provider.remove_client(orm_service.oauth_client_id)
+        app.db.delete(orm_service)
+    app._service_map.clear()
+    app.db.commit()
 
 
 _username_counter = 0
