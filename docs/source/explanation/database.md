@@ -131,6 +131,13 @@ In general, you select your database backend with [](JupyterHub.db_url), and can
 - `jupyterhub upgrade-db` will execute a schema upgrade. You should backup your database before running this.
 - `jupyterhub downgrade-db` may be able to revert a schema upgrade on PostgreSQL and MySQL, but this is not guaranteed to work, and is not supported.
 
+JupyterHub exposes two related interfaces for running a schema upgrade. They are not the same:
+
+- The `jupyterhub upgrade-db` subcommand is a standalone action: it performs the schema upgrade and then exits without starting the Hub.
+- The `--upgrade-db` flag (passed to `jupyterhub`) starts the Hub normally and runs the schema upgrade during startup if one is needed.
+
+For most upgrades, prefer the `jupyterhub upgrade-db` subcommand so the migration runs as a discrete step that you can inspect before starting the Hub.
+
 ### SQLite
 
 The SQLite database should not be used on NFS. SQLite uses reader/writer locks
