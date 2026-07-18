@@ -115,19 +115,17 @@ async def app(request, ssl_tmpdir):
 
     mocked_app = MockHub.instance(**kwargs)
 
-    def fin():
-        # disconnect logging during cleanup because pytest closes captured FDs prematurely
-        mocked_app.log.handlers = []
-        MockHub.clear_instance()
-        try:
-            mocked_app.stop()
-        except Exception as e:
-            print(f"Error stopping Hub: {e}", file=sys.stderr)
-
-    request.addfinalizer(fin)
     await mocked_app.initialize([])
     await mocked_app.start()
-    return mocked_app
+    yield mocked_app
+
+    # disconnect logging during cleanup because pytest closes captured FDs prematurely
+    mocked_app.log.handlers = []
+    MockHub.clear_instance()
+    try:
+        await mocked_app.stop()
+    except Exception as e:
+        print(f"Error stopping Hub: {e}", file=sys.stderr)
 
 
 @fixture

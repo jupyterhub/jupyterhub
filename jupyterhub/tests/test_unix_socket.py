@@ -1,7 +1,8 @@
 """Test managing a ConfigurableHTTPProxy running on unix sockets."""
 
-from urllib.parse import quote_plus
+from urllib.parse import quote
 
+import pytest
 from traitlets.config import Config
 
 from ..httpclient import fetch
@@ -9,31 +10,42 @@ from .mocking import MockHub
 from .utils import auth_header
 
 
-async def test_unix_socket_proxy(request, tmp_path):
+@pytest.fixture
+async def new_hub():
+    apps = []
+
+    async def _new_hub(config):
+        app = MockHub.instance(config=config)
+        app.last_activity_interval = 0
+        apps.append(app)
+        await app.initialize([])
+        await app.start()
+
+        async def noop():
+            return
+
+        app.shutdown_cancel_tasks = noop
+        return app
+
+    yield _new_hub
+    for app in apps:
+        await app.stop()
+    MockHub.clear_instance()
+
+
+async def test_unix_socket_proxy(new_hub, tmp_path):
     cfg = Config()
     proxy_sock = str(tmp_path / 'proxy.sock')
     api_sock = str(tmp_path / 'api.sock')
 
     auth_token = 'secret!'
 
-    cfg.bind_url = f'http+unix://{quote_plus(proxy_sock)}'
-    cfg.ConfigurableHTTPProxy.api_url = f'http+unix://{quote_plus(api_sock)}'
+    cfg.JupyterHub.bind_url = f'http+unix://{quote(proxy_sock, safe="")}'
+    cfg.ConfigurableHTTPProxy.api_url = f'http+unix://{quote(api_sock, safe="")}'
     cfg.ConfigurableHTTPProxy.should_start = True
     cfg.ConfigurableHTTPProxy.auth_token = auth_token
 
-    app = MockHub.instance(config=cfg, bind_url=cfg.bind_url)
-    # disable last_activity polling to avoid check_routes being called during the test,
-    # which races with some of our test conditions
-    app.last_activity_interval = 0
-
-    def fin():
-        MockHub.clear_instance()
-        app.stop()
-
-    request.addfinalizer(fin)
-
-    await app.initialize([])
-    await app.start()
+    app = await new_hub(config=cfg)
 
     expected_args = [
         "configurable-http-proxy",
