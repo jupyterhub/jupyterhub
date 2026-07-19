@@ -3338,12 +3338,13 @@ class JupyterHub(Application):
 
     def init_pycurl(self):
         """Configure tornado to use pycurl by default, if available"""
-        # use pycurl by default, if available:
+        # no longer affects JupyterHub's internal requests (6.0),
+        # but may still affect custom Authenticators, etc.
         try:
             AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient")
         except ImportError as e:
             self.log.debug(
-                "pycurl not loaded. pycurl is no longer used internally by JupyterHub.",
+                "pycurl not loaded (%s). pycurl is no longer used internally by JupyterHub.",
                 e,
             )
 
