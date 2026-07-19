@@ -40,13 +40,14 @@ from tornado.web import HTTPError
 from traitlets import Any, Bool, Dict, Instance, Integer, Unicode, default
 
 from jupyterhub._version import __version__, _check_version
+from jupyterhub.httpclient import fetch
 from jupyterhub.log import log_request
 from jupyterhub.services.auth import HubOAuth, HubOAuthCallbackHandler
 from jupyterhub.utils import (
     _bool_env,
-    async_fetch,
     exponential_backoff,
     isoformat,
+    make_ssl_context,
     url_path_join,
 )
 
@@ -348,16 +349,14 @@ class JupyterHubSingleUser(ExtensionApp):
 
     @default('hub_http_client_opts')
     def _default_client_opts(self):
-        # can't use ssl_options in case of pycurl
-        client_opts = dict(validate_cert=True)
-        # don't set falsy empty strings,
-        # which tornado interprets as paths
-        if self.hub_auth.client_ca:
-            client_opts["ca_certs"] = self.hub_auth.client_ca
-        if self.hub_auth.keyfile:
-            client_opts["client_key"] = self.hub_auth.keyfile
-        if self.hub_auth.certfile:
-            client_opts["client_cert"] = self.hub_auth.certfile
+        client_opts = dict()
+        ssl_context = make_ssl_context(
+            self.hub_auth.keyfile,
+            self.hub_auth.certfile,
+            cafile=self.hub_auth.client_ca,
+        )
+        if ssl_context:
+            client_opts["ssl"] = ssl_context
         return client_opts
 
     async def check_hub_version(self):
@@ -369,7 +368,7 @@ class JupyterHubSingleUser(ExtensionApp):
         RETRIES = 5
         for i in range(1, RETRIES + 1):
             try:
-                resp = await async_fetch(
+                resp = await fetch(
                     self.hub_auth.api_url,
                     **self.hub_http_client_opts,
                 )
@@ -446,14 +445,14 @@ class JupyterHubSingleUser(ExtensionApp):
             nonlocal failure_count
             self.log.debug("Notifying Hub of activity %s", last_activity_timestamp)
             try:
-                await async_fetch(
+                await fetch(
                     self.hub_activity_url,
                     method='POST',
                     headers={
                         "Authorization": f"token {self.hub_auth.api_token}",
                         "Content-Type": "application/json",
                     },
-                    body=json.dumps(
+                    data=json.dumps(
                         {
                             'servers': {
                                 self.server_name: {

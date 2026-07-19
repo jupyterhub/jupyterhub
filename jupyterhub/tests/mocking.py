@@ -30,7 +30,6 @@ Other components
 import asyncio
 import os
 import sys
-from concurrent.futures import ThreadPoolExecutor
 from tempfile import NamedTemporaryFile
 from unittest import mock
 from urllib.parse import urlparse
@@ -390,22 +389,14 @@ class MockHub(JupyterHub):
 
     _stop_called = False
 
-    def stop(self):
+    async def stop(self):
         if self._stop_called:
             return
         self._stop_called = True
         # run cleanup in a background thread
         # to avoid multiple eventloops in the same thread errors from asyncio
 
-        def cleanup():
-            loop = asyncio.new_event_loop()
-            loop.run_until_complete(self.cleanup())
-            loop.close()
-
-        with ThreadPoolExecutor(1) as pool:
-            f = pool.submit(cleanup)
-            # wait for cleanup to finish
-            f.result()
+        await self.cleanup()
 
         # prevent redundant atexit from running
         self._atexit_ran = True

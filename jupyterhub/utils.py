@@ -26,21 +26,18 @@ from datetime import datetime, timezone
 from functools import lru_cache
 from hmac import compare_digest
 from operator import itemgetter
-from typing import Any, Dict
 from urllib.parse import (
-    SplitResult,
     quote,
-    unquote_plus,
-    urlsplit,
-    urlunsplit,
+    unquote,
 )
 
+import aiohttp
 import idna
 from sqlalchemy.exc import SQLAlchemyError
-from tornado import gen, ioloop, web
-from tornado.httpclient import AsyncHTTPClient, HTTPError, HTTPRequest, HTTPResponse
+from tornado import ioloop, web
 from tornado.log import app_log
-from tornado.netutil import Resolver
+
+from .httpclient import fetch
 
 
 def unix_socket_in_use(socket_path: str) -> bool:
@@ -57,77 +54,6 @@ def unix_socket_in_use(socket_path: str) -> bool:
         return True
     finally:
         sock.close()
-
-
-class UnixSocketResolver(Resolver):
-    """A resolver that routes HTTP requests to unix sockets
-    in tornado HTTP clients.
-    Due to constraints in Tornados' API, the scheme of the
-    must be `http` (not `http+unix`). Applications should replace
-    the scheme in URLS before making a request to the HTTP client.
-    """
-
-    async def resolve(self, host, port, *args, **kwargs):
-        return [(socket.AF_UNIX, unquote_plus(host))]
-
-
-async def async_fetch(
-    urlstring: str,
-    method: str = "GET",
-    body: Any = None,
-    headers: Any = None,
-    ssl_options: Dict[str, Any] = None,
-    raise_error: bool = True,
-    **kwargs,
-) -> HTTPResponse:
-    """
-    Send an asynchronous HTTP, HTTPS, or http+unix request
-    to a Tornado Web Server. Returns a tornado HTTPResponse.
-    """
-
-    if AsyncHTTPClient.configured_class().__name__ == 'CurlAsyncHTTPClient':
-        using_pycurl = True
-        import pycurl
-    else:
-        using_pycurl = False
-
-    parts = urlsplit(urlstring)
-    if parts.scheme == 'http+unix':
-        # If unix socket, mimic scheme HTTP.
-        socket_path = parts.netloc
-        hostname = 'localhost' if using_pycurl else socket_path
-        parts = SplitResult(
-            scheme="http",
-            netloc=hostname,
-            path=parts.path,
-            query=parts.query,
-            fragment=parts.fragment,
-        )
-        if using_pycurl:
-            kwargs['prepare_curl_callback'] = lambda curl: curl.setopt(
-                pycurl.UNIX_SOCKET_PATH, unquote_plus(socket_path)
-            )
-            client = AsyncHTTPClient(force_instance=True)
-        else:
-            client = AsyncHTTPClient(force_instance=True, resolver=UnixSocketResolver())
-    elif parts.scheme in ['http', 'https']:
-        client = AsyncHTTPClient(force_instance=True)
-    else:
-        msg = "Unknown URL scheme."
-        raise Exception(msg)
-
-    # ssl_options not allowed on pycurl
-    if not using_pycurl:
-        kwargs['ssl_options'] = ssl_options
-
-    request = HTTPRequest(
-        urlunsplit(parts), method=method, body=body, headers=headers, **kwargs
-    )
-    try:
-        response = await client.fetch(request, raise_error=raise_error)
-    finally:
-        client.close()
-    return response
 
 
 def _bool_env(key, default=False):
@@ -200,7 +126,7 @@ def can_connect(address, port=None, unix_socket=False):
     Return True if we can connect, False otherwise.
     """
     if unix_socket:
-        return unix_socket_in_use(unquote_plus(address))
+        return unix_socket_in_use(unquote(address))
     else:
         return can_connect_ip(address, port)
 
@@ -278,8 +204,13 @@ def make_ssl_context(
     return ssl_context
 
 
-# AnyTimeoutError catches TimeoutErrors coming from asyncio, tornado, stdlib
-AnyTimeoutError = (gen.TimeoutError, asyncio.TimeoutError, TimeoutError)
+# AnyTimeoutError catches TimeoutErrors coming from asyncio, aiohttp, tornado, stdlib
+# with recent versions, these are all aliases for the stdlib TimeoutError
+# starting with Python 3.11, asyncio.TimeoutError is a deprecated alias for base TimeoutError
+if sys.version_info >= (3, 11):
+    AnyTimeoutError = (TimeoutError,)
+else:
+    AnyTimeoutError = (asyncio.TimeoutError, TimeoutError)
 
 
 async def exponential_backoff(
@@ -394,38 +325,35 @@ async def wait_for_http_server(url, timeout=10, ssl_context=None):
 
     Any non-5XX response code will do, even 404.
     """
-    request_args = {'follow_redirects': False}
+    request_args = {'allow_redirects': False}
     if ssl_context:
-        request_args['ssl_options'] = ssl_context
+        request_args['ssl'] = ssl_context
 
     app_log.debug("Waiting %ss for server at %s", timeout, url)
     tic = time.perf_counter()
 
     async def is_reachable():
         try:
-            r = await async_fetch(url, **request_args)
-            return r
-        except HTTPError as e:
-            if e.code >= 500:
-                # failed to respond properly, wait and try again
-                if e.code != 599:
-                    # we expect 599 for no connection,
-                    # but 502 or other proxy error is conceivable
-                    app_log.warning(
-                        "Server at %s responded with error: %s", url, e.code
-                    )
-            else:
-                app_log.debug("Server at %s responded with %s", url, e.code)
-                return e.response
-        except OSError as e:
-            if e.errno not in {
+            r = await fetch(url, raise_for_status=False, **request_args)
+        except aiohttp.ClientOSError as e:
+            # suppress expected "not there yet" errors
+            if e.os_error.errno not in {
                 errno.ECONNABORTED,
                 errno.ECONNREFUSED,
                 errno.ECONNRESET,
             }:
                 app_log.warning("Failed to connect to %s (%s)", url, e)
+        except aiohttp.ClientConnectionError as e:
+            app_log.warning("Failed to connect to %s (%s)", url, e)
         except Exception as e:
             app_log.warning("Error while waiting for server %s (%s)", url, e)
+        else:
+            if r.status >= 500:
+                # failed to respond properly, wait and try again
+                app_log.warning("Server at %s responded with error: %s", url, r.status)
+            else:
+                app_log.debug("Server at %s responded with %s", url, r.status)
+                return r
         return False
 
     re = await exponential_backoff(

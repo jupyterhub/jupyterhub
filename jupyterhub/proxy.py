@@ -24,17 +24,16 @@ import signal
 import time
 from functools import wraps
 from subprocess import Popen
-from urllib.parse import quote, unquote_plus, urlparse
+from urllib.parse import quote, unquote, urlparse
 from weakref import WeakKeyDictionary
 
-from tornado.httpclient import AsyncHTTPClient, HTTPError
+from aiohttp import ClientResponseError
 from tornado.ioloop import PeriodicCallback
 from traitlets import (
     Any,
     Bool,
     CaselessStrEnum,
     Dict,
-    Instance,
     Integer,
     TraitError,
     Unicode,
@@ -44,8 +43,8 @@ from traitlets import (
 )
 from traitlets.config import LoggingConfigurable
 
+from jupyterhub.httpclient import fetch
 from jupyterhub.traitlets import Command
-from jupyterhub.utils import async_fetch
 
 from . import utils
 from .metrics import CHECK_ROUTES_DURATION_SECONDS, PROXY_POLL_DURATION_SECONDS
@@ -504,7 +503,6 @@ class ConfigurableHTTPProxy(Proxy):
     """
 
     proxy_process = Any()
-    client = Instance(AsyncHTTPClient, ())
 
     concurrency = Integer(
         10,
@@ -689,7 +687,7 @@ class ConfigurableHTTPProxy(Proxy):
         for socket_url in [self.public_url, self.api_url]:
             proto, sep, rest = socket_url.partition('://')
             if proto == 'http+unix':
-                paths.append(unquote_plus(rest))
+                paths.append(unquote(rest))
         for path in paths:
             try:
                 os.remove(path)
@@ -738,7 +736,7 @@ class ConfigurableHTTPProxy(Proxy):
         if proxy_server._unix_socket:
             server_args = (
                 '--socket',
-                unquote_plus(proxy_server.connect_addr),
+                unquote(proxy_server.connect_addr),
             )
         else:
             server_args = (
@@ -752,7 +750,7 @@ class ConfigurableHTTPProxy(Proxy):
         if api_server._unix_socket:
             api_args = (
                 '--api-socket',
-                unquote_plus(api_server.connect_addr),
+                unquote(api_server.connect_addr),
             )
         else:
             api_args = (
@@ -966,19 +964,17 @@ class ConfigurableHTTPProxy(Proxy):
         async def _wait_for_api_request():
             try:
                 async with self.semaphore:
-                    return await async_fetch(
+                    return await fetch(
                         url,
                         method=method,
                         headers={'Authorization': f'token {self.auth_token}'},
-                        body=body,
-                        connect_timeout=3,  # default: 20s
-                        request_timeout=10,  # default: 20s
+                        data=body,
                     )
-            except HTTPError as e:
+            except ClientResponseError as e:
                 # Retry on potentially transient errors in CHP, typically
                 # numbered 500 and up. Note that CHP isn't able to emit 429
                 # errors.
-                if e.code >= 500:
+                if e.status >= 500:
                     self.log.warning(
                         f"api_request to the proxy failed with status code {e.code}, retrying..."
                     )
@@ -1006,8 +1002,8 @@ class ConfigurableHTTPProxy(Proxy):
         path = self._routespec_to_chp_path(routespec)
         try:
             await self.api_request(path, method='DELETE')
-        except HTTPError as e:
-            if e.code == 404:
+        except ClientResponseError as e:
+            if e.status == 404:
                 # Warn about 404s because something might be wrong
                 # but don't raise because the route is gone,
                 # which is the goal.
@@ -1025,7 +1021,7 @@ class ConfigurableHTTPProxy(Proxy):
         """Fetch the proxy's routes."""
         proxy_poll_start_time = time.perf_counter()
         resp = await self.api_request('')
-        chp_routes = json.loads(resp.body.decode('utf8', 'replace'))
+        chp_routes = await resp.json()
         all_routes = {}
         for chp_path, chp_data in chp_routes.items():
             routespec = self._routespec_from_chp_path(chp_path)

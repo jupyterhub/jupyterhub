@@ -69,6 +69,7 @@ from .crypto import CryptKeeper
 
 # For faking stats
 from .handlers.static import CacheControlStaticFilesHandler, LogoHandler
+from .httpclient import JupyterHubHTTPClient
 from .log import CoroutineLogFormatter, log_request
 from .metrics import (
     HUB_STARTUP_DURATION_SECONDS,
@@ -1905,7 +1906,7 @@ class JupyterHub(Application):
 
     def init_internal_ssl(self):
         """Create the certs needed to turn on internal SSL."""
-
+        connector_options = {}
         if self.internal_ssl:
             from certipy import Certipy, CertNotFoundError
 
@@ -1998,18 +1999,19 @@ class JupyterHub(Application):
             self.internal_ssl_cert = internal_key_pair['files']['cert']
             self.internal_ssl_ca = self.internal_trust_bundles[hub_name]
 
-            # Configure the AsyncHTTPClient. This will affect anything using
-            # AsyncHTTPClient.
-            # can't use ssl_options in case of pycurl
-            AsyncHTTPClient.configure(
-                AsyncHTTPClient.configured_class(),
-                defaults=dict(
-                    ca_certs=self.internal_ssl_ca,
-                    client_key=self.internal_ssl_key,
-                    client_cert=self.internal_ssl_cert,
-                    validate_cert=True,
-                ),
+            connector_options["ssl"] = make_ssl_context(
+                self.internal_ssl_key,
+                self.internal_ssl_cert,
+                self.internal_ssl_ca,
             )
+        # make sure it's a fresh instance
+        # mainly for tests
+        if JupyterHubHTTPClient.initialized():
+            JupyterHubHTTPClient.clear_instance()
+        http_client = JupyterHubHTTPClient.instance(
+            parent=self,
+            _internal_connector_options=connector_options,
+        )
 
     def init_db(self):
         """Create the database connection"""
@@ -3336,12 +3338,13 @@ class JupyterHub(Application):
 
     def init_pycurl(self):
         """Configure tornado to use pycurl by default, if available"""
-        # use pycurl by default, if available:
+        # no longer affects JupyterHub's internal requests (6.0),
+        # but may still affect custom Authenticators, etc.
         try:
             AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient")
         except ImportError as e:
             self.log.debug(
-                "Could not load pycurl: %s\npycurl is recommended if you have a large number of users.",
+                "pycurl not loaded (%s). pycurl is no longer used internally by JupyterHub.",
                 e,
             )
 
@@ -3611,6 +3614,10 @@ class JupyterHub(Application):
             self.log.info("Cleaning up PID file %s", self.pid_file)
             os.remove(self.pid_file)
 
+        if JupyterHubHTTPClient.initialized():
+            http_client = JupyterHubHTTPClient.instance()
+            await http_client.close()
+
         self.log.info("...done")
 
     def write_config_file(self):
@@ -3717,7 +3724,7 @@ class JupyterHub(Application):
                 self.internal_ssl_key,
                 self.internal_ssl_cert,
                 cafile=self.internal_ssl_ca,
-                purpose=ssl.Purpose.CLIENT_AUTH,
+                purpose=ssl.Purpose.SERVER_AUTH,
             )
 
         msg = f'{service_name} at {service.url}' if service.url else service_name
