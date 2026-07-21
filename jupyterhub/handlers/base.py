@@ -1071,7 +1071,7 @@ class BaseHandler(RequestHandler):
 
         if concurrent_spawn_limit and spawn_pending_count >= concurrent_spawn_limit:
             SERVER_SPAWN_DURATION_SECONDS.labels(
-                status=ServerSpawnStratus.failure,
+                status=ServerSpawnStatus.failure,
                 reason=ServerSpawnFailureReason.throttled,
             ).observe(time.perf_counter() - spawn_start_time)
             # Suggest number of seconds client should wait before retrying
