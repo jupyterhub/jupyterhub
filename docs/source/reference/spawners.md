@@ -114,13 +114,47 @@ class MySpawner(Spawner):
 
 #### Exception handling
 
-When `Spawner.start` raises an Exception, a message can be passed on to the user via the exception using a `.jupyterhub_html_message` or `.jupyterhub_message` attribute.
+Spawn methods or hooks can raise a {class}`.SpawnException` for expected failures.
+SpawnException allows separately specifying:
 
-When the Exception has a `.jupyterhub_html_message` attribute, it will be rendered as HTML to the user.
+- `message` - the message to be shown to the user
+- `reason` - a label used in prometheus metrics to categorize spawn failures.
+  Should be short and have a limited number of unique values (such as 'timeout').
+- `message_html` - an HTML-formatted message, shown on HTML pages (e.g. the spawn error page).
+  Should have the same content as `message`, but may contain e.g. formatted links for follow-up.
+- `log_message` - a message used in logs (not shown to users)
 
+```{versionadded} 6.0
+SpawnException is new in JupyterHub 6.0.
+You can get much of this behavior prior to 6.0 by raising an {py:class}`~tornado.web.HTTPError`
+explicitly, rather than arbitrary unhandled errors.
+```
+
+When `Spawner.start` raises an {py:class}`~tornado.web.HTTPError`, a special message can be passed on to the user via the exception using a `.jupyterhub_html_message` and/or `.jupyterhub_message` attribute.
+If `.jupyterhub_message` is set, the default `message` will be logged, but not shown to the user.
+
+When the Exception has a `.jupyterhub_html_message` attribute, it will be rendered as HTML on user-facing pages.
 Alternatively `.jupyterhub_message` is rendered as unformatted text.
 
-If both attributes are not present, the Exception will be shown to the user as unformatted text.
+If both attributes are not present, an HTTPError's `message` is shown to the user.
+For other unhandled errors, a default "Internal Server Error" message will be given.
+
+raising an HTTPError and setting `.jupyterhub_message` and `.jupyterhub_html_message` will generally be equivalent to raising a SpawnException:
+
+```python
+from tornado.web import HTTPError
+e = web.HTTPError(400, "log message")
+e.jupyterhub_message = "user message"
+e.jupyterhub_html_message = "<b>user message!</b>"
+raise e
+```
+
+will behave the same as:
+
+```python
+from jupyterhub.spawner import SpawnException
+raise SpawnException("user message", reason="event", message_html="<b>user message!</b>", log_message="log_message", status_code=400)
+```
 
 ### Spawner.poll
 

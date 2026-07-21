@@ -6,4 +6,5 @@ and splits the previous `status=failure` into `status=error` for unhandled error
 ```
 
 ```{include} ../includes/metrics_table.md
+
 ```
