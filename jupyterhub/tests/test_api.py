@@ -22,6 +22,7 @@ import jupyterhub
 from .. import orm
 from ..apihandlers.base import PAGINATION_MEDIA_TYPE
 from ..objects import Server
+from ..spawner import SpawnException
 from ..utils import url_path_join as ujoin
 from ..utils import utcnow
 from .conftest import new_username
@@ -1259,19 +1260,46 @@ async def test_spawn_error_log(app, bad_spawn, caplog):
     def pre_spawn_http(spawner):
         raise HTTPError(418, "Teapot alert!")
 
+    def pre_spawn_custom(spawner):
+        raise SpawnException("Your fault", reason="custom", status_code=410)
+
+    def pre_spawn_custom_log(spawner):
+        raise SpawnException(
+            "Your fault 2", reason="custom2", status_code=411, log_message="Custom Log!"
+        )
+
     def pre_spawn_unhandled(spawner):
         raise ValueError("Not on my watch")
 
+    caplog.clear()
     with mock.patch.dict(app.config.Spawner, {"pre_spawn_hook": pre_spawn_http}):
         r = await api_request(app, 'users', name, 'server', method='post')
     assert r.status_code == 418
     assert "Traceback" not in caplog.text
     assert r.json() == {"status": 418, "message": "Teapot alert!"}
 
+    caplog.clear()
+    with mock.patch.dict(app.config.Spawner, {"pre_spawn_hook": pre_spawn_custom}):
+        r = await api_request(app, 'users', name, 'server', method='post')
+    assert r.status_code == 410
+    assert "Traceback" not in caplog.text
+    assert "Your fault" in caplog.text
+    assert r.json() == {"status": 410, "message": "Your fault"}
+
+    caplog.clear()
+    with mock.patch.dict(app.config.Spawner, {"pre_spawn_hook": pre_spawn_custom_log}):
+        r = await api_request(app, 'users', name, 'server', method='post')
+    assert r.status_code == 411
+    assert "Traceback" not in caplog.text
+    assert "Custom Log!" in caplog.text
+    assert "Your fault" not in caplog.text
+    assert r.json() == {"status": 411, "message": "Your fault 2"}
+
+    caplog.clear()
     with mock.patch.dict(app.config.Spawner, {"pre_spawn_hook": pre_spawn_unhandled}):
         r = await api_request(app, 'users', name, 'server', method='post')
     assert r.status_code == 500
-    assert r.json() == {"status": 500, "message": "error"}
+    assert r.json() == {"status": 500, "message": "Internal Server Error"}
     # unhandled error logs a traceback
     assert "Traceback" in caplog.text
     # unhandled error logs a traceback

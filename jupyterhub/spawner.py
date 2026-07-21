@@ -75,6 +75,76 @@ def _quote_safe(s):
         return repr(s)
 
 
+class SpawnException(web.HTTPError):
+    """
+    An exception to raise when a policy failure prevents a spawn.
+
+    This is meant to help logging and metrics distinguish spawns that
+    should have been rejected due to e.g. invalid launch parameters
+    from spawns that fail due to unexpected errors that indicate possible
+    JupyterHub stability problems.
+
+    If a SpawnException is raised during spawn (including spawn hooks),
+    no traceback should be logged and the `status` shall be 'failure'.
+    The 'reason' label will be populated from the required reason keyword argument.
+
+
+    Args:
+        message (str, required):
+            The message that will be logged and returned to the user.
+        reason (str, required):
+            A short 'reason' label to categorize the failure.
+            This will be in the `reason` field for the spawn failure in metrics.
+        log_message (str):
+            The message which will be logged (not shown to the user),
+            if you want to log more detail than you show to the user.
+            Default: use message.
+        message_html (str):
+            An HTML-formatted message, for use in UI.
+            This allows you to display things like links in error message.
+            Default: use message, formatted as plain text
+            (will be escaped before displaying as HTML).
+        status_code (int):
+            HTTP status code that should be set for the error.
+            Default: 400.
+
+    Examples:
+
+    >>> raise SpawnException("invalid image", reason="image")
+    >>> raise SpawnException(
+            "Server is full",
+            reason="capacity",
+            message_html=f'Server is full. See <a href="{status_url}">status page</a> for more information',
+            status_code=503,
+        )
+
+    .. versionadded: 6.0
+    """
+
+    reason = ""
+    status_code = 400
+    message = ""
+    message_html = ""
+    log_message = ""
+
+    def __init__(
+        self, message, *, reason, log_message="", message_html="", status_code=400
+    ):
+        self.message = message
+        self.reason = reason
+        self.log_message = log_message or message
+        self.message_html = message_html
+        self.status_code = status_code
+        super().__init__(status_code, message, reason=reason)
+
+    # HTTPError interface
+    def get_message(self):
+        return self.log_message
+
+    def __str__(self):
+        return f"{self.status_code} {self.__class__.__name__}(reason={self.reason}): {self.log_message}"
+
+
 class Spawner(LoggingConfigurable):
     """Base class for spawning single-user notebook servers.
 
