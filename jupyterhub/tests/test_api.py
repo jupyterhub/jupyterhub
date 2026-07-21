@@ -2769,6 +2769,7 @@ async def test_rename_server(
         await spawner._spawn_future
     else:
         spawner = user.get_or_create_spawner("exists", "exists")
+    orm_spawner = spawner.orm_spawner
 
     r = await api_request(
         app,
@@ -2787,14 +2788,16 @@ async def test_rename_server(
 
 async def test_patch_server(app, user, named_servers):
     src_name = "named"
+    dst_name = "newname"
     spawner = user.get_or_create_spawner(src_name, "display name")
+    orm_spawner = spawner.orm_spawner
 
     r = await api_request(
         app,
         f"users/{user.name}/servers/{src_name}",
         data=json.dumps(
             {
-                "name": "newname",
+                "name": dst_name,
                 "display_name": "New Name!",
                 "user_options": {
                     "key": "value",
@@ -2806,7 +2809,13 @@ async def test_patch_server(app, user, named_servers):
     r.raise_for_status()
     server_model = r.json()
     assert src_name not in user.orm_spawners
-    assert spawner.name == "newname"
+    assert src_name not in user.spawners
+    assert dst_name in user.orm_spawners
+    assert dst_name not in user.spawners
+    spawner = user.get_spawner(dst_name)
+    # it's the same orm_spawner, renamed
+    assert spawner.orm_spawner.id == orm_spawner.id
+    assert spawner.name == dst_name
     assert spawner.display_name == "New Name!"
     assert spawner.orm_spawner.user_options == {"key": "value"}
     assert spawner.user_options == {"key": "value"}

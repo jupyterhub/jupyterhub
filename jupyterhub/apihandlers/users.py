@@ -803,12 +803,14 @@ class UserServerAPIHandler(APIHandler):
         spawner = user.get_spawner(server_name)
 
         # cannot patch active servers
-        if spawner.active:
-            raise web.HTTPError(
-                400,
-                f"{spawner._log_name} is active. Please stop it before modifying it.",
-            )
-        # now we know it's idle
+        if server_name in user.spawners:
+            spawner = user.spawners[server_name]
+            if spawner.active:
+                raise web.HTTPError(
+                    400,
+                    f"{spawner._log_name} is active. Please stop it before modifying it.",
+                )
+
         # actions:
         # 1. new name, rename
         if new_server_name:
@@ -819,12 +821,12 @@ class UserServerAPIHandler(APIHandler):
             self.log.info(
                 f"Renaming spawner {user.name}/{server_name} -> {new_server_name}"
             )
+            spawner = user.get_spawner(server_name)
             await spawner.rename(server_name, new_server_name)
             orm_spawner.name = new_server_name
-            if server_name in user.spawners:
-                # rename in .servers dict
-                user.spawners[new_server_name] = user.spawners.pop(server_name)
             self.db.commit()
+            # after rename, discard stale Spawner wrapper
+            user.spawners.pop(server_name)
             server_name = new_server_name
 
         # 2. set user options, display_name
@@ -835,9 +837,6 @@ class UserServerAPIHandler(APIHandler):
                 f"Setting user_options on {user.name}/{server_name} {body['user_options']}"
             )
             orm_spawner.user_options = body["user_options"]
-            if server_name in user.spawners:
-                # user_options not synced between orm.Spawner and Spawner wrapper class
-                user.spawners[server_name].user_options = body["user_options"]
             self.db.commit()
 
         # update display_name
