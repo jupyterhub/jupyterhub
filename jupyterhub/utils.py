@@ -37,7 +37,7 @@ from urllib.parse import (
 
 import idna
 from sqlalchemy.exc import SQLAlchemyError
-from tornado import gen, ioloop, web
+from tornado import ioloop, web
 from tornado.httpclient import AsyncHTTPClient, HTTPError, HTTPRequest, HTTPResponse
 from tornado.log import app_log
 from tornado.netutil import Resolver
