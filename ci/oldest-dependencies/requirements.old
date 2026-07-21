@@ -314,7 +314,7 @@ tomli==2.4.1
     # via
     #   coverage
     #   pytest
-tornado==6.2
+tornado==6.5
     # via
     #   -r oldest-dependencies.txt
     #   ipykernel
