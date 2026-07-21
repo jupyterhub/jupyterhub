@@ -104,6 +104,27 @@ async def test_post_content_type(app, content_type, status):
     assert r.status_code == status
 
 
+async def test_invalid_utf8_json_returns_400(app):
+    """Sending invalid-UTF8 bytes with Content-Type: application/json should return 400."""
+    db = app.db
+    # ensure admin user exists
+    user = find_user(db, 'admin')
+    if user is None:
+        user = add_user(db, app, name='admin', admin=True)
+    cookies = await app.login_user('admin')
+
+    # send invalid UTF-8 bytes as application/json
+    r = await api_request(
+        app,
+        'users',
+        method='post',
+        data=b'\xff\xfe',
+        headers={'Content-Type': 'application/json'},
+        cookies=cookies,
+    )
+    assert r.status_code == 400
+
+
 @mark.parametrize("xsrf_in_url", [True, False, "invalid"])
 @mark.parametrize(
     "method, path",
