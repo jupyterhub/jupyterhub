@@ -195,6 +195,16 @@ class SpawnHandler(BaseHandler):
             self.log.error(error_message)
             raise web.HTTPError(400, error_message)
 
+    async def run_spawn_intent_hook(self, user, server_name, query):
+        """Run the spawn_intent_hook if defined
+
+        Returns the hook's result dict (with optional 'redirect_url' and
+        'render_spawn_form' keys), or None if no hook is configured.
+        """
+        hook = self.settings.get('spawn_intent_hook')
+        if hook is not None:
+            return await maybe_future(hook(user, server_name, query))
+
     @needs_scope("servers")
     async def _get(self, user_name, server_name, display_name):
         for_user = user_name
@@ -204,6 +214,20 @@ class SpawnHandler(BaseHandler):
             user = self.find_user(for_user)
             if user is None:
                 raise web.HTTPError(404, f"No such user: {for_user}")
+
+        query = {
+            key: [b.decode('utf8') for b in byte_list]
+            for key, byte_list in self.request.query_arguments.items()
+        }
+        # 'next' is reserved argument for redirect after spawn
+        query.pop('next', None)
+
+        # a spawn_intent_hook may reinterpret the request: redirect it
+        # elsewhere, or render the options form instead of spawning directly
+        intent = await self.run_spawn_intent_hook(user, server_name, query)
+        if intent and intent.get('redirect_url'):
+            self.redirect(intent['redirect_url'])
+            return
 
         if server_name:
             await self._check_named_server_request(user, server_name, display_name)
@@ -241,19 +265,20 @@ class SpawnHandler(BaseHandler):
         await spawner.run_auth_state_hook(auth_state)
 
         # Try to start server directly when query arguments are passed.
-        query_options = {}
-        for key, byte_list in self.request.query_arguments.items():
-            query_options[key] = [bs.decode('utf8') for bs in byte_list]
-
-        # 'next' is reserved argument for redirect after spawn
-        query_options.pop('next', None)
+        query_options = dict(query)
 
         # display_name is reserved for jupyterhub
         query_options.pop('display_name', None)
 
+        spawn_now = len(query_options) > 0
+        # a spawn_intent_hook may ask to render the pre-filled options form
+        # instead of spawning directly from the query arguments
+        if intent and intent.get('render_spawn_form'):
+            spawn_now = False
+
         spawn_exc = None
 
-        if len(query_options) > 0:
+        if spawn_now:
             try:
                 self.log.debug(
                     "Triggering spawn with supplied query arguments for %s",

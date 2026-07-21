@@ -1772,6 +1772,27 @@ class JupyterHub(Application):
         """,
     ).tag(config=True)
 
+    spawn_intent_hook = Callable(
+        None,
+        allow_none=True,
+        help="""
+        Callable to reinterpret an incoming request to the /spawn page.
+
+        Receives 3 parameters:
+        1. user - the currently authenticated user
+        2. server_name - the route-derived server name ('' on the default
+           /hub/spawn page, the server name on /hub/spawn/:user/:server)
+        3. query - decoded GET query args (a dict of lists), with 'next' removed
+
+        It should return an optional dict with any of the keys:
+        - redirect_url - reinterpret the request and redirect here
+        - render_spawn_form - True to render the options form instead of
+          spawning directly from the query arguments
+
+        Return None or an empty dict to preserve current behavior.
+        """,
+    ).tag(config=True)
+
     use_legacy_stopped_server_status_code = Bool(
         False,
         help="""
@@ -3295,6 +3316,7 @@ class JupyterHub(Application):
             subdomain_host=self.subdomain_host,
             domain=self.domain,
             implicit_spawn_seconds=self.implicit_spawn_seconds,
+            spawn_intent_hook=self.spawn_intent_hook,
             allow_named_servers=self.allow_named_servers,
             default_server_name=self._default_server_name,
             named_server_limit_per_user=self.named_server_limit_per_user,
