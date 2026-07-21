@@ -115,40 +115,88 @@ In case the role with a certain name already exists in the database, its definit
 
 Role definitions can include those of the "default" roles listed above (admin excluded),
 if the default scopes associated with those roles do not suit your deployment.
+
 For example, to specify what permissions the $JUPYTERHUB_API_TOKEN issued to all single-user servers
-has,
-define the `server` role.
+has, you may define the `server` role.
+However, starting with JupyterHub 4, it is recommended to use the {attr}`.Spawner.server_token_scopes` option for this instead.
 
 To restore the JupyterHub 1.x behavior of servers being able to do anything their owners can do,
 use the scope `inherit` (for 'inheriting' the owner's permissions):
 
 ```python
-c.JupyterHub.load_roles = [
- {
-   'name': 'server',
-   'scopes': ['inherit'],
- }
-]
+c.JupyterHub.server_token_scopes = {"inherit"}
 ```
 
 or, better yet, identify the specific [scopes][] you want server environments to have access to.
+If you choose to _restrict_ the server token, the one required scope for the server token `users:activity!user` will be added automatically.
 
-[scopes]: available-scopes-target
-
-If you don't want to get too detailed,
-one option is the `self` scope,
-which will have no effect on non-admin users,
-but will restrict the token issued to admin user servers to only have access to their own resources,
+If you don't want to get too detailed, one option is the `self` scope,
+which will restrict the token issued to admin user servers to only have access to their own resources,
 instead of being able to take actions on behalf of all other users.
 
 ```python
+c.JupyterHub.server_token_scopes = {"self"}
+```
+
+You can also override the default user role, to add _or remove_ permissions from all jupyterhub users by defining the `user` role.
+By default, the `user` role has only the `self` scope, allowing accessing and managing the user's own server:
+
+```python
 c.JupyterHub.load_roles = [
- {
-   'name': 'server',
-   'scopes': ['self'],
- }
+  {
+    "name": "user",
+    "scopes": [
+      "self",
+    ],
+  }
 ]
 ```
+
+If you override the user role, you can _restrict_ user permissions to less than this, e.g.
+
+```python
+c.JupyterHub.load_roles = [
+  {
+    "name": "user",
+    "scopes": [
+      "access:servers!user",
+      "users:activity!user",
+    ],
+  }
+]
+```
+
+which will allow users to access their own servers, but not start them (maybe you have some other mechanism you control for starting servers).
+
+If you want to _add_ to default user permissions, make sure to include the `self` scope, otherwise you might find yourself restricting users unintentionally.
+
+Starting with JupyterHub 6, there is now {attr}`.JupyterHub.extra_user_scopes` option,
+which only _adds_ to the default user scopes, so you don't need to override the default role with `load_roles` if expanding permissions is your goal.
+For example, to grant access to any JupyterHub service:
+
+```python
+c.JupyterHub.extra_user_scopes = {"access:services"}
+```
+
+which _adds_ the `access:services` scope to all users without overriding the default scopes in the `user` role.
+This is equivalent (in JupyterHub 6.0) to:
+
+```python
+c.JupyterHub.load_roles = [
+  {
+    "name": "user",
+    "scopes": [
+      "self",
+      "access:services",
+    ],
+  }
+]
+```
+
+but if a future JupyterHub release ever changes the default user role, the `extra_user_scopes` approach will continue to add `access:services` to the default, whatever the default may be,
+whereas the overridden `user` role will continue to have exactly the permissions defined in your configuration, no matter what the default changes to.
+
+[scopes]: available-scopes-target
 
 (removing-roles-target)=
 
