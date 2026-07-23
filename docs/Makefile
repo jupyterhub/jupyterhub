@@ -40,8 +40,8 @@ html: metrics
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
 
-metrics: source/reference/metrics.md
-source/reference/metrics.md:
+metrics: source/includes/metrics_table.md
+source/includes/metrics_table.md:
 	python3 generate-metrics.py
 
 

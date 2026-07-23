@@ -8,7 +8,7 @@ node_modules
 dist
 docs/_build
 docs/build
-docs/source/reference/metrics.md
+docs/source/includes/metrics_table.md
 
 .ipynb_checkpoints
 .virtual_documents
