@@ -92,20 +92,20 @@ class SpawnException(web.HTTPError):
     Args:
         message (str, required):
             The message that will be logged and returned to the user.
-        reason (str, required):
+        reason (str, required, keyword-only):
             A short 'reason' label to categorize the failure.
             This will be in the `reason` field for the spawn failure in metrics.
             This must be a called with a named argument, e.g. `SpawnException("invalid image", reason="image")` and not `SpawnException("invalid image", "image")`
-        log_message (str):
+        log_message (str, keyword-only):
             The message which will be logged (not shown to the user),
             if you want to log more detail than you show to the user.
             Default: use message.
-        message_html (str):
+        message_html (str, keyword-only):
             An HTML-formatted message, for use in UI.
             This allows you to display things like links in error message.
             Default: use message, formatted as plain text
             (will be escaped before displaying as HTML).
-        status_code (int):
+        status_code (int, keyword-only):
             HTTP status code that should be set for the error.
             Default: 400.
 
