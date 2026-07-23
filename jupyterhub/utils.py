@@ -37,7 +37,7 @@ from urllib.parse import (
 
 import idna
 from sqlalchemy.exc import SQLAlchemyError
-from tornado import gen, ioloop, web
+from tornado import ioloop, web
 from tornado.httpclient import AsyncHTTPClient, HTTPError, HTTPRequest, HTTPResponse
 from tornado.log import app_log
 from tornado.netutil import Resolver
@@ -278,8 +278,13 @@ def make_ssl_context(
     return ssl_context
 
 
-# AnyTimeoutError catches TimeoutErrors coming from asyncio, tornado, stdlib
-AnyTimeoutError = (gen.TimeoutError, asyncio.TimeoutError, TimeoutError)
+# AnyTimeoutError catches TimeoutErrors coming from asyncio, aiohttp, tornado, stdlib
+# with recent versions, these are all aliases for the stdlib TimeoutError
+# starting with Python 3.11, asyncio.TimeoutError is a deprecated alias for base TimeoutError
+if sys.version_info >= (3, 11):
+    AnyTimeoutError = (TimeoutError,)
+else:
+    AnyTimeoutError = (asyncio.TimeoutError, TimeoutError)
 
 
 async def exponential_backoff(

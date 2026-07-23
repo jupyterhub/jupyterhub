@@ -113,7 +113,8 @@ class APIHandler(BaseHandler):
         """Return the body of the request as JSON data."""
         if not self.request.body:
             return None
-        body = self.request.body.strip().decode('utf-8')
+        body = self.request.body.strip().decode("utf-8", "replace")
+
         try:
             model = json.loads(body)
         except Exception:
