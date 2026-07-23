@@ -114,6 +114,12 @@ class MySpawner(Spawner):
 
 #### Exception handling
 
+```{versionadded} 6.0
+SpawnException is new in JupyterHub 6.0.
+You can get most of the same behavior prior to 6.0 by raising an {py:class}`~tornado.web.HTTPError`
+explicitly, rather than arbitrary unhandled errors.
+```
+
 Spawn methods or hooks can raise a {class}`.SpawnException` for expected failures.
 SpawnException allows separately specifying:
 
@@ -123,12 +129,6 @@ SpawnException allows separately specifying:
 - `message_html` - an HTML-formatted message, shown on HTML pages (e.g. the spawn error page).
   Should have the same content as `message`, but may contain e.g. formatted links for follow-up.
 - `log_message` - a message used in logs (not shown to users)
-
-```{versionadded} 6.0
-SpawnException is new in JupyterHub 6.0.
-You can get much of this behavior prior to 6.0 by raising an {py:class}`~tornado.web.HTTPError`
-explicitly, rather than arbitrary unhandled errors.
-```
 
 When `Spawner.start` raises an {py:class}`~tornado.web.HTTPError`, a special message can be passed on to the user via the exception using a `.jupyterhub_html_message` and/or `.jupyterhub_message` attribute.
 If `.jupyterhub_message` is set, the default `message` will be logged, but not shown to the user.
