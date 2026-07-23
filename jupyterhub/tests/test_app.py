@@ -17,6 +17,7 @@ import pytest
 import traitlets
 from traitlets.config import Config
 
+from jupyterhub.roles import get_default_roles
 from jupyterhub.scopes import get_scopes_for
 
 from .. import orm
@@ -503,6 +504,62 @@ async def test_user_creation(tmpdir, request):
         "in-group",
         "in-role",
     }
+
+
+@pytest.mark.db
+@pytest.mark.parametrize(
+    "extra_user_scopes, user_scopes, expected_warn",
+    [
+        pytest.param({"access:services"}, None, None, id="extra_user_scopes only"),
+        pytest.param(
+            None,
+            {"access:servers!user"},
+            "does not include 'self'",
+            id="user_role only",
+        ),
+        pytest.param(
+            {"access:services"},
+            {"access:servers!user"},
+            [
+                "will be ignored",
+                "extra_user_scopes={'",
+            ],
+            id="both set",
+        ),
+    ],
+)
+async def test_extra_user_scopes(caplog, extra_user_scopes, user_scopes, expected_warn):
+    roles = []
+    if user_scopes:
+        roles.append(
+            {
+                "name": "user",
+                "scopes": user_scopes,
+            }
+        )
+    cfg = Config()
+    cfg.JupyterHub.load_roles = roles
+    if extra_user_scopes:
+        cfg.JupyterHub.extra_user_scopes = extra_user_scopes
+
+    default_roles = {role['name']: role for role in get_default_roles()}
+    default_scopes = default_roles["user"]["scopes"]
+    hub = MockHub(config=cfg, log=logging.getLogger())
+    hub.init_db()
+    caplog.clear()
+    await hub.init_role_creation()
+    if user_scopes:
+        expected_scopes = user_scopes
+    else:
+        expected_scopes = set(default_scopes) | set(extra_user_scopes or [])
+    user_role = orm.Role.find(hub.db, "user")
+    assert set(user_role.scopes) == set(expected_scopes)
+    if expected_warn:
+        logged = "\n".join([f"{rec.levelname}:{rec.message}" for rec in caplog.records])
+        if not isinstance(expected_warn, list):
+            expected_warn = [expected_warn]
+        for message in expected_warn:
+            assert message in logged
 
 
 @pytest.mark.db

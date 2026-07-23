@@ -353,6 +353,23 @@ class JupyterHub(Application):
         """,
     ).tag(config=True)
 
+    extra_user_scopes = Set(
+        Unicode(),
+        config=True,
+        help="""
+        Additional scopes to ADD to the default `user` role.
+        
+        Any scopes here will be **ADDED** to the `user` role, which affects all JupyterHub users.
+        Use this to grant all users additional permissions (e.g. `access:services`)
+        beyond what they have by default.
+
+        This option avoids the need to redefine the user role via `load_roles` in order to change default user permissions,
+        which can lead to removing scopes unintentionally.
+
+        .. versionadded:: 6.0
+        """,
+    )
+
     custom_scopes = Dict(
         key_trait=Unicode(),
         value_trait=Dict(
@@ -2363,6 +2380,10 @@ class JupyterHub(Application):
             roles_to_load.extend(managed_roles)
         self.log.debug('Loading roles into database')
         default_roles = roles.get_default_roles()
+        if self.extra_user_scopes:
+            for role in default_roles:
+                if role["name"] == "user":
+                    role["scopes"].extend(self.extra_user_scopes)
         self.config_role_names = [r['name'] for r in roles_to_load]
 
         default_roles_dict = {role["name"]: role for role in default_roles}
@@ -2373,6 +2394,16 @@ class JupyterHub(Application):
             self.log.debug("Loading role %s", role_name)
             if role_name in default_roles_dict:
                 self.log.debug("Overriding default role %s", role_name)
+                if role_name == "user" and "scopes" in role_spec:
+                    role_scopes = role_spec["scopes"]
+                    if self.extra_user_scopes:
+                        self.log.warning(
+                            f"user role overridden with scopes={role_scopes}, extra_user_scopes={self.extra_user_scopes} will be ignored."
+                        )
+                    if "self" not in role_scopes:
+                        self.log.warning(
+                            f"user role overridden with scopes={role_scopes}, which does not include 'self', users may lack necessary permissions. Consider setting `c.JupyterHub.extra_user_scopes` to add user permissions."
+                        )
                 # merge custom role spec with default role spec when overriding
                 # so the new role can be partially defined
                 default_role_spec = default_roles_dict.pop(role_name)
