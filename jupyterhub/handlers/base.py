@@ -1565,7 +1565,7 @@ class BaseHandler(RequestHandler):
                 status_message = reason or message
 
             # allow custom html messages
-            message_html = getattr(exception, "jupyterhub_html_message", "")
+            message_html = getattr(exception, "jupyterhub_html_message", message_html)
 
             # construct the custom reason, if defined
             if reason:

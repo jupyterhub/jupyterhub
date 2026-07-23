@@ -139,7 +139,7 @@ Alternatively `.jupyterhub_message` is rendered as unformatted text.
 If both attributes are not present, an HTTPError's `message` is shown to the user.
 For other unhandled errors, a default "Internal Server Error" message will be given.
 
-raising an HTTPError and setting `.jupyterhub_message` and `.jupyterhub_html_message` will generally be equivalent to raising a SpawnException:
+Raising an HTTPError and setting `.jupyterhub_message` and `.jupyterhub_html_message` will generally be equivalent to raising a SpawnException:
 
 ```python
 from tornado.web import HTTPError

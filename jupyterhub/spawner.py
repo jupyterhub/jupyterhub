@@ -80,8 +80,8 @@ class SpawnException(web.HTTPError):
     An exception to raise when a policy failure prevents a spawn.
 
     This is meant to help logging and metrics distinguish spawns that
-    should have been rejected due to e.g. invalid launch parameters
-    from spawns that fail due to unexpected errors that indicate possible
+    should have been rejected due to policy failures, e.g. invalid launch parameters,
+    from spawns that error due to unexpected system errors that indicate possible
     JupyterHub stability problems.
 
     If a SpawnException is raised during spawn (including spawn hooks),
@@ -95,6 +95,7 @@ class SpawnException(web.HTTPError):
         reason (str, required):
             A short 'reason' label to categorize the failure.
             This will be in the `reason` field for the spawn failure in metrics.
+            This must be a called with a named argument, e.g. `SpawnException("invalid image", reason="image")` and not `SpawnException("invalid image", "image")`
         log_message (str):
             The message which will be logged (not shown to the user),
             if you want to log more detail than you show to the user.
