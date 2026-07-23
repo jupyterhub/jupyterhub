@@ -506,6 +506,15 @@ def form_spawn(app):
 
 
 @fixture
+def named_servers(app):
+    with mock.patch.dict(
+        app.tornado_settings,
+        {'allow_named_servers': True, 'named_server_limit_per_user': 2},
+    ):
+        yield
+
+
+@fixture
 def create_temp_role(app):
     """Generate a temporary role with certain scopes.
     Convenience function that provides setup, database handling and teardown"""

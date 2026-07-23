@@ -17,7 +17,6 @@ from tornado.iostream import StreamClosedError
 from .. import orm, scopes
 from ..roles import assign_default_roles
 from ..scopes import needs_scope
-from ..slugs import is_valid_display_name, is_valid_safe_slug, normalise_unicode
 from ..user import User
 from ..utils import (
     format_exception,
@@ -614,7 +613,105 @@ class UserTokenAPIHandler(APIHandler):
 
 
 class UserServerAPIHandler(APIHandler):
-    """Start and stop single-user servers"""
+    """Start and stop single-user servers
+
+    - GET: single server model
+    - PUT: create new server (don't start it)
+    - PATCH: edit server (must exist)
+    - POST: start server (create if not exists)
+    - DELETE: stop server (and delete it)
+    """
+
+    def get_server_json_body(self):
+        """Get the body of a server request
+
+        - validates field types
+        - ensures user_options key is defined
+        - handles backward-compatibility with top-level body being user_options
+        """
+        body = super().get_json_body()
+        if not body:
+            return {
+                "display_name": None,
+                "user_options": None,
+            }
+        if not isinstance(body, dict):
+            raise web.HTTPError(400, "Body must be a JSON object")
+        if "display_name" in body and not isinstance(body["display_name"], str):
+            raise web.HTTPError(400, "display_name must be a string")
+        if "user_options" in body and not (
+            body["user_options"] is None or isinstance(body["user_options"], dict)
+        ):
+            raise web.HTTPError(400, "user_options must be an object or null")
+
+        # display_name specified, use new schema
+        # if user_options is not specified, that's the same as None
+        if "display_name" in body:
+            body.setdefault("user_options", None)
+
+        # backward-compat:  neither display_name nor user_options specified,
+        # use body as user_options
+        if "user_options" not in body:
+            body = {
+                "display_name": None,
+                "user_options": body,
+            }
+        return body
+
+    @needs_scope('read:servers')
+    async def get(self, user_name, server_name=''):
+        """Get the model for a single spawner
+
+        .. versionadded:: 6.0
+        """
+        user = self.find_user(user_name)
+        if user is None:
+            # this can be reached if a token has `servers`
+            # permission on *all* users
+            raise web.HTTPError(404)
+
+        if server_name in user.spawners:
+            spawner = user.spawners[server_name]
+        elif server_name in user.orm_spawners:
+            spawner = user.orm_spawners[server_name]
+        else:
+            raise web.HTTPError(404)
+
+        self.write(json.dumps(self.server_model(spawner, user=user)))
+
+    @needs_scope('start:servers')
+    async def put(self, user_name, server_name=''):
+        """Create named servers, but don't start them
+
+        Raises 409 on existing servers.
+
+        .. versionadded:: 6.0
+        """
+        user = self.find_user(user_name)
+        if user is None:
+            # this can be reached if a token has `servers`
+            # permission on *all* users
+            raise web.HTTPError(404)
+        if not server_name:
+            # 'create' default server doesn't make sense
+            raise web.HTTPError(409, f"User {user.name} already has a default server")
+        if user.orm_spawners.get(server_name):
+            raise web.HTTPError(
+                409, f"User {user.name} already has server {server_name}"
+            )
+        body = self.get_server_json_body()
+        display_name = body.get("display_name")
+        if not display_name:
+            display_name = server_name
+        await self._check_named_server_request(user, server_name, display_name)
+        spawner = user.get_or_create_spawner(server_name, display_name)
+        user_options = body.get("user_options")
+        if user_options:
+            # spawner.user_options is not synced with orm_spawner
+            spawner.user_options = spawner.orm_spawner.user_options = user_options
+            self.db.commit()
+        self.set_status(201)
+        self.write(json.dumps(self.server_model(spawner, user=user)))
 
     @needs_scope('start:servers')
     async def post(self, user_name, server_name=''):
@@ -624,52 +721,12 @@ class UserServerAPIHandler(APIHandler):
             # permission on *all* users
             raise web.HTTPError(404)
 
+        body = self.get_server_json_body() or {}
         if server_name:
-            body = self.get_json_body() or {}
             display_name = body.get("display_name")
             if not display_name:
                 display_name = server_name
-            elif not isinstance(display_name, str):
-                raise web.HTTPError(400, "display_name must be a string")
-
-            # The following is identical to handlers.pages.SpawnHandler._check_named_server_request()
-
-            if not self.allow_named_servers:
-                raise web.HTTPError(400, "Named servers are not enabled.")
-
-            named_server_limit_per_user = (
-                await self.get_current_user_named_server_limit()
-            )
-
-            if named_server_limit_per_user > 0 and server_name not in user.orm_spawners:
-                named_spawners = list(user.all_spawners(include_default=False))
-                if named_server_limit_per_user <= len(named_spawners):
-                    raise web.HTTPError(
-                        400,
-                        f"User {user_name} already has the maximum of {named_server_limit_per_user} named servers."
-                        "  One must be deleted before a new server can be created",
-                    )
-
-            if server_name not in user.orm_spawners:
-                # Prevent creation of new invalid server names
-                if not is_valid_safe_slug(server_name):
-                    error_message = f"Invalid server_name: {safe_log(server_name)}"
-                    self.log.error(error_message)
-                    raise web.HTTPError(400, error_message)
-
-                display_name = normalise_unicode(display_name)
-                if not is_valid_display_name(display_name):
-                    error_message = f"Invalid display_name: {safe_log(display_name)}"
-                    self.log.error(error_message)
-                    raise web.HTTPError(400, error_message)
-
-            if not self.settings[
-                "allow_invalid_named_server_start"
-            ] and not is_valid_safe_slug(server_name):
-                error_message = f"Starting invalid server_name {safe_log(server_name)} is disabled, contact your administrator"
-                self.log.error(error_message)
-                raise web.HTTPError(400, error_message)
-
+            await self._check_named_server_request(user, server_name, display_name)
         else:
             display_name = ''
 
@@ -695,11 +752,106 @@ class UserServerAPIHandler(APIHandler):
             if state is None:
                 raise web.HTTPError(400, f"{spawner._log_name} is already running")
 
-        options = self.get_json_body()
+        if body.get("display_name") and spawner.display_name != display_name:
+            self.log.info(
+                f"Updating display_name for {spawner._log_name} {spawner.display_name} -> {display_name}"
+            )
+            spawner.display_name = display_name
+            self.db.commit()
+
+        options = body["user_options"]
         await self.spawn_single_user(user, server_name, display_name, options=options)
         status = 202 if spawner.pending == 'spawn' else 201
         self.set_header('Content-Type', 'text/plain')
         self.set_status(status)
+
+    @needs_scope('start:servers')
+    async def patch(self, user_name, server_name=''):
+        user = self.find_user(user_name)
+        self.set_header("Content-Type", 'application/json')
+        if user is None:
+            # this can be reached if a token has `servers`
+            # permission on *all* users
+            raise web.HTTPError(404)
+
+        body = self.get_json_body() or {}
+        src_server_name = server_name
+        new_server_name = body.get("name", None)
+        display_name = body.get("display_name", new_server_name)
+
+        body_keys = set(body.keys())
+        if not body_keys:
+            raise web.HTTPError(400, "Must specify at least one field to modify.")
+        supported_keys = {"name", "display_name", "user_options"}
+        unhandled_keys = body_keys.difference(supported_keys)
+        if unhandled_keys:
+            raise web.HTTPError(
+                400,
+                f"Unexpected fields: {unhandled_keys}, supported fields: {supported_keys.join(',')}",
+            )
+
+        if new_server_name:
+            await self._check_named_server_request(user, new_server_name, display_name)
+        elif display_name:
+            await self._check_named_server_request(user, server_name, display_name)
+
+        orm_spawner = user.orm_spawners.get(server_name)
+        if not orm_spawner:
+            raise web.HTTPError(
+                404, f"User {user.name} has no such server {safe_log(server_name)}"
+            )
+        spawner = user.get_spawner(server_name)
+
+        # cannot patch active servers
+        if server_name in user.spawners:
+            spawner = user.spawners[server_name]
+            if spawner.active:
+                raise web.HTTPError(
+                    400,
+                    f"{spawner._log_name} is active. Please stop it before modifying it.",
+                )
+
+        # actions:
+        # 1. new name, rename
+        if new_server_name:
+            if new_server_name in user.orm_spawners:
+                raise web.HTTPError(
+                    409, f"User {user.name} already has server {new_server_name!r}"
+                )
+            self.log.info(
+                f"Renaming spawner {user.name}/{server_name} -> {new_server_name}"
+            )
+            spawner = user.get_spawner(server_name)
+            await spawner.rename(server_name, new_server_name)
+            orm_spawner.name = new_server_name
+            self.db.commit()
+            # after rename, discard stale Spawner wrapper
+            user.spawners.pop(server_name)
+            server_name = new_server_name
+
+        # 2. set user options, display_name
+        if "user_options" in body:
+            if not isinstance(body["user_options"], dict):
+                raise web.HTTPError(400, "user_options must be a dict")
+            self.log.info(
+                f"Setting user_options on {user.name}/{server_name} {body['user_options']}"
+            )
+            orm_spawner.user_options = body["user_options"]
+            self.db.commit()
+
+        # update display_name
+        if body.get("display_name") and orm_spawner.display_name != display_name:
+            if not isinstance(body["display_name"], str):
+                raise web.HTTPError(400, "display_name must be a string")
+            self.log.info(
+                f"Updating display_name for {user.name}/{server_name} {orm_spawner.display_name!r} -> {display_name!r}"
+            )
+            orm_spawner.display_name = display_name
+            self.db.commit()
+
+        # 3. (not yet) directly modify server state?
+        # self.set_status(200)
+        self.write(self.server_model(orm_spawner, user=user))
 
     @needs_scope('delete:servers')
     async def delete(self, user_name, server_name=''):
