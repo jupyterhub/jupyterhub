@@ -493,7 +493,60 @@ async def test_named_server_spawn_form(app, username, named_servers):
         assert next_url in path_history
     assert server_name in user.spawners
     spawner = user.spawners[server_name]
-    spawner.user_options == {'energy': '938MeV', 'bounds': [-10, 10], 'notspecified': 5}
+    assert spawner.user_options == {
+        'energy': '938MeV',
+        'bounds': [-10, 10],
+        'notspecified': 5,
+    }
+
+
+@pytest.mark.parametrize(
+    "query, expected",
+    [
+        # Old style of passing spawn parameters in a GET
+        ("energy=abc", {"energy": "abc"}),
+        ("energy=abc&display_name=a+b", {"energy": "abc"}),
+        # Mix of old and new style
+        ("energy=abc&opt-foo=bar", {}),
+        ("energy=abc&opt-opt-foo=bar", {"opt-foo": "bar"}),
+        (
+            "energy=abc&opt-energy=def&opt-opt-foo=bar",
+            {"energy": "def", "opt-foo": "bar"},
+        ),
+        # New style
+        (
+            "opt-energy=abc&opt-display_name=a+b&opt-opt-foo=bar",
+            {"energy": "abc", "display_name": "a b", "opt-foo": "bar"},
+        ),
+    ],
+)
+async def test_named_server_spawn_with_opts(
+    app, username, named_servers, query, expected
+):
+    server_name = "myserver"
+    base_url = public_url(app)
+    cookies = await app.login_user(username)
+    user = app.users[username]
+    # "notspecified" is always added by FormSpawner.options_from_form
+    expected.update({"notspecified": 5})
+    with mock.patch.dict(app.users.settings, {'spawner_class': FormSpawner}):
+        r = await get_page(
+            f'spawn/{username}/{server_name}?{query}', app, cookies=cookies
+        )
+        r.raise_for_status()
+        count = 0
+        while "spawn-pending" in r.url:
+            if count > 10:
+                raise TimeoutError("Server failed to spawn after 10s")
+            await asyncio.sleep(1)
+            count += 1
+            r = await async_requests.get(r.url, cookies=cookies)
+            r.raise_for_status()
+        assert r.url.split("?")[0].endswith(f'/user/{username}/{server_name}/')
+
+    assert server_name in user.spawners
+    spawner = user.spawners[server_name]
+    assert spawner.user_options == expected
 
 
 async def test_user_redirect_default_server_name(

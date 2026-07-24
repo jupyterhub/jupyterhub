@@ -94,7 +94,22 @@ There is no option to create named servers with non-compliant names.
 Support for non-compliant names will be completely dropped in JupyterHub 7, i.e. it will be impossible to start those servers.
 :::
 
-## Custom spawner forms (`spawner.user_options`)
+## Passing parameters to spawners (`spawner.user_options`)
 
-The `display_name` spawner query parameter is now reserved for use by JupyterHub.
-If you have a custom form that sets this parameter in `spawner.user_options` you must rename it.
+If parameters are passed to a spawner using URL query parameters in a GET request they should be prefixed with `opt-`.
+This ensures they won't clash with parameters used by JupyterHub.
+
+Passing parameters without the `opt-` prefix will continue to work in most cases, with these exceptions:
+
+- If you use the `display_name` parameter this is now used by JupyterHub and is removed from the options passed to the spawner.
+  You must use the new format `opt-display_name` instead.
+- If you have a parameter beginning with `opt-`, e.g. `opt-a`, this will be converted to `a`.
+  You must pass this parameter as `opt-opt-a` instead.
+- You can't mix the old and new style of passing parameters.
+  If any parameter is passed using the `opt-` prefix all parameters must, others will be ignored.
+- Other parameters may be used by JupyterHub in future releases.
+  These will not be treated as a breaking change.
+
+For example, instead of calling `GET /spawn?key=value&opt-image=datascience` use
+`GET /spawn?opt-key=value&opt-opt-image=datascience`.
+This will result in `{"key": "value", "opt-image", "datascience"}`

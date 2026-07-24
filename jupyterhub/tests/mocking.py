@@ -168,20 +168,29 @@ class FormSpawner(MockSpawner):
     """A spawner that has an options form defined"""
 
     energy = Unicode(help="field that is set as an environment variable for testing")
+    display_name = Unicode(
+        help="field that will clashes with a jupyterhub query parameter"
+    )
+    opt_foo = Unicode(help="field that will overlap with a jupyterhub query parameter")
 
     # Only one of the form fields is used in browser UI tests
     options_form = """
         <input aria-label="energy" name="energy" type="text" value=""/>
     """
 
-    apply_user_options = {"energy": "energy"}
+    apply_user_options = {
+        "energy": "energy",
+        "display_name": "display_name",
+        "opt-foo": "opt_foo",
+    }
 
     def options_from_form(self, form_data):
         options = {'notspecified': 5}
         if 'bounds' in form_data:
             options['bounds'] = [int(i) for i in form_data['bounds']]
-        if 'energy' in form_data:
-            options['energy'] = form_data['energy'][0]
+        for field in ['energy', 'display_name', 'opt-foo']:
+            if field in form_data:
+                options[field] = form_data[field][0]
         if 'hello_file' in form_data:
             options['hello'] = form_data['hello_file'][0]
 
