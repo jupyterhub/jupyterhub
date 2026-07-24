@@ -540,9 +540,6 @@ async def test_named_server_spawn_with_opts(
                 raise TimeoutError("Server failed to spawn after 10s")
             await asyncio.sleep(1)
             count += 1
-            # r = await get_page(url, app, cookies=cookies)
-            headers = {}
-            headers.setdefault("Sec-Fetch-Mode", "navigate")
             r = await async_requests.get(r.url, cookies=cookies)
             r.raise_for_status()
         assert r.url.split("?")[0].endswith(f'/user/{username}/{server_name}/')

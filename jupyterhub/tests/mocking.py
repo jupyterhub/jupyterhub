@@ -188,9 +188,11 @@ class FormSpawner(MockSpawner):
         options = {'notspecified': 5}
         if 'bounds' in form_data:
             options['bounds'] = [int(i) for i in form_data['bounds']]
-        for field in ['energy', 'hello_file', 'display_name', 'opt-foo']:
+        for field in ['energy', 'display_name', 'opt-foo']:
             if field in form_data:
                 options[field] = form_data[field][0]
+        if 'hello_file' in form_data:
+            options['hello'] = form_data['hello_file'][0]
 
         if 'illegal_argument' in form_data:
             raise ValueError("You are not allowed to specify 'illegal_argument'")
