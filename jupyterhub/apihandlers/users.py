@@ -822,7 +822,11 @@ class UserServerAPIHandler(APIHandler):
                 f"Renaming spawner {user.name}/{server_name} -> {new_server_name}"
             )
             spawner = user.get_spawner(server_name)
-            await spawner.rename(server_name, new_server_name)
+            try:
+                spawner._rename_pending = True
+                await spawner.rename(server_name, new_server_name)
+            finally:
+                spawner._rename_pending = False
             orm_spawner.name = new_server_name
             self.db.commit()
             # after rename, discard stale Spawner wrapper
@@ -896,6 +900,8 @@ class UserServerAPIHandler(APIHandler):
                 # schedule remove when stop completes
                 asyncio.ensure_future(_remove_spawner(spawner._stop_future))
             return
+        elif spawner.pending == 'rename':
+            raise web.HTTPError(400, "Cannot stop a server while it is being renamed")
 
         stop_future = None
         if spawner.pending:
