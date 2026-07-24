@@ -493,7 +493,11 @@ async def test_named_server_spawn_form(app, username, named_servers):
         assert next_url in path_history
     assert server_name in user.spawners
     spawner = user.spawners[server_name]
-    spawner.user_options == {'energy': '938MeV', 'bounds': [-10, 10], 'notspecified': 5}
+    assert spawner.user_options == {
+        'energy': '938MeV',
+        'bounds': [-10, 10],
+        'notspecified': 5,
+    }
 
 
 @pytest.mark.parametrize(
