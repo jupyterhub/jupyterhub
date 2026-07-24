@@ -38,12 +38,12 @@ from urllib.parse import urlparse
 from pamela import PAMError
 from sqlalchemy import event
 from tornado.httputil import url_concat
-from traitlets import Bool, Dict, Unicode, default
+from traitlets import Bool, Dict, Integer, Unicode, default
 
 from .. import metrics, orm, roles
 from ..app import JupyterHub
 from ..auth import PAMAuthenticator
-from ..spawner import SimpleLocalProcessSpawner
+from ..spawner import SimpleLocalProcessSpawner, SpawnException
 from ..utils import random_port, url_path_join, utcnow
 from .utils import AsyncSession, public_url, ssl_setup
 
@@ -143,6 +143,19 @@ class BadSpawner(MockSpawner):
 
     def start(self):
         raise RuntimeError("I don't work!")
+
+
+class CustomBadSpawner(MockSpawner):
+    """Spawner that fails immediately"""
+
+    status_code = Integer(418, config=True)
+    message = Unicode("custom message", config=True)
+    reason = Unicode("custom reason", config=True)
+
+    def start(self):
+        raise SpawnException(
+            self.message, reason=self.reason, status_code=self.status_code
+        )
 
 
 class SlowBadSpawner(MockSpawner):

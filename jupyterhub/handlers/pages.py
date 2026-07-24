@@ -17,6 +17,7 @@ from .. import __version__, orm
 from ..metrics import SERVER_POLL_DURATION_SECONDS, ServerPollStatus
 from ..scopes import describe_raw_scopes, needs_scope
 from ..slugs import is_valid_display_name, is_valid_safe_slug, normalise_unicode
+from ..spawner import SpawnException
 from ..utils import (
     format_exception,
     maybe_future,
@@ -423,7 +424,11 @@ class SpawnHandler(BaseHandler):
         # otherwise it may cause a redirect loop
         if f.done() and f.exception():
             exc = f.exception()
-            self.log.exception(f"Error starting server {spawner._log_name}: {exc}")
+            if isinstance(exc, (web.HTTPError, SpawnException)):
+                log = self.log.error
+            else:
+                log = self.log.exception
+            log(f"Error starting server {spawner._log_name}: {exc}")
             if isinstance(exc, web.HTTPError):
                 # allow custom HTTPErrors to pass through
                 raise exc
