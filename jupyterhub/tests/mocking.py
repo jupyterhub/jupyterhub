@@ -38,12 +38,12 @@ from urllib.parse import urlparse
 from pamela import PAMError
 from sqlalchemy import event
 from tornado.httputil import url_concat
-from traitlets import Bool, Dict, Unicode, default
+from traitlets import Bool, Dict, Integer, Unicode, default
 
 from .. import metrics, orm, roles
 from ..app import JupyterHub
 from ..auth import PAMAuthenticator
-from ..spawner import SimpleLocalProcessSpawner
+from ..spawner import SimpleLocalProcessSpawner, SpawnException
 from ..utils import random_port, url_path_join, utcnow
 from .utils import AsyncSession, public_url, ssl_setup
 
@@ -143,6 +143,19 @@ class BadSpawner(MockSpawner):
 
     def start(self):
         raise RuntimeError("I don't work!")
+
+
+class CustomBadSpawner(MockSpawner):
+    """Spawner that fails immediately"""
+
+    status_code = Integer(418, config=True)
+    message = Unicode("custom message", config=True)
+    reason = Unicode("custom reason", config=True)
+
+    def start(self):
+        raise SpawnException(
+            self.message, reason=self.reason, status_code=self.status_code
+        )
 
 
 class SlowBadSpawner(MockSpawner):
@@ -264,6 +277,7 @@ class MockHub(JupyterHub):
     external_certs = Dict()
 
     def __init__(self, *args, **kwargs):
+        self.socket = kwargs.get('unix_socket', False)
         if 'internal_certs_location' in kwargs:
             cert_location = kwargs['internal_certs_location']
             kwargs['external_certs'] = ssl_setup(cert_location, 'hub-ca')
@@ -284,6 +298,8 @@ class MockHub(JupyterHub):
 
     @default('bind_url')
     def _default_bind_url(self):
+        if self.socket:
+            return f"http+unix://{self.socket}"
         if self.subdomain_host:
             port = urlparse(self.subdomain_host).port
         else:

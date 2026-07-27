@@ -15,7 +15,6 @@ from ..utils import url_path_join as ujoin
 from ..utils import wait_for_http_server
 from .mocking import MockHub
 from .test_api import add_user, api_request
-from .utils import skip_if_ssl
 
 
 @pytest.fixture
@@ -28,8 +27,6 @@ def disable_check_routes(app):
         app._periodic_callbacks["last_activity"].start()
 
 
-@skip_if_ssl
-@pytest.mark.flaky(reruns=2)
 async def test_external_proxy(request):
     auth_token = 'secret!'
     proxy_ip = '127.0.0.1'

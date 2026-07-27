@@ -490,6 +490,15 @@ def bad_spawn(app):
 
 
 @fixture
+def custom_bad_spawn(app):
+    """Fixture enabling BadSpawner"""
+    with mock.patch.dict(
+        app.tornado_settings, {'spawner_class': mocking.CustomBadSpawner}
+    ):
+        yield
+
+
+@fixture
 def slow_bad_spawn(app):
     """Fixture enabling SlowBadSpawner"""
     with mock.patch.dict(

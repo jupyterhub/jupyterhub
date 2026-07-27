@@ -745,6 +745,11 @@ class JupyterHub(Application):
 
         This is the address on which the proxy will bind.
         Sets protocol, ip, base_url
+
+        For example:
+
+        - `http://:8000`
+        - `http+unix://%2Fsrv%2Fjupyterhub%2Fproxy.sock`
         """,
     ).tag(config=True)
 
@@ -753,7 +758,14 @@ class JupyterHub(Application):
         """ensure protocol field of bind_url matches ssl"""
         v = proposal['value']
         proto, sep, rest = v.partition('://')
-        if self.ssl_cert and proto != 'https':
+        if proto == 'unix+http':
+            self.log.warning(
+                "Using deprecated 'unix+http' protocol. Please use 'http+unix' instead."
+            )
+            return f'http+unix://{rest}'
+        elif proto == 'http+unix':
+            return v
+        elif self.ssl_cert and proto != 'https':
             return 'https' + sep + rest
         elif proto != 'http' and not self.ssl_cert:
             return 'http' + sep + rest
@@ -1050,7 +1062,7 @@ class JupyterHub(Application):
         to talk to the Hub.
 
         Only needs to be specified if the default hub URL is not
-        connectable (e.g. using a unix+http:// bind url).
+        connectable (e.g. using a http+unix:// bind url).
 
         .. seealso::
             JupyterHub.hub_connect_ip
@@ -1071,7 +1083,7 @@ class JupyterHub(Application):
         For example:
 
             "http://127.0.0.1:8081"
-            "unix+http://%2Fsrv%2Fjupyterhub%2Fjupyterhub.sock"
+            "http+unix://%2Fsrv%2Fjupyterhub%2Fjupyterhub.sock"
 
         .. versionadded:: 0.9
         """,
@@ -1091,6 +1103,14 @@ class JupyterHub(Application):
             Use hub_connect_url
         """,
     ).tag(config=True)
+
+    hub_socket_mode = Integer(
+        0o600,  # socket only read- and writeable by owner
+        help="""
+        If hub_bind_url is set to a unix socket path, use this mode for the socket's file permissions.
+        """,
+        config=True,
+    )
 
     hub_prefix = URLPrefix(
         '/hub/', help="The prefix for the hub server.  Always /base_url/hub/"
@@ -2061,6 +2081,7 @@ class JupyterHub(Application):
             public_host = self.subdomain_host
         hub_args = dict(
             base_url=self.hub_prefix,
+            socket_mode=self.hub_socket_mode,
             routespec=self.hub_routespec,
             public_host=public_host,
             certfile=self.internal_ssl_cert,
@@ -3719,7 +3740,7 @@ class JupyterHub(Application):
                     http=True, timeout=service.timeout, ssl_context=ssl_context
                 )
             )
-            futures = []
+            futures = [wait_up_task]
             if service.managed:
 
                 async def wait_for_stop():
@@ -3735,7 +3756,7 @@ class JupyterHub(Application):
                 futures.append(wait_for_stop_task)
 
             done, pending = await asyncio.wait(
-                futures, return_when=asyncio.FIRST_EXCEPTION
+                futures, return_when=asyncio.FIRST_COMPLETED
             )
             # cancel pending
             [f.cancel() for f in pending if not f.done()]
@@ -3831,10 +3852,12 @@ class JupyterHub(Application):
         )
         bind_url = urlparse(self.hub.bind_url)
         try:
-            if bind_url.scheme.startswith('unix+'):
+            if bind_url.scheme.startswith('http+unix'):
                 from tornado.netutil import bind_unix_socket
 
-                socket = bind_unix_socket(unquote(bind_url.netloc))
+                socket = bind_unix_socket(
+                    unquote(bind_url.netloc), mode=self.hub.socket_mode
+                )
                 self.http_server.add_socket(socket)
             else:
                 ip = bind_url.hostname

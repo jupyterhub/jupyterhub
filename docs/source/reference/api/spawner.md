@@ -6,6 +6,12 @@
 .. automodule:: jupyterhub.spawner
 ```
 
+### {class}`SpawnException`
+
+```{eval-rst}
+.. autoclass:: SpawnException
+```
+
 ### {class}`Spawner`
 
 ```{eval-rst}

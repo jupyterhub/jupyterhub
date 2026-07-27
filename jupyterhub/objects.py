@@ -33,6 +33,8 @@ class Server(HasTraits):
     ip = Unicode()
     connect_ip = Unicode()
     connect_port = Integer()
+    connect_addr = Unicode()
+    socket_mode = Integer()
     proto = Unicode('http')
     port = Integer()
     base_url = URLPrefix('/')
@@ -57,15 +59,21 @@ class Server(HasTraits):
     @observe('bind_url')
     def _bind_url_changed(self, change):
         urlinfo = urlparse(change.new)
-        self.proto = urlinfo.scheme
-        self.ip = urlinfo.hostname or ''
-        port = urlinfo.port
-        if port is None:
-            if self.proto == 'https':
-                port = 443
-            else:
-                port = 80
-        self.port = port
+        if urlinfo.scheme:
+            self.proto = urlinfo.scheme
+
+        if self._unix_socket:
+            self.connect_url = f'{self.proto}://{urlinfo.netloc}'  # only proto and netloc, without path
+            self.connect_addr = urlinfo.netloc
+        else:
+            self.ip = urlinfo.hostname or ''
+            port = urlinfo.port
+            if port is None:
+                if self.proto == 'https':
+                    port = 443
+                else:
+                    port = 80
+            self.port = port
 
     @validate('connect_url')
     def _connect_url_add_prefix(self, proposal):
@@ -78,6 +86,10 @@ class Server(HasTraits):
             urlinfo = urlinfo._replace(path=self.base_url)
             return urlunparse(urlinfo)
         return proposal.value
+
+    @default('connect_addr')
+    def _connect_addr(self):
+        return self._connect_ip
 
     @property
     def _connect_ip(self):
@@ -106,6 +118,10 @@ class Server(HasTraits):
         if self.connect_port:
             return self.connect_port
         return self.port
+
+    @property
+    def _unix_socket(self):
+        return self.proto == 'http+unix'
 
     @classmethod
     def from_orm(cls, orm_server):
@@ -180,7 +196,10 @@ class Server(HasTraits):
             )
         else:
             return wait_for_server(
-                self._connect_ip, self._connect_port, timeout=timeout
+                self.connect_addr,
+                self._connect_port,
+                timeout=timeout,
+                unix_socket=self._unix_socket,
             )
 
     def is_up(self):
