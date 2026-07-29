@@ -9,5 +9,5 @@ psutil==5.6.5; sys_platform == 'win32'
 pydantic==2
 pyopenssl==25.*
 SQLAlchemy==1.4.1
-tornado==6.2
+tornado==6.5
 traitlets==5.4

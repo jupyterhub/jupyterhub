@@ -43,11 +43,12 @@ from ..metrics import (
     LoginStatus,
     ProxyDeleteStatus,
     ServerPollStatus,
+    ServerSpawnFailureReason,
     ServerSpawnStatus,
     ServerStopStatus,
 )
 from ..objects import Server
-from ..spawner import LocalProcessSpawner
+from ..spawner import LocalProcessSpawner, SpawnException
 from ..user import User
 from ..utils import (
     AnyTimeoutError,
@@ -1049,7 +1050,8 @@ class BaseHandler(RequestHandler):
         if server_name in user.spawners and user.spawners[server_name].pending:
             pending = user.spawners[server_name].pending
             SERVER_SPAWN_DURATION_SECONDS.labels(
-                status=ServerSpawnStatus.already_pending
+                status=ServerSpawnStatus.failure,
+                reason=ServerSpawnFailureReason.already_pending,
             ).observe(time.perf_counter() - spawn_start_time)
             raise RuntimeError(f"{user_server_name} pending {pending}")
 
@@ -1069,7 +1071,8 @@ class BaseHandler(RequestHandler):
 
         if concurrent_spawn_limit and spawn_pending_count >= concurrent_spawn_limit:
             SERVER_SPAWN_DURATION_SECONDS.labels(
-                status=ServerSpawnStatus.throttled
+                status=ServerSpawnStatus.failure,
+                reason=ServerSpawnFailureReason.throttled,
             ).observe(time.perf_counter() - spawn_start_time)
             # Suggest number of seconds client should wait before retrying
             # This helps prevent thundering herd problems, where users simply
@@ -1105,7 +1108,8 @@ class BaseHandler(RequestHandler):
         if active_server_limit and active_count >= active_server_limit:
             self.log.info('%s servers active, no space available', active_count)
             SERVER_SPAWN_DURATION_SECONDS.labels(
-                status=ServerSpawnStatus.too_many_users
+                status=ServerSpawnStatus.failure,
+                reason=ServerSpawnFailureReason.too_many_users,
             ).observe(time.perf_counter() - spawn_start_time)
             raise web.HTTPError(
                 429, "Active user limit exceeded. Try again in a few minutes."
@@ -1146,7 +1150,8 @@ class BaseHandler(RequestHandler):
                 "User %s took %.3f seconds to start", user_server_name, toc - tic
             )
             SERVER_SPAWN_DURATION_SECONDS.labels(
-                status=ServerSpawnStatus.success
+                status=ServerSpawnStatus.success,
+                reason=ServerSpawnFailureReason.none,
             ).observe(time.perf_counter() - spawn_start_time)
             self.eventlog.emit(
                 schema_id='https://schema.jupyter.org/jupyterhub/events/server-action',
@@ -1203,11 +1208,29 @@ class BaseHandler(RequestHandler):
                 self.settings['failure_count'] = 0
                 return
             # spawn failed, increment count and abort if limit reached
+            e = f.exception()
+            if isinstance(e, SpawnException):
+                status = ServerSpawnStatus.failure
+                reason = e.reason
+            elif isinstance(e, web.HTTPError) and e.status_code < 500:
+                status = ServerSpawnStatus.failure
+                # use default value
+                reason = e.reason or ServerSpawnFailureReason.none
+            elif isinstance(e, web.HTTPError) and e.status_code >= 500:
+                status = ServerSpawnStatus.error
+                reason = e.reason or ServerSpawnFailureReason.none
+            else:
+                status = ServerSpawnStatus.error
+                reason = ServerSpawnFailureReason.none
+
             SERVER_SPAWN_DURATION_SECONDS.labels(
-                status=ServerSpawnStatus.failure
+                status=status,
+                reason=reason,
             ).observe(time.perf_counter() - spawn_start_time)
             self.settings.setdefault('failure_count', 0)
-            self.settings['failure_count'] += 1
+            if status == ServerSpawnStatus.error:
+                # increment on error only, not on handled rejections
+                self.settings['failure_count'] += 1
             failure_count = self.settings['failure_count']
             failure_limit = spawner.consecutive_failure_limit
             if failure_limit and 1 < failure_count < failure_limit:
@@ -1261,7 +1284,8 @@ class BaseHandler(RequestHandler):
 
             if status is not None:
                 SERVER_SPAWN_DURATION_SECONDS.labels(
-                    status=ServerSpawnStatus.failure
+                    status=ServerSpawnStatus.error,
+                    reason="exited",
                 ).observe(time.perf_counter() - spawn_start_time)
 
                 # if it stopped, give the original spawn future a second chance to raise
@@ -1527,20 +1551,25 @@ class BaseHandler(RequestHandler):
         message_html = ''
         exception = None
         status_message = responses.get(status_code, 'Unknown HTTP Error')
+        reason = ''
         if exc_info:
             exception = exc_info[1]
-            # get the custom message, if defined
-            try:
-                message = exception.log_message % exception.args
-            except Exception:
-                pass
+            if isinstance(exception, SpawnException):
+                log_message = exception.log_message
+                message = exception.message
+                message_html = exception.message_html
+                reason = exception.reason
+            elif isinstance(exception, web.HTTPError):
+                message = exception.get_message()
+                reason = exception.reason
+                status_message = reason or message
+
             # allow custom html messages
-            message_html = getattr(exception, "jupyterhub_html_message", "")
+            message_html = getattr(exception, "jupyterhub_html_message", message_html)
 
             # construct the custom reason, if defined
-            reason = getattr(exception, 'reason', '')
             if reason:
-                message = reasons.get(reason, reason)
+                message = reasons.get(reason, message)
 
             # get special jupyterhub_message, if defined
             message = getattr(exception, "jupyterhub_message", message)

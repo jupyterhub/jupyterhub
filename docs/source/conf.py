@@ -65,6 +65,10 @@ with pyproject_toml.open("rb") as f:
     pyproject = tomllib.load(f)
 
 
+exclude_patterns = [
+    "includes/*",
+]
+
 # -- MyST configuration ------------------------------------------------------
 # ref: https://myst-parser.readthedocs.io/en/latest/configuration.html
 #
