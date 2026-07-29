@@ -107,6 +107,9 @@ repos:
         pass_filenames: false
         language: node
         files: "jsx/.*"
+        # seems to need additional dependencies
+        # due to spurious error on pre-commit.ci
+        additional_dependencies: []
         # can't run on pre-commit; hangs, for some reason
         stages:
           - manual
