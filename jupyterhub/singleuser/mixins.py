@@ -44,13 +44,14 @@ from traitlets import (
 from traitlets.config import Configurable
 
 from .._version import __version__, _check_version
+from ..httpclient import fetch
 from ..log import log_request
 from ..services.auth import HubOAuth, HubOAuthCallbackHandler, HubOAuthenticated
 from ..utils import (
     _bool_env,
-    async_fetch,
     exponential_backoff,
     isoformat,
+    make_ssl_context,
     url_path_join,
 )
 from ._decorator import allow_unauthenticated
@@ -400,16 +401,14 @@ class SingleUserNotebookAppMixin(Configurable):
 
     @default('hub_http_client_opts')
     def _default_client_opts(self):
-        # can't use ssl_options in case of pycurl
-        client_opts = dict(validate_cert=True)
-        # don't set falsy empty strings,
-        # which tornado interprets as paths
-        if self.hub_auth.client_ca:
-            client_opts["ca_certs"] = self.hub_auth.client_ca
-        if self.hub_auth.keyfile:
-            client_opts["client_key"] = self.hub_auth.keyfile
-        if self.hub_auth.certfile:
-            client_opts["client_cert"] = self.hub_auth.certfile
+        client_opts = dict()
+        ssl_context = make_ssl_context(
+            self.hub_auth.keyfile,
+            self.hub_auth.certfile,
+            cafile=self.hub_auth.client_ca,
+        )
+        if ssl_context:
+            client_opts["ssl"] = ssl_context
         return client_opts
 
     async def check_hub_version(self):
@@ -421,7 +420,7 @@ class SingleUserNotebookAppMixin(Configurable):
         RETRIES = 5
         for i in range(1, RETRIES + 1):
             try:
-                resp = await async_fetch(self.hub_api_url, **self.hub_http_client_opts)
+                resp = await fetch(self.hub_api_url, **self.hub_http_client_opts)
             except Exception:
                 self.log.exception(
                     "Failed to connect to my Hub at %s (attempt %i/%i). Is it running?",
@@ -473,7 +472,6 @@ class SingleUserNotebookAppMixin(Configurable):
 
     async def notify_activity(self):
         """Notify jupyterhub of activity"""
-        client = self.hub_http_client
         last_activity = self.web_app.last_activity()
         if not last_activity:
             self.log.debug("No activity to send to the Hub")
@@ -500,7 +498,7 @@ class SingleUserNotebookAppMixin(Configurable):
                     "Authorization": f"token {self.hub_auth.api_token}",
                     "Content-Type": "application/json",
                 },
-                body=json.dumps(
+                data=json.dumps(
                     {
                         'servers': {
                             self.server_name: {'last_activity': last_activity_timestamp}
@@ -510,7 +508,7 @@ class SingleUserNotebookAppMixin(Configurable):
                 ),
             )
             try:
-                await async_fetch(req, **self.hub_http_client_opts)
+                await fetch(req, **self.hub_http_client_opts)
             except Exception:
                 self.log.exception("Error notifying Hub of activity")
                 return False
