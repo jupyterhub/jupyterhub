@@ -93,7 +93,7 @@ class UserListAPIHandler(APIHandler):
         user = self.users[orm_user]
         return any(spawner.ready for spawner in user.spawners.values())
 
-    @needs_scope('list:users')
+    @needs_scope('list:users', post_filter=True)
     def get(self):
         state_filter = self.get_argument("state", None)
         name_filter = self.get_argument("name_filter", None)
