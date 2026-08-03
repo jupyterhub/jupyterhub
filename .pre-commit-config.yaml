@@ -30,7 +30,7 @@ repos:
 
   # Autoformat: python imports
   - repo: https://github.com/pycqa/isort
-    rev: 7f321d375f31a2f03833bc9a548e8783f2b5c420  # frozen: 9.0.0b1
+    rev: 7f321d375f31a2f03833bc9a548e8783f2b5c420 # frozen: 9.0.0b1
     hooks:
       - id: isort
 
@@ -48,14 +48,14 @@ repos:
 
   # Autoformat: markdown, yaml, javascript (see the file .prettierignore)
   - repo: https://github.com/rbubley/mirrors-prettier
-    rev: 0ee178619d696787ca73d210cc191d720868c631  # frozen: v3.9.6
+    rev: 0ee178619d696787ca73d210cc191d720868c631 # frozen: v3.9.6
     hooks:
       - id: prettier
         exclude: .*/templates/.*|docs/source/_static/rest-api.yml|docs/source/rbac/scope-table.md
 
   # autoformat HTML templates
   - repo: https://github.com/djlint/djLint
-    rev: 01e0d29d2037467fdf6de91f65bc806045042762  # frozen: v1.43.2
+    rev: 01e0d29d2037467fdf6de91f65bc806045042762 # frozen: v1.43.2
     hooks:
       - id: djlint-reformat-jinja
         files: ".*templates/.*.html"
@@ -67,7 +67,7 @@ repos:
 
   # github actions security checks
   - repo: https://github.com/zizmorcore/zizmor-pre-commit
-    rev: 451b56af716f9f0d0c2b816503a3fd0cf8b036fa  # frozen: v1.29.0
+    rev: 451b56af716f9f0d0c2b816503a3fd0cf8b036fa # frozen: v1.29.0
     hooks:
       - id: zizmor
         args:
