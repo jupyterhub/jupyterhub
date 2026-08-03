@@ -17,7 +17,7 @@ from .base import APIHandler
 
 
 class ServiceListAPIHandler(APIHandler):
-    @needs_scope('list:services')
+    @needs_scope('list:services', post_filter=True)
     def get(self):
         data = {}
         service_scope = self.parsed_scopes['list:services']

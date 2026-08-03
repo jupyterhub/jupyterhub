@@ -116,6 +116,14 @@ class MockAPIHandler:
         # Rely on inner vertical filtering
         return True
 
+    @needs_scope('users', post_filter=True)
+    def post_filter(self):
+        # post_filter=True requires filtering in the body
+        if has_scope("users!user=gob", self.parsed_scopes, db=self.db):
+            return True
+        else:
+            raise web.HTTPError(403)
+
     @needs_scope('users')
     @needs_scope('read:services')
     def secret_thing(self):
@@ -177,12 +185,15 @@ def mock_handler():
         ),
         (['users'], 'other_thing', ('gob',), True),
         (['read:users'], 'other_thing', ('gob',), False),
-        (['users!user=gob'], 'other_thing', ('gob',), True),
-        (['users!user=gob'], 'other_thing', ('maeby',), True),
+        (['users!user=gob'], 'other_thing', ('gob',), False),
+        (['users!user=gob'], 'post_filter', (), True),
+        (['users!user=maeby'], 'post_filter', (), False),
     ],
 )
-def test_scope_method_access(mock_handler, scopes, method, arguments, is_allowed):
-    mock_handler.current_user = mock.Mock(name=arguments[0])
+def test_scope_method_access(
+    mock_handler, username, scopes, method, arguments, is_allowed
+):
+    mock_handler.current_user = mock.Mock(name=username)
     mock_handler.set_scopes(*scopes)
     api_call = getattr(mock_handler, method)
     if is_allowed:
@@ -327,28 +338,52 @@ async def test_request_user_outside_group(app, create_user_with_scopes):
     assert r.json()['message'] == err_message
 
 
-async def test_user_filter(app, create_user_with_scopes):
-    name_in_scope = {'lindsay', 'oscar', 'gob'}
-    user = create_user_with_scopes(
-        *(f'list:users!user={name}' for name in name_in_scope)
+@pytest.mark.parametrize("has_filter", [(True,), (False,)])
+async def test_post_users_admin_filter(
+    app, create_user_with_scopes, username, has_filter
+):
+    if has_filter:
+        scope = f"admin:users!user={username}"
+    else:
+        scope = "admin:users"
+    user = create_user_with_scopes(scope)
+    r = await api_request(
+        app,
+        'users',
+        headers=auth_header(app.db, user.name),
+        method="post",
+        json={
+            "usernames": [username],
+        },
     )
-    outside_scope = {'maeby', 'marta'}
-    group_name = 'bluth'
-    group = orm.Group.find(app.db, name=group_name)
-    if not group:
-        group = orm.Group(name=group_name)
-        app.db.add(group)
-    for name in name_in_scope | outside_scope:
-        group_user = add_user(app.db, name=name)
-        if name not in group.users:
-            group.users.append(group_user)
-    app.db.commit()
-    r = await api_request(app, 'users', headers=auth_header(app.db, user.name))
-    assert r.status_code == 200
-    result_names = {user['name'] for user in r.json()}
-    assert result_names == name_in_scope
-    app.db.delete(group)
-    app.db.commit()
+    if has_filter:
+        assert r.status_code == 403
+    else:
+        assert r.status_code == 201
+
+
+@pytest.mark.parametrize("has_filter", [(True,), (False,)])
+async def test_post_groups_admin_filter(
+    app, create_user_with_scopes, groupname, has_filter
+):
+    if has_filter:
+        scope = f"admin:groups!group={groupname}"
+    else:
+        scope = "admin:groups"
+    user = create_user_with_scopes(scope)
+    r = await api_request(
+        app,
+        'groups',
+        headers=auth_header(app.db, user.name),
+        method="post",
+        json={
+            "groups": [groupname],
+        },
+    )
+    if has_filter:
+        assert r.status_code == 403
+    else:
+        assert r.status_code == 201
 
 
 async def test_service_filter(app, create_user_with_scopes):
