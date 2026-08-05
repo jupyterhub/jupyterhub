@@ -8,7 +8,7 @@
         <h1 class="text-center">Accept sharing invitation</h1>
         <p class="lead">
           You ({{ user.name }}) have been invited to access {{ owner.name }}'s server
-          {%- if spawner.name %}({{ spawner.name }}){%- endif %} at <a href="{{ spawner_url | safe }}">{{ spawner_url }}</a>
+          {%- if spawner.name %}({{ spawner.name }}){%- endif %} at <a href="{{ spawner_url }}">{{ spawner_url }}</a>
         </p>
         {% if not spawner_ready %}
           <p class="alert alert-danger">
@@ -41,7 +41,7 @@
             <div class="card-footer">
               <button type="submit" class="form-control btn btn-jupyter">Accept invitation</button>
               <p class="small">
-                After accepting the invitation, you will be redirected to <a href="{{ next_url | safe }}">{{ next_url }}</a>.
+                After accepting the invitation, you will be redirected to <a href="{{ next_url }}">{{ next_url }}</a>.
               </p>
             </div>
           </div>
