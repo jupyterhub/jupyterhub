@@ -18,12 +18,10 @@
             </p>
             <a role="button"
                class='btn btn-jupyter btn-lg'
-               href='{{ authenticator_login_url | safe }}'>Sign in with {{ login_service }}</a>
+               href='{{ authenticator_login_url }}'>Sign in with {{ login_service }}</a>
           </div>
         {% else %}
-          <form action="{{ authenticator_login_url | safe }}"
-                method="post"
-                role="form">
+          <form action="{{ authenticator_login_url }}" method="post" role="form">
             <div class="auth-form-header">
               <h1>Sign in</h1>
             </div>
