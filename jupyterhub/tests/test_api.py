@@ -2796,6 +2796,8 @@ async def test_update_server_activity(app, user, server_name, fresh):
         ("exists", "valid", 400, True),
         ("exists", "invalid name", 400, False),
         ("", "valid", 200, False),
+        ("exists", "alsoexists", 409, False),
+        ("exists", "", 409, False),
     ],
 )
 async def test_rename_server(
@@ -2811,6 +2813,8 @@ async def test_rename_server(
     else:
         spawner = user.get_or_create_spawner("exists", "exists")
     orm_spawner = spawner.orm_spawner
+    # if dst_name == "alsoexists":
+    user.get_or_create_spawner("alsoexists", "alsoexists")
 
     r = await api_request(
         app,
@@ -2845,10 +2849,9 @@ async def test_rename_server(
             assert "" in servers
             assert user.spawner is not None
             assert user.spawner is not spawner
-    elif active:
+    else:
         # make sure nothing changed
-        assert src_name in user.orm_spawners
-        assert dst_name not in user.orm_spawners
+        assert sorted(user.orm_spawners) == ["", "alsoexists", "exists"]
 
 
 async def test_patch_server(app, user, named_servers):

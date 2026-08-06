@@ -813,7 +813,7 @@ class UserServerAPIHandler(APIHandler):
 
         # actions:
         # 1. new name, rename
-        if new_server_name:
+        if new_server_name is not None:
             if new_server_name in user.orm_spawners:
                 raise web.HTTPError(
                     409, f"User {user.name} already has server {new_server_name!r}"
