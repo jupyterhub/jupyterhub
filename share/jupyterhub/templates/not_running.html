@@ -17,7 +17,7 @@
             {% if failed %}
               The latest attempt to start your server {{ server_name }} has failed.
               {% if failed_html_message %}
-              </p>
+                </p>
               <p>{{ failed_html_message | safe }}</p>
               <p>{% elif failed_message %}</p>
               <p>{{ failed_message }}</p>
