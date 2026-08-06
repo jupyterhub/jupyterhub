@@ -621,6 +621,9 @@ class User:
     # singleton property, self.spawner maps onto spawner with empty server_name
     @property
     def spawner(self):
+        # ensure default spawner exists in the database
+        if '' not in self.orm_user.orm_spawners:
+            self._new_orm_spawner('', '')
         return self.spawners['']
 
     @spawner.setter

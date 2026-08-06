@@ -2819,10 +2819,34 @@ async def test_rename_server(
         method="patch",
     )
     assert r.status_code == status_code
-    if r.status_code == 200:
-        assert src_name not in user.orm_spawners
+    if status_code == 200:
+        if src_name != "":
+            assert src_name not in user.orm_spawners
         assert dst_name in user.orm_spawners
-    if active:
+        # validate after state
+        r = await api_request(
+            app,
+            f"users/{user.name}/servers/{dst_name}",
+        )
+        assert r.status_code == 200
+        server_model = r.json()
+        assert server_model["name"] == dst_name
+        r = await api_request(
+            app,
+            f"users/{user.name}?include_stopped_servers=1",
+        )
+        assert r.status_code == 200
+        user_model = r.json()
+        servers = user_model["servers"]
+        assert dst_name in servers
+        if src_name != "":
+            assert src_name not in servers
+        else:
+            assert "" in servers
+            assert user.spawner is not None
+            assert user.spawner is not spawner
+    elif active:
+        # make sure nothing changed
         assert src_name in user.orm_spawners
         assert dst_name not in user.orm_spawners
 
