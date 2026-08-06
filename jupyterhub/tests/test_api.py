@@ -2798,6 +2798,8 @@ async def test_update_server_activity(app, user, server_name, fresh):
         ("", "valid", 200, False),
         ("exists", "alsoexists", 409, False),
         ("exists", "", 409, False),
+        ("exists", "full", 200, False),
+        ("", "full", 400, False),
     ],
 )
 async def test_rename_server(
@@ -2813,8 +2815,17 @@ async def test_rename_server(
     else:
         spawner = user.get_or_create_spawner("exists", "exists")
     orm_spawner = spawner.orm_spawner
-    # if dst_name == "alsoexists":
-    user.get_or_create_spawner("alsoexists", "alsoexists")
+    server_limit = app.tornado_settings["named_server_limit_per_user"]
+    if dst_name == "alsoexists":
+        user.get_or_create_spawner("alsoexists", "alsoexists")
+    if dst_name == "full":
+        # make sure user has all the servers they are allowed
+        # rename existing is okay, rename default is not
+        existing_servers = len(user.orm_spawners) - 1
+        for i in range(existing_servers, server_limit):
+            user.get_or_create_spawner(f"exists-{i}", f"exists-{i}")
+    before_servers = sorted(user.orm_spawners.keys())
+    assert len(before_servers) <= server_limit + 1
 
     r = await api_request(
         app,
@@ -2851,7 +2862,7 @@ async def test_rename_server(
             assert user.spawner is not spawner
     else:
         # make sure nothing changed
-        assert sorted(user.orm_spawners) == ["", "alsoexists", "exists"]
+        assert sorted(user.orm_spawners) == before_servers
 
 
 async def test_patch_server(app, user, named_servers):

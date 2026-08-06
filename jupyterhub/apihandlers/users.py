@@ -791,9 +791,15 @@ class UserServerAPIHandler(APIHandler):
             )
 
         if new_server_name is not None:
-            await self._check_named_server_request(user, new_server_name, display_name)
+            # usually rename doesn't change number of named servers, but renaming default server
+            # implicitly creates a new default server, increasing named server count by one
+            await self._check_named_server_request(
+                user, new_server_name, display_name, check_limit=server_name == ""
+            )
         elif display_name:
-            await self._check_named_server_request(user, server_name, display_name)
+            await self._check_named_server_request(
+                user, server_name, display_name, check_limit=False
+            )
 
         orm_spawner = user.orm_spawners.get(server_name)
         if not orm_spawner:

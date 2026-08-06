@@ -1616,25 +1616,30 @@ class BaseHandler(RequestHandler):
 
         self.write(html)
 
-    async def _check_named_server_request(self, user, server_name, display_name):
+    async def _check_named_server_request(
+        self, user, server_name, display_name, check_limit=True
+    ):
         """Check that a request for a named server is valid"""
         if not self.allow_named_servers:
             raise web.HTTPError(400, "Named servers are not enabled.")
 
-        named_server_limit_per_user = await self.get_current_user_named_server_limit()
+        # check the named server limit
+        if check_limit:
+            named_server_limit_per_user = (
+                await self.get_current_user_named_server_limit()
+            )
+            if named_server_limit_per_user > 0 and server_name not in user.orm_spawners:
+                spawner_names = set(user.orm_spawners.keys())
+                # discard default, only count named servers
+                spawner_names.discard("")
+                if named_server_limit_per_user <= len(spawner_names):
+                    raise web.HTTPError(
+                        400,
+                        f"User {user.name} already has the maximum of {named_server_limit_per_user} named servers."
+                        "  One must be deleted before a new server can be created",
+                    )
 
-        # Allow invalid server names created before JupyterHub 6
-        # if allow_invalid_named_server_start
         # Prevent creation of new invalid server names
-        if named_server_limit_per_user > 0 and server_name not in user.orm_spawners:
-            named_spawners = list(user.all_spawners(include_default=False))
-            if named_server_limit_per_user <= len(named_spawners):
-                raise web.HTTPError(
-                    400,
-                    f"User {user.name} already has the maximum of {named_server_limit_per_user} named servers."
-                    "  One must be deleted before a new server can be created",
-                )
-
         if server_name not in user.orm_spawners:
             if not is_valid_safe_slug(server_name):
                 error_message = f"Invalid server_name: {safe_log(server_name)}"
@@ -1647,6 +1652,8 @@ class BaseHandler(RequestHandler):
                 self.log.error(error_message)
                 raise web.HTTPError(400, error_message)
 
+        # Allow invalid server names created before JupyterHub 6
+        # if allow_invalid_named_server_start
         if not self.settings[
             "allow_invalid_named_server_start"
         ] and not is_valid_safe_slug(server_name):
