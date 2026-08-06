@@ -790,7 +790,7 @@ class UserServerAPIHandler(APIHandler):
                 f"Unexpected fields: {unhandled_keys}, supported fields: {supported_keys.join(',')}",
             )
 
-        if new_server_name:
+        if new_server_name is not None:
             await self._check_named_server_request(user, new_server_name, display_name)
         elif display_name:
             await self._check_named_server_request(user, server_name, display_name)
