@@ -158,43 +158,6 @@ class SpawnHandler(BaseHandler):
             display_name=server_displayname,
         )
 
-    async def _check_named_server_request(self, user, server_name, display_name):
-        if not self.allow_named_servers:
-            raise web.HTTPError(400, "Named servers are not enabled.")
-
-        named_server_limit_per_user = await self.get_current_user_named_server_limit()
-
-        # Allow invalid server names created before JupyterHub 6
-        # if allow_invalid_named_server_start
-        # Prevent creation of new invalid server names
-        if named_server_limit_per_user > 0 and server_name not in user.orm_spawners:
-            named_spawners = list(user.all_spawners(include_default=False))
-            if named_server_limit_per_user <= len(named_spawners):
-                raise web.HTTPError(
-                    400,
-                    f"User {user.name} already has the maximum of {named_server_limit_per_user} named servers."
-                    "  One must be deleted before a new server can be created",
-                )
-
-        if server_name not in user.orm_spawners:
-            if not is_valid_safe_slug(server_name):
-                error_message = f"Invalid server_name: {safe_log(server_name)}"
-                self.log.error(error_message)
-                raise web.HTTPError(400, error_message)
-
-            display_name = normalise_unicode(display_name)
-            if not is_valid_display_name(display_name):
-                error_message = f"Invalid display_name: {safe_log(display_name)}"
-                self.log.error(error_message)
-                raise web.HTTPError(400, error_message)
-
-        if not self.settings[
-            "allow_invalid_named_server_start"
-        ] and not is_valid_safe_slug(server_name):
-            error_message = f"Starting invalid server_name {safe_log(server_name)} is disabled, contact your administrator"
-            self.log.error(error_message)
-            raise web.HTTPError(400, error_message)
-
     def _get_user_options(self, query_options):
         """
         If any parameter starts with `opt-` assume the request follows
