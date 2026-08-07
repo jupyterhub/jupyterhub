@@ -116,7 +116,7 @@ In case the role with a certain name already exists in the database, its definit
 Role definitions can include those of the "default" roles listed above (admin excluded),
 if the default scopes associated with those roles do not suit your deployment.
 
-For example, to specify what permissions the $JUPYTERHUB_API_TOKEN issued to all single-user servers
+For example, to specify what permissions the `$JUPYTERHUB_API_TOKEN` issued to all single-user servers
 has, you may define the `server` role.
 However, starting with JupyterHub 4, it is recommended to use the {attr}`.Spawner.server_token_scopes` option for this instead.
 
