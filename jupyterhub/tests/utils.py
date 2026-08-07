@@ -191,7 +191,8 @@ async def api_request(
     )
     assert 'http' not in resp.headers['Content-Security-Policy']
     if not kwargs.get('stream', False) and resp.content:
-        assert resp.headers.get('content-type') == 'application/json'
+        content_type = resp.headers.get("content-type", "unspecified")
+        assert 'application/json' in content_type, content_type
     return resp
 
 

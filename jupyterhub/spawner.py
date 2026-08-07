@@ -168,6 +168,7 @@ class Spawner(LoggingConfigurable):
     _stop_pending = False
     _proxy_pending = False
     _check_pending = False
+    _rename_pending = False
     _waiting_for_response = False
     _jupyterhub_version = None
     _spawn_future = None
@@ -210,6 +211,8 @@ class Spawner(LoggingConfigurable):
             return 'stop'
         elif self._check_pending:
             return 'check'
+        elif self._rename_pending:
+            return 'rename'
         return None
 
     @property
@@ -1670,6 +1673,17 @@ class Spawner(LoggingConfigurable):
         .. versionadded:: 0.9
         """
         yield {"progress": 50, "message": "Spawning server..."}
+
+    async def rename(self, old_name, new_name):
+        """
+        Called when an existing server's name is about to be changed.
+
+        Override in subclasses if any state needs to be changed based on the server's name.
+
+        If an error is raised here, it is propagated to the user and rename is prevented.
+
+        .. versionadded:: 6.0
+        """
 
     async def start(self):
         """Start the single-user server

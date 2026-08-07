@@ -2788,6 +2788,118 @@ async def test_update_server_activity(app, user, server_name, fresh):
     assert user.spawners[server_name].orm_spawner.last_activity == expected
 
 
+@mark.parametrize(
+    "src_name, dst_name, status_code, active",
+    [
+        ("exists", "valid", 200, False),
+        ("not_exists", "valid", 404, False),
+        ("exists", "valid", 400, True),
+        ("exists", "invalid name", 400, False),
+        ("", "valid", 200, False),
+        ("exists", "alsoexists", 409, False),
+        ("exists", "", 409, False),
+        ("exists", "full", 200, False),
+        ("", "full", 400, False),
+    ],
+)
+async def test_rename_server(
+    app, user, named_servers, src_name, dst_name, status_code, active, no_patience
+):
+    if active:
+        r = await api_request(
+            app, 'users', user.name, 'servers', src_name, method='post'
+        )
+        spawner = user.get_spawner(src_name)
+        assert r.ok
+        await spawner._spawn_future
+    else:
+        spawner = user.get_or_create_spawner("exists", "exists")
+    orm_spawner = spawner.orm_spawner
+    server_limit = app.tornado_settings["named_server_limit_per_user"]
+    if dst_name == "alsoexists":
+        user.get_or_create_spawner("alsoexists", "alsoexists")
+    if dst_name == "full":
+        # make sure user has all the servers they are allowed
+        # rename existing is okay, rename default is not
+        existing_servers = len(user.orm_spawners) - 1
+        for i in range(existing_servers, server_limit):
+            user.get_or_create_spawner(f"exists-{i}", f"exists-{i}")
+    before_servers = sorted(user.orm_spawners.keys())
+    assert len(before_servers) <= server_limit + 1
+
+    r = await api_request(
+        app,
+        f"users/{user.name}/servers/{src_name}",
+        data=json.dumps({"name": dst_name}),
+        method="patch",
+    )
+    assert r.status_code == status_code
+    if status_code == 200:
+        if src_name != "":
+            assert src_name not in user.orm_spawners
+        assert dst_name in user.orm_spawners
+        # validate after state
+        r = await api_request(
+            app,
+            f"users/{user.name}/servers/{dst_name}",
+        )
+        assert r.status_code == 200
+        server_model = r.json()
+        assert server_model["name"] == dst_name
+        r = await api_request(
+            app,
+            f"users/{user.name}?include_stopped_servers=1",
+        )
+        assert r.status_code == 200
+        user_model = r.json()
+        servers = user_model["servers"]
+        assert dst_name in servers
+        if src_name != "":
+            assert src_name not in servers
+        else:
+            assert "" in servers
+            assert user.spawner is not None
+            assert user.spawner is not spawner
+    else:
+        # make sure nothing changed
+        assert sorted(user.orm_spawners) == before_servers
+
+
+async def test_patch_server(app, user, named_servers):
+    src_name = "named"
+    dst_name = "newname"
+    spawner = user.get_or_create_spawner(src_name, "display name")
+    orm_spawner = spawner.orm_spawner
+
+    r = await api_request(
+        app,
+        f"users/{user.name}/servers/{src_name}",
+        data=json.dumps(
+            {
+                "name": dst_name,
+                "display_name": "New Name!",
+                "user_options": {
+                    "key": "value",
+                },
+            }
+        ),
+        method="patch",
+    )
+    r.raise_for_status()
+    server_model = r.json()
+    assert src_name not in user.orm_spawners
+    assert src_name not in user.spawners
+    assert dst_name in user.orm_spawners
+    assert dst_name not in user.spawners
+    spawner = user.get_spawner(dst_name)
+    # it's the same orm_spawner, renamed
+    assert spawner.orm_spawner.id == orm_spawner.id
+    assert spawner.name == dst_name
+    assert spawner.display_name == "New Name!"
+    assert spawner.orm_spawner.user_options == {"key": "value"}
+    assert spawner.user_options == {"key": "value"}
+
+
 # -----------------
 # General API tests
 # -----------------
