@@ -59,8 +59,6 @@ from traitlets import (
 )
 from traitlets.config import SingletonConfigurable
 
-from jupyterhub.utils import async_fetch
-
 from .._xsrf_utils import (
     _anonymous_xsrf_id,
     _needs_check_xsrf,
@@ -68,8 +66,9 @@ from .._xsrf_utils import (
     check_xsrf_cookie,
     get_xsrf_token,
 )
+from ..httpclient import fetch
 from ..scopes import _intersect_expanded_scopes
-from ..utils import _bool_env, get_browser_protocol, url_path_join
+from ..utils import _bool_env, get_browser_protocol, make_ssl_context, url_path_join
 
 
 def check_scopes(required_scopes, scopes):
@@ -592,26 +591,19 @@ class HubAuth(SingletonConfigurable):
             self.cache[cache_key] = data
         return data
 
-    async def _api_request(self, method, url, headers=None, **kwargs):
+    async def _api_request(self, method, url, /, **kwargs):
         """Make an API request"""
         allow_403 = kwargs.pop('allow_403', False)
-        if headers is None:
-            headers = {}
+        headers = kwargs.setdefault("headers", {})
         headers.setdefault('Authorization', f'token {self.api_token}')
         # translate requests args to tornado's
-        if self.certfile:
-            kwargs["client_cert"] = self.certfile
-        if self.keyfile:
-            kwargs["client_key"] = self.keyfile
-        if self.client_ca:
-            kwargs["ca_certs"] = self.client_ca
+        if self.certfile or self.keyfile:
+            kwargs["ssl"] = make_ssl_context(
+                self.keyfile, self.certfile, cafile=self.client_ca
+            )
 
         try:
-            r = await async_fetch(
-                url, method=method, raise_error=False, headers=headers, **kwargs
-            )
-        except HTTPError as e:
-            pass
+            r = await fetch(url, method=method, raise_for_status=False, **kwargs)
         except Exception as e:
             app_log.error("Error connecting to %s: %s", self.api_url, e)
             msg = f"Failed to connect to Hub API at {self.api_url!r}."
@@ -623,16 +615,17 @@ class HubAuth(SingletonConfigurable):
                 )
             raise HTTPError(500, msg)
 
+        response_text = await r.text()
+
         data = None
         try:
-            status = HTTPStatus(r.code)
+            status = HTTPStatus(r.status)
         except ValueError:
             app_log.error(
                 f"Unknown error checking authorization with JupyterHub: {r.code}"
             )
-            app_log.error(r.body.decode("utf8", "replace"))
+            app_log.error(response_text)
 
-        response_text = r.body.decode("utf8", "replace")
         if status.value == 403 and allow_403:
             pass
         elif status.value == 403:
@@ -1134,7 +1127,7 @@ class HubOAuth(HubAuth):
         token_reply = await self._api_request(
             'POST',
             self.oauth_token_url,
-            body=urlencode(params).encode('utf8'),
+            data=urlencode(params).encode('utf8'),
             headers={'Content-Type': 'application/x-www-form-urlencoded'},
         )
 

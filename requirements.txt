@@ -1,3 +1,5 @@
+aiodns
+aiohttp
 alembic>=1.4
 certipy>=0.1.2
 idna

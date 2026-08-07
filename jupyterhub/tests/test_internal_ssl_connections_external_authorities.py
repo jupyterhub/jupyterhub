@@ -22,7 +22,7 @@ def create_external_ca_and_signed_cert(tmpdir):
 
 
 @pytest.fixture(scope='module')
-async def app_with_external_ca(request, ssl_tmpdir):
+async def app_with_external_ca(ssl_tmpdir):
     """Mock a jupyterhub app for testing"""
     mocked_app = None
     kwargs = dict()
@@ -32,19 +32,17 @@ async def app_with_external_ca(request, ssl_tmpdir):
 
     mocked_app = MockHub.instance(**kwargs)
 
-    def fin():
-        # disconnect logging during cleanup because pytest closes captured FDs prematurely
-        mocked_app.log.handlers = []
-        MockHub.clear_instance()
-        try:
-            mocked_app.stop()
-        except Exception as e:
-            print(f"Error stopping Hub: {e}", file=sys.stderr)
-
-    request.addfinalizer(fin)
     await mocked_app.initialize([])
     await mocked_app.start()
-    return mocked_app
+    yield mocked_app
+
+    # disconnect logging during cleanup because pytest closes captured FDs prematurely
+    mocked_app.log.handlers = []
+    MockHub.clear_instance()
+    try:
+        await mocked_app.stop()
+    except Exception as e:
+        print(f"Error stopping Hub: {e}", file=sys.stderr)
 
 
 async def test_connection_hub_with_external_ssl_authority(app_with_external_ca):

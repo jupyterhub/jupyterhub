@@ -27,18 +27,17 @@ class Generator:
         return table_rows
 
     def prometheus_metrics(self):
-        generated_directory = f"{HERE}/source/reference"
+        generated_directory = f"{HERE}/source/includes"
         if not os.path.exists(generated_directory):
             os.makedirs(generated_directory)
 
-        filename = f"{generated_directory}/metrics.md"
+        filename = f"{generated_directory}/metrics_table.md"
         table_name = ""
         headers = ["Type", "Name", "Description"]
         values = self._parse_metrics()
         writer = self.create_writer(table_name, headers, values)
 
         with open(filename, 'w') as f:
-            f.write("# List of Prometheus Metrics\n\n")
             f.write(writer.dumps())
             f.write("\n")
         print(f"Generated {filename}")

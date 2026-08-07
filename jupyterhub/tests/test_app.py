@@ -292,8 +292,10 @@ def persist_db(tmpdir):
 
 
 @pytest.fixture
-def new_hub(request, tmpdir, persist_db):
+async def new_hub(request, tmpdir, persist_db):
     """Fixture to launch a new hub for testing"""
+
+    apps = []
 
     async def new_hub(**kwargs):
         ssl_enabled = getattr(request.module, "ssl_enabled", False)
@@ -302,12 +304,14 @@ def new_hub(request, tmpdir, persist_db):
         app = MockHub(test_clean_db=False, **kwargs)
         app.config.ConfigurableHTTPProxy.should_start = False
         app.config.ConfigurableHTTPProxy.auth_token = 'unused'
-        request.addfinalizer(app.stop)
+        apps.append(app)
         await app.initialize([])
 
         return app
 
-    return new_hub
+    yield new_hub
+    for app in apps:
+        await app.stop()
 
 
 @pytest.mark.db
@@ -326,7 +330,7 @@ async def test_resume_spawners(tmpdir, request, new_hub):
 
     # stop the Hub without cleaning up servers
     app.cleanup_servers = False
-    app.stop()
+    await app.stop()
 
     # proc is still running
     assert proc.poll() is None
@@ -344,7 +348,7 @@ async def test_resume_spawners(tmpdir, request, new_hub):
 
     # stop the Hub without cleaning up servers
     app.cleanup_servers = False
-    app.stop()
+    await app.stop()
 
     # stop the server while the Hub is down. BAMF!
     proc.terminate()
@@ -512,7 +516,7 @@ async def test_recreate_service_from_database(
     # create a hub and add a service (not from config)
     app = await new_hub()
     app.service_from_spec(service_data, from_config=False)
-    app.stop()
+    await app.stop()
 
     # new hub, should load service from db
     app = await new_hub()
@@ -573,7 +577,7 @@ async def test_revoke_blocked_users(username, groupname, new_hub):
     token = user.new_api_token()
     orm_token = orm.APIToken.find(app.db, token)
     app.cleanup_servers = False
-    app.stop()
+    await app.stop()
 
     # before state
     assert await spawner.poll() is None
@@ -614,4 +618,4 @@ async def test_revoke_blocked_users(username, groupname, new_hub):
     # (sanity check) didn't lose other user
     kept_user = app2.users[kept_username]
     assert 'user' in [r.name for r in kept_user.roles]
-    app2.stop()
+    await app2.stop()

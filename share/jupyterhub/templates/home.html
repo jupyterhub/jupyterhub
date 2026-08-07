@@ -82,7 +82,8 @@
               {# actions #}
               <td>
                 <a role="button"
-                   class="stop-server btn btn-xs btn-danger{% if not spawner.active %} hidden{% endif %}"
+                   {# stop is available if anything is happening _except_ rename #}
+                   class="stop-server btn btn-xs btn-danger{% if not spawner.active or spawner.pending == "rename" %} hidden{% endif %}"
                    id="stop-{{ spawner.name }}">stop</a>
                 <a role="button"
                    class="start-server btn btn-xs btn-primary {% if spawner.active %}hidden{% endif %}"

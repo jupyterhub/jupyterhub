@@ -64,6 +64,15 @@ define(["jquery", "utils"], function ($, utils) {
     );
   };
 
+  JHAPI.prototype.create_named_server = function (user, server_name, options) {
+    options = options || {};
+    options = update(options, { type: "PUT", dataType: null });
+    this.api_request(
+      utils.url_path_join("users", user, "servers", server_name),
+      options,
+    );
+  };
+
   JHAPI.prototype.stop_server = function (user, options) {
     options = options || {};
     options = update(options, { type: "DELETE", dataType: null });

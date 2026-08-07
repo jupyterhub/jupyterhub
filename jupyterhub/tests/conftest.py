@@ -115,19 +115,17 @@ async def app(request, ssl_tmpdir):
 
     mocked_app = MockHub.instance(**kwargs)
 
-    def fin():
-        # disconnect logging during cleanup because pytest closes captured FDs prematurely
-        mocked_app.log.handlers = []
-        MockHub.clear_instance()
-        try:
-            mocked_app.stop()
-        except Exception as e:
-            print(f"Error stopping Hub: {e}", file=sys.stderr)
-
-    request.addfinalizer(fin)
     await mocked_app.initialize([])
     await mocked_app.start()
-    return mocked_app
+    yield mocked_app
+
+    # disconnect logging during cleanup because pytest closes captured FDs prematurely
+    mocked_app.log.handlers = []
+    MockHub.clear_instance()
+    try:
+        await mocked_app.stop()
+    except Exception as e:
+        print(f"Error stopping Hub: {e}", file=sys.stderr)
 
 
 @fixture
@@ -490,6 +488,15 @@ def bad_spawn(app):
 
 
 @fixture
+def custom_bad_spawn(app):
+    """Fixture enabling BadSpawner"""
+    with mock.patch.dict(
+        app.tornado_settings, {'spawner_class': mocking.CustomBadSpawner}
+    ):
+        yield
+
+
+@fixture
 def slow_bad_spawn(app):
     """Fixture enabling SlowBadSpawner"""
     with mock.patch.dict(
@@ -502,6 +509,15 @@ def slow_bad_spawn(app):
 def form_spawn(app):
     """Fixture enabling FormSpawner"""
     with mock.patch.dict(app.tornado_settings, {'spawner_class': mocking.FormSpawner}):
+        yield
+
+
+@fixture
+def named_servers(app):
+    with mock.patch.dict(
+        app.tornado_settings,
+        {'allow_named_servers': True, 'named_server_limit_per_user': 2},
+    ):
         yield
 
 

@@ -17,7 +17,7 @@ from .crypto import CryptKeeper, EncryptionUnavailable, InvalidToken, decrypt, e
 from .metrics import RUNNING_SERVERS, TOTAL_USERS
 from .objects import Server
 from .slugs import is_valid_display_name, is_valid_safe_slug
-from .spawner import LocalProcessSpawner
+from .spawner import LocalProcessSpawner, SpawnException
 from .utils import (
     AnyTimeoutError,
     _strict_dns_safe,
@@ -621,6 +621,9 @@ class User:
     # singleton property, self.spawner maps onto spawner with empty server_name
     @property
     def spawner(self):
+        # ensure default spawner exists in the database
+        if '' not in self.orm_user.orm_spawners:
+            self._new_orm_spawner('', '')
         return self.spawners['']
 
     @spawner.setter
@@ -1058,6 +1061,8 @@ class User:
                     f"\n{start_timeout_message}"
                 )
                 e.reason = 'timeout'
+            elif isinstance(e, SpawnException):
+                self.log.error(f"Not starting {self.name}'s server {spawner.name}: {e}")
             elif isinstance(e, web.HTTPError):
                 # avoid logging noisy traceback on HTTPError,
                 # since this should be informative and will be relayed to the user
