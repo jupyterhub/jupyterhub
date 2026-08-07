@@ -196,6 +196,25 @@ c.JupyterHub.load_roles = [
 but if a future JupyterHub release ever changes the default user role, the `extra_user_scopes` approach will continue to add `access:services` to the default, whatever the default may be,
 whereas the overridden `user` role will continue to have exactly the permissions defined in your configuration, no matter what the default changes to.
 
+You cannot define scopes for the `user` role using `extra_user_scopes` and `load_roles` at the same time (there would be no reason to).
+If your config has both:
+
+```python
+c.JupyterHub.extra_user_scopes = {"access:services"}
+c.JupyterHub.load_roles = [
+  {
+    "name": "user",
+    "scopes": [
+      "self",
+      "access:servers!group=shared",
+    ],
+  }
+]
+```
+
+then `extra_user_scopes` will be ignored.
+If you are defining user scopes via `load_roles`, then that is the only list of scopes that will be considered.
+
 [scopes]: available-scopes-target
 
 (removing-roles-target)=
