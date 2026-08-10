@@ -756,7 +756,7 @@ class UserServerAPIHandler(APIHandler):
             self.log.info(
                 f"Updating display_name for {spawner._log_name} {spawner.display_name} -> {display_name}"
             )
-            spawner.display_name = display_name
+            spawner.orm_spawner.display_name = display_name
             self.db.commit()
 
         options = body["user_options"]

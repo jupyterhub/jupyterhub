@@ -158,6 +158,38 @@ class SpawnHandler(BaseHandler):
             display_name=server_displayname,
         )
 
+    def _get_user_options(self, query_options):
+        """
+        If any parameter starts with `opt-` assume the request follows
+        the new pattern and ignore parameters without the prefix.
+        Otherwise we're using the legacy form.
+        """
+        new_keys = {}
+        old_keys = {}
+        for key, value in query_options.items():
+            if key.startswith("opt-"):
+                if not key[4:]:
+                    raise web.HTTPError(422, f"Invalid user-option name {key}")
+                new_keys[key[4:]] = value
+            else:
+                old_keys[key] = value
+
+        if old_keys and new_keys:
+            self.log.warning(
+                "Found a mix of new style (opt- prefix) and old style user-options, "
+                "ignoring options without a prefix"
+            )
+            return new_keys
+
+        if old_keys:
+            self.log.warning(
+                "User options should be prefixed with `opt-` to avoid "
+                "conflicts with JupyterHub parameters"
+            )
+            return old_keys
+
+        return new_keys
+
     @needs_scope("servers")
     async def _get(self, user_name, server_name, display_name):
         for_user = user_name
@@ -214,15 +246,16 @@ class SpawnHandler(BaseHandler):
         # display_name is reserved for jupyterhub
         query_options.pop('display_name', None)
 
+        user_options = self._get_user_options(query_options)
         spawn_exc = None
 
-        if len(query_options) > 0:
+        if len(user_options) > 0:
             try:
                 self.log.debug(
                     "Triggering spawn with supplied query arguments for %s",
                     spawner._log_name,
                 )
-                options = await maybe_future(spawner.options_from_query(query_options))
+                options = await maybe_future(spawner.options_from_query(user_options))
                 return await self._wrap_spawn_single_user(
                     user, server_name, display_name, spawner, pending_url, options
                 )
