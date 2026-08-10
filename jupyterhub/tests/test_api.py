@@ -657,6 +657,23 @@ async def test_get_self(app):
     assert r.status_code == 403
 
 
+@mark.user
+async def test_get_self_auth_state(app, auth_state_enabled, create_user_with_scopes):
+    auth_state = {'access_token': 'secret'}
+    user = create_user_with_scopes('admin:auth_state!user')
+    await user.save_auth_state(auth_state)
+    token = user.new_api_token()
+
+    r = await api_request(
+        app,
+        'user',
+        headers={'Authorization': f'token {token}'},
+    )
+
+    r.raise_for_status()
+    assert r.json()['auth_state'] == auth_state
+
+
 async def test_get_self_service(app, mockservice):
     r = await api_request(
         app, "user", headers={"Authorization": f"token {mockservice.api_token}"}

@@ -62,6 +62,8 @@ class SelfAPIHandler(APIHandler):
             self.parsed_scopes = scopes.parse_scopes(self.expanded_scopes)
 
         model = get_model(user)
+        if 'auth_state' in model:
+            model['auth_state'] = await user.get_auth_state()
 
         # add session_id associated with token
         # added in 2.0
