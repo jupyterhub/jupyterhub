@@ -950,7 +950,7 @@ def reduce_scopes(expanded_scopes):
     return unparse_scopes(parse_scopes(expanded_scopes))
 
 
-def needs_scope(*scopes):
+def needs_scope(*scopes, post_filter=False):
     """Decorator to restrict access to users or services with the required scope"""
 
     for scope in scopes:
@@ -1013,7 +1013,7 @@ def needs_scope(*scopes):
                 has_access = has_scope(
                     scope,
                     self.parsed_scopes,
-                    post_filter=filter_ is None,
+                    post_filter=post_filter,
                     db=self.db,
                 )
                 if has_access:

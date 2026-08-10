@@ -46,7 +46,7 @@ class _GroupAPIHandler(APIHandler):
 
 
 class GroupListAPIHandler(_GroupAPIHandler):
-    @needs_scope('list:groups')
+    @needs_scope('list:groups', post_filter=True)
     def get(self):
         """List groups"""
         query = full_query = self.db.query(orm.Group)
