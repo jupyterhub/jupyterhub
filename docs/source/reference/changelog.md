@@ -22,6 +22,33 @@ Contributors to major version bumps in JupyterHub include:
 
 ## 5.5
 
+### 5.5.1 - 2026-08-10
+
+5.5.1 is a security release, fixing two vulnerabilities that affect a small minority of deployments, and backporting small bugfixes.
+
+One high-level security vulnerability in user-initiated sharing is patched (no effect on deployments without user-initiated sharing):
+
+- [GHSA-c4gm-pwx9-9w8j](https://github.com/jupyterhub/jupyterhub/security/advisories/GHSA-c4gm-pwx9-9w8j) (CVE pending)
+
+One low-level vulnerability in enforcing partial admin-level restrictions (no effect unless you have _filtered_ admin roles: `admin:users!group=...` or `admin:groups!group=...`):
+
+- [GHSA-69wv-m5fw-2fhp](https://github.com/jupyterhub/jupyterhub/security/advisories/GHSA-69wv-m5fw-2fhp) (CVE pending)
+
+Security advisories are published 7 days after release.
+
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/5.5.0...5.5.1))
+
+#### Bugs fixed
+
+- Backport PR #5461 on branch 5.x (Invalid UTF-8 JSON request body returns HTTP 500 instead of HTTP 400) [#5487](https://github.com/jupyterhub/jupyterhub/pull/5487) ([@Tech-Abhang](https://github.com/Tech-Abhang), [@minrk](https://github.com/minrk))
+- Backport PR #5420 on branch 5.x (avoid traceback when write_error is called before prepare) [#5486](https://github.com/jupyterhub/jupyterhub/pull/5486) ([@minrk](https://github.com/minrk))
+
+#### Maintenance and upkeep improvements
+
+- 5.x: npm audit fix [#5485](https://github.com/jupyterhub/jupyterhub/pull/5485) ([@minrk](https://github.com/minrk))
+- Remove/replace some broken links
+  [#5438](https://github.com/jupyterhub/jupyterhub/pull/5438) ([@manics](https://github.com/manics), [@minrk](https://github.com/minrk))
+
 ### 5.5.0 - 2026-06-10
 
 5.5.0 backports more bugfixes from the upcoming 6.0 release,
@@ -29,7 +56,7 @@ as well as the new {attr}`.SharedPasswordAuthenticator.password_groups` option.
 
 One moderate-level security vulnerability is patched:
 
-- [GHSA-p43p-whwx-q52h](https://github.com/jupyterhub/jupyterhub/security/advisories/GHSA-p43p-whwx-q52h) (CVE pending): Unauthenticated Denial of Service via Unbounded Username Logging on Failed Login
+- [GHSA-p43p-whwx-q52h](https://github.com/jupyterhub/jupyterhub/security/advisories/GHSA-p43p-whwx-q52h) (CVE-2026-54338): Unauthenticated Denial of Service via Unbounded Username Logging on Failed Login
 
 Security advisories are published 7 days after release.
 
