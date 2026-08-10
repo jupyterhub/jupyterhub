@@ -180,7 +180,7 @@ class FormSpawner(MockSpawner):
     """A spawner that has an options form defined"""
 
     energy = Unicode(help="field that is set as an environment variable for testing")
-    display_name = Unicode(
+    my_display_name = Unicode(
         help="field that will clashes with a jupyterhub query parameter"
     )
     opt_foo = Unicode(help="field that will overlap with a jupyterhub query parameter")
@@ -192,7 +192,7 @@ class FormSpawner(MockSpawner):
 
     apply_user_options = {
         "energy": "energy",
-        "display_name": "display_name",
+        "display_name": "my_display_name",
         "opt-foo": "opt_foo",
     }
 
