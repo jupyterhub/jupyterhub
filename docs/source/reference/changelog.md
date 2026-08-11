@@ -20,6 +20,129 @@ Contributors to major version bumps in JupyterHub include:
 
 ## [Unreleased]
 
+### 6.0.0 (prerelease)
+
+6.0 is a substantial release with several new features, including a database schema upgrade.
+The breaking changes ought to be minimal, and should affect very few deployments.
+
+Check out [the upgrade documentation](howto:upgrading-v6) for details on significant and breaking changes prior to upgrading.
+
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/5.4.2...1e2c6ea617a1c57ac15c9cb8ef0aaed60543867e))
+
+#### API and Breaking Changes
+
+- BREAKING: spawn options passed as GET query parameters should be prefixed with `opt-` [#5470](https://github.com/jupyterhub/jupyterhub/pull/5470) ([@manics](https://github.com/manics), [@minrk](https://github.com/minrk))
+- Require tornado 6.5 [#5465](https://github.com/jupyterhub/jupyterhub/pull/5465) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics))
+- use aiohttp for internal http requests [#5447](https://github.com/jupyterhub/jupyterhub/pull/5447) ([@minrk](https://github.com/minrk))
+- remove largely unused statsd metrics [#5407](https://github.com/jupyterhub/jupyterhub/pull/5407) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics))
+- Restrict named server servernames [#5192](https://github.com/jupyterhub/jupyterhub/pull/5192) ([@manics](https://github.com/manics), [@minrk](https://github.com/minrk))
+- Require Python 3.10 [#5182](https://github.com/jupyterhub/jupyterhub/pull/5182) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio), [@manics](https://github.com/manics), [@rgaiacs](https://github.com/rgaiacs))
+
+#### New features added
+
+- add SpawnException [#5464](https://github.com/jupyterhub/jupyterhub/pull/5464) ([@minrk](https://github.com/minrk), [@jnywong](https://github.com/jnywong))
+- add JupyterHub.extra_user_scopes [#5463](https://github.com/jupyterhub/jupyterhub/pull/5463) ([@minrk](https://github.com/minrk), [@agoose77](https://github.com/agoose77))
+- add GET, PUT, PATCH for server endpoints [#5443](https://github.com/jupyterhub/jupyterhub/pull/5443) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics))
+- Support usage of unix sockets in configurable proxy [#5397](https://github.com/jupyterhub/jupyterhub/pull/5397) ([@dometto](https://github.com/dometto), [@manics](https://github.com/manics), [@minrk](https://github.com/minrk))
+- add user_info to User, use it in jupyterhub-singleuser [#5317](https://github.com/jupyterhub/jupyterhub/pull/5317) ([@kreuzert](https://github.com/kreuzert), [@manics](https://github.com/manics), [@minrk](https://github.com/minrk))
+- Add ability to assign groups to users in SharedPasswordAuthenticator [#5298](https://github.com/jupyterhub/jupyterhub/pull/5298) ([@yuvipanda](https://github.com/yuvipanda), [@ateucher](https://github.com/ateucher), [@ericvd-ucb](https://github.com/ericvd-ucb), [@minrk](https://github.com/minrk), [@shaneknapp](https://github.com/shaneknapp))
+- add start:servers scope [#5297](https://github.com/jupyterhub/jupyterhub/pull/5297) ([@minrk](https://github.com/minrk))
+- add configurable service.timeout [#5207](https://github.com/jupyterhub/jupyterhub/pull/5207) ([@minrk](https://github.com/minrk), [@willingc](https://github.com/willingc))
+- Add Server Start Time and Profile Used columns to admin dashboard [#5173](https://github.com/jupyterhub/jupyterhub/pull/5173) ([@dragz](https://github.com/dragz), [@erawn](https://github.com/erawn), [@manics](https://github.com/manics), [@minrk](https://github.com/minrk))
+- Add Stop Server Button to Spawn Pending Pages [#5080](https://github.com/jupyterhub/jupyterhub/pull/5080) ([@mynkyu](https://github.com/mynkyu), [@Paul2708](https://github.com/Paul2708), [@manics](https://github.com/manics), [@minrk](https://github.com/minrk))
+- enable PKCE for internal OAuth [#4936](https://github.com/jupyterhub/jupyterhub/pull/4936) ([@minrk](https://github.com/minrk))
+
+#### Enhancements made
+
+- login: add show/hide password toggle [#5183](https://github.com/jupyterhub/jupyterhub/pull/5183) ([@Rameshkumar31595](https://github.com/Rameshkumar31595), [@manics](https://github.com/manics), [@minrk](https://github.com/minrk))
+
+#### Bugs fixed
+
+- Invalid UTF-8 JSON request body returns HTTP 500 instead of HTTP 400 [#5461](https://github.com/jupyterhub/jupyterhub/pull/5461) ([@Tech-Abhang](https://github.com/Tech-Abhang), [@minrk](https://github.com/minrk))
+- fix wait-up on managed services [#5455](https://github.com/jupyterhub/jupyterhub/pull/5455) ([@minrk](https://github.com/minrk))
+- Don't trust input when logging invalid named servers [#5439](https://github.com/jupyterhub/jupyterhub/pull/5439) ([@manics](https://github.com/manics), [@minrk](https://github.com/minrk))
+- avoid traceback when write_error is called before prepare [#5420](https://github.com/jupyterhub/jupyterhub/pull/5420) ([@minrk](https://github.com/minrk))
+- avoid logging traceback on HTTPError raised in spawn [#5405](https://github.com/jupyterhub/jupyterhub/pull/5405) ([@minrk](https://github.com/minrk), [@jnywong](https://github.com/jnywong), [@manics](https://github.com/manics))
+- pass db_kwargs to engine during upgrade-db [#5391](https://github.com/jupyterhub/jupyterhub/pull/5391) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics))
+- ensure jupyterhub session id is set for cookie-authenticated requests [#5386](https://github.com/jupyterhub/jupyterhub/pull/5386) ([@minrk](https://github.com/minrk), [@willingc](https://github.com/willingc), [@yuvipanda](https://github.com/yuvipanda))
+- allow no-cors GETs from same-origin [#5380](https://github.com/jupyterhub/jupyterhub/pull/5380) ([@minrk](https://github.com/minrk), [@jrdnbradford](https://github.com/jrdnbradford), [@willingc](https://github.com/willingc))
+- make sure public url env is set for managed services [#5359](https://github.com/jupyterhub/jupyterhub/pull/5359) ([@minrk](https://github.com/minrk), [@willingc](https://github.com/willingc))
+- Do not fail when deleting nonexistent server of nonexistent user [#5350](https://github.com/jupyterhub/jupyterhub/pull/5350) ([@nsychev](https://github.com/nsychev), [@minrk](https://github.com/minrk))
+- Prevent treating a role as 'stale' if defined in load_managed_roles [#5344](https://github.com/jupyterhub/jupyterhub/pull/5344) ([@jezwilkinson](https://github.com/jezwilkinson), [@minrk](https://github.com/minrk))
+- Fix red color of failed progress bar [#5342](https://github.com/jupyterhub/jupyterhub/pull/5342) ([@Paul2708](https://github.com/Paul2708), [@minrk](https://github.com/minrk))
+- add external_ssl_authorities to trust bundles [#5290](https://github.com/jupyterhub/jupyterhub/pull/5290) ([@kreuzert](https://github.com/kreuzert), [@minrk](https://github.com/minrk))
+- Fix internal server error of HEAD /hub/logo [#5251](https://github.com/jupyterhub/jupyterhub/pull/5251) ([@Paul2708](https://github.com/Paul2708), [@manics](https://github.com/manics), [@minrk](https://github.com/minrk))
+- fix loading stopped servers at startup (regression in 5.4) [#5236](https://github.com/jupyterhub/jupyterhub/pull/5236) ([@minrk](https://github.com/minrk))
+- allow callable default_url to return a falsy value to mean the default behavior [#5195](https://github.com/jupyterhub/jupyterhub/pull/5195) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- `headers` does not exist in `web.HTTPError` [#5191](https://github.com/jupyterhub/jupyterhub/pull/5191) ([@manics](https://github.com/manics), [@agoose77](https://github.com/agoose77), [@minrk](https://github.com/minrk))
+
+#### Maintenance and upkeep improvements
+
+- remove unused local node hook that doesn't work [#5473](https://github.com/jupyterhub/jupyterhub/pull/5473) ([@minrk](https://github.com/minrk))
+- avoid linkcheck on `:8000` [#5448](https://github.com/jupyterhub/jupyterhub/pull/5448) ([@minrk](https://github.com/minrk))
+- Don't rely on package.json postinstall scripts [#5409](https://github.com/jupyterhub/jupyterhub/pull/5409) ([@manics](https://github.com/manics), [@consideRatio](https://github.com/consideRatio), [@minrk](https://github.com/minrk))
+- fix dist artifact name in release [#5395](https://github.com/jupyterhub/jupyterhub/pull/5395) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- require jupyter-events >= 0.11 [#5378](https://github.com/jupyterhub/jupyterhub/pull/5378) ([@minrk](https://github.com/minrk), [@bl-aire](https://github.com/bl-aire), [@willingc](https://github.com/willingc))
+- Update dependencies esp. webpack-cli and suppress warnings on npm install [#5375](https://github.com/jupyterhub/jupyterhub/pull/5375) ([@willingc](https://github.com/willingc), [@minrk](https://github.com/minrk))
+- Update pre-commit hooks for prettier and zizmor [#5374](https://github.com/jupyterhub/jupyterhub/pull/5374) ([@willingc](https://github.com/willingc), [@minrk](https://github.com/minrk))
+- try to fix flakiness in test_start_stop_all_servers_on_admin_page [#5372](https://github.com/jupyterhub/jupyterhub/pull/5372) ([@minrk](https://github.com/minrk), [@willingc](https://github.com/willingc))
+- Re-use Browser instance across tests [#5364](https://github.com/jupyterhub/jupyterhub/pull/5364) ([@willingc](https://github.com/willingc), [@minrk](https://github.com/minrk))
+- browser tests: increase default expect timeout to 30s [#5363](https://github.com/jupyterhub/jupyterhub/pull/5363) ([@minrk](https://github.com/minrk), [@willingc](https://github.com/willingc))
+- Update test to not reload the browser until token result is visible [#5362](https://github.com/jupyterhub/jupyterhub/pull/5362) ([@willingc](https://github.com/willingc), [@minrk](https://github.com/minrk))
+- Fix JSX vulnerabilities, lint errors, and dev-server rendering [#5360](https://github.com/jupyterhub/jupyterhub/pull/5360) ([@willingc](https://github.com/willingc), [@manics](https://github.com/manics), [@minrk](https://github.com/minrk))
+- Revert "ci: temporary pin-down cryptography" [#5358](https://github.com/jupyterhub/jupyterhub/pull/5358) ([@minrk](https://github.com/minrk))
+- ci: temporary pin-down cryptography [#5351](https://github.com/jupyterhub/jupyterhub/pull/5351) ([@minrk](https://github.com/minrk))
+- Add browser test for named servers with forms [#5345](https://github.com/jupyterhub/jupyterhub/pull/5345) ([@manics](https://github.com/manics), [@consideRatio](https://github.com/consideRatio), [@minrk](https://github.com/minrk))
+- pin pre-commit hooks to shas [#5338](https://github.com/jupyterhub/jupyterhub/pull/5338) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- add zizmor to pre-commit, address lint [#5319](https://github.com/jupyterhub/jupyterhub/pull/5319) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics))
+- update links, ignores for linkcheck [#5318](https://github.com/jupyterhub/jupyterhub/pull/5318) ([@minrk](https://github.com/minrk))
+- replace ruff with black, flake8, etc. [#5315](https://github.com/jupyterhub/jupyterhub/pull/5315) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio), [@manics](https://github.com/manics), [@yuvipanda](https://github.com/yuvipanda))
+- update and pin redocly lint [#5312](https://github.com/jupyterhub/jupyterhub/pull/5312) ([@minrk](https://github.com/minrk))
+- reduce coverage for mysql/postgres tests [#5287](https://github.com/jupyterhub/jupyterhub/pull/5287) ([@minrk](https://github.com/minrk))
+- increase timeout waiting for stop server button [#5286](https://github.com/jupyterhub/jupyterhub/pull/5286) ([@minrk](https://github.com/minrk))
+- rework wait for spawn progress message [#5285](https://github.com/jupyterhub/jupyterhub/pull/5285) ([@minrk](https://github.com/minrk))
+- enable subprocess coverage [#5278](https://github.com/jupyterhub/jupyterhub/pull/5278) ([@minrk](https://github.com/minrk))
+- specify psycopg for postgres tests [#5276](https://github.com/jupyterhub/jupyterhub/pull/5276) ([@minrk](https://github.com/minrk))
+- enable trusted publishing [#5242](https://github.com/jupyterhub/jupyterhub/pull/5242) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics))
+- browser test_spawn_pending_progress : fix server ready expectation [#5238](https://github.com/jupyterhub/jupyterhub/pull/5238) ([@minrk](https://github.com/minrk))
+- update license metadata [#5209](https://github.com/jupyterhub/jupyterhub/pull/5209) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- Change event-schemas version to string [#4998](https://github.com/jupyterhub/jupyterhub/pull/4998) ([@manics](https://github.com/manics), [@consideRatio](https://github.com/consideRatio), [@minrk](https://github.com/minrk))
+
+#### Documentation improvements
+
+- Update README to reflect the minimum supported Python version [#5457](https://github.com/jupyterhub/jupyterhub/pull/5457) ([@Tech-Abhang](https://github.com/Tech-Abhang), [@minrk](https://github.com/minrk))
+- Include XRSF element in custom-roles example form [#5454](https://github.com/jupyterhub/jupyterhub/pull/5454) ([@milliams](https://github.com/milliams), [@minrk](https://github.com/minrk))
+- Remove/replace some broken links [#5438](https://github.com/jupyterhub/jupyterhub/pull/5438) ([@manics](https://github.com/manics), [@minrk](https://github.com/minrk))
+- DB upgrade: not safe to delete database [#5437](https://github.com/jupyterhub/jupyterhub/pull/5437) ([@manics](https://github.com/manics), [@minrk](https://github.com/minrk))
+- Fix some links that are permanently redirected in the linkcheck [#5408](https://github.com/jupyterhub/jupyterhub/pull/5408) ([@manics](https://github.com/manics), [@consideRatio](https://github.com/consideRatio))
+- Add bwJupyter to the deployment gallery [#5389](https://github.com/jupyterhub/jupyterhub/pull/5389) ([@Paul2708](https://github.com/Paul2708), [@minrk](https://github.com/minrk))
+- Add VU Amsterdam to the deployment gallery [#5343](https://github.com/jupyterhub/jupyterhub/pull/5343) ([@wilkinvr](https://github.com/wilkinvr), [@minrk](https://github.com/minrk))
+- Fix outdated Code of Conduct links in contributing docs [#5341](https://github.com/jupyterhub/jupyterhub/pull/5341) ([@sixonenines](https://github.com/sixonenines), [@rgaiacs](https://github.com/rgaiacs))
+- update changelog from 5.4.4 [#5334](https://github.com/jupyterhub/jupyterhub/pull/5334) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- docs: update JSX README and remove outdated place command [#5266](https://github.com/jupyterhub/jupyterhub/pull/5266) ([@anny0811](https://github.com/anny0811), [@minrk](https://github.com/minrk))
+- Add link to roadmap workshop [#5264](https://github.com/jupyterhub/jupyterhub/pull/5264) ([@rgaiacs](https://github.com/rgaiacs), [@betatim](https://github.com/betatim), [@minrk](https://github.com/minrk))
+- Fix command to check Node.js version in setup.md [#5261](https://github.com/jupyterhub/jupyterhub/pull/5261) ([@LUC4R4T0R](https://github.com/LUC4R4T0R), [@rgaiacs](https://github.com/rgaiacs))
+- changelog for 5.4.3 [#5237](https://github.com/jupyterhub/jupyterhub/pull/5237) ([@minrk](https://github.com/minrk))
+- Link to compass contributor guide [#5227](https://github.com/jupyterhub/jupyterhub/pull/5227) ([@shaneknapp](https://github.com/shaneknapp), [@minrk](https://github.com/minrk))
+- add note about roadmap workshop to roadmap page [#5226](https://github.com/jupyterhub/jupyterhub/pull/5226) ([@minrk](https://github.com/minrk))
+- point to testing config sooner [#5225](https://github.com/jupyterhub/jupyterhub/pull/5225) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- typo: POSIX [#5224](https://github.com/jupyterhub/jupyterhub/pull/5224) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- fix linkcheck [#5213](https://github.com/jupyterhub/jupyterhub/pull/5213) ([@minrk](https://github.com/minrk))
+- small fix to server api start/stop example [#5204](https://github.com/jupyterhub/jupyterhub/pull/5204) ([@kellyrowland](https://github.com/kellyrowland), [@consideRatio](https://github.com/consideRatio))
+- Use admonition in documentation [#5198](https://github.com/jupyterhub/jupyterhub/pull/5198) ([@rgaiacs](https://github.com/rgaiacs))
+- Add noxfile.py [#5197](https://github.com/jupyterhub/jupyterhub/pull/5197) ([@rgaiacs](https://github.com/rgaiacs), [@minrk](https://github.com/minrk))
+- docs - update jupyterhub repo links to main branch [#5194](https://github.com/jupyterhub/jupyterhub/pull/5194) ([@kellyrowland](https://github.com/kellyrowland), [@minrk](https://github.com/minrk))
+- remove jupytercon banner [#5165](https://github.com/jupyterhub/jupyterhub/pull/5165) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics))
+
+#### Contributors to this release
+
+The following people contributed discussions, new ideas, code and documentation contributions, and review.
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/use/#how-does-this-tool-define-contributions-in-the-reports).
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2025-10-24&to=2026-08-11&type=c))
+
+@agoose77 ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aagoose77+updated%3A2025-10-24..2026-08-11&type=Issues)) | @anny0811 ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aanny0811+updated%3A2025-10-24..2026-08-11&type=Issues)) | @ateucher ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aateucher+updated%3A2025-10-24..2026-08-11&type=Issues)) | @betatim ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Abetatim+updated%3A2025-10-24..2026-08-11&type=Issues)) | @bl-aire ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Abl-aire+updated%3A2025-10-24..2026-08-11&type=Issues)) | @clhedrick ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aclhedrick+updated%3A2025-10-24..2026-08-11&type=Issues)) | @consideRatio ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3AconsideRatio+updated%3A2025-10-24..2026-08-11&type=Issues)) | @dometto ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Adometto+updated%3A2025-10-24..2026-08-11&type=Issues)) | @dragz ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Adragz+updated%3A2025-10-24..2026-08-11&type=Issues)) | @erawn ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aerawn+updated%3A2025-10-24..2026-08-11&type=Issues)) | @ericvd-ucb ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aericvd-ucb+updated%3A2025-10-24..2026-08-11&type=Issues)) | @jezwilkinson ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ajezwilkinson+updated%3A2025-10-24..2026-08-11&type=Issues)) | @jnywong ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ajnywong+updated%3A2025-10-24..2026-08-11&type=Issues)) | @jrdnbradford ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ajrdnbradford+updated%3A2025-10-24..2026-08-11&type=Issues)) | @kellyrowland ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Akellyrowland+updated%3A2025-10-24..2026-08-11&type=Issues)) | @kreuzert ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Akreuzert+updated%3A2025-10-24..2026-08-11&type=Issues)) | @LUC4R4T0R ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3ALUC4R4T0R+updated%3A2025-10-24..2026-08-11&type=Issues)) | @manics ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amanics+updated%3A2025-10-24..2026-08-11&type=Issues)) | @milliams ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amilliams+updated%3A2025-10-24..2026-08-11&type=Issues)) | @minrk ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk+updated%3A2025-10-24..2026-08-11&type=Issues)) | @mynkyu ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amynkyu+updated%3A2025-10-24..2026-08-11&type=Issues)) | @nsychev ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ansychev+updated%3A2025-10-24..2026-08-11&type=Issues)) | @Paul2708 ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3APaul2708+updated%3A2025-10-24..2026-08-11&type=Issues)) | @Rameshkumar31595 ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3ARameshkumar31595+updated%3A2025-10-24..2026-08-11&type=Issues)) | @rgaiacs ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Argaiacs+updated%3A2025-10-24..2026-08-11&type=Issues)) | @shaneknapp ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ashaneknapp+updated%3A2025-10-24..2026-08-11&type=Issues)) | @sixonenines ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Asixonenines+updated%3A2025-10-24..2026-08-11&type=Issues)) | @tbizouerne ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Atbizouerne+updated%3A2025-10-24..2026-08-11&type=Issues)) | @Tech-Abhang ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3ATech-Abhang+updated%3A2025-10-24..2026-08-11&type=Issues)) | @wilkinvr ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Awilkinvr+updated%3A2025-10-24..2026-08-11&type=Issues)) | @willingc ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Awillingc+updated%3A2025-10-24..2026-08-11&type=Issues)) | @yuvipanda ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ayuvipanda+updated%3A2025-10-24..2026-08-11&type=Issues))
+
 ## 5.5
 
 ### 5.5.1 - 2026-08-10
