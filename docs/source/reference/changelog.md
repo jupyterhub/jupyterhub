@@ -20,7 +20,122 @@ Contributors to major version bumps in JupyterHub include:
 
 ## [Unreleased]
 
+## 5.5
+
+### 5.5.1 - 2026-08-10
+
+5.5.1 is a security release, fixing two vulnerabilities that affect a small minority of deployments, and backporting small bugfixes.
+
+One high-level security vulnerability in user-initiated sharing is patched (no effect on deployments without user-initiated sharing):
+
+- [GHSA-c4gm-pwx9-9w8j](https://github.com/jupyterhub/jupyterhub/security/advisories/GHSA-c4gm-pwx9-9w8j) (CVE pending)
+
+One low-level vulnerability in enforcing partial admin-level restrictions (no effect unless you have _filtered_ admin roles: `admin:users!group=...` or `admin:groups!group=...`):
+
+- [GHSA-69wv-m5fw-2fhp](https://github.com/jupyterhub/jupyterhub/security/advisories/GHSA-69wv-m5fw-2fhp) (CVE pending)
+
+Security advisories are published 7 days after release.
+
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/5.5.0...5.5.1))
+
+#### Bugs fixed
+
+- Backport PR #5461 on branch 5.x (Invalid UTF-8 JSON request body returns HTTP 500 instead of HTTP 400) [#5487](https://github.com/jupyterhub/jupyterhub/pull/5487) ([@Tech-Abhang](https://github.com/Tech-Abhang), [@minrk](https://github.com/minrk))
+- Backport PR #5420 on branch 5.x (avoid traceback when write_error is called before prepare) [#5486](https://github.com/jupyterhub/jupyterhub/pull/5486) ([@minrk](https://github.com/minrk))
+
+#### Maintenance and upkeep improvements
+
+- 5.x: npm audit fix [#5485](https://github.com/jupyterhub/jupyterhub/pull/5485) ([@minrk](https://github.com/minrk))
+- Remove/replace some broken links
+  [#5438](https://github.com/jupyterhub/jupyterhub/pull/5438) ([@manics](https://github.com/manics), [@minrk](https://github.com/minrk))
+
+### 5.5.0 - 2026-06-10
+
+5.5.0 backports more bugfixes from the upcoming 6.0 release,
+as well as the new {attr}`.SharedPasswordAuthenticator.password_groups` option.
+
+One moderate-level security vulnerability is patched:
+
+- [GHSA-p43p-whwx-q52h](https://github.com/jupyterhub/jupyterhub/security/advisories/GHSA-p43p-whwx-q52h) (CVE-2026-54338): Unauthenticated Denial of Service via Unbounded Username Logging on Failed Login
+
+Security advisories are published 7 days after release.
+
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/5.4.6...5.5.0))
+
+#### New features added
+
+- Backport PR #5298 on branch 5.x (Add ability to assign groups to users in SharedPasswordAuthenticator) [#5411](https://github.com/jupyterhub/jupyterhub/pull/5411) ([@yuvipanda](https://github.com/yuvipanda), [@minrk](https://github.com/minrk))
+
+#### Bugs fixed
+
+- Backport PR #5391 on branch 5.x (pass db_kwargs to engine during upgrade-db) [#5417](https://github.com/jupyterhub/jupyterhub/pull/5417) ([@manics](https://github.com/manics), [@minrk](https://github.com/minrk))
+- Backport PR #5386 on branch 5.x (ensure jupyterhub session id is set for cookie-authenticated requests) [#5416](https://github.com/jupyterhub/jupyterhub/pull/5416) ([@minrk](https://github.com/minrk))
+- Backport PR #5290 on branch 5.x (add external_ssl_authorities to trust bundles) [#5415](https://github.com/jupyterhub/jupyterhub/pull/5415) ([@kreuzert](https://github.com/kreuzert), [@minrk](https://github.com/minrk))
+- Backport PR #5251 on branch 5.x (Fix internal server error of HEAD /hub/logo) [#5412](https://github.com/jupyterhub/jupyterhub/pull/5412) ([@Paul2708](https://github.com/Paul2708), [@manics](https://github.com/manics), [@minrk](https://github.com/minrk))
+- Backport PR #5405 on branch 5.x (avoid logging traceback on HTTPError raised in spawn) [#5410](https://github.com/jupyterhub/jupyterhub/pull/5410) ([@minrk](https://github.com/minrk))
+
+#### Contributors to this release
+
+The following people contributed discussions, new ideas, code and documentation contributions, and review.
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/use/#how-does-this-tool-define-contributions-in-the-reports).
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2026-04-28&to=2026-06-10&type=c))
+
+@manics ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amanics)) | @minrk ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk)) | @yuvipanda ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ayuvipanda)) | @kreuzert ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Akreuzert)) | @Paul2708 ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3APaul2708))
+
 ## 5.4
+
+### 5.4.6 - 2026-05-05
+
+5.4.6 fixes a regression in 5.4.5, as well as some other bugs.
+
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/5.4.5...5.4.6))
+
+#### Bugs fixed
+
+- allow no-cors GETs from same-origin [#5380](https://github.com/jupyterhub/jupyterhub/pull/5380) ([@minrk](https://github.com/minrk), [@willingc](https://github.com/willingc))
+- make sure public url env is set for managed services [#5359](https://github.com/jupyterhub/jupyterhub/pull/5359) ([@minrk](https://github.com/minrk), [@willingc](https://github.com/willingc))
+- Prevent treating a role as 'stale' if defined in load_managed_roles [#5344](https://github.com/jupyterhub/jupyterhub/pull/5344) ([@jezwilkinson](https://github.com/jezwilkinson), [@minrk](https://github.com/minrk))
+
+#### Contributors to this release
+
+The following people contributed discussions, new ideas, code and documentation contributions, and review.
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/use/#how-does-this-tool-define-contributions-in-the-reports).
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2026-04-28&to=2026-05-05&type=c))
+
+@jezwilkinson ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ajezwilkinson+updated%3A2026-04-28..2026-05-05&type=Issues)) | @krassowski ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Akrassowski+updated%3A2026-04-28..2026-05-05&type=Issues)) | @kreuzert ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Akreuzert+updated%3A2026-04-28..2026-05-05&type=Issues)) | @manics ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amanics+updated%3A2026-04-28..2026-05-05&type=Issues)) | @minrk ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk+updated%3A2026-04-28..2026-05-05&type=Issues)) | @willingc ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Awillingc+updated%3A2026-04-28..2026-05-05&type=Issues))
+
+### 5.4.5 - 2026-04-28
+
+```{important}
+5.4.5 is a security release, fixing a moderate-severity CSRF vulnerability in JupyterHub ([CVE-2026-40864]).
+```
+
+The advisory will be published 7 days after release (2026-05-05).
+
+[CVE-2026-40864]: https://github.com/jupyterhub/jupyterhub/security/advisories/GHSA-m68r-v472-jgq9
+
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/5.4.4...5.4.5))
+
+#### Bugs fixed
+
+- Do not fail when deleting nonexistent server of nonexistent user [#5350](https://github.com/jupyterhub/jupyterhub/pull/5350) ([@nsychev](https://github.com/nsychev), [@minrk](https://github.com/minrk))
+- Fix red color of failed progress bar [#5342](https://github.com/jupyterhub/jupyterhub/pull/5342) ([@Paul2708](https://github.com/Paul2708), [@minrk](https://github.com/minrk))
+
+#### Maintenance and upkeep improvements
+
+- ci: temporary pin-down cryptography [#5351](https://github.com/jupyterhub/jupyterhub/pull/5351) ([@minrk](https://github.com/minrk))
+- 5.x: backport workflow updates [#5346](https://github.com/jupyterhub/jupyterhub/pull/5346) ([@minrk](https://github.com/minrk))
+
+#### Contributors to this release
+
+The following people contributed discussions, new ideas, code and documentation contributions, and review.
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/use/#how-does-this-tool-define-contributions-in-the-reports).
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2026-03-26&to=2026-04-28&type=c))
+
+@consideRatio ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3AconsideRatio+updated%3A2026-03-26..2026-04-28&type=Issues)) | @manics ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amanics+updated%3A2026-03-26..2026-04-28&type=Issues)) | @meeseeksmachine ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ameeseeksmachine+updated%3A2026-03-26..2026-04-28&type=Issues)) | @minrk ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk+updated%3A2026-03-26..2026-04-28&type=Issues)) | @nsychev ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ansychev+updated%3A2026-03-26..2026-04-28&type=Issues)) | @Paul2708 ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3APaul2708+updated%3A2026-03-26..2026-04-28&type=Issues)) | @rgaiacs ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Argaiacs+updated%3A2026-03-26..2026-04-28&type=Issues)) | @sixonenines ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Asixonenines+updated%3A2026-03-26..2026-04-28&type=Issues)) | @wilkinvr ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Awilkinvr+updated%3A2026-03-26..2026-04-28&type=Issues))
 
 ### 5.4.4 - 2026-03-26
 
@@ -2511,7 +2626,7 @@ and tornado < 5.0.
   Sets ip, port, base_url all at once.
 - Add `JupyterHub.hub_bind_url` for setting the full host+port of the Hub.
   `hub_bind_url` supports unix domain sockets, e.g.
-  `http+unix://%2Fsrv%2Fjupyterhub.sock`
+  `unix+http://%2Fsrv%2Fjupyterhub.sock`
 - Deprecate `JupyterHub.hub_connect_port` config in favor of `JupyterHub.hub_connect_url`. `hub_connect_ip` is not deprecated
   and can still be used in the common case where only the ip address of the hub differs from the bind ip.
 
