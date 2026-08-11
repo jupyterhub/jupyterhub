@@ -112,6 +112,8 @@ class MySpawner(Spawner):
         return url
 ```
 
+(spawn-errors)=
+
 #### Exception handling
 
 ```{versionadded} 6.0

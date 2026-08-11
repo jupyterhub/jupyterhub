@@ -339,6 +339,7 @@ intersphinx_mapping = get_intersphinx_mapping(
         "nbgitpuller",
     }
 )
+intersphinx_mapping["aiohttp"] = ("https://docs.aiohttp.org/en/stable/", None)
 
 # -- Options for the opengraph extension -------------------------------------
 # ref: https://github.com/wpilibsuite/sphinxext-opengraph#options

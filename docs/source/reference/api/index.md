@@ -31,6 +31,7 @@ proxy
 user
 service
 services.auth
+httpclient
 ```
 
 [openapi initiative]: https://www.openapis.org/
