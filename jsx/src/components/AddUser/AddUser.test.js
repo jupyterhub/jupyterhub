@@ -3,17 +3,27 @@ import "@testing-library/jest-dom";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { Provider, useDispatch, useSelector } from "react-redux";
 import { createStore } from "redux";
-import { HashRouter } from "react-router";
 // eslint-disable-next-line
 import regeneratorRuntime from "regenerator-runtime";
 
 import AddUser from "./AddUser";
+
+jest.mock("react-router", () => ({
+  HashRouter: ({ children }) => children,
+  Link: ({ to, children }) => <a href={to}>{children}</a>,
+  useLocation: jest.fn(),
+  useNavigate: jest.fn(),
+  useParams: jest.fn(),
+  useSearchParams: jest.fn(),
+}));
 
 jest.mock("react-redux", () => ({
   ...jest.requireActual("react-redux"),
   useDispatch: jest.fn(),
   useSelector: jest.fn(),
 }));
+
+const { HashRouter } = require("react-router");
 
 var mockAsync = (result) =>
   jest.fn().mockImplementation(() => Promise.resolve(result));

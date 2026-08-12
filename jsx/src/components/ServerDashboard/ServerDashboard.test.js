@@ -9,7 +9,6 @@ import {
   getByText,
   getAllByRole,
 } from "@testing-library/react";
-import { HashRouter, Routes, Route, useSearchParams } from "react-router";
 import { Provider, useSelector } from "react-redux";
 import { createStore } from "redux";
 // eslint-disable-next-line
@@ -22,10 +21,21 @@ jest.mock("react-redux", () => ({
   ...jest.requireActual("react-redux"),
   useSelector: jest.fn(),
 }));
+
+// can't use requireActual now that react-router is ESM
+// surely there's a better fix?
 jest.mock("react-router", () => ({
-  ...jest.requireActual("react-router"),
+  HashRouter: ({ children }) => children,
+  Routes: ({ children }) => children,
+  Route: ({ element }) => element,
+  Link: ({ to, children }) => <a href={to}>{children}</a>,
   useSearchParams: jest.fn(),
+  useLocation: jest.fn(),
+  useNavigate: jest.fn(),
+  useParams: jest.fn(),
 }));
+
+const { HashRouter, Routes, Route, useSearchParams } = require("react-router");
 
 const serverDashboardJsx = (props) => {
   // create mock ServerDashboard
