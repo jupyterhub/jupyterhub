@@ -114,6 +114,21 @@ For example, instead of calling `GET /spawn?key=value&opt-image=datascience` use
 `GET /spawn?opt-key=value&opt-opt-image=datascience`.
 This will result in `{"key": "value", "opt-image", "datascience"}`
 
+A similar change is made when specifying options via `POST /api/users/:username/servers/:servername`.
+Prior to JupyterHub 6, the whole JSON body was passed as `user_options`, while JupyterHub 6 moves this to a `user_options` key:
+
+```json
+// POST /api/users/chee/servers/xlzl
+{
+  "display_name": "XL-ZL",
+  "user_options": {
+    "quibble": true
+  }
+}
+```
+
+For backward-compatibility, the full body will still be passed as `user_options`, as long as neither the `user_options` nor `display_name` key is defined.
+
 ## statsd metrics removed
 
 JupyterHub had not updated its statsd metrics in a long time, and they have been removed in 6.0.
