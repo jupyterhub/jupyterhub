@@ -4,10 +4,21 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Provider, useDispatch, useSelector } from "react-redux";
 import { createStore } from "redux";
-import { HashRouter } from "react-router";
 // eslint-disable-next-line
 import regeneratorRuntime from "regenerator-runtime";
 import CreateGroup from "./CreateGroup";
+
+// need to mock react-router due to esm funny business
+jest.mock("react-router", () => ({
+  HashRouter: ({ children }) => children,
+  Link: ({ to, children }) => <a href={to}>{children}</a>,
+  useLocation: jest.fn(),
+  useNavigate: jest.fn(),
+  useParams: jest.fn(),
+  useSearchParams: jest.fn(),
+}));
+
+const { HashRouter } = require("react-router");
 
 jest.mock("react-redux", () => ({
   ...jest.requireActual("react-redux"),

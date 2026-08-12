@@ -3,7 +3,6 @@ import "@testing-library/jest-dom";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { Provider, useSelector } from "react-redux";
 import { createStore } from "redux";
-import { HashRouter, useSearchParams } from "react-router";
 // eslint-disable-next-line
 import regeneratorRuntime from "regenerator-runtime";
 
@@ -16,9 +15,15 @@ jest.mock("react-redux", () => ({
 }));
 
 jest.mock("react-router", () => ({
-  ...jest.requireActual("react-router"),
+  HashRouter: ({ children }) => children,
+  Link: ({ to, children }) => <a href={to}>{children}</a>,
   useSearchParams: jest.fn(),
+  useLocation: jest.fn(),
+  useNavigate: jest.fn(),
+  useParams: jest.fn(),
 }));
+
+const { HashRouter, useSearchParams } = require("react-router");
 
 var groupsJsx = (callbackSpy) => (
   <Provider store={createStore(mockReducers, mockAppState())}>
