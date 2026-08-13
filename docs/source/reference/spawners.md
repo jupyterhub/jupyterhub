@@ -112,6 +112,8 @@ class MySpawner(Spawner):
         return url
 ```
 
+(spawn-errors)=
+
 #### Exception handling
 
 ```{versionadded} 6.0
@@ -359,17 +361,28 @@ hub:
 
 In addition to going through the options form, `user_options` may be set directly, via the REST API.
 The body of a POST request to spawn a server may be a JSON dictionary,
-which will be used to set `user_options` directly.
+in which case the `user_options` field will be used to set `user_options` directly.
 When used this way, neither `options_form` nor `options_from_form` are involved,
 `user_options` is set directly, and only `apply_user_options` is called.
 
-```
-POST /hub/api/users/servers/:name
+```json
+// POST /hub/api/users/servers/:name
 {
-  "option": 5,
-  "bool": True,
-  "string": "value"
+  "display_name": "Optional Display Name",
+  "user_options": {
+    "option": 5,
+    "bool": true,
+    "string": "value"
+  }
 }
+```
+
+_`display_name` is optional_.
+
+```{versionchanged} 6.0
+JupyterHub 6.0 moves user options under the `user_options` key in the JSON body.
+Prior to JupyterHub 6.0, the whole JSON body was passed.
+For backward compatibility, JupyterHub 6 will still pass the full body as `user_options` if neither `user_options` nor `display_name` key is specified, but this behavior is deprecated.
 ```
 
 ## Writing a custom spawner

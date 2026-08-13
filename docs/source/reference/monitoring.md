@@ -1,3 +1,5 @@
+(monitoring)=
+
 # Monitoring
 
 This section covers details on monitoring the state of your JupyterHub installation.

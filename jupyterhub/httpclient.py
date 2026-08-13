@@ -75,7 +75,7 @@ class JupyterHubHTTPClient(SingletonConfigurable):
     session_options = Dict(
         config=True,
         help="""
-        See aiohttp.ClientSession for options to set on the internal HTTP client session.
+        See :class:`aiohttp.ClientSession` for options to set on the internal HTTP client session.
 
         Examples include:
         
@@ -92,7 +92,7 @@ class JupyterHubHTTPClient(SingletonConfigurable):
     connector_options = Dict(
         config=True,
         help="""
-        See aiohttp.BaseConnector for options to set on the internal HTTP connector.
+        See :class:`aiohttp.BaseConnector` for options to set on the internal HTTP connector.
 
         Examples include:
 

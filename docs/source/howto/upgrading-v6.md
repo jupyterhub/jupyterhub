@@ -40,7 +40,7 @@ The server name is used in labels, URLs, etc.
 ### API
 
 API clients that create named servers must provide a name that complies with the above restrictions.
-They can optionally provide a user-facing `display_name`.
+They can optionally provide a user-facing `display_name` in the JSON body.
 
 ### Migrating old named servers
 
@@ -113,3 +113,149 @@ Passing parameters without the `opt-` prefix will continue to work in most cases
 For example, instead of calling `GET /spawn?key=value&opt-image=datascience` use
 `GET /spawn?opt-key=value&opt-opt-image=datascience`.
 This will result in `{"key": "value", "opt-image", "datascience"}`
+
+A similar change is made when specifying options via `POST /api/users/:username/servers/:servername`.
+Prior to JupyterHub 6, the whole JSON body was passed as `user_options`, while JupyterHub 6 moves this to a `user_options` key:
+
+```json
+// POST /api/users/chee/servers/xlzl
+{
+  "display_name": "XL-ZL",
+  "user_options": {
+    "quibble": true
+  }
+}
+```
+
+For backward-compatibility, the full body will still be passed as `user_options`, as long as neither the `user_options` nor `display_name` key is defined.
+
+## statsd metrics removed
+
+JupyterHub had not updated its statsd metrics in a long time, and they have been removed in 6.0.
+If you want to continue monitoring JupyterHub metrics, you can switch to the much more widely used Prometheus [metrics](#monitoring).
+
+## aiohttp used for internal communication
+
+Prior to 6.0, JupyterHub used Tornado's [](inv:tornado:py:class#*.AsyncHTTPClient) to make internal HTTP requests
+(API requests from user server to the Hub, checks that user servers are available at their designated URL, etc.).
+In most cases, for performance reasons, JupyterHub would use the implementation backed by pycurl.
+This has been traded for [aiohttp] in JupyterHub 6.
+Hopefully, this should have no noticeable affect on deployments, but if you encounter issues,
+such as an increase in timeouts spawning servers under load,
+you can configure aiohttp via [](#JupyterHubHTTPClient) configuration.
+
+[aiohttp]: https://docs.aiohttp.org
+
+## New server endpoints
+
+There are new server endpoints, especially useful for named servers.
+You can now GET information about a single server:
+
+```
+GET /hub/api/users/:name/servers/:name
+```
+
+which returns the model for just that server
+(previously only retrievable from the full user model with all servers at `GET /hub/api/users/:name`)
+
+```
+PUT /hub/api/users/:name/servers/:name
+```
+
+lets you create a new named server. If a server with that name already exists, it will fail with 409.
+
+```
+PATCH /hub/api/users/:name/servers/:name
+```
+
+lets you modify a server (such as its display name or `user_options`) _without starting it_.
+
+For more details, check out the [REST API](#jupyterhub-rest-API).
+
+## Unix sockets
+
+JupyterHub and configurable-http-proxy now fully support using Unix domain sockets for internal communication,
+including between singleuser servers and the hub.
+Configuration and URLs must have the form:
+
+```
+http+unix://{socket_path}
+```
+
+where `{socket_path}` is the **url-encoded** path of the socket.
+
+For example, to use unix sockets for the configurable-http-proxy and Hub:
+
+```python
+# CHP api socket must be accessible to Hub (/srv/juptyerhub/proxy-api.sock)
+c.ConfigurableHTTPProxy.api_url = "http+unix://%2Fsrv%2Fjupyterhub%2Fproxy-api.sock"
+# CHP public URL must be accessible to reverse proxy (nginx, traefik, etc.): /srv/jupyterhub/chp-public.sock
+c.JupyterHub.bind_url = "http+unix://%2Fsrv%2Fjupyterhub%2Fproxy-public.sock"
+# Hub API socket must be accessible to all users, proxy: /var/run/jupyterhub/hub.sock
+c.JupyterHub.hub_bind_url = "http+unix://%2Fvar%2Frun%2Fjupyterhub%2Fhub.sock"
+```
+
+For single-user servers, Spawners must be configured to listen on a unix socket and return an `http+unix://` URL.
+This will require a custom Spawner, at this point.
+
+## New scopes
+
+JupyterHub has added two mechanisms to improve
+
+- A new `start:servers` scope, which allows you to grant tokens, applications, or users permission to _start_ specific servers, but not create, access, or stop them.
+- A new [](#JupyterHub.extra_user_scopes) option to _add_ scopes to the default user role,
+  without needing to _redefine_ it via [](#JupyterHub.load_roles)
+
+## User info
+
+Authenticators may now return a [`user_info`](#authenticator-user-info) dictionary,
+containing information to populate things like the JupyterLab collaboration UI
+(display name, avatar, etc.).
+
+## PKCE
+
+JupyterHub 6 adds Proof Key for Code Exchange ([PKCE]) to its internal OAuth implementation.
+This should be invisible to users, but provides improved security to the internal OAuth mechanism.
+
+For backward-compatibility, if clients do not send PKCE code challenges, JupyterHub will not require a code verifier to complete OAuth.
+Strict PKCE enforcement can be enabled by setting:
+
+```python
+c.JupyterHub.oauth_require_pkce = True
+```
+
+Setting this will prevent any oauth client that does not send PKCE arguments (such as those using OAuth implementations from JupyterHub 5 or before) from completing OAuth.
+Any client that does implement PKCE is fully backward compatible with all versions of JupyterHub,
+as unrecognized arguments are required to be ignored in OAuth.
+
+[PKCE]: https://auth0.com/docs/get-started/authentication-and-authorization-flow/authorization-code-flow-with-pkce
+
+## SpawnExceptions
+
+In order to allow deployments to better separate spawn failures due to _errors_ (timeouts, unexpected problems) from spawn failures due to _rejections_ (e.g. improper inputs, capacity limits), a new [](#SpawnException) class is defined.
+Raising a SpawnException should never result in tracebacks being logged, and should be distinguishable from errors in spawn failure metrics, by having `status=failure` where errors will have `status=error`.
+
+```{seealso}
+[](#spawn-errors)
+```
+
+### Backward compatibility
+
+Custom Spawners that wish to use this functionality while supporting older JupyterHub versions can get close to the same behavior
+by raising a [](inv:tornado:py:exception#*.web.HTTPError):
+
+```python
+try:
+    from jupyterhub.spawner import SpawnException
+except ImportError:
+    from tornado.web import HTTPError
+    class SpawnException(HTTPError):
+        def __init__(
+            self, message, *, reason, log_message="", message_html="", status_code=400
+        ):
+            self.jupyterhub_message = message
+            if message_html:
+                self.jupyterhub_html_message = message_html
+
+            super().__init__(status_code, log_message or message, reason=reason)
+```
