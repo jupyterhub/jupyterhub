@@ -27,7 +27,7 @@ from subprocess import Popen
 from urllib.parse import quote, unquote, urlparse
 from weakref import WeakKeyDictionary
 
-from aiohttp import ClientResponseError
+from aiohttp import ClientConnectionError, ClientResponseError
 from tornado.ioloop import PeriodicCallback
 from traitlets import (
     Any,
@@ -970,6 +970,11 @@ class ConfigurableHTTPProxy(Proxy):
                         headers={'Authorization': f'token {self.auth_token}'},
                         data=body,
                     )
+            except ClientConnectionError as e:
+                self.log.warning(
+                    f"api_request to the proxy failed with connection error {e}, retrying..."
+                )
+                return False  # a falsy return value make exponential_backoff retry
             except ClientResponseError as e:
                 # Retry on potentially transient errors in CHP, typically
                 # numbered 500 and up. Note that CHP isn't able to emit 429
