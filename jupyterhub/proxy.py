@@ -27,7 +27,7 @@ from subprocess import Popen
 from urllib.parse import quote, unquote, urlparse
 from weakref import WeakKeyDictionary
 
-from aiohttp import ClientConnectorError, ClientResponseError
+from aiohttp import ClientConnectionError, ClientResponseError
 from tornado.ioloop import PeriodicCallback
 from traitlets import (
     Any,
@@ -970,7 +970,7 @@ class ConfigurableHTTPProxy(Proxy):
                         headers={'Authorization': f'token {self.auth_token}'},
                         data=body,
                     )
-            except ClientConnectorError as e:
+            except ClientConnectionError as e:
                 self.log.warning(
                     f"api_request to the proxy failed with connection error {e}, retrying..."
                 )
