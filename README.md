@@ -160,34 +160,71 @@ To start the Hub on a specific url and port `10.0.1.2:443` with **https**:
 
 A starter [**docker image for JupyterHub**](https://quay.io/repository/jupyterhub/jupyterhub)
 gives a baseline deployment of JupyterHub using Docker.
+(Docker Hub may still list older copies; prefer the Quay image above.)
 
 **Important:** This `quay.io/jupyterhub/jupyterhub` image contains only the Hub itself,
-with no configuration. In general, one needs to make a derivative image, with
-at least a `jupyterhub_config.py` setting up an Authenticator and/or a Spawner.
-To run the single-user servers, which may be on the same system as the Hub or
-not, Jupyter Notebook version 4 or greater must be installed.
+with no pre-baked configuration. To run the single-user servers, JupyterLab or
+Jupyter Notebook must also be available to the spawner (not included in this
+image). For production, use [Zero to JupyterHub on Kubernetes](https://z2jh.jupyter.org/)
+or build a derivative image with your Authenticator and Spawner settings.
 
-The JupyterHub docker image can be started with the following command:
+### Quick start
 
-    docker run -p 8000:8000 -d --name jupyterhub quay.io/jupyterhub/jupyterhub jupyterhub
+```bash
+docker run -p 8000:8000 -d --name jupyterhub quay.io/jupyterhub/jupyterhub jupyterhub
+```
 
-This command will create a container named `jupyterhub` that you can
-**stop and resume** with `docker stop/start`.
+This creates a container named `jupyterhub` that you can **stop and resume** with
+`docker stop` / `docker start`. The Hub listens on port 8000 — fine for local
+testing. On a public host you **must** terminate TLS (proxy or JupyterHub ssl
+config).
 
-The Hub service will be listening on all interfaces at port 8000, which makes
-this a good choice for **testing JupyterHub on your desktop or laptop**.
+### Configuration path inside the container
 
-If you want to run docker on a computer that has a public IP then you should
-(as in MUST) **secure it with ssl** by adding ssl options to your docker
-configuration or by using an ssl enabled proxy.
+The image working directory is **`/srv/jupyterhub`**. JupyterHub loads
+`jupyterhub_config.py` from the current working directory unless you pass another
+path, so the file to edit or mount is:
 
-[Mounting volumes](https://docs.docker.com/engine/admin/volumes/volumes/) will
-allow you to **store data outside the docker image (host system) so it will be persistent**, even when you start
-a new image.
+```text
+/srv/jupyterhub/jupyterhub_config.py
+```
 
-The command `docker exec -it jupyterhub bash` will spawn a root shell in your docker
-container. You can **use the root shell to create system users in the container**.
-These accounts will be used for authentication in JupyterHub's default configuration.
+Runtime state (cookie secret, sqlite DB) also lives under `/srv/jupyterhub` by
+default.
+
+**Mount a config from the host** (recommended for anything beyond a smoke test):
+
+```bash
+# on the host: create jupyterhub_config.py, then:
+docker run -p 8000:8000 -d --name jupyterhub \
+  -v "$PWD/jupyterhub_config.py:/srv/jupyterhub/jupyterhub_config.py:ro" \
+  quay.io/jupyterhub/jupyterhub jupyterhub
+```
+
+**Or generate and edit config inside the container:**
+
+```bash
+docker exec -it jupyterhub bash
+jupyterhub --generate-config   # writes ./jupyterhub_config.py in /srv/jupyterhub
+# edit jupyterhub_config.py, then:
+exit
+docker restart jupyterhub
+```
+
+[Mounting volumes](https://docs.docker.com/engine/storage/volumes/) keeps config
+and data on the host so they survive container replacement.
+
+### Default authentication users
+
+With the default Authenticator, system users inside the container are used for
+login. Spawn a root shell and create accounts as needed:
+
+```bash
+docker exec -it jupyterhub bash
+# e.g. adduser myuser
+```
+
+More detail: [Install JupyterHub with Docker](https://jupyterhub.readthedocs.io/en/stable/tutorial/quickstart-docker.html).
 
 ## Contributing
 
