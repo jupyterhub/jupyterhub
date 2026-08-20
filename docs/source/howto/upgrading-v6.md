@@ -127,7 +127,7 @@ Prior to JupyterHub 6, the whole JSON body was passed as `user_options`, while J
 }
 ```
 
-For backward-compatibility, the full body will still be passed as `user_options`, as long as neither the `user_options` nor `display_name` key is defined.
+For backward-compatibility, the full body will still be parsed as `user_options`, as long as neither the `user_options` nor `display_name` key is defined.
 
 ## statsd metrics removed
 
@@ -200,7 +200,7 @@ This will require a custom Spawner, at this point.
 
 ## New scopes
 
-JupyterHub has added two mechanisms to improve
+JupyterHub has added two features to improve the handling of scopes
 
 - A new `start:servers` scope, which allows you to grant tokens, applications, or users permission to _start_ specific servers, but not create, access, or stop them.
 - A new [](#JupyterHub.extra_user_scopes) option to _add_ scopes to the default user role,
@@ -224,7 +224,7 @@ Strict PKCE enforcement can be enabled by setting:
 c.JupyterHub.oauth_require_pkce = True
 ```
 
-Setting this will prevent any oauth client that does not send PKCE arguments (such as those using OAuth implementations from JupyterHub 5 or before) from completing OAuth.
+Setting this will prevent any OAuth client that does not send PKCE arguments (such as those using OAuth implementations from JupyterHub 5 or before) from completing OAuth.
 Any client that does implement PKCE is fully backward compatible with all versions of JupyterHub,
 as unrecognized arguments are required to be ignored in OAuth.
 
