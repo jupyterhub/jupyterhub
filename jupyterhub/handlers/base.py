@@ -942,6 +942,8 @@ class BaseHandler(RequestHandler):
         # Only set `admin` if the authenticator returned an explicit value.
         if admin is not None and admin != user.admin:
             user.admin = admin
+        if user_info is not None:
+            user.user_info = user_info
         # always ensure default roles ('user', 'admin' if admin) are assigned
         # after a successful login
         roles.assign_default_roles(self.db, entity=user)
