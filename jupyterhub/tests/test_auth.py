@@ -431,6 +431,33 @@ async def test_auth_state_disabled(app, auth_state_unavailable):
     assert auth_state is None
 
 
+@pytest.mark.parametrize(
+    "user_info, ok",
+    [
+        pytest.param(None, None, id="None"),
+        pytest.param({"key": "value"}, True, id="dict"),
+        pytest.param({}, True, id="empty dict"),
+        pytest.param(object(), False, id="not JSONable"),
+    ],
+)
+async def test_auth_user_info(app, user, user_info, ok):
+    async def mock_authenticate(handler, data):
+        authenticated = {
+            "name": data["username"],
+        }
+        if user_info is not None:
+            authenticated["user_info"] = user_info
+        return authenticated
+
+    with mock.patch.object(app.authenticator, 'authenticate', mock_authenticate):
+        await app.login_user(user.name)
+    app.db.expire(user.orm_user)
+    if ok:
+        assert user.orm_user.user_info == user_info
+    else:
+        assert user.orm_user.user_info is None
+
+
 async def test_normalize_names():
     a = MockPAMAuthenticator(allow_all=True)
     authorized = await a.get_authenticated_user(
