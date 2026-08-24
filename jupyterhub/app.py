@@ -17,7 +17,7 @@ import ssl
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from functools import partial
 from getpass import getuser
 from operator import itemgetter
@@ -32,7 +32,7 @@ from jinja2 import ChoiceLoader, Environment, FileSystemLoader, PrefixLoader
 from jupyter_events.logger import EventLogger
 from sqlalchemy.exc import OperationalError, SQLAlchemyError
 from sqlalchemy.orm import selectinload
-from tornado import gen, web
+from tornado import web
 from tornado.httpclient import AsyncHTTPClient
 from tornado.ioloop import IOLoop, PeriodicCallback
 from tornado.log import access_log, app_log, gen_log
@@ -97,6 +97,7 @@ from .utils import (
     subdomain_hook_legacy,
     url_path_join,
     utcnow,
+    wait_for_shielded,
 )
 
 common_aliases = {
@@ -3570,8 +3571,9 @@ class JupyterHub(Application):
         try:
             # don't allow a zero timeout because we still need to be sure
             # that the Spawner objects are defined and pending
-            await gen.with_timeout(
-                timedelta(seconds=max(init_spawners_timeout, 1)), init_spawners_future
+            await wait_for_shielded(
+                init_spawners_future,
+                timeout=max(init_spawners_timeout, 1),
             )
         except AnyTimeoutError:
             self.log.warning(
