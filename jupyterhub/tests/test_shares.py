@@ -1494,3 +1494,53 @@ async def test_accept_share_page_next_url(
     )
     assert target == expected_next_target
     # is it worth following the redirect?
+
+
+async def test_share_rename(app, user, share_user, share, named_servers):
+    # rename user
+    new_name = f"{user.name}-renamed"
+    new_server_name = "renamed"
+    share_code, _ = orm.ShareCode.new(
+        app.db,
+        share.spawner,
+        scopes=share.scopes,
+    )
+    share = app.db.query(orm.Share).first()
+    user_scopes = scopes.get_scopes_for(share_user)
+    before_share_scope = f"access:servers!server={user.name}/"
+    after_share_scope = f"access:servers!server={new_name}/"
+    assert before_share_scope in share.scopes
+    assert after_share_scope not in share.scopes
+    assert before_share_scope in share_code.scopes
+    assert after_share_scope not in share_code.scopes
+    assert before_share_scope in user_scopes
+    assert after_share_scope not in user_scopes
+    r = await api_request(
+        app, f"users/{user.name}", method="patch", json={"name": new_name}
+    )
+    assert r.ok
+    assert user.name == new_name
+    user_scopes = scopes.get_scopes_for(share_user)
+    assert before_share_scope not in share.scopes
+    assert after_share_scope in share.scopes
+    assert before_share_scope not in share_code.scopes
+    assert after_share_scope in share_code.scopes
+    assert before_share_scope not in user_scopes
+    assert after_share_scope in user_scopes
+    r = await api_request(
+        app,
+        f"users/{user.name}/servers/",
+        method="patch",
+        json={"name": new_server_name},
+    )
+    assert r.ok
+    assert share.spawner.name == new_server_name
+    before_share_scope = after_share_scope
+    after_share_scope = f"access:servers!server={new_name}/{new_server_name}"
+    user_scopes = scopes.get_scopes_for(share_user)
+    assert before_share_scope not in share.scopes
+    assert after_share_scope in share.scopes
+    assert before_share_scope not in share_code.scopes
+    assert after_share_scope in share_code.scopes
+    assert before_share_scope not in user_scopes
+    assert after_share_scope in user_scopes
