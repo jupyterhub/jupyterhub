@@ -59,6 +59,7 @@ from ..utils import (
     url_escape_path,
     url_path_join,
     utcnow,
+    wait_for_shielded,
 )
 
 # pattern for the authentication token header
@@ -1253,10 +1254,9 @@ class BaseHandler(RequestHandler):
                 IOLoop.current().call_later(2, abort)
 
         finish_spawn_future.add_done_callback(_track_failure_count)
-
         try:
-            await asyncio.wait_for(
-                asyncio.shield(finish_spawn_future), timeout=self.slow_spawn_timeout
+            await wait_for_shielded(
+                finish_spawn_future, timeout=self.slow_spawn_timeout
             )
         except AnyTimeoutError:
             # waiting_for_response indicates server process has started,
@@ -1292,9 +1292,7 @@ class BaseHandler(RequestHandler):
                 # this avoids storing the generic 500 error as the spawn failure,
                 # when the original may be more informative
                 try:
-                    await asyncio.wait_for(
-                        asyncio.shield(finish_spawn_future), timeout=1
-                    )
+                    await wait_for_shielded(finish_spawn_future, timeout=1)
                 except AnyTimeoutError:
                     pass
 
@@ -1430,9 +1428,7 @@ class BaseHandler(RequestHandler):
         future = spawner._stop_future = asyncio.ensure_future(stop())
 
         try:
-            await asyncio.wait_for(
-                asyncio.shield(future), timeout=self.slow_stop_timeout
-            )
+            await wait_for_shielded(future, timeout=self.slow_stop_timeout)
         except AnyTimeoutError:
             # hit timeout, but stop is still pending
             self.log.warning(

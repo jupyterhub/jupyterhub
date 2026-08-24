@@ -97,6 +97,7 @@ from .utils import (
     subdomain_hook_legacy,
     url_path_join,
     utcnow,
+    wait_for_shielded,
 )
 
 common_aliases = {
@@ -3570,8 +3571,8 @@ class JupyterHub(Application):
         try:
             # don't allow a zero timeout because we still need to be sure
             # that the Spawner objects are defined and pending
-            await asyncio.wait_for(
-                asyncio.shield(init_spawners_future),
+            await wait_for_shielded(
+                init_spawners_future,
                 timeout=max(init_spawners_timeout, 1),
             )
         except AnyTimeoutError:

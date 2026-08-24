@@ -1036,3 +1036,29 @@ def safe_log(s, max_length=1024):
     if len(r) > max_length:
         r = r[: (max_length - 2)] + " …"
     return r
+
+
+async def wait_for_shielded(f, timeout):
+    """Wait for a future, up to timeout.
+
+    Raises TimeoutError if timeout is reached and future is not done.
+
+    This should eventually be replaced by:
+
+    asyncio.wait_for(asyncio.shield(f), timeout).
+
+    Like asyncio.wait_for(f, timeout), but:
+
+    1. doesn't cancel awaited task
+    2. avoids use of asyncio.shield, which has a logging bug in 3.14+
+       https://github.com/python/cpython/issues/156321
+    3. avoids _different_ logging problems also in tornado's gen.with_timeout
+    4. asssumes future will be handled separately if it is not done when timeout is reached
+       (this appears to be what leads to the logging problems in both asyncio.shield and gen.with_timeout)
+    """
+    f = asyncio.ensure_future(f)
+    done, pending = await asyncio.wait([f], timeout=timeout)
+    if f.done():
+        return await f
+    else:
+        raise TimeoutError(f"{f} not done after {timeout}s")
