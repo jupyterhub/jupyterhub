@@ -444,7 +444,6 @@ async def test_auth_user_info(app, user, user_info, ok):
     async def mock_authenticate(handler, data):
         authenticated = {
             "name": data["username"],
-            "user_info": user_info,
         }
         if user_info is not None:
             authenticated["user_info"] = user_info
