@@ -107,7 +107,16 @@ async def test_auth_expired_page(app, user, disable_refresh):
     assert user._auth_refreshed == before
 
 
-async def test_auth_expired_api(app, user, disable_refresh):
+@pytest.mark.parametrize(
+    "auth_refresh_strict, status",
+    [
+        (True, 403),
+        (False, 200),
+    ],
+)
+async def test_auth_expired_api(
+    app, user, disable_refresh, auth_refresh_strict, status
+):
     cookies = await app.login_user(user.name)
     assert user._auth_refreshed
     user._auth_refreshed -= 10
@@ -119,10 +128,18 @@ async def test_auth_expired_api(app, user, disable_refresh):
     assert r.status_code == 200
 
     # get a page with stale auth, triggers expiry
-    user._auth_refreshed -= app.authenticator.auth_refresh_age
-    r = await api_request(app, 'users/' + user.name, name=user.name)
+    # can't do a regular mock.patch on traits, must patch the descriptor
+    with mock.patch.object(
+        app.authenticator.__class__,
+        "auth_refresh_strict",
+        new_callable=mock.PropertyMock,
+    ) as patched:
+        patched.return_value = auth_refresh_strict
+
+        user._auth_refreshed -= app.authenticator.auth_refresh_age
+        r = await api_request(app, 'users/' + user.name, name=user.name)
     # api requests can't do login redirects
-    assert r.status_code == 403
+    assert r.status_code == status
 
 
 async def test_refresh_pre_spawn(app, user, refresh_pre_spawn):
