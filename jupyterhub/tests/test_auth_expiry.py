@@ -45,6 +45,18 @@ def refresh_pre_stop(app):
     app.authenticator.refresh_pre_stop = False
 
 
+@pytest.fixture(params=[True, False])
+def auth_refresh_strict(request, app):
+    """parametrise auth_refresh_strict
+
+    for testing both enabled and disabled behavior
+    """
+    before = app.authenticator.auth_refresh_strict
+    app.authenticator.auth_refresh_strict = request.param
+    yield request.param
+    app.authenticator.auth_refresh_strict = before
+
+
 async def test_auth_refresh_at_login(app, user):
     # auth_refreshed starts unset:
     assert not user._auth_refreshed
@@ -107,16 +119,8 @@ async def test_auth_expired_page(app, user, disable_refresh):
     assert user._auth_refreshed == before
 
 
-@pytest.mark.parametrize(
-    "auth_refresh_strict, status",
-    [
-        (True, 403),
-        (False, 200),
-    ],
-)
-async def test_auth_expired_api(
-    app, user, disable_refresh, auth_refresh_strict, status
-):
+async def test_auth_expired_api(app, user, disable_refresh, auth_refresh_strict):
+
     cookies = await app.login_user(user.name)
     assert user._auth_refreshed
     user._auth_refreshed -= 10
@@ -127,17 +131,9 @@ async def test_auth_expired_api(
     assert user._auth_refreshed == before
     assert r.status_code == 200
 
-    # get a page with stale auth, triggers expiry
-    # can't do a regular mock.patch on traits, must patch the descriptor
-    with mock.patch.object(
-        app.authenticator.__class__,
-        "auth_refresh_strict",
-        new_callable=mock.PropertyMock,
-    ) as patched:
-        patched.return_value = auth_refresh_strict
-
-        user._auth_refreshed -= app.authenticator.auth_refresh_age
-        r = await api_request(app, 'users/' + user.name, name=user.name)
+    user._auth_refreshed -= app.authenticator.auth_refresh_age
+    r = await api_request(app, 'users/' + user.name, name=user.name)
+    status = 403 if auth_refresh_strict else 200
     # api requests can't do login redirects
     assert r.status_code == status
 
@@ -156,7 +152,9 @@ async def test_refresh_pre_spawn(app, user, refresh_pre_spawn):
     assert user._auth_refreshed > before
 
 
-async def test_refresh_pre_spawn_expired(app, user, refresh_pre_spawn, disable_refresh):
+async def test_refresh_pre_spawn_expired(
+    app, user, refresh_pre_spawn, disable_refresh, auth_refresh_strict
+):
     cookies = await app.login_user(user.name)
     assert user._auth_refreshed
     user._auth_refreshed -= 10
@@ -166,7 +164,10 @@ async def test_refresh_pre_spawn_expired(app, user, refresh_pre_spawn, disable_r
     r = await api_request(
         app, f'users/{user.name}/server', method='post', name=user.name
     )
-    assert r.status_code == 403
+    if auth_refresh_strict:
+        assert r.status_code == 403
+    else:
+        assert 200 <= r.status_code < 300
     assert user._auth_refreshed == before
 
 
@@ -187,7 +188,7 @@ async def test_refresh_pre_spawn_admin_request(
 
 
 async def test_refresh_pre_spawn_expired_admin_request(
-    app, user, admin_user, refresh_pre_spawn, disable_refresh
+    app, user, admin_user, refresh_pre_spawn, disable_refresh, auth_refresh_strict
 ):
     await app.login_user(user.name)
     await app.login_user(admin_user.name)
@@ -195,11 +196,17 @@ async def test_refresh_pre_spawn_expired_admin_request(
 
     # auth needs refresh but can't without a new login; spawn should fail
     user._auth_refreshed -= app.authenticator.auth_refresh_age
+    before = user._auth_refreshed
     r = await api_request(
         app, 'users', user.name, 'server', method='post', name=admin_user.name
     )
-    # api requests can't do login redirects
-    assert r.status_code == 403
+    # api requests can't do login redirects,
+    # but admin launches are still allowed unless auth_refresh_strict
+    if auth_refresh_strict:
+        assert r.status_code == 403
+    else:
+        assert 200 <= r.status_code < 300
+    assert user._auth_refreshed == before
 
 
 async def test_refresh_pre_stop(app, user, refresh_pre_stop):
@@ -223,7 +230,9 @@ async def test_refresh_pre_stop(app, user, refresh_pre_stop):
     assert user._auth_refreshed > before
 
 
-async def test_refresh_pre_stop_expired(app, user, refresh_pre_stop, disable_refresh):
+async def test_refresh_pre_stop_expired(
+    app, user, refresh_pre_stop, disable_refresh, auth_refresh_strict
+):
     cookies = await app.login_user(user.name)
     assert user._auth_refreshed
     user._auth_refreshed -= 10
@@ -239,7 +248,10 @@ async def test_refresh_pre_stop_expired(app, user, refresh_pre_stop, disable_ref
     r = await api_request(
         app, f'users/{user.name}/server', method='delete', name=user.name
     )
-    assert r.status_code == 403
+    if auth_refresh_strict:
+        assert r.status_code == 403
+    else:
+        assert 200 <= r.status_code < 300
     assert user._auth_refreshed == before
 
 
