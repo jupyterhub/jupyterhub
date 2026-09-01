@@ -28,6 +28,8 @@ Contributors to major version bumps in JupyterHub include:
 
 - [GHSA-mj6q-mp44-53v8](https://github.com/jupyterhub/jupyterhub/security/advisories/GHSA-mj6q-mp44-53v8) (CVE pending)
 
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/5.5.1...5.5.2))
+
 ### 5.5.1 - 2026-08-10
 
 5.5.1 is a security release, fixing two vulnerabilities that affect a small minority of deployments, and backporting small bugfixes.
