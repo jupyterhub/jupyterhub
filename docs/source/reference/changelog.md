@@ -22,6 +22,12 @@ Contributors to major version bumps in JupyterHub include:
 
 ## 5.5
 
+### 5.5.2 - 2026-09-01
+
+5.5.2 is a security release fixing a low severity vulnerability in user-initiated sharing when users have been renamed
+
+- [GHSA-mj6q-mp44-53v8](https://github.com/jupyterhub/jupyterhub/security/advisories/GHSA-mj6q-mp44-53v8) (CVE pending)
+
 ### 5.5.1 - 2026-08-10
 
 5.5.1 is a security release, fixing two vulnerabilities that affect a small minority of deployments, and backporting small bugfixes.
