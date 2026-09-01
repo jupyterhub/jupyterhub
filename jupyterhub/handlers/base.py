@@ -419,10 +419,37 @@ class BaseHandler(RequestHandler):
         auth_info = await self.authenticator.refresh_user(user, self)
 
         if not auth_info:
-            self.log.warning(
-                "User %s has stale auth info. Login is required to refresh.", user.name
-            )
-            return
+            # refresh failed, what do we do?
+            # if it's a cookie-authenticated, we can force a fresh login
+            # if it's token-authenticated OR the request is another user, we can't.
+            # In these cases, keep using the stale auth until the user makes a cookie-authenticated request.
+
+            if self._jupyterhub_user is user and (not self._token_authenticated):
+                self.log.warning(
+                    "User %s has stale auth info. Login is required to refresh.",
+                    user.name,
+                )
+                return None
+            else:
+                # cannot force login, avoid shutting down admin spawn or API access,
+                # which cannot meaningfully be refreshed
+                if self._token_authenticated:
+                    self.log.warning(
+                        "User %s has stale auth info. Cannot refresh on API requests.",
+                        user.name,
+                    )
+                if self._jupyterhub_user is not user:
+                    self.log.warning(
+                        "User %s has stale auth info. Request is made by %s, cannot refresh on cross-user requests.",
+                        user.name,
+                        self._jupyterhub_user.name,
+                    )
+
+                if self.authenticator.auth_refresh_strict:
+                    # strict refresh, don't allow
+                    return None
+                else:
+                    return user
 
         user._auth_refreshed = now
 
@@ -528,6 +555,9 @@ class BaseHandler(RequestHandler):
                 if user is None and self._accept_cookie_auth:
                     user = self.get_current_user_cookie()
                 if user and isinstance(user, User):
+                    # set self._jupyterhub_user so it can be checked in refresh_auth
+                    # it will be set again immediately after
+                    self._jupyterhub_user = user
                     user = await self.refresh_auth(user)
                 self._jupyterhub_user = user
             except Exception:

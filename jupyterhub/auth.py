@@ -88,6 +88,34 @@ class Authenticator(LoggingConfigurable):
         """,
     )
 
+    auth_refresh_strict = Bool(
+        False,
+        config=True,
+        help="""
+
+        When refresh_user would be called (refresh_pre_spawn, auth_refresh_age),
+        not all requests can be redirected to a login, such as:
+
+        - token-authenticated API requests
+        - admin spawn of other users' servers
+
+        If a user's auth state is stale and cannot be refreshed (e.g. missing or outdated oauth token),
+        these actions cannot be taken until the user logs in again.
+
+        Since auth state is unlikely to be invalid, forcing a refresh when it cannot be refreshed
+        is often counterproductive.
+        
+        However, if auth freshness is strictly required, this can be set to True,
+        in which case admin spawns for other users, or even API requests from users' own servers
+        will fail until the user completes a fresh login.
+
+        .. versionadded:: 6.0
+            Prior to 6.0, the behavior was the same as `Authenticator.auth_refresh_strict = True`.
+            6.0 adds this configuration and makes it False by default,
+            due to the problems seen when it is True.
+        """,
+    )
+
     refresh_pre_spawn = Bool(
         False,
         config=True,
