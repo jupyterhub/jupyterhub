@@ -2,15 +2,19 @@
 
 import json
 import os
+import socket
 from contextlib import contextmanager
 from subprocess import Popen
+from unittest import mock
 from urllib.parse import quote, urlparse
 
 import pytest
 from traitlets import TraitError
 from traitlets.config import Config
 
-from ..utils import random_port
+from .. import proxy as proxymod
+from ..proxy import ConfigurableHTTPProxy
+from ..utils import fmt_ip_url, random_port
 from ..utils import url_path_join as ujoin
 from ..utils import wait_for_http_server
 from .mocking import MockHub
@@ -163,6 +167,45 @@ async def test_external_proxy(request):
     # check that the routes are correct
     routes = await app.proxy.get_all_routes()
     assert sorted(routes.keys()) == [app.hub.routespec, user_spec]
+
+
+@pytest.mark.parametrize("bind_ip", ['0.0.0.0', '::', ''])
+async def test_proxy_wildcard_bind_ip(bind_ip):
+    """configurable-http-proxy must be launched with the configured bind
+    address, not the address clients should use to connect to it.
+
+    Regression test for https://github.com/jupyterhub/jupyterhub/issues/5508
+    """
+    proxy = ConfigurableHTTPProxy(
+        public_url=f'http://{fmt_ip_url(bind_ip)}:{random_port()}',
+        api_url=f'http://{fmt_ip_url(bind_ip)}:{random_port()}',
+        auth_token='test-token',
+        app=mock.Mock(subdomain_host='', internal_ssl=False),
+    )
+    proxy.hub = mock.Mock(url='http://127.0.0.1:8081')
+
+    captured = {}
+
+    def mock_popen(cmd, **kwargs):
+        captured['cmd'] = cmd
+        proc = mock.Mock()
+        proc.pid = 1234
+        proc.poll.return_value = None
+        return proc
+
+    with (
+        mock.patch.object(proxymod, 'Popen', mock_popen),
+        mock.patch.object(
+            proxymod.Server, 'wait_up', mock.AsyncMock(return_value=True)
+        ),
+    ):
+        await proxy.start()
+
+    cmd = captured['cmd']
+    assert cmd[cmd.index('--ip') + 1] == bind_ip
+    assert cmd[cmd.index('--api-ip') + 1] == bind_ip
+    # must not have resolved the wildcard address to the local hostname
+    assert socket.gethostname() not in cmd
 
 
 @pytest.mark.parametrize("username", ['zoe', '50fia', '秀樹', '~TestJH', 'has@'])
