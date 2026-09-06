@@ -170,7 +170,7 @@ async def test_external_proxy(request):
 
 
 @pytest.mark.parametrize("bind_ip", ['0.0.0.0', '::', ''])
-async def test_proxy_wildcard_bind_ip(bind_ip):
+async def test_proxy_wildcard_bind_ip(bind_ip, tmp_path):
     """configurable-http-proxy must be launched with the configured bind
     address, not the address clients should use to connect to it.
 
@@ -180,6 +180,9 @@ async def test_proxy_wildcard_bind_ip(bind_ip):
         public_url=f'http://{fmt_ip_url(bind_ip)}:{random_port()}',
         api_url=f'http://{fmt_ip_url(bind_ip)}:{random_port()}',
         auth_token='test-token',
+        # isolate the pid file so parametrized runs (and other tests)
+        # can't collide on a leftover jupyterhub-proxy.pid in the cwd
+        pid_file=str(tmp_path / 'proxy.pid'),
         app=mock.Mock(subdomain_host='', internal_ssl=False),
     )
     proxy.hub = mock.Mock(url='http://127.0.0.1:8081')
