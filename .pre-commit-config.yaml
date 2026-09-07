@@ -22,7 +22,7 @@ repos:
 
   # Autoformat: Python lint fixes
   - repo: https://github.com/PyCQA/autoflake
-    rev: 2d3853a9f31d97783fb2e181d41cd82a6babd666 # frozen: v2.3.3
+    rev: 6d9dd2716540ab776f29c7b896cd3052ef4619b2  # frozen: v2.4.0
     hooks:
       - id: autoflake
         args:
@@ -30,7 +30,7 @@ repos:
 
   # Autoformat: python imports
   - repo: https://github.com/pycqa/isort
-    rev: 7f321d375f31a2f03833bc9a548e8783f2b5c420 # frozen: 9.0.0b1
+    rev: 131f4adcd5582bfc53928ab0d740eceb8b506b6c  # frozen: 9.0.1
     hooks:
       - id: isort
 
@@ -55,7 +55,7 @@ repos:
 
   # autoformat HTML templates
   - repo: https://github.com/djlint/djLint
-    rev: 01e0d29d2037467fdf6de91f65bc806045042762 # frozen: v1.43.2
+    rev: 4fcf1e595b401de170064a973da7cfd66924f468  # frozen: v1.46.0
     hooks:
       - id: djlint-reformat-jinja
         files: ".*templates/.*.html"
@@ -67,7 +67,7 @@ repos:
 
   # github actions security checks
   - repo: https://github.com/zizmorcore/zizmor-pre-commit
-    rev: 451b56af716f9f0d0c2b816503a3fd0cf8b036fa # frozen: v1.29.0
+    rev: cef8b8350da46d8114c7e6b7272aebdccdf193ce  # frozen: v1.30.0
     hooks:
       - id: zizmor
         args:
