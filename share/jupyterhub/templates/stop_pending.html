@@ -17,7 +17,7 @@
 {% endblock main %}
 {% block script %}
   {{ super() }}
-  <script type="text/javascript">
+  <script>
     require(["jquery"], function($) {
       $("#refresh").click(function() {
         window.location.reload();
