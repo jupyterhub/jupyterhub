@@ -41,6 +41,7 @@ async def login_home(browser, app, username):
         {"next": ujoin(app.hub.base_url, "home")},
     )
     await browser.goto(login_url)
+    await browser.wait_for_load_state("domcontentloaded")
     async with browser.expect_navigation(url=re.compile(".*/hub/home")):
         await login(browser, username)
 
@@ -236,6 +237,7 @@ async def open_spawn_pending(app, browser, user_special_chars):
     )
     await browser.goto(url_spawn)
     await expect(browser).to_have_url(url_spawn)
+    await browser.wait_for_load_state("domcontentloaded")
 
 
 async def test_spawn_pending_server_not_started(
@@ -416,6 +418,7 @@ async def open_home_page(app, browser, user):
     await browser.goto(url)
     await login(browser, user.name, password=str(user.name))
     await expect(browser).to_have_url(re.compile(".*/hub/home"))
+    await browser.wait_for_load_state("domcontentloaded")
 
 
 async def test_home_nav_collapse(app, browser, user_special_chars):
@@ -554,6 +557,7 @@ async def open_token_page(app, browser, user):
     await browser.goto(url)
     await login(browser, user.name, password=str(user.name))
     await expect(browser).to_have_url(re.compile(".*/hub/token"))
+    await browser.wait_for_load_state("domcontentloaded")
 
 
 @pytest.mark.parametrize(
@@ -1162,13 +1166,16 @@ async def open_admin_page(app, browser, login_as=None):
             public_host(app), app.hub.base_url, "/login?next=" + admin_page
         )
         await browser.goto(url)
+        await browser.wait_for_load_state("domcontentloaded")
         await login(browser, user.name, password=str(user.name))
         await expect(browser).to_have_url(re.compile(".*/hub/admin"))
     else:
         # url = url_path_join(public_host(app), app.hub.base_url, "/login?next=" + admin_page)
         await browser.goto(admin_page)
         await expect(browser).to_have_url(re.compile(".*/hub/admin"))
-    await browser.wait_for_load_state("networkidle")
+    await browser.wait_for_load_state("domcontentloaded")
+    # wait for an element to be rendered by react
+    await expect(browser.locator(".pagination-footer")).to_be_visible()
 
 
 def create_list_of_users(create_user_with_scopes, n):
@@ -1310,7 +1317,6 @@ async def test_search_on_admin_page(
     element_search = browser.locator('//input[@name="user_search"]')
     await element_search.click()
     await element_search.fill(search_value, force=True)
-    await browser.wait_for_load_state("networkidle")
     # get the result of the search from db
     total = (
         app.db.query(orm.User).filter(orm.User.name.like(f'%{search_value}%')).count()
@@ -1339,7 +1345,6 @@ async def test_search_on_admin_page(
             await expect(element).to_contain_text(re.compile(f".*{search_value}.*"))
         # click on Next button to verify that the rest part of filtered list is displayed on the next page
         await browser.get_by_role("button", name="Next").click()
-        await browser.wait_for_load_state("networkidle")
         filtered_list_on_next_page = browser.locator('//tr[@class="user-row"]')
         await expect(filtered_list_on_page).to_have_count(total - 50)
         for element in await filtered_list_on_next_page.get_by_test_id(
@@ -1385,8 +1390,11 @@ async def test_start_stop_server_on_admin_page(
         await stop_btn.click()
 
     user1, user2 = create_list_of_users(create_user_with_scopes, 2)
+    users_count_db = app.db.query(orm.User).count()
     await open_admin_page(app, browser, admin_user)
-    await browser.wait_for_load_state("networkidle")
+    await expect(browser.locator('//td[@data-testid="user-row-name"]')).to_have_count(
+        users_count_db
+    )
     users = await browser.locator('//td[@data-testid="user-row-name"]').all()
     users_list = [await user.text_content() for user in users]
     users_list = [user.strip() for user in users_list]
