@@ -9,11 +9,13 @@
           <input id="token-note"
                  class="form-control"
                  placeholder="note to identify your new token">
-          <small id="note-note" class="form-text">This note will help you keep track of what your tokens are for.</small>
+          <small id="note-note"
+                 class="form-text">This note will help you keep track of what your tokens are for.</small>
           <br />
           <label for="token-expiration-seconds" class="form-label">Token expires in</label>
           {% block expiration_options %}
-            <select id="token-expiration-seconds" class="form-select">{{ token_expires_in_options_html | safe }}</select>
+            <select id="token-expiration-seconds"
+                    class="form-select">{{ token_expires_in_options_html | safe }}</select>
           {% endblock expiration_options %}
           <small id="note-expires-at" class="form-text">You can configure when your token will expire.</small>
           <br />
@@ -100,7 +102,7 @@
                       {%- endif -%}
                     </td>
                     <td class="col text-center">
-                      <button class="revoke-token-btn btn btn-xs btn-danger">revoke</button>
+                      <button type="button" class="revoke-token-btn btn btn-xs btn-danger">revoke</button>
                     </td>
                   {% endblock token_row %}
                 </tr>
@@ -145,21 +147,21 @@
                     </details>
                   </td>
                   <td class="time-col col-sm-3">
-                    {%- if client['last_activity'] -%}
+                    {%- if client["last_activity"] -%}
                       {{ client['last_activity'].isoformat() + 'Z' }}
                     {%- else -%}
                       Never
                     {%- endif -%}
                   </td>
                   <td class="time-col col-sm-3">
-                    {%- if client['created'] -%}
+                    {%- if client["created"] -%}
                       {{ client['created'].isoformat() + 'Z' }}
                     {%- else -%}
                       N/A
                     {%- endif -%}
                   </td>
                   <td class="col-sm-1 text-center">
-                    <button class="revoke-token-btn btn btn-xs btn-danger">revoke</button>
+                    <button type="button" class="revoke-token-btn btn btn-xs btn-danger">revoke</button>
                   </td>
                 {% endblock client_row %}
               </tr>
@@ -172,7 +174,7 @@
 {% endblock main %}
 {% block script %}
   {{ super() }}
-  <script type="text/javascript">
+  <script>
     require(["token"]);
   </script>
 {% endblock script %}

@@ -12,12 +12,12 @@
           {{ custom_html | safe }}
         {% elif login_service %}
           <div class="service-login">
-            <p id='insecure-login-warning' class='hidden alert alert-warning'>
+            <p id="insecure-login-warning" class="hidden alert alert-warning">
               Warning: JupyterHub seems to be served over an unsecured HTTP connection.
               We strongly recommend enabling HTTPS for JupyterHub.
             </p>
             <a role="button"
-               class='btn btn-jupyter btn-lg'
+               class="btn btn-jupyter btn-lg"
                href='{{ authenticator_login_url }}'>Sign in with {{ login_service }}</a>
           </div>
         {% else %}
@@ -25,8 +25,8 @@
             <div class="auth-form-header">
               <h1>Sign in</h1>
             </div>
-            <div class='auth-form-body m-auto'>
-              <p id='insecure-login-warning' class='hidden alert alert-warning'>
+            <div class="auth-form-body m-auto">
+              <p id="insecure-login-warning" class="hidden alert alert-warning">
                 Warning: JupyterHub seems to be served over an unsecured HTTP connection.
                 We strongly recommend enabling HTTPS for JupyterHub.
               </p>
@@ -98,9 +98,8 @@
               <div class="feedback-container">
                 <input id="login_submit"
                        type="submit"
-                       class='btn btn-jupyter form-control'
-                       value='Sign in'
-                       tabindex="3" />
+                       class="btn btn-jupyter form-control"
+                       value='Sign in' />
                 <div class="feedback-widget hidden">
                   <i class="fa fa-spinner"></i>
                 </div>

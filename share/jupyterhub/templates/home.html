@@ -7,7 +7,9 @@
     <h1 class="visually-hidden">JupyterHub home page</h1>
     <div class="row">
       <div class="text-center">
-        {% if default_server.active %}<a id="stop" role="button" class="btn btn-lg btn-danger">Stop My Server</a>{% endif %}
+        {% if default_server.active %}<a id="stop"
+   role="button"
+   class="btn btn-lg btn-danger">Stop My Server</a>{% endif %}
         <a id="start"
            role="button"
            class="btn btn-lg btn-primary"
@@ -50,9 +52,7 @@
                 <input class="new-server-name form-control"
                        aria-label="server name"
                        placeholder="name-your-server">
-                <button role="button"
-                        type="button"
-                        class="new-server-btn btn btn-xs btn-primary">Add New Server</button>
+                <button type="button" class="new-server-btn btn btn-xs btn-primary">Add New Server</button>
               </div>
             </td>
           </tr>
@@ -72,7 +72,7 @@
                    href="{{ user.server_url(spawner.name) }}">{{ user.server_url(spawner.name) }}</a>
               </td>
               {# activity #}
-              <td class='time-col'>
+              <td class="time-col">
                 {% if spawner.last_activity %}
                   {{ spawner.last_activity.isoformat() + 'Z' }}
                 {% else %}
@@ -89,7 +89,7 @@
                    class="start-server btn btn-xs btn-primary {% if spawner.active %}hidden{% endif %}"
                    id="start-{{ spawner.name }}"
                    href="{{ base_url }}spawn/{{ user.name }}/{{ spawner.name }}">start</a>
-                <button role="button"
+                <button type="button"
                         class="delete-server btn btn-xs btn-danger{% if spawner.active %} hidden{% endif %}"
                         id="delete-{{ spawner.name }}">delete</button>
               </td>
@@ -102,7 +102,7 @@
 {% endblock main %}
 {% block script %}
   {{ super() }}
-  <script type="text/javascript">
+  <script>
     require(["home"]);
   </script>
 {% endblock script %}

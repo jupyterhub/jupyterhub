@@ -1,2 +1,1 @@
-{%- set _meta = meta | default({}) %}
-{%- extends _meta.page_template | default('!page.html') %}
+{%- extends (meta | default({})).page_template | default("!page.html") %}

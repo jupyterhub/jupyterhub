@@ -39,26 +39,19 @@
     <meta http-equiv="X-UA-Compatible" content="chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     {% block stylesheet %}
-      <link rel="stylesheet"
-            href="{{ static_url('css/style.min.css') }}"
-            type="text/css" />
+      <link rel="stylesheet" href="{{ static_url('css/style.min.css') }}" />
     {% endblock stylesheet %}
     {% block favicon %}
       <link rel="icon" href="{{ static_url('favicon.ico') }}" type="image/x-icon">
     {% endblock favicon %}
     {% block scripts %}
-      <script src="{{static_url("components/bootstrap/dist/js/bootstrap.bundle.min.js") }}"
-              type="text/javascript"
+      <script src="{{ static_url("components/bootstrap/dist/js/bootstrap.bundle.min.js") }}"
               charset="utf-8"></script>
-      <script src="{{static_url("components/requirejs/require.js") }}"
-              type="text/javascript"
+      <script src="{{ static_url("components/requirejs/require.js") }}"
               charset="utf-8"></script>
-      <script src="{{static_url("components/jquery/dist/jquery.min.js") }}"
-              type="text/javascript"
+      <script src="{{ static_url("components/jquery/dist/jquery.min.js") }}"
               charset="utf-8"></script>
-      <script src="{{static_url("js/darkmode.js") }}"
-              type="text/javascript"
-              charset="utf-8"></script>
+      <script src="{{ static_url("js/darkmode.js") }}" charset="utf-8"></script>
     {% endblock scripts %}
     {# djlint js formatting doesn't handle template blocks in js #}
     {# djlint: off #}
@@ -107,7 +100,7 @@
   </head>
   <body>
     <noscript>
-      <div id='noscript'>
+      <div id="noscript">
         JupyterHub requires JavaScript.
         <br>
         Please enable it to proceed.
@@ -119,10 +112,10 @@
           {% block logo %}
             <span id="jupyterhub-logo" class="navbar-brand">
               <a href="{{ logo_url or base_url }}">
-                <img src='{{ base_url }}logo'
-                     alt='JupyterHub logo'
-                     class='jpy-logo'
-                     title='Home' />
+                <img src="{{ base_url }}logo"
+                     alt="JupyterHub logo"
+                     class="jpy-logo"
+                     title="Home" />
               </a>
             </span>
           {% endblock logo %}
@@ -147,7 +140,7 @@
                   <li class="nav-item">
                     <a class="nav-link" href="{{ base_url }}token">Token</a>
                   </li>
-                  {% if 'admin-ui' in parsed_scopes %}
+                  {% if "admin-ui" in parsed_scopes %}
                     <li class="nav-item">
                       <a class="nav-link" href="{{ base_url }}admin">Admin</a>
                     </li>
@@ -178,6 +171,7 @@
                 <li class="nav-item">
                   {% block theme_toggle %}
                     <button class="btn btn-sm"
+                            type="button"
                             id="dark-theme-toggle"
                             aria-label="Toggle dark mode"
                             title="Toggle dark mode">
