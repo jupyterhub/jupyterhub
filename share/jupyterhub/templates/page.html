@@ -45,13 +45,13 @@
       <link rel="icon" href="{{ static_url('favicon.ico') }}" type="image/x-icon">
     {% endblock favicon %}
     {% block scripts %}
-      <script src="{{static_url("components/bootstrap/dist/js/bootstrap.bundle.min.js") }}"
+      <script src="{{ static_url("components/bootstrap/dist/js/bootstrap.bundle.min.js") }}"
               charset="utf-8"></script>
-      <script src="{{static_url("components/requirejs/require.js") }}"
+      <script src="{{ static_url("components/requirejs/require.js") }}"
               charset="utf-8"></script>
-      <script src="{{static_url("components/jquery/dist/jquery.min.js") }}"
+      <script src="{{ static_url("components/jquery/dist/jquery.min.js") }}"
               charset="utf-8"></script>
-      <script src="{{static_url("js/darkmode.js") }}" charset="utf-8"></script>
+      <script src="{{ static_url("js/darkmode.js") }}" charset="utf-8"></script>
     {% endblock scripts %}
     {# djlint js formatting doesn't handle template blocks in js #}
     {# djlint: off #}
@@ -171,6 +171,7 @@
                 <li class="nav-item">
                   {% block theme_toggle %}
                     <button class="btn btn-sm"
+                            type="button"
                             id="dark-theme-toggle"
                             aria-label="Toggle dark mode"
                             title="Toggle dark mode">

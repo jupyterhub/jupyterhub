@@ -52,9 +52,7 @@
                 <input class="new-server-name form-control"
                        aria-label="server name"
                        placeholder="name-your-server">
-                <button role="button"
-                        type="button"
-                        class="new-server-btn btn btn-xs btn-primary">Add New Server</button>
+                <button type="button" class="new-server-btn btn btn-xs btn-primary">Add New Server</button>
               </div>
             </td>
           </tr>
@@ -91,7 +89,7 @@
                    class="start-server btn btn-xs btn-primary {% if spawner.active %}hidden{% endif %}"
                    id="start-{{ spawner.name }}"
                    href="{{ base_url }}spawn/{{ user.name }}/{{ spawner.name }}">start</a>
-                <button role="button"
+                <button type="button"
                         class="delete-server btn btn-xs btn-danger{% if spawner.active %} hidden{% endif %}"
                         id="delete-{{ spawner.name }}">delete</button>
               </td>
