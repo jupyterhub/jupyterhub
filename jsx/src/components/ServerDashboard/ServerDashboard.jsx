@@ -428,7 +428,9 @@ const ServerDashboard = (props) => {
             <p className="text-secondary">{server.name}</p>
           </td>
           <td data-testid="user-row-last-activity">
-            {server.last_activity ? timeSince(server.last_activity) : "Never"}
+            {/* sorted server-side on the user's last_activity; the per-server
+                value is in the collapsed Server details below */}
+            {user.last_activity ? timeSince(user.last_activity) : "Never"}
           </td>
           <td data-testid="user-row-server-start-time">
             {server.started ? timeSince(server.started) : "Never"}

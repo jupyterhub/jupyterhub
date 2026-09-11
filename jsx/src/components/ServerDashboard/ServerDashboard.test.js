@@ -16,6 +16,7 @@ import regeneratorRuntime from "regenerator-runtime";
 
 import ServerDashboard from "./ServerDashboard";
 import { initialState, reducers } from "../../Store";
+import { timeSince } from "../../util/timeSince";
 
 jest.mock("react-redux", () => ({
   ...jest.requireActual("react-redux"),
@@ -816,6 +817,65 @@ test("Shows 'Never' for server start time when server never started", async () =
 
   let startTimeCell = screen.getByTestId("user-row-server-start-time");
   expect(startTimeCell.textContent).toBe("Never");
+});
+
+test("Shows the user last activity that the table is sorted by", async () => {
+  // the column is sorted server-side on User.last_activity, so it has to show
+  // that field and not the spawner's
+  const userActivity = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+  const serverActivity = new Date(
+    Date.now() - 3 * 60 * 60 * 1000,
+  ).toISOString();
+  const user = {
+    ...newUser("testuser"),
+    server: null,
+    last_activity: userActivity,
+    servers: {
+      "": {
+        name: "",
+        last_activity: serverActivity,
+        started: serverActivity,
+        ready: true,
+        url: "/user/testuser/",
+      },
+    },
+  };
+
+  useSelector.mockImplementation((callback) => {
+    return callback({
+      user_data: [user],
+      user_page: { offset: 0, limit: 2, total: 1 },
+      limit: 2,
+    });
+  });
+
+  await act(async () => {
+    render(serverDashboardJsx());
+  });
+
+  expect(screen.getByTestId("user-row-last-activity").textContent).toBe(
+    timeSince(userActivity),
+  );
+});
+
+test("Shows 'Never' for last activity when the user was never active", async () => {
+  const user = { ...newUser("testuser"), server: null, last_activity: null };
+
+  useSelector.mockImplementation((callback) => {
+    return callback({
+      user_data: [user],
+      user_page: { offset: 0, limit: 2, total: 1 },
+      limit: 2,
+    });
+  });
+
+  await act(async () => {
+    render(serverDashboardJsx());
+  });
+
+  expect(screen.getByTestId("user-row-last-activity").textContent).toBe(
+    "Never",
+  );
 });
 
 test("Displays profile information correctly", async () => {
