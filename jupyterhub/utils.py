@@ -337,7 +337,7 @@ async def wait_for_http_server(url, timeout=10, ssl_context=None):
             r = await fetch(url, raise_for_status=False, **request_args)
         except aiohttp.ClientOSError as e:
             # suppress expected "not there yet" errors
-            if e.os_error.errno not in {
+            if e.errno not in {
                 errno.ECONNABORTED,
                 errno.ECONNREFUSED,
                 errno.ECONNRESET,
