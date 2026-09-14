@@ -22,6 +22,31 @@ Contributors to major version bumps in JupyterHub include:
 
 ## 6.0
 
+### 6.0.1 - 2026-09-14
+
+6.0.1 is a minor bugfix release fixing a few regressions in 6.0.
+
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/6.0.0...6.0.1))
+
+#### Bugs fixed
+
+- Fix AttributeError on ClientOSError without os_error in wait_for_http_server [#5515](https://github.com/jupyterhub/jupyterhub/pull/5515) ([@jotamartos](https://github.com/jotamartos), [@minrk](https://github.com/minrk))
+- fix proxy binding on all interfaces [#5512](https://github.com/jupyterhub/jupyterhub/pull/5512) ([@minrk](https://github.com/minrk))
+
+#### Maintenance and upkeep improvements
+
+- try to improve browser test waiting and reporting [#5513](https://github.com/jupyterhub/jupyterhub/pull/5513) ([@minrk](https://github.com/minrk), [@krassowski](https://github.com/krassowski), [@manics](https://github.com/manics))
+- Delete empty PULL_REQUEST_TEMPLATE.md [#5510](https://github.com/jupyterhub/jupyterhub/pull/5510) ([@manics](https://github.com/manics), [@minrk](https://github.com/minrk))
+
+#### Contributors to this release
+
+The following people contributed discussions, new ideas, code and documentation contributions, and review.
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/use/#how-does-this-tool-define-contributions-in-the-reports).
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2026-09-01&to=2026-09-14&type=c))
+
+@dario-pilori ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Adario-pilori+updated%3A2026-09-01..2026-09-14&type=Issues)) | @jotamartos ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ajotamartos+updated%3A2026-09-01..2026-09-14&type=Issues)) | @krassowski ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Akrassowski+updated%3A2026-09-01..2026-09-14&type=Issues)) | @manics ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amanics+updated%3A2026-09-01..2026-09-14&type=Issues)) | @minrk ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk+updated%3A2026-09-01..2026-09-14&type=Issues))
+
 ### 6.0.0 - 2026-09-01
 
 6.0 is a substantial release with several new features, including a database schema upgrade.
