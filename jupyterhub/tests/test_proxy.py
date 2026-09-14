@@ -2,6 +2,7 @@
 
 import json
 import os
+import socket
 from contextlib import contextmanager
 from subprocess import Popen
 from urllib.parse import quote, urlparse
@@ -10,6 +11,7 @@ import pytest
 from traitlets import TraitError
 from traitlets.config import Config
 
+from ..proxy import ConfigurableHTTPProxy
 from ..utils import random_port
 from ..utils import url_path_join as ujoin
 from ..utils import wait_for_http_server
@@ -339,3 +341,28 @@ async def test_add_get_delete(app, routespec, disable_check_routes):
 async def test_proxy_patch_bad_request_data(app, test_data):
     r = await api_request(app, 'proxy', method='patch', data=test_data)
     assert r.status_code == 400
+
+
+async def test_proxy_bind_ip(request, app, tmp_path):
+    public_port = random_port()
+    api_port = random_port()
+    public_url = f"http://0.0.0.0:{public_port}"
+    api_url = f"http://0.0.0.0:{api_port}"
+    proxy = ConfigurableHTTPProxy(
+        public_url=public_url,
+        api_url=api_url,
+        app=app,
+        hub=app.hub,
+        pid_file=str(tmp_path / "proxy.pid"),
+    )
+    await proxy.start()
+    request.addfinalizer(proxy.stop)
+    cmdline = " ".join(proxy.proxy_process.args)
+    assert '--ip 0.0.0.0' in cmdline
+    assert '--api-ip 0.0.0.0' in cmdline
+    public_ip = socket.gethostbyname(socket.gethostname())
+    # make sure it is connectable on both local and public ips
+    await wait_for_http_server(public_url.replace("0.0.0.0", "127.0.0.1"))
+    await wait_for_http_server(public_url.replace("0.0.0.0", public_ip))
+    await wait_for_http_server(api_url.replace("0.0.0.0", "127.0.0.1"))
+    await wait_for_http_server(api_url.replace("0.0.0.0", public_ip))

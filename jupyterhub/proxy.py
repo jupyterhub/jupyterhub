@@ -741,7 +741,7 @@ class ConfigurableHTTPProxy(Proxy):
         else:
             server_args = (
                 '--ip',
-                proxy_server.connect_addr,
+                proxy_server.ip,
                 '--port',
                 str(proxy_server.port),
             )
@@ -755,7 +755,7 @@ class ConfigurableHTTPProxy(Proxy):
         else:
             api_args = (
                 '--api-ip',
-                api_server.connect_addr,
+                api_server.ip,
                 '--api-port',
                 str(api_server.port),
             )
