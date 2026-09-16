@@ -244,6 +244,33 @@ class UpgradeDB(Application):
         dbutil.upgrade_if_needed(hub.db_url, log=self.log, db_kwargs=hub.db_kwargs)
 
 
+class StandbyHandler(web.RequestHandler):
+    """Answer requests while this Hub waits for the database lock (not ready)"""
+
+    status = 503
+
+    def prepare(self):
+        self.set_status(self.status)
+        self.set_header("Content-Type", "application/json")
+        self.set_header("Retry-After", "5")
+        self.finish(
+            {
+                "status": "standby",
+                "message": "This JupyterHub is waiting for the database lock"
+                " held by another JupyterHub.",
+            }
+        )
+
+
+class StandbyHealthHandler(web.RequestHandler):
+    """Liveness probe for a standby Hub: the process is alive"""
+
+    def get(self):
+        pass
+
+    head = get
+
+
 class JupyterHub(Application):
     """An Application for starting a Multi-User Jupyter Notebook server."""
 
@@ -1636,6 +1663,7 @@ class JupyterHub(Application):
     ).tag(config=True)
 
     _db_lock = Any(None, allow_none=True)
+    _standby_server = Any(None, allow_none=True)
 
     users = Instance(UserDict)
 
@@ -2135,22 +2163,27 @@ class JupyterHub(Application):
                 " waiting up to %gs for the database lock.",
                 self.db_lock_timeout,
             )
-        while True:
-            await asyncio.sleep(poll_interval)
-            if lock.try_acquire():
-                self.log.info(
-                    "Acquired database lock after %.0fs in standby",
-                    loop.time() - tic,
-                )
-                return
-            self.log.debug("Still waiting for database lock")
-            if deadline is not None and loop.time() >= deadline:
-                self.log.critical(
-                    "Timed out after %gs waiting for the database lock"
-                    " held by another JupyterHub.",
-                    self.db_lock_timeout,
-                )
-                self.exit(1)
+        self._start_standby_server()
+        try:
+            while True:
+                await asyncio.sleep(poll_interval)
+                if lock.try_acquire():
+                    self.log.info(
+                        "Acquired database lock after %.0fs in standby",
+                        loop.time() - tic,
+                    )
+                    return
+                self.log.debug("Still waiting for database lock")
+                if deadline is not None and loop.time() >= deadline:
+                    self.log.critical(
+                        "Timed out after %gs waiting for the database lock"
+                        " held by another JupyterHub.",
+                        self.db_lock_timeout,
+                    )
+                    self.exit(1)
+        finally:
+            # free the port for the real server (or on exit)
+            self._stop_standby_server()
 
     def _check_db_lock(self):
         """Periodically verify that we still hold the database lock"""
@@ -3674,9 +3707,11 @@ class JupyterHub(Application):
         self.init_pycurl()
         self.init_secrets()
         self.init_internal_ssl()
+        # init_hub only depends on config, and the standby server
+        # needs hub.bind_url before we have the database lock
+        self.init_hub()
         await self.acquire_db_lock()
         self.init_db()
-        self.init_hub()
         self.init_proxy()
         self.init_oauth()
         await self.init_role_creation()
@@ -3979,6 +4014,65 @@ class JupyterHub(Application):
                 return False
         return True
 
+    def _listen(self, http_server):
+        """Bind an HTTPServer to `self.hub.bind_url`"""
+        bind_url = urlparse(self.hub.bind_url)
+        try:
+            if bind_url.scheme.startswith('http+unix'):
+                from tornado.netutil import bind_unix_socket
+
+                socket = bind_unix_socket(
+                    unquote(bind_url.netloc), mode=self.hub.socket_mode
+                )
+                http_server.add_socket(socket)
+            else:
+                ip = bind_url.hostname
+                port = bind_url.port
+                if not port:
+                    if bind_url.scheme == 'https':
+                        port = 443
+                    else:
+                        port = 80
+                http_server.listen(port, address=ip)
+        except Exception:
+            self.log.error("Failed to bind hub to %s", self.hub.bind_url)
+            raise
+
+    def _start_standby_server(self):
+        """Serve health probes while waiting for the database lock.
+
+        A standby Hub must look *alive* but *not ready* to an orchestrator,
+        so that it is not restarted and receives no traffic:
+
+        - ``/hub/health`` (liveness) returns 200
+        - ``/hub/api/health`` (readiness) and everything else return 503
+        """
+        ssl_context = make_ssl_context(
+            self.internal_ssl_key,
+            self.internal_ssl_cert,
+            cafile=self.internal_ssl_ca,
+            purpose=ssl.Purpose.CLIENT_AUTH,
+        )
+        app = web.Application(
+            [
+                (
+                    url_path_join(self.hub.base_url, r'health/?$'),
+                    StandbyHealthHandler,
+                ),
+                (r'.*', StandbyHandler),
+            ]
+        )
+        self._standby_server = tornado.httpserver.HTTPServer(
+            app, ssl_options=ssl_context, xheaders=True
+        )
+        self._listen(self._standby_server)
+        self.log.info("Standby Hub answering health checks on %s", self.hub.bind_url)
+
+    def _stop_standby_server(self):
+        server, self._standby_server = self._standby_server, None
+        if server is not None:
+            server.stop()
+
     async def start(self):
         """Start the whole thing"""
         self.io_loop = loop = IOLoop.current()
@@ -4040,30 +4134,10 @@ class JupyterHub(Application):
             xheaders=True,
             trusted_downstream=self.trusted_downstream_ips,
         )
-        bind_url = urlparse(self.hub.bind_url)
-        try:
-            if bind_url.scheme.startswith('http+unix'):
-                from tornado.netutil import bind_unix_socket
-
-                socket = bind_unix_socket(
-                    unquote(bind_url.netloc), mode=self.hub.socket_mode
-                )
-                self.http_server.add_socket(socket)
-            else:
-                ip = bind_url.hostname
-                port = bind_url.port
-                if not port:
-                    if bind_url.scheme == 'https':
-                        port = 443
-                    else:
-                        port = 80
-                self.http_server.listen(port, address=ip)
-            self.log.info("Hub API listening on %s", self.hub.bind_url)
-            if self.hub.url != self.hub.bind_url:
-                self.log.info("Private Hub API connect url %s", self.hub.url)
-        except Exception:
-            self.log.error("Failed to bind hub to %s", self.hub.bind_url)
-            raise
+        self._listen(self.http_server)
+        self.log.info("Hub API listening on %s", self.hub.bind_url)
+        if self.hub.url != self.hub.bind_url:
+            self.log.info("Private Hub API connect url %s", self.hub.url)
 
         # start the service(s)
         for service_name, service in self._service_map.items():

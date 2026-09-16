@@ -9,6 +9,7 @@ from sqlalchemy import create_engine, text
 from jupyterhub.dblock import DatabaseLock
 
 from .mocking import MockHub
+from .utils import async_requests
 
 TEST_DB_URL = os.environ.get("JUPYTERHUB_TEST_DB_URL", "")
 
@@ -152,6 +153,37 @@ async def test_app_standby_takes_over(hub_pair):
     await asyncio.wait_for(task, timeout=15)
     assert b._db_lock.held
     assert b.db is not None
+
+
+@pytest.mark.db
+@needs_server_db
+async def test_app_standby_serves_health(hub_pair):
+    a = hub_pair(db_lock=True, db_lock_timeout=-1)
+    await a.initialize([])
+
+    b = hub_pair(db_lock=True, db_lock_timeout=-1)
+    task = asyncio.ensure_future(b.initialize([]))
+    await asyncio.sleep(1.5)
+    assert not task.done()
+    assert b._standby_server is not None
+    hub_url = b.hub.bind_url.rstrip("/")
+
+    # liveness: alive
+    r = await async_requests.get(hub_url + "/health")
+    assert r.status_code == 200
+    # readiness: not serving
+    r = await async_requests.get(hub_url + "/api/health")
+    assert r.status_code == 503
+    assert r.json()["status"] == "standby"
+    r = await async_requests.get(hub_url + "/api/users")
+    assert r.status_code == 503
+
+    await a.cleanup()
+    await asyncio.wait_for(task, timeout=15)
+    # the standby server is gone, the port is free for the real one
+    assert b._standby_server is None
+    with pytest.raises(Exception):
+        await async_requests.get(hub_url + "/health", timeout=1)
 
 
 @pytest.mark.db
