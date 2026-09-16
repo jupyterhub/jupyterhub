@@ -71,6 +71,7 @@ class DatabaseLock:
         self._url = make_url(db_url)
         self._engine = None
         self._conn = None
+        self._acquired = False
 
     @property
     def dialect(self):
@@ -84,8 +85,11 @@ class DatabaseLock:
 
     @property
     def held(self):
-        """Whether we currently hold an open lock connection"""
-        return self._conn is not None and not self._conn.closed
+        """Whether we believe we hold the lock.
+
+        Use :meth:`check` to verify that the session holding it is alive.
+        """
+        return self._acquired and self._conn is not None and not self._conn.closed
 
     # -- SQL per backend --------------------------------------------------
 
@@ -126,6 +130,7 @@ class DatabaseLock:
         return self._conn
 
     def _drop_connection(self):
+        self._acquired = False
         conn, self._conn = self._conn, None
         if conn is None:
             return
@@ -161,7 +166,11 @@ class DatabaseLock:
             self._drop_connection()
             raise
         # postgres returns bool, mysql returns 1/0/NULL
-        return bool(result)
+        self._acquired = bool(result)
+        if not self._acquired:
+            # don't keep a connection open while somebody else holds the lock
+            self._drop_connection()
+        return self._acquired
 
     def check(self):
         """Check that the connection holding the lock is still alive.
@@ -183,7 +192,7 @@ class DatabaseLock:
 
     def backend_pid(self):
         """Server-side id of the session holding the lock (for diagnostics)"""
-        if not self.supported or not self.held:
+        if not self.held:
             return None
         return self._conn.execute(self._pid_sql()).scalar()
 
@@ -192,7 +201,7 @@ class DatabaseLock:
 
         Safe to call multiple times.
         """
-        if self.held and self.supported:
+        if self.held:
             sql, params = self._release_sql()
             try:
                 self._conn.execute(sql, params)

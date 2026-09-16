@@ -66,6 +66,7 @@ from ._data import DATA_FILES_PATH
 # classes for config
 from .auth import Authenticator, PAMAuthenticator
 from .crypto import CryptKeeper
+from .dblock import DatabaseLock
 
 # For faking stats
 from .handlers.static import CacheControlStaticFilesHandler, LogoHandler
@@ -1581,6 +1582,61 @@ class JupyterHub(Application):
     ).tag(config=True)
     session_factory = Any()
 
+    db_lock = Bool(
+        False,
+        help="""Acquire an exclusive database-level lock on startup.
+
+        JupyterHub requires that exactly one Hub process uses a given database.
+        With `db_lock` enabled, the Hub takes a server-side, session-scoped lock
+        (PostgreSQL advisory lock or MySQL named lock) before touching the
+        database, so a second Hub started against the same database cannot
+        corrupt its state. The lock is released automatically by the database
+        when the Hub exits or loses its connection.
+
+        Combined with a negative `db_lock_timeout`, additional Hub processes
+        act as hot standbys: they wait, without touching the database or
+        serving requests, until the active Hub goes away, and then take over.
+
+        Only PostgreSQL and MySQL/MariaDB are supported; the option is ignored
+        for SQLite. Not compatible with connection poolers in transaction
+        pooling mode (e.g. PgBouncer `pool_mode = transaction`), because
+        session-level locks require a stable server session.
+
+        .. versionadded:: 6.1
+        """,
+    ).tag(config=True)
+
+    db_lock_timeout = Float(
+        0,
+        help="""How long to wait for the database lock, in seconds.
+
+        Only used when `db_lock` is enabled.
+
+        - `0` (default): exit immediately if another Hub holds the lock.
+        - negative: wait indefinitely (hot-standby mode).
+        - positive: wait at most this many seconds, then exit.
+
+        .. versionadded:: 6.1
+        """,
+    ).tag(config=True)
+
+    db_lock_check_interval = Float(
+        30,
+        help="""Interval (in seconds) between checks that the database lock
+        connection is still alive.
+
+        If the connection was lost, the Hub tries to reacquire the lock.
+        If another Hub acquired it in the meantime, this Hub exits, since it
+        can no longer guarantee it is the only Hub using the database.
+
+        Set to 0 to disable the check. Only used when `db_lock` is enabled.
+
+        .. versionadded:: 6.1
+        """,
+    ).tag(config=True)
+
+    _db_lock = Any(None, allow_none=True)
+
     users = Instance(UserDict)
 
     @default('users')
@@ -2030,6 +2086,94 @@ class JupyterHub(Application):
             parent=self,
             _internal_connector_options=connector_options,
         )
+
+    async def acquire_db_lock(self):
+        """Acquire the database-level lock, if `db_lock` is enabled.
+
+        Waits according to `db_lock_timeout`, then exits if the lock could
+        not be acquired. Must run before anything else touches the database.
+        """
+        if not self.db_lock:
+            return
+        self._db_lock = lock = DatabaseLock(
+            self.db_url, db_kwargs=self.db_kwargs, log=self.log
+        )
+        if not lock.supported:
+            self.log.warning(
+                "db_lock is enabled, but the %r database backend does not"
+                " support locking; continuing without a lock.",
+                lock.dialect,
+            )
+            return
+
+        poll_interval = 1
+        loop = asyncio.get_running_loop()
+        deadline = None
+        if self.db_lock_timeout > 0:
+            deadline = loop.time() + self.db_lock_timeout
+        tic = loop.time()
+
+        if lock.try_acquire():
+            self.log.info("Acquired database lock")
+            return
+
+        if self.db_lock_timeout == 0:
+            self.log.critical(
+                "Another JupyterHub is using this database (db_lock held)."
+                " Only one Hub may use a database at a time."
+            )
+            self.exit(1)
+
+        if deadline is None:
+            self.log.info(
+                "Another JupyterHub is using this database;"
+                " waiting in standby until the database lock is released."
+            )
+        else:
+            self.log.info(
+                "Another JupyterHub is using this database;"
+                " waiting up to %gs for the database lock.",
+                self.db_lock_timeout,
+            )
+        while True:
+            await asyncio.sleep(poll_interval)
+            if lock.try_acquire():
+                self.log.info(
+                    "Acquired database lock after %.0fs in standby",
+                    loop.time() - tic,
+                )
+                return
+            self.log.debug("Still waiting for database lock")
+            if deadline is not None and loop.time() >= deadline:
+                self.log.critical(
+                    "Timed out after %gs waiting for the database lock"
+                    " held by another JupyterHub.",
+                    self.db_lock_timeout,
+                )
+                self.exit(1)
+
+    def _check_db_lock(self):
+        """Periodically verify that we still hold the database lock"""
+        lock = self._db_lock
+        if lock is None or not lock.supported:
+            return
+        if lock.check():
+            return
+        self.log.warning("Database lock connection lost; trying to reacquire")
+        try:
+            reacquired = lock.try_acquire()
+        except Exception:
+            self.log.exception("Failed to reconnect to the database for db_lock")
+            return
+        if reacquired:
+            self.log.warning("Reacquired database lock")
+            return
+        self.log.critical(
+            "Another JupyterHub acquired the database lock while we were"
+            " disconnected. This Hub is no longer the only Hub using the"
+            " database and must exit."
+        )
+        self.exit(1)
 
     def init_db(self):
         """Create the database connection"""
@@ -3530,6 +3674,7 @@ class JupyterHub(Application):
         self.init_pycurl()
         self.init_secrets()
         self.init_internal_ssl()
+        await self.acquire_db_lock()
         self.init_db()
         self.init_hub()
         self.init_proxy()
@@ -3641,7 +3786,12 @@ class JupyterHub(Application):
             except Exception as e:
                 self.log.error("Failed to stop user: %s", e)
 
-        self.db.commit()
+        if getattr(self, "db", None) is not None:
+            self.db.commit()
+
+        if self._db_lock is not None:
+            self.log.debug("Releasing database lock")
+            self._db_lock.release()
 
         if self.pid_file and os.path.exists(self.pid_file):
             self.log.info("Cleaning up PID file %s", self.pid_file)
@@ -3936,6 +4086,13 @@ class JupyterHub(Application):
                 self.update_last_activity, 1e3 * self.last_activity_interval
             )
             self._periodic_callbacks["last_activity"] = pc
+            pc.start()
+
+        if self.db_lock and self.db_lock_check_interval > 0:
+            pc = PeriodicCallback(
+                self._check_db_lock, 1e3 * self.db_lock_check_interval
+            )
+            self._periodic_callbacks["db_lock"] = pc
             pc.start()
 
         if self.proxy.should_start:

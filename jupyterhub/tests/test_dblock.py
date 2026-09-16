@@ -1,11 +1,14 @@
 """Tests for the database-level Hub lock (jupyterhub.dblock)"""
 
+import asyncio
 import os
 
 import pytest
 from sqlalchemy import create_engine, text
 
 from jupyterhub.dblock import DatabaseLock
+
+from .mocking import MockHub
 
 TEST_DB_URL = os.environ.get("JUPYTERHUB_TEST_DB_URL", "")
 
@@ -66,3 +69,112 @@ def test_lost_connection_detected_and_reacquired():
     finally:
         a.release()
         b.release()
+
+
+# -- application integration ---------------------------------------------
+
+
+@pytest.fixture
+async def hub_pair(request):
+    """Two independent (non-singleton) MockHub instances sharing one database"""
+
+    hubs = []
+
+    def make(**kwargs):
+        # these hubs are initialized but never started, so there's no proxy to stop
+        kwargs.setdefault("cleanup_proxy", False)
+        hub = MockHub(**kwargs)
+        hubs.append(hub)
+        return hub
+
+    yield make
+
+    for hub in hubs:
+        if getattr(hub, "db", None) is not None:
+            # fully initialized
+            await hub.cleanup()
+        elif hub._db_lock is not None:
+            # exited before init_db, as a fenced Hub does
+            hub._db_lock.release()
+
+
+def test_db_lock_disabled_by_default():
+    hub = MockHub()
+    assert hub.db_lock is False
+    assert hub.db_lock_timeout == 0
+    assert hub.db_lock_check_interval == 30
+
+
+@pytest.mark.db
+@needs_server_db
+async def test_app_second_hub_exits_when_locked(hub_pair):
+    a = hub_pair(db_lock=True, db_lock_timeout=0)
+    await a.initialize([])
+    assert a._db_lock.held
+
+    b = hub_pair(db_lock=True, db_lock_timeout=0)
+    with pytest.raises(SystemExit):
+        await b.initialize([])
+    assert not b._db_lock.held
+
+
+@pytest.mark.db
+@needs_server_db
+async def test_app_second_hub_times_out(hub_pair):
+    a = hub_pair(db_lock=True, db_lock_timeout=0)
+    await a.initialize([])
+
+    b = hub_pair(db_lock=True, db_lock_timeout=1.5)
+    loop = asyncio.get_running_loop()
+    tic = loop.time()
+    with pytest.raises(SystemExit):
+        await b.initialize([])
+    assert loop.time() - tic >= 1.5
+
+
+@pytest.mark.db
+@needs_server_db
+async def test_app_standby_takes_over(hub_pair):
+    a = hub_pair(db_lock=True, db_lock_timeout=-1)
+    await a.initialize([])
+
+    b = hub_pair(db_lock=True, db_lock_timeout=-1)
+    task = asyncio.ensure_future(b.initialize([]))
+    await asyncio.sleep(2)
+    # still waiting: no lock, no database session
+    assert not task.done()
+    assert not b._db_lock.held
+    assert getattr(b, "db", None) is None
+
+    # graceful shutdown of the active hub releases the lock
+    await a.cleanup()
+    assert not a._db_lock.held
+    await asyncio.wait_for(task, timeout=15)
+    assert b._db_lock.held
+    assert b.db is not None
+
+
+@pytest.mark.db
+@needs_server_db
+async def test_app_lock_check_reacquires_after_lost_connection(hub_pair):
+    a = hub_pair(db_lock=True)
+    await a.initialize([])
+    # drop the lock connection behind the hub's back
+    a._db_lock._drop_connection()
+    a._check_db_lock()
+    assert a._db_lock.held
+
+
+@pytest.mark.db
+@needs_server_db
+async def test_app_lock_check_exits_if_lock_taken(hub_pair):
+    a = hub_pair(db_lock=True)
+    await a.initialize([])
+    a._db_lock._drop_connection()
+    other = DatabaseLock(TEST_DB_URL)
+    try:
+        assert other.try_acquire()
+        with pytest.raises(SystemExit):
+            a._check_db_lock()
+    finally:
+        other.release()
