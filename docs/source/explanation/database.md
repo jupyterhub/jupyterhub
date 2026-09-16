@@ -58,6 +58,10 @@ We are slowly working to remove these assumptions, and moving to a more traditio
 This will enable multiple Hub instances and enable scaling JupyterHub, but will significantly reduce the number of active users a single Hub instance can serve.
 :::
 
+Because the Hub owns its database, **two Hub processes must never use the same database at the same time**.
+Nothing in the database itself prevents this from happening by accident (for example, `replicas: 2` in a Kubernetes Deployment), and the result is silently corrupted state.
+See [](explanation:hub-database-lock) for how to enforce this, and how to use it to run a standby Hub.
+
 ### Database performance in a typical request
 
 Most authenticated requests to JupyterHub involve a few database transactions:
@@ -121,6 +125,65 @@ The sqlite documentation provides a helpful page about [when to use SQLite and
 where traditional RDBMS may be a better choice](https://sqlite.org/whentouse.html).
 
 In general, you select your database backend with [](JupyterHub.db_url), and can further configure it (usually not necessary) with [](JupyterHub.db_kwargs).
+
+(explanation:hub-database-lock)=
+
+## Guaranteeing a single active Hub (fencing and standby)
+
+With PostgreSQL or MySQL/MariaDB, the Hub can use the database server's own session-scoped locks
+(`pg_try_advisory_lock` on PostgreSQL, `GET_LOCK` on MySQL) to make the "one Hub per database" rule explicit:
+
+```python
+c.JupyterHub.db_lock = True
+```
+
+On startup, before it reads or upgrades the database, the Hub acquires the lock.
+If another Hub already holds it, this Hub exits with an error instead of corrupting shared state.
+The database releases the lock automatically when the holding session ends, so a Hub that crashes (or a node that is lost) never leaves a stale lock behind.
+This has no effect with SQLite, where the database file already enforces a single process.
+
+### Running a standby Hub
+
+JupyterHub cannot run multiple _active_ Hubs (see above), but with the lock in place you can run additional Hub processes as **hot standbys** that wait for the lock instead of exiting:
+
+```python
+c.JupyterHub.db_lock = True
+# negative: wait indefinitely for the lock
+c.JupyterHub.db_lock_timeout = -1
+```
+
+A standby Hub does not open a database session, does not talk to the proxy, and does not serve the Hub API.
+It only answers health probes on the Hub's bind URL:
+
+- `/hub/health` returns 200 (the process is alive), and
+- `/hub/api/health` and every other path return 503 with `{"status": "standby"}` (the process is not ready).
+
+When the active Hub exits (a graceful restart releases the lock immediately) or its database session is lost (a crash or a lost node),
+a standby acquires the lock within about a second and continues its normal startup.
+Because the standby process is already scheduled and its image already pulled, this removes scheduling and startup time from a Hub restart.
+Users' running single-user servers are unaffected, as with any Hub restart, as long as [](JupyterHub.cleanup_servers) is False.
+
+While it holds the lock, the active Hub periodically (every [](JupyterHub.db_lock_check_interval) seconds) verifies that its lock session is still alive.
+If the session was dropped (for example, during a database failover) it reacquires the lock.
+If a standby acquired it in the meantime, the old Hub exits, since it can no longer guarantee it is the only Hub using the database.
+
+In Kubernetes, this pattern looks like:
+
+- an external PostgreSQL or MySQL database,
+- a Hub Deployment with `replicas: 2` and a strategy that does not require the new pod to become ready while the old one is still running
+  (`type: Recreate`, or `RollingUpdate` with `maxSurge: 0` and `maxUnavailable: 1`),
+- a readiness probe on `/hub/api/health` and a liveness probe on `/hub/health`.
+
+:::{warning}
+Session-level locks require a stable server session for the lifetime of the Hub process.
+They do not work through connection poolers in _transaction_ pooling mode (for example PgBouncer with `pool_mode = transaction`).
+Use session pooling, or connect the Hub directly to the database.
+:::
+
+:::{note}
+The `jupyterhub upgrade-db` and `jupyterhub shell` commands do not take the lock.
+Stop the Hub before running them, as you should already be doing.
+:::
 
 ## Notes and Tips
 
