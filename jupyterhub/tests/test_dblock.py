@@ -103,7 +103,7 @@ def test_db_lock_disabled_by_default():
     hub = MockHub()
     assert hub.db_lock is False
     assert hub.db_lock_timeout == 0
-    assert hub.db_lock_check_interval == 30
+    assert hub.db_lock_check_interval == 5
 
 
 @pytest.mark.db

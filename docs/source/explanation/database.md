@@ -163,9 +163,17 @@ a standby acquires the lock within about a second and continues its normal start
 Because the standby process is already scheduled and its image already pulled, this removes scheduling and startup time from a Hub restart.
 Users' running single-user servers are unaffected, as with any Hub restart, as long as [](JupyterHub.cleanup_servers) is False.
 
-While it holds the lock, the active Hub periodically (every [](JupyterHub.db_lock_check_interval) seconds) verifies that its lock session is still alive.
+While it holds the lock, the active Hub periodically (every [](JupyterHub.db_lock_check_interval) seconds, 5 by default) verifies that its lock session is still alive.
 If the session was dropped (for example, during a database failover) it reacquires the lock.
 If a standby acquired it in the meantime, the old Hub exits, since it can no longer guarantee it is the only Hub using the database.
+
+:::{note}
+If the database drops the active Hub's sessions while the Hub process itself is healthy,
+a standby can acquire the lock up to `db_lock_check_interval` seconds before the old Hub notices and exits.
+This is the only situation in which two Hubs can briefly use the database, and it is bounded by that interval.
+Session drops of this kind are rare (a database restart or failover), and in that case the old Hub's cached state was
+already suspect. Keep the interval short; the check is a single `SELECT 1`.
+:::
 
 In Kubernetes, this pattern looks like:
 

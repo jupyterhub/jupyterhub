@@ -247,10 +247,8 @@ class UpgradeDB(Application):
 class StandbyHandler(web.RequestHandler):
     """Answer requests while this Hub waits for the database lock (not ready)"""
 
-    status = 503
-
     def prepare(self):
-        self.set_status(self.status)
+        self.set_status(503)
         self.set_header("Content-Type", "application/json")
         self.set_header("Retry-After", "5")
         self.finish(
@@ -1648,13 +1646,17 @@ class JupyterHub(Application):
     ).tag(config=True)
 
     db_lock_check_interval = Float(
-        30,
+        5,
         help="""Interval (in seconds) between checks that the database lock
         connection is still alive.
 
         If the connection was lost, the Hub tries to reacquire the lock.
         If another Hub acquired it in the meantime, this Hub exits, since it
         can no longer guarantee it is the only Hub using the database.
+
+        This bounds how long an active Hub whose database session was dropped
+        (e.g. by a database failover) can keep running after a standby Hub
+        has taken over. The check is a single `SELECT 1`, so it is cheap.
 
         Set to 0 to disable the check. Only used when `db_lock` is enabled.
 
