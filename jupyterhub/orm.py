@@ -46,7 +46,15 @@ from sqlalchemy.pool import StaticPool
 from sqlalchemy.types import LargeBinary, Text, TypeDecorator
 from tornado.log import app_log
 
-from .utils import compare_token, fmt_ip_url, hash_token, new_token, random_port, utcnow
+from .utils import (
+    _TOKEN_MAX_LEN,
+    compare_token,
+    fmt_ip_url,
+    hash_token,
+    new_token,
+    random_port,
+    utcnow,
+)
 
 # top-level variable for easier mocking in tests
 utcnow = partial(utcnow, with_tz=False)
@@ -599,6 +607,7 @@ class Hashed(Expiring):
     rounds = 16384
     salt_bytes = 8
     min_length = 8
+    max_len = _TOKEN_MAX_LEN
 
     # values to use for internally generated tokens,
     # which have good entropy as UUIDs
@@ -613,6 +622,10 @@ class Hashed(Expiring):
     @token.setter
     def token(self, token):
         """Store the hashed value and prefix for a token"""
+        if len(token) > self.max_len:
+            raise ValueError(
+                f"Cannot create tokens larger than {self.max_len} characters"
+            )
         self.prefix = token[: self.prefix_length]
         if self.generated:
             # Generated tokens are UUIDs, which have sufficient entropy on their own
