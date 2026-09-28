@@ -150,7 +150,7 @@ Those signals are only taken into account by the server's internal kernel culler
 
 Tips for more aggressive culling:
 
-1. set `cull_connected = True` if you want to prevent a left-open JupyterLab from keeping a kernel alive
+1. set `cull_connected = True` if you want to prevent a left-open JupyterLab tab from keeping a kernel alive
 2. set `cull_busy = True` if you want to prevent a forgotten infinite loop from keeping a kernel alive
 
 ```{warning}
@@ -171,7 +171,7 @@ c.TerminalManager.cull_interval = 60 # interval to check for idle terminals
 
 If you proxy other applications (e.g. RStudio) via [jupyter-server-proxy](inv:jupyter-server-proxy#index),
 we reintroduce the issue of a proxy needing to track activity to a proxied service without the knowledge of whether each request is truly meaningful.
-Like configurable-http-proxy, jupyter-server-proxy tracks every request to a proxied application as 'activity'.
+Like configurable-http-proxy, jupyter-server-proxy tracks every request to a proxied application as "activity".
 You can exclude a given proxied application from being considered activity by specifying:
 
 ```python
