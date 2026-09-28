@@ -2,8 +2,12 @@
 
 # JupyterHub and idleness
 
+```{seealso}
+This doc assumes some familiarity with [](#explanation:concepts), check it out before getting too deep into this.
+```
+
 JupyterHub tracks a `last_activity` field on users and servers whenever it notices "activity".
-This field is an ISO8601 timestamp indicating the last time there was "activity" by that user or on that server.
+This field is represented as an ISO8601 timestamp in the JupyterHub API, indicating the last time there was "activity" by that user or on that server.
 These can be simply informative metrics (they show up in the admin UI and REST API), but are also meant to inform a measure of "idleness" which can be used to make decisions like shutting down servers that haven't been used in some time, to avoid deployments paying for unused resources.
 
 But this raises the question:
@@ -34,7 +38,27 @@ idle/inactive
 cull
 : shut down a server (or kernel or other resource) that has become idle
 
+(flavors-of-idleness)=
+
+## Three flavors of idleness
+
+There are generally three situations in which a server is 'idle' (i.e. a human isn't actively using it), and the characteristics and configurations relevant to making sure it is considered idle (or not) vary in each:
+
+1. Fully disconnected (no browsers connected to the server)
+2. A browser tab is left open, but forgotten in the background (_shouldn't_, but can, maintain ongoing network activity)
+3. A browser tab is open _and is focused_ (often _is_ considered a good proxy for human attention, but deployments can disagree)
+
+The first case will usually be considered idle by the typical monitoring mechanisms.
+The last will usually be considered active, unless some significant effort is made.
+The second case (a tab open, but no human is looking at it) is the one most often misattributed as active that deployments would _like_ to be considered idle and culled.
+
 ## Sources of activity
+
+JupyterHub tracks activity on the user and server level, while Jupyter Server tracks activity.
+Activity can come from API requests, network traffic through the proxy, or tracked events internal to each user's server.
+This section covers each source in detail.
+
+### User activity
 
 On the User, any authenticated request as that user counts as activity,
 so visiting JupyterHub pages, making API requests, visiting your own server or any JupyterHub-authenticated service.
@@ -79,6 +103,7 @@ c.JupyterHub.last_activity_interval = 0
 disables retrieving activity information from the proxy, relying on other activity sources.
 Doing so gives your deployment more precise control over what counts as activity,
 but you must make sure that relevant user activity does get tracked and reported somewhere.
+The main benefit of disabling tracking activity in the proxy is that idle traffic to a server is less likely to keep it alive.
 Proxy activity tracking is a blunt instrument, but it is at least simple and well defined.
 
 ## Activity in the server
@@ -90,16 +115,17 @@ without interactions.
 In summary, the Jupyter Server will report activity on any API, kernel, or terminal to JupyterHub.
 It _can_ shut itself down if it considers itself inactive, but this is disabled by default and will not occur if there is any "activity", including if any kernels or terminals are running, even if they are idle.
 
-Jupyter Server tracks _multiple_ sources of activity, and reports them to JupyterHub every `$JUPYTERHUB_ACTIVITY_INTERVAL` seconds (default: 300).
+Jupyter Server tracks _multiple_ sources of activity, and reports them to JupyterHub every [`$JUPYTERHUB_ACTIVITY_INTERVAL`](#JupyterHubSingleUser.hub_activity_interval) seconds (default: 300).
 Like with network activity, make sure to set your last activity reporting interval to be short enough relative to your culling interval and timeout.
 
 Like JupyterHub, authenticated API requests to the server count as activity.
 But there are other kinds of activity, such as kernel activity and execution state,
 terminal activity, and extension activity, which can be considered.
 
-Jupyter Server Extensions have the ability to track activity and report to Jupyter Server.
-Any timestamp written to `self.settings[*_last_activity]` will be considered,
-and whatever the latest timestamp will be reported to JupyterHub as the last activity for the server.
+Jupyter Server Extensions have the ability to track activity and report it to Jupyter Server.
+The Server tracks a global `settings` dictionary, available to all extensions.
+Any timestamp stored in the global `settings` dict that ends with `_last_activity` will be considered.
+When the Server is reporting activity to the Hub, it looks at all of these timestamps and uses the latest one as the last activity on theServer.
 
 Extensions also have a `current_activity` indicator which is a boolean that _doesn't_ update the `last_activity` timestamp,
 but informs Jupyter Server's own "shutdown if there's no activity" behavior.
@@ -172,7 +198,7 @@ c.TerminalManager.cull_interval = 60 # interval to check for idle terminals
 If you proxy other applications (e.g. RStudio) via [jupyter-server-proxy](inv:jupyter-server-proxy#index),
 we reintroduce the issue of a proxy needing to track activity to a proxied service without the knowledge of whether each request is truly meaningful.
 Like configurable-http-proxy, jupyter-server-proxy tracks every request to a proxied application as "activity".
-You can exclude a given proxied application from being considered activity by specifying:
+You can exclude a given proxied application from being considered activity by specifying `update_last_activity: False`:
 
 ```python
 c.ServerProxy.servers = {
@@ -184,7 +210,7 @@ c.ServerProxy.servers = {
 ```
 
 Starting with jupyter-server-proxy 4.6, you can further control _which_ proxied requests count as activity,
-by specifying [](inv:jupyter-server-proxy:std:doc#server-process) as a list of URL patterns (regular expressions) to exclude from contributing to the `last_activity` metric:
+by specifying [`exclude_last_activity_patterns`](inv:jupyter-server-proxy:std:doc#server-process) as a list of URL patterns (regular expressions) to exclude from contributing to the `last_activity` metric:
 
 ```python
 c.ServerProxy.servers = {
@@ -197,8 +223,7 @@ c.ServerProxy.servers = {
 }
 ```
 
-`jupyter-rsession-proxy` 2.6 uses this to try to avoid the requests typical of an idle RStudio connection
-being treated as user activity.
+`jupyter-rsession-proxy` 2.6 uses this to try to avoid the requests typical of an idle RStudio connection being treated as user activity.
 
 ## Other servers
 
@@ -247,6 +272,12 @@ and no API requests or other Extension activity registered within this timeout,
 the server will shut itself down.
 
 ## Troubleshooting
+
+Troubleshooting idleness usually means that you and JupyterHub disagree about whether a server is idle.
+Either, you consider it idle and it's getting activity registered,
+or you consider it active, but it is getting culled when you don't want it to.
+
+It is useful to first identify which [flavor of idleness](flavors-of-idleness) your server is in when the disagreement occurs, because it affects the tools available to you to address the difference.
 
 ### Why is this idle server _not_ getting culled?
 
