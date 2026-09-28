@@ -634,3 +634,19 @@ def service_data(service_name):
         "oauth_client_allowed_scopes": ["inherit"],
         "info": {'foo': 'bar'},
     }
+
+
+@fixture
+def no_proxy_activity(app):
+    """Disable activity tracking from proxy"""
+    real_get_routes = app.proxy.get_all_routes
+
+    async def get_routes():
+        routes = await real_get_routes()
+        for route in routes.values():
+            if "data" in route:
+                route["data"].pop("last_activity", None)
+        return routes
+
+    with mock.patch.object(app.proxy, "get_all_routes", get_routes):
+        yield
