@@ -31,6 +31,7 @@ proxy
 user
 service
 services.auth
+singleuser
 httpclient
 ```
 
