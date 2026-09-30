@@ -1,5 +1,6 @@
 """Tests for jupyterhub.singleuser"""
 
+import asyncio
 import os
 import sys
 import warnings
@@ -490,3 +491,27 @@ async def test_api_403_no_cookie(app, user, full_spawn):
     # no state cookie set
     assert not r.cookies
     await user.stop()
+
+
+@pytest.mark.skipif(IS_JUPYVERSE, reason="jupyverse doesn't track activity")
+async def test_singleuser_activity(app, user, full_spawn, no_proxy_activity):
+    token = user.new_api_token(scopes=[f"access:servers!server={user.name}/"])
+    user.spawner.environment["JUPYTERHUB_ACTIVITY_INTERVAL"] = "1"
+    await user.spawn()
+    await app.proxy.add_user(user)
+    url = url_path_join(public_url(app, user), "/api/contents/")
+    # wait up to 10 seconds (100 * 0.1)
+    before_activity_user = user.last_activity
+    before_activity_spawner = user.spawner.last_activity
+    for i in range(100):
+        r = await async_requests.get(url, headers={"Authorization": f"Bearer {token}"})
+        r.raise_for_status()
+        if (
+            user.last_activity == before_activity_user
+            or user.spawner.last_activity == before_activity_spawner
+        ):
+            await asyncio.sleep(0.1)
+        else:
+            break
+    assert user.last_activity > before_activity_user
+    assert user.spawner.last_activity > before_activity_spawner
