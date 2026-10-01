@@ -80,6 +80,21 @@ def populate_db(url):
         spawner.server = orm.Server()
         db.commit()
 
+        # per-server oauth client tied to a spawner
+        # regression coverage for jupyterhub/jupyterhub#5427: the api_token_scopes
+        # upgrade migration must resolve access_scopes() for a spawner's oauth
+        # client without lazy-loading future ORM relationships (User.roles,
+        # User.shared_with_me) that reference not-yet-existing schema.
+        # The spawner.oauth_client relationship was added in 2.0.
+        if jupyterhub.version_info >= (2,):
+            server_oauth_client = orm.OAuthClient(
+                identifier='jupyterhub-user-has-server'
+            )
+            db.add(server_oauth_client)
+            db.commit()
+            spawner.oauth_client = server_oauth_client
+            db.commit()
+
         # admin's spawner is not running
         spawner = orm.Spawner(name='', user=admin)
         db.add(spawner)
