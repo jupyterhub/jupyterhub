@@ -8,6 +8,7 @@ from unittest import mock
 from urllib.parse import parse_qs, urlparse
 
 import pytest
+from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 from playwright.async_api import expect
 from tornado.escape import url_escape
 from tornado.httputil import url_concat
@@ -28,7 +29,17 @@ async def login(browser, username, password=None):
     await browser.get_by_label("Username:").fill(username)
     await browser.get_by_label("Password:").click()
     await browser.get_by_label("Password:").fill(password)
-    await browser.get_by_role("button", name="Sign in").click()
+    # sometimes sign in button doesn't trigger anything,
+    # retry if it doesn't after 5 seconds
+    for i in range(2):
+        try:
+            async with browser.expect_navigation(timeout=5_000, wait_until="commit"):
+                await browser.get_by_role("button", name="Sign in").click()
+        except PlaywrightTimeoutError as e:
+            print("Login didn't navigate, trying again...")
+            continue
+        else:
+            break
 
 
 async def login_home(browser, app, username):
