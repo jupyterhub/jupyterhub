@@ -23,7 +23,7 @@ async def login(browser, username, password=None):
     """filling the login form by user and pass_w parameters and initiate the login"""
     if password is None:
         password = username
-
+    await browser.wait_for_load_state("domcontentloaded")
     await browser.get_by_label("Username:").click()
     await browser.get_by_label("Username:").fill(username)
     await browser.get_by_label("Password:").click()
@@ -54,7 +54,7 @@ async def login_home(browser, app, username):
 
 async def test_open_login_page(app, browser):
     login_url = url_path_join(public_host(app), app.hub.base_url, "login")
-    await browser.goto(login_url)
+    await browser.goto(login_url, wait_until="domcontentloaded")
     await expect(browser).to_have_url(re.compile(r".*/login"))
     await expect(browser).to_have_title("JupyterHub")
     form = browser.locator('//*[@id="login-main"]/form')
@@ -65,7 +65,7 @@ async def test_open_login_page(app, browser):
 async def test_submit_login_form(app, browser, user_special_chars):
     user = user_special_chars.user
     login_url = url_path_join(public_host(app), app.hub.base_url, "login")
-    await browser.goto(login_url)
+    await browser.goto(login_url, wait_until="domcontentloaded")
     await login(browser, user.name, password=user.name)
     expected_url = public_url(app, user)
     await browser.wait_for_url(expected_url)
@@ -227,23 +227,14 @@ async def test_login_otp(request, app, browser, username, request_otp):
 
 async def open_spawn_pending(app, browser, user_special_chars):
     user = user_special_chars.user
-    url = url_path_join(
-        public_host(app),
-        url_concat(
-            url_path_join(app.base_url, "login"),
-            {"next": url_path_join(app.base_url, "hub/home")},
-        ),
-    )
-    await browser.goto(url)
-    await login(browser, user.name, password=user.name)
+    await login_home(browser, app, user.name)
     url_spawn = url_path_join(
         public_host(app),
         app.hub.base_url,
         '/spawn-pending/' + user_special_chars.urlname,
     )
-    await browser.goto(url_spawn)
+    await browser.goto(url_spawn, wait_until="domcontentloaded")
     await expect(browser).to_have_url(url_spawn)
-    await browser.wait_for_load_state("domcontentloaded")
 
 
 async def test_spawn_pending_server_not_started(
@@ -347,8 +338,7 @@ async def test_spawn_pending_server_ready(app, browser, user_special_chars):
     await launch_btn.click()
     await browser.wait_for_selector("button", state="detached")
     home_page = url_path_join(public_host(app), ujoin(app.base_url, "hub/home"))
-    await browser.goto(home_page)
-    await browser.wait_for_load_state("domcontentloaded")
+    await browser.goto(home_page, wait_until="domcontentloaded")
     # checking that server is running and two butons present on the home page
     stop_start_btns = browser.locator('//div[@class="text-center"]').get_by_role(
         "button"
@@ -547,12 +537,9 @@ async def test_stop_button(app, browser, user_special_chars):
 async def open_token_page(app, browser, user):
     """function to open the token page"""
 
-    token_page = url_escape(app.base_url) + "hub/token"
-    url = url_path_join(public_host(app), app.hub.base_url, "/login?next=" + token_page)
-    await browser.goto(url)
-    await login(browser, user.name, password=str(user.name))
-    await expect(browser).to_have_url(re.compile(".*/hub/token"))
-    await browser.wait_for_load_state("domcontentloaded")
+    token_page = url_path_join(public_url(app), "hub/token")
+    await login_home(browser, app, user.name)
+    await browser.goto(token_page, wait_until="domcontentloaded")
 
 
 @pytest.mark.parametrize(
@@ -1561,7 +1548,7 @@ async def test_singleuser_xsrf(
     browser_user = create_user_with_scopes("self", "access:servers")
     # login browser_user
     login_url = url_path_join(public_host(app), app.hub.base_url, "login")
-    await browser.goto(login_url)
+    await browser.goto(login_url, wait_until="domcontentloaded")
     await login(browser, browser_user.name, browser_user.name)
     # end up at single-user
     await browser.wait_for_url(re.compile(rf".*/user/{browser_user.name}/.*"))
