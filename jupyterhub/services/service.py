@@ -45,7 +45,7 @@ import os
 import shlex
 import shutil
 from subprocess import Popen
-from urllib.parse import urlparse, urlunparse
+from urllib.parse import unquote, urlparse, urlunparse
 
 from traitlets import (
     Any,
@@ -199,8 +199,26 @@ class Service(LoggingConfigurable):
 
     name = Unicode(help="""The name of the service.
 
-        If the service has an http endpoint, it
+        If the service has an http endpoint, it will be proxied under this name.
         """).tag(input=True)
+
+    @validate("name")
+    def _validate_service_name(self, proposal):
+        name = proposal.value
+        unquoted = unquote(name)
+        if unquoted != name:
+            raise ValueError("Services cannot have escaped names")
+
+        if "/" in name:
+            raise ValueError("Service names must not contain '/'")
+        if not name:
+            raise ValueError("Service names must not be empty")
+        if set(name) == {"."}:
+            raise ValueError("Service names must not be relative path components")
+        if name != name.strip():
+            raise ValueError("Service names must not start or end with space")
+        return name
+
     admin = Bool(False, help="Does the service need admin-access to the Hub API?").tag(
         input=True
     )
