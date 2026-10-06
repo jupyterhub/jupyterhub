@@ -26,6 +26,7 @@ For admins:
 For users:
 
 - How can I ensure my server _doesn't_ get shut down, especially if I'm doing something that doesn't look like typical interactive work?
+- How can I ensure my server _does_ shut down to avoid accruing compute-hours against my quota or incurring compute costs?
 
 A few keywords that we will use throughout:
 
@@ -37,6 +38,11 @@ idle/inactive
 
 cull
 : shut down a server (or kernel or other resource) that has become idle
+
+```{note}
+This document has a lot of detail of how things work.
+If you got here with a question already, you might want to start at [](#idle-troubleshooting).
+```
 
 (flavors-of-idleness)=
 
@@ -271,6 +277,8 @@ when there are no terminals and no kernels running (e.g. culled by above configu
 and no API requests or other Extension activity registered within this timeout,
 the server will shut itself down.
 
+(idle-troubleshooting)=
+
 ## Troubleshooting
 
 Troubleshooting idleness usually means that you and JupyterHub disagree about whether a server is idle.
@@ -307,9 +315,15 @@ Then the only source of activity will be the requests to `/hub/api/users/.../act
 ### Why is my server getting culled?
 
 If your server is getting shut down when you don't want it do, the question to ask is: what are you doing that _should_ be registered as activity?
-It could be that your deployment has set a max age (usually in hours), and no amount of activity will keep it alive.
-It could be that the idle timeout is too short, and doesn't tolerate you sitting and reading and thinking.
-These are tuning parameters in the deployment, and often aren't easy for users to work around. Contact your administrator for more information.
+It could be that your deployment has set a max age (usually in hours or days), and no amount of activity will keep it alive.
+It could be that the idle timeout is too short, and doesn't tolerate you sitting and reading and thinking without clicking buttons and running code.
+These are tuning parameters in the deployment, and often aren't easy for users to work around.
+
+```{note}
+Administrators - because idle timeounts and max age are settings that directly affects users,
+make sure it is documented in your user documentation for your deployment,
+for example as [2i2c does here](https://docs.2i2c.org/admin/user-management/control-user-server/#stop-user-servers-after-inactivity).
+```
 
 #### Keeping a server alive
 
