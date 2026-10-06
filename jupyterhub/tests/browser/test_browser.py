@@ -40,9 +40,15 @@ async def login_home(browser, app, username):
         url_path_join(public_url(app), "hub/login"),
         {"next": ujoin(app.hub.base_url, "home")},
     )
-    await browser.goto(login_url)
-    await browser.wait_for_load_state("domcontentloaded")
-    async with browser.expect_navigation(url=re.compile(".*/hub/home")):
+    async with browser.expect_navigation(
+        url=re.compile(".*/hub/login"), wait_until="domcontentloaded"
+    ):
+        await browser.goto(login_url)
+
+    # there seems to be a race here
+    async with browser.expect_navigation(
+        url=re.compile(".*/hub/home"), wait_until="domcontentloaded"
+    ):
         await login(browser, username)
 
 
@@ -410,20 +416,9 @@ async def test_spawn_named_server_with_form(
 # HOME PAGE
 
 
-async def open_home_page(app, browser, user):
-    """function to open the home page"""
-
-    home_page = url_escape(app.base_url) + "hub/home"
-    url = url_path_join(public_host(app), app.hub.base_url, "/login?next=" + home_page)
-    await browser.goto(url)
-    await login(browser, user.name, password=str(user.name))
-    await expect(browser).to_have_url(re.compile(".*/hub/home"))
-    await browser.wait_for_load_state("domcontentloaded")
-
-
 async def test_home_nav_collapse(app, browser, user_special_chars):
     user = user_special_chars.user
-    await open_home_page(app, browser, user)
+    await login_home(browser, app, user.name)
     nav = browser.locator(".navbar")
     navbar_collapse = nav.locator(".navbar-collapse")
     logo = nav.locator("#jupyterhub-logo")
@@ -484,7 +479,7 @@ async def test_start_button_server_not_started(app, browser, user_special_chars)
     after starting 2 buttons are available"""
     user = user_special_chars.user
     urlname = user_special_chars.urlname
-    await open_home_page(app, browser, user)
+    await login_home(browser, app, user.name)
     # checking that only one button is presented
     start_stop_btns = browser.locator('//div[@class="text-center"]').get_by_role(
         "button"
@@ -522,7 +517,7 @@ async def test_stop_button(app, browser, user_special_chars):
     the start button is displayed with new name"""
 
     user = user_special_chars.user
-    await open_home_page(app, browser, user)
+    await login_home(browser, app, user.name)
     # checking that only one button is presented
     start_stop_btns = browser.locator('//div[@class="text-center"]').get_by_role(
         "button"
@@ -694,7 +689,7 @@ async def test_request_token_expiration(
     urlname = user_special_chars.urlname
     if token_opt == "server_up":
         # open the home page
-        await open_home_page(app, browser, user)
+        await login_home(browser, app, user.name)
         # start server via clicking on the Start button
         async with browser.expect_navigation(url=f"**/user/{urlname}/"):
             await browser.locator("#start").click()
@@ -864,7 +859,7 @@ async def test_revoke_token(app, browser, token_type, user_special_chars):
 
     user = user_special_chars.user
     # open the home page
-    await open_home_page(app, browser, user)
+    await login_home(browser, app, user.name)
     if token_type == "server_up" or token_type == "both":
         # Start server via clicking on the Start button
         async with browser.expect_navigation(
@@ -990,9 +985,9 @@ async def test_menu_bar(app, browser, page, logged_in, user_special_chars):
 async def test_user_logout(app, browser, url, user_special_chars):
     user = user_special_chars.user
     if "/hub/home" in url:
-        await open_home_page(app, browser, user)
+        await login_home(browser, app, user.name)
     elif "/hub/token" in url:
-        await open_home_page(app, browser, user)
+        await login_home(browser, app, user.name)
     elif "/hub/spawn" in url:
         await open_spawn_pending(app, browser, user_special_chars)
     logout_btn = browser.get_by_role("button", name="Logout")
@@ -1159,21 +1154,13 @@ async def test_oauth_page(
 
 async def open_admin_page(app, browser, login_as=None):
     """Login as `user` and open the admin page"""
-    admin_page = url_escape(app.base_url) + "hub/admin"
     if login_as:
-        user = login_as
-        url = url_path_join(
-            public_host(app), app.hub.base_url, "/login?next=" + admin_page
-        )
-        await browser.goto(url)
-        await browser.wait_for_load_state("domcontentloaded")
-        await login(browser, user.name, password=str(user.name))
-        await expect(browser).to_have_url(re.compile(".*/hub/admin"))
-    else:
-        # url = url_path_join(public_host(app), app.hub.base_url, "/login?next=" + admin_page)
-        await browser.goto(admin_page)
-        await expect(browser).to_have_url(re.compile(".*/hub/admin"))
-    await browser.wait_for_load_state("domcontentloaded")
+        await login_home(browser, app, login_as.name)
+
+    async with browser.expect_navigation(
+        url=re.compile(".*/hub/admin"), wait_until="domcontentloaded"
+    ):
+        await browser.goto(url_path_join(public_url(app), "hub/admin"))
     # wait for an element to be rendered by react
     await expect(browser.locator(".pagination-footer")).to_be_visible()
 
