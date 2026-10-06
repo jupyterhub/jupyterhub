@@ -1399,3 +1399,33 @@ def test_has_scope_post_filter(scope, have_scopes, ok):
             has_scope(scope, have_scopes, post_filter=True)
     else:
         assert has_scope(scope, have_scopes, post_filter=True) == ok
+
+
+@pytest.mark.parametrize(
+    "have_scopes, ok",
+    [
+        (["tokens!service=NAME"], False),
+        (["tokens!user=NAME"], True),
+        (["tokens!group=somegroup"], False),
+        (["tokens"], True),
+    ],
+)
+async def test_service_token_scope(
+    app, have_scopes, ok, create_service_with_scopes, user
+):
+    have_scopes = [s.replace("NAME", user.name) for s in have_scopes]
+    service = create_service_with_scopes(*have_scopes, name=user.name)
+    token = service.new_api_token()
+    r = await api_request(
+        app,
+        'users',
+        user.name,
+        "tokens",
+        headers={'Authorization': f'token {token}'},
+        method="post",
+    )
+    if ok:
+        assert r.ok
+        r.raise_for_status()
+    else:
+        assert r.status_code == 403
