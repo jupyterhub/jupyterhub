@@ -340,6 +340,10 @@ intersphinx_mapping = get_intersphinx_mapping(
     }
 )
 intersphinx_mapping["aiohttp"] = ("https://docs.aiohttp.org/en/stable/", None)
+intersphinx_mapping["jupyter-server-proxy"] = (
+    "https://jupyter-server-proxy.readthedocs.io/en/latest/",
+    None,
+)
 
 # -- Options for the opengraph extension -------------------------------------
 # ref: https://github.com/wpilibsuite/sphinxext-opengraph#options
