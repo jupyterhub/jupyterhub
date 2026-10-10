@@ -478,11 +478,18 @@ def hash_token(token, salt=8, rounds=16384, algorithm='sha512'):
     return f"{algorithm}:{rounds}:{salt}:{digest}"
 
 
+# valid tokens cannot ever be longer than this
+_TOKEN_MAX_LEN = 64
+
+
 def compare_token(compare, token):
     """Compare a token with a hashed token.
 
     Uses the same algorithm and salt of the hashed token for comparison.
     """
+    if len(token) >= _TOKEN_MAX_LEN:
+        # don't bother hashing tokens that are too long to be valid
+        return False
     algorithm, srounds, salt, _ = compare.split(':')
     hashed = hash_token(
         token, salt=salt, rounds=int(srounds), algorithm=algorithm
