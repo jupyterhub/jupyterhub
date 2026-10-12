@@ -71,6 +71,7 @@ so visiting JupyterHub pages, making API requests, visiting your own server or a
 All of these count towards your user's activity.
 A user's last activity is useful in reporting (such as monthly active users),
 but action is rarely taken as a result of an inactive user.
+
 More often actionable, on the other hand, is activity on a user's _server_,
 where evidence of inactivity is often used to shut the server down to avoid wasting resources.
 At the same time, server activity is more complicated to define,
