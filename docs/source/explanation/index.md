@@ -13,5 +13,6 @@ database
 websecurity
 oauth
 singleuser
+idle
 ../rbac/index
 ```

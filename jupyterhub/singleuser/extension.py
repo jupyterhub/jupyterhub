@@ -395,7 +395,12 @@ class JupyterHubSingleUser(ExtensionApp):
         return os.environ.get('JUPYTERHUB_SERVER_NAME', '')
 
     hub_activity_url = Unicode(
-        config=True, help="URL for sending JupyterHub activity updates"
+        config=True,
+        help="""
+        URL for sending JupyterHub activity updates.
+
+        Uses `$JUPYTERHUB_ACTIVITY_URL` environment variable by default.
+        """,
     )
 
     @default('hub_activity_url')
@@ -408,6 +413,8 @@ class JupyterHubSingleUser(ExtensionApp):
         help="""
         Interval (in seconds) on which to update the Hub
         with our latest activity.
+
+        Uses `$JUPYTERHUB_ACTIVITY_INTERVAL` environment variable by default.
         """,
     )
 

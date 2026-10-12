@@ -3,6 +3,7 @@
 # installation of jupyterhub that's already installed
 autodoc-traits
 intersphinx-registry
+jupyter-server>=2
 jupyterhub-sphinx-theme
 myst-parser>=0.19
 pre-commit
