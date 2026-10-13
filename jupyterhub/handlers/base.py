@@ -1003,6 +1003,15 @@ class BaseHandler(RequestHandler):
         if not self.authenticator.enable_auth_state:
             # auth_state is not enabled. Force None.
             auth_state = None
+        else:
+            if self.authenticator.reconcile_auth_state_hook:
+                existing_auth_state = await user.get_auth_state()
+                auth_state = await maybe_future(
+                    self.authenticator.reconcile_auth_state_hook(
+                        authenticated, existing_auth_state
+                    )
+                )
+
 
         await user.save_auth_state(auth_state)
 

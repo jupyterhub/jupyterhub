@@ -69,6 +69,18 @@ class Authenticator(LoggingConfigurable):
         """,
     )
 
+    reconcile_auth_state_hook = Any(
+        config=True,
+        help="""
+        A hook for reconciling existing auth_state information with new auth_state.
+
+        Receives the new auth_model, and existing auth_state, and must return the
+        new auth_state after reconciling whatever needs to be reconciled.
+
+        May be a coroutine
+        """
+    )
+
     auth_refresh_age = Integer(
         300,
         config=True,
