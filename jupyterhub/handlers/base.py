@@ -1010,7 +1010,7 @@ class BaseHandler(RequestHandler):
                 existing_auth_state = await user.get_auth_state()
                 auth_state = await maybe_future(
                     self.authenticator.reconcile_auth_state_hook(
-                        authenticated, existing_auth_state
+                        self.authenticator, authenticated, existing_auth_state
                     )
                 )
 

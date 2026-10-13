@@ -382,7 +382,7 @@ async def test_auth_state(app, auth_state_enabled):
 
 
 async def test_reconcile_auth_state_hook(app, auth_state_enabled, username):
-    async def test_hook(authenticated, auth_state):
+    async def test_hook(authenticator, authenticated, auth_state):
         new_auth_state = {}
         new_auth_state.update(authenticated["auth_state"])
         # increment login counter, start at 1
