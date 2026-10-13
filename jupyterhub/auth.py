@@ -69,6 +69,44 @@ class Authenticator(LoggingConfigurable):
         """,
     )
 
+    reconcile_auth_state_hook = Any(
+        config=True,
+        help="""
+        An optional hook function that you can implement to reconcile existing
+        and new auth_state during authentication. For example, creating new API
+        tokens in external services but only if they aren't already in auth_state
+        or just to put in additional information in `auth_state` that persists
+        over time.
+
+        This function is called after the user has passed all authentication checks
+        and is ready to successfully authenticate. This function must return the
+        auth_state dict reguardless of changes to it.
+
+        The hook is called with 3 positional arguments: `(authenticator, auth_model, existing_auth_state)`.
+        `auth_model` is a dict with the result of the current authentication flow, including
+        the new `auth_state`. `existing_auth_state` is the previous `auth_state`, set to
+        `None` if there was no `auth_state` prior.
+
+        This may be a coroutine.
+
+        .. versionadded: 6.1
+
+        Example::
+
+            # Create a secret once and persist it across logins in auth_state,
+            # ignoring any new auth_state.
+            import secrets
+            def my_hook(authenticator, auth_model, existing_auth_state):
+                if 'MY_SECRET' in existing_auth_state:
+                    return existing_auth_state
+                existing_auth_state['MY_SECRET'] = secrets.token_hex(16)
+
+                return existing_auth_state
+
+            c.Authenticator.reconcile_auth_state_hook = my_hook
+        """,
+    )
+
     auth_refresh_age = Integer(
         300,
         config=True,
