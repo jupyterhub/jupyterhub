@@ -383,14 +383,34 @@ async def test_auth_state(app, auth_state_enabled):
 
 async def test_reconcile_auth_state_hook(app, auth_state_enabled, username):
     async def test_hook(authenticated, auth_state):
-        return {"x": 5}
+        new_auth_state = {}
+        new_auth_state.update(authenticated["auth_state"])
+        # increment login counter, start at 1
+        if auth_state is None:
+            login_counter = 1
+        else:
+            login_counter = auth_state["login"] + 1
+
+        new_auth_state["login"] = login_counter
+        return new_auth_state
 
     app.authenticator.reconcile_auth_state_hook = test_hook
+    expected_auth_state = {"login": 1}
+    expected_auth_state.update(app.authenticator.auth_state)
+
     await app.login_user(username)
-    app.authenticator.reconcile_auth_state_hook = None
     user = app.users[username]
     auth_state = await user.get_auth_state()
-    assert auth_state == {"x": 5}
+    assert auth_state == expected_auth_state
+    await app.login_user(username)
+    auth_state = await user.get_auth_state()
+    expected_auth_state["login"] += 1
+    assert auth_state == expected_auth_state
+    await app.login_user(username)
+    auth_state = await user.get_auth_state()
+    expected_auth_state["login"] += 1
+    assert auth_state == expected_auth_state
+    app.authenticator.reconcile_auth_state_hook = None
 
 
 async def test_auth_admin_non_admin(app):
