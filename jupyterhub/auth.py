@@ -104,7 +104,7 @@ class Authenticator(LoggingConfigurable):
                 return existing_auth_state
 
             c.Authenticator.reconcile_auth_state_hook = my_hook
-        """
+        """,
     )
 
     auth_refresh_age = Integer(

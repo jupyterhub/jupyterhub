@@ -1014,7 +1014,6 @@ class BaseHandler(RequestHandler):
                     )
                 )
 
-
         await user.save_auth_state(auth_state)
 
         return user
