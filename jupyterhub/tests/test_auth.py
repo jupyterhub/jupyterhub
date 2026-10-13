@@ -380,6 +380,16 @@ async def test_auth_state(app, auth_state_enabled):
     auth_state = await user.get_auth_state()
     assert auth_state == app.authenticator.auth_state
 
+async def test_reconcile_auth_state_hook(app, auth_state_enabled, username):
+    async def test_hook(authenticated, auth_state):
+        return {"x": 5}
+
+    app.authenticator.reconcile_auth_state_hook = test_hook
+    await app.login_user(username)
+    app.authenticator.reconcile_auth_state_hook = None
+    user = app.users[username]
+    auth_state = await user.get_auth_state()
+    assert auth_state == {"x": 5}
 
 async def test_auth_admin_non_admin(app):
     """admin should be passed through for non-admin users"""
