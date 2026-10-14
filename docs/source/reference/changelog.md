@@ -22,6 +22,52 @@ Contributors to major version bumps in JupyterHub include:
 
 ## 5.5
 
+### 5.5.3 - 2026-10-14
+
+5.5.3 is a security backport release, fixing a collection of moderate severity vulnerabilities, all of which require valid authentication, and only one of which affects most JupyterHub deployments.
+All deployments are encouraged to upgrade to JupyterHub 5.5.3 or 6.1.0.
+
+Only this one affects most deployments:
+
+- [GHSA-hx46-2cv3-mh6g] - denial of service via invalid spawner options
+
+Others affect a small minority of deployments:
+
+- [GHSA-5jhc-4h3c-q97h] - Incomplete privilege drop in LocalProcessSpawner when `setgroups()` fails (rare)
+- [GHSA-93gc-h923-mp36] - Insufficient validation of user and service names in URL components (requires admin permissions OR unconstrained user-selected usernames)
+- [GHSA-r764-xgvf-jrfj] - SharedPasswordAuthenticator: missing username normalization (only affects deployments using SharedPasswordAuthenticator with `admin_users`)
+- [GHSA-pvm9-48cg-w76j] - `token_expires_in_max_seconds` not properly enforced when set (not default)
+
+And one is only exploitable by users who already have admin-level permissions:
+
+- [GHSA-x7xh-7hc7-9436] - missing validation on user rename API, leading to XSS
+
+[GHSA-hx46-2cv3-mh6g]: https://github.com/jupyterhub/jupyterhub/security/advisories/GHSA-hx46-2cv3-mh6g
+[GHSA-5jhc-4h3c-q97h]: https://github.com/jupyterhub/jupyterhub/security/advisories/GHSA-5jhc-4h3c-q97h
+[GHSA-93gc-h923-mp36]: https://github.com/jupyterhub/jupyterhub/security/advisories/GHSA-93gc-h923-mp36
+[GHSA-r764-xgvf-jrfj]: https://github.com/jupyterhub/jupyterhub/security/advisories/GHSA-r764-xgvf-jrfj
+[GHSA-pvm9-48cg-w76j]: https://github.com/jupyterhub/jupyterhub/security/advisories/GHSA-pvm9-48cg-w76j
+[GHSA-x7xh-7hc7-9436]: https://github.com/jupyterhub/jupyterhub/security/advisories/GHSA-x7xh-7hc7-9436
+
+#### Bugs fixed
+
+- Set upper bound on token lengths [#5553](https://github.com/jupyterhub/jupyterhub/pull/5553) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics), [@willingc](https://github.com/willingc))
+- fix scope filter on POST /users/:name/tokens for services [#5554](https://github.com/jupyterhub/jupyterhub/pull/5554) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics))
+
+#### Maintenance and upkeep improvements
+
+- try even more to reduce flaky browser tests [#5555](https://github.com/jupyterhub/jupyterhub/pull/5555) ([@minrk](https://github.com/minrk))
+- try to improve browser test waiting and reporting [#5513](https://github.com/jupyterhub/jupyterhub/pull/5513) ([@minrk](https://github.com/minrk), [@krassowski](https://github.com/krassowski), [@manics](https://github.com/manics))
+
+#### Contributors to this release
+
+The following people contributed discussions, new ideas, code and documentation contributions, and review.
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/use/#how-does-this-tool-define-contributions-in-the-reports).
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2026-09-14&to=2026-10-14&type=c))
+
+@krassowski ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Akrassowski+updated%3A2026-09-14..2026-10-14&type=Issues)) | @manics ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amanics+updated%3A2026-09-14..2026-10-14&type=Issues)) | @minrk ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk+updated%3A2026-09-14..2026-10-14&type=Issues)) | @willingc ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Awillingc+updated%3A2026-09-14..2026-10-14&type=Issues))
+
 ### 5.5.2 - 2026-09-01
 
 5.5.2 is a security release fixing a low severity vulnerability in user-initiated sharing when users have been renamed
