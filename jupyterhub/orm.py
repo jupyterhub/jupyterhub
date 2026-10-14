@@ -77,6 +77,15 @@ class JSONDict(TypeDecorator):
         Currently only bytes are supported
 
         """
+        if isinstance(obj, dict) and any(
+            str(key).startswith("__jupyterhub_") for key in obj
+        ):
+            app_log.warning(
+                "Reserved keys in user_options: %r; will persist None.",
+                obj.keys(),
+            )
+            return None
+
         if not isinstance(obj, bytes):
             app_log.warning(
                 "Non-jsonable data in user_options: %r; will persist None.", type(obj)
@@ -88,7 +97,12 @@ class JSONDict(TypeDecorator):
     def _object_hook(self, dct):
         """decode non-json objects packed by _json_default"""
         if dct.get("__jupyterhub_bytes__", False):
-            return decodebytes(dct['data'].encode('ascii'))
+            # don't allow failure to prevent deserialization
+            try:
+                return decodebytes(dct['data'].encode('ascii'))
+            except Exception:
+                app_log.exception("Error decoding json bytes, returning None")
+                return None
         return dct
 
     def process_bind_param(self, value, dialect):
