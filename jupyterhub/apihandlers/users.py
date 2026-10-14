@@ -378,7 +378,7 @@ class UserAPIHandler(APIHandler):
             if not self.authenticator.validate_username(new_name):
                 raise web.HTTPError(
                     400,
-                    f"Invalid username: {safe_log(new_name)}",
+                    f"Invalid username: {new_name}",
                 )
             if self.find_user(new_name):
                 raise web.HTTPError(
