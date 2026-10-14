@@ -22,6 +22,8 @@ class SharedPasswordAuthenticator(Authenticator):
         - The password is stored in plain text at rest in config
         - Anyone with the password can login as **any user**
         - All users are able to login as all other (non-admin) users with the same password
+
+    .. versionadded:: 5.3.0
     """
 
     _USER_PASSWORD_MIN_LENGTH = 8
@@ -168,23 +170,22 @@ class SharedPasswordAuthenticator(Authenticator):
 
     async def authenticate(self, handler, data):
         """Checks against shared password"""
-        if data["username"] in self.admin_users:
+        # normalize username before comparing against existing admins
+        username = self.normalize_username(data["username"])
+        password = data["password"]
+        if username in self.admin_users:
             # Admin user
-            if self.admin_password and compare_digest(
-                data["password"], self.admin_password
-            ):
-                return {"name": data["username"], "admin": True, "groups": []}
+            if self.admin_password and compare_digest(password, self.admin_password):
+                return {"name": username, "admin": True, "groups": []}
         else:
-            if self.user_password and compare_digest(
-                data["password"], self.user_password
-            ):
+            if self.user_password and compare_digest(password, self.user_password):
                 # Anyone logging in with the standard password is *never* admin
-                return {"name": data["username"], "admin": False, "groups": []}
+                return {"name": username, "admin": False, "groups": []}
 
             for group_password in self.password_groups:
-                if compare_digest(data["password"], group_password):
+                if compare_digest(password, group_password):
                     return {
-                        "name": data["username"],
+                        "name": username,
                         "groups": self.password_groups[group_password],
                     }
 
