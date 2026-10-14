@@ -933,7 +933,7 @@ async def test_user_make_admin(app, create_user_with_scopes, is_admin):
 @mark.user
 @mark.parametrize("requester_is_admin", [True, False])
 @mark.parametrize("user_is_admin", [True, False])
-async def test_user_set_name(
+async def test_user_rename(
     app, user, create_user_with_scopes, requester_is_admin, user_is_admin
 ):
     db = app.db
@@ -942,13 +942,14 @@ async def test_user_set_name(
     user.admin = user_is_admin
     db.commit()
     new_name = new_username()
+    request_name = new_name.upper()  # test normalization
 
     r = await api_request(
         app,
         'users',
         user.name,
         method='patch',
-        data=json.dumps({'name': new_name}),
+        data=json.dumps({'name': request_name}),
         name=requester.name,
     )
     if requester_is_admin or not user_is_admin:
@@ -960,6 +961,28 @@ async def test_user_set_name(
     assert renamed is not None
     assert renamed.name == new_name
     assert renamed.id == user.id
+
+
+@pytest.mark.parametrize(
+    "new_name",
+    [
+        "in/valid",
+        "exists",
+    ],
+)
+async def test_user_rename_invalid(app, user, new_name):
+    db = app.db
+    if new_name == "exists":
+        add_user(app.db, app, name=new_name)
+
+    r = await api_request(
+        app,
+        'users',
+        user.name,
+        method='patch',
+        data=json.dumps({'name': new_name}),
+    )
+    assert r.status_code == 400
 
 
 @mark.user
