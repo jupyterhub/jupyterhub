@@ -12,6 +12,7 @@ from functools import partial
 from shutil import which
 from subprocess import PIPE, STDOUT, Popen
 from textwrap import dedent
+from urllib.parse import unquote
 
 try:
     import pamela
@@ -447,11 +448,20 @@ class Authenticator(LoggingConfigurable):
 
         Return True if username is valid, False otherwise.
         """
+        try:
+            unquoted = unquote(username)
+        except Exception as e:
+            unquoted = username
+
         if '/' in username:
             # / is not allowed in usernames
             return False
         if not username:
             # empty usernames are not allowed
+            return False
+        if set(username) == {"."} or set(unquoted) == {"."}:
+            # usernames that can resolve to weird url components are not allowed
+            # excludes names that are just `.` or `..`
             return False
         if username != username.strip():
             # starting/ending with space is not allowed

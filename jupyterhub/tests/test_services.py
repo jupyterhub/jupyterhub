@@ -6,6 +6,10 @@ from binascii import hexlify
 from contextlib import asynccontextmanager
 from subprocess import Popen
 
+import pytest
+
+from jupyterhub.services.service import Service
+
 from ..utils import (
     exponential_backoff,
     maybe_future,
@@ -58,6 +62,24 @@ async def test_managed_service(mockservice):
 
     assert service.proc.pid != first_pid
     assert service.proc.poll() is None
+
+
+@pytest.mark.parametrize(
+    "invalid_name",
+    [
+        ".",
+        "",
+        "a/b",
+        "..",
+        "%2e",
+        "%2E%2E",
+        ".%2e",
+        " space ",
+    ],
+)
+async def test_invalid_name(invalid_name):
+    with pytest.raises(ValueError):
+        service = Service(name=invalid_name)
 
 
 @skip_if_ssl
