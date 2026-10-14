@@ -25,6 +25,24 @@ Contributors to major version bumps in JupyterHub include:
 ### 6.1.0 - 2026-10-14
 
 6.1.0 is a small release, fixing some more regressions in 6.0 and adds a few new features.
+6.1.0 also fixes a collection of moderate severity vulnerabilities, all of which require valid authentication, and only one of which affects most JupyterHub deployments.
+These security fixes have all been backported to 5.5.3.
+All deployments are encouraged to upgrade to JupyterHub 5.5.3 or 6.1.0.
+
+Only this one affects most deployments:
+
+- [GHSA-hx46-2cv3-mh6g] - denial of service via invalid spawner options
+
+Others affect a small minority of deployments:
+
+- [GHSA-5jhc-4h3c-q97h] - Incomplete privilege drop in LocalProcessSpawner when `setgroups()` fails (rare)
+- [GHSA-93gc-h923-mp36] - Insufficient validation of user and service names in URL components (requires admin permissions OR unconstrained user-selected usernames)
+- [GHSA-r764-xgvf-jrfj] - SharedPasswordAuthenticator: missing username normalization (only affects deployments using SharedPasswordAuthenticator with `admin_users`)
+- [GHSA-pvm9-48cg-w76j] - `token_expires_in_max_seconds` not properly enforced when set (not default)
+
+And one is only exploitable by users who already have admin-level permissions:
+
+- [GHSA-x7xh-7hc7-9436] - missing validation on user rename API, leading to XSS
 
 ([full changelog](https://github.com/jupyterhub/jupyterhub/compare/6.0.1...6.1.0))
 
