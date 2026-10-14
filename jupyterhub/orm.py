@@ -1272,7 +1272,7 @@ class APIToken(Hashed, Base):
         else:
             assert service.id is not None
             orm_token.service = service
-        if expires_in:
+        if expires_in is not None:
             if not isinstance(expires_in, numbers.Real):
                 raise TypeError(
                     f"expires_in must be a positive integer or null, not {expires_in!r}"

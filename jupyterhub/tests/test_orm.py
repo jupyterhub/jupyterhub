@@ -562,6 +562,12 @@ def test_share_group(db):
     assert user2.all_shared_with_me == []
 
 
+def test_api_token_invalid_expires_in(app, user):
+    db = app.db
+    with pytest.raises(ValueError):
+        token = orm.APIToken.new(expires_in=0, user=user)
+
+
 def test_expiring_api_token(app, user):
     db = app.db
     token = orm.APIToken.new(expires_in=30, user=user)
