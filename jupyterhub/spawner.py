@@ -1837,11 +1837,31 @@ def set_user_setuid(username, chdir=True):
         Also try to chdir to the user's home directory.
         """
         os.setgid(gid)
+        # set supplemental groups, which doesn't always succeed.
+        # if it fails, make sure we don't inherit any group membership.
         try:
             os.setgroups(gids)
+            groups_ok = True
         except Exception as e:
-            print(f'Failed to set groups {e}', file=sys.stderr)
+            print(f'Failed to set groups: {e}', file=sys.stderr)
+            groups_ok = False
+            # Setting groups failed, clear supplemental group list to ensure we don't inherit groups.
+            # This might fail is syscall is rejected altogether.
+            try:
+                os.setgroups([])
+            except Exception as e:
+                print(f'Failed to clear groups: {e}', file=sys.stderr)
+
         os.setuid(uid)
+
+        if not groups_ok:
+            # if setting groups failed, verify group membership.
+            # only verify that we don't have any groups we shouldn't.
+            # must be checked after setuid.
+            current_groups = set(os.getgroups())
+            extra_groups = current_groups.difference(gids)
+            if extra_groups:
+                raise PermissionError(f"Failed to drop groups: {extra_groups}")
 
         # start in the user's home dir
         if chdir:
