@@ -8,6 +8,7 @@ from unittest import mock
 from urllib.parse import parse_qs, urlparse
 
 import pytest
+from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 from playwright.async_api import expect
 from tornado.escape import url_escape
 from tornado.httputil import url_concat
@@ -24,12 +25,22 @@ async def login(browser, username, password=None):
     """filling the login form by user and pass_w parameters and initiate the login"""
     if password is None:
         password = username
-
+    await browser.wait_for_load_state("domcontentloaded")
     await browser.get_by_label("Username:").click()
     await browser.get_by_label("Username:").fill(username)
     await browser.get_by_label("Password:").click()
     await browser.get_by_label("Password:").fill(password)
-    await browser.get_by_role("button", name="Sign in").click()
+    # sometimes sign in button doesn't trigger anything,
+    # retry if it doesn't after 5 seconds
+    for i in range(2):
+        try:
+            async with browser.expect_navigation(timeout=5_000, wait_until="commit"):
+                await browser.get_by_role("button", name="Sign in").click()
+        except PlaywrightTimeoutError as e:
+            print("Login didn't navigate, trying again...")
+            continue
+        else:
+            break
 
 
 async def login_home(browser, app, username):
@@ -41,14 +52,21 @@ async def login_home(browser, app, username):
         url_path_join(public_url(app), "hub/login"),
         {"next": ujoin(app.hub.base_url, "home")},
     )
-    await browser.goto(login_url)
-    async with browser.expect_navigation(url=re.compile(".*/hub/home")):
+    async with browser.expect_navigation(
+        url=re.compile(".*/hub/login"), wait_until="domcontentloaded"
+    ):
+        await browser.goto(login_url)
+
+    # there seems to be a race here
+    async with browser.expect_navigation(
+        url=re.compile(".*/hub/home"), wait_until="domcontentloaded"
+    ):
         await login(browser, username)
 
 
 async def test_open_login_page(app, browser):
     login_url = url_path_join(public_host(app), app.hub.base_url, "login")
-    await browser.goto(login_url)
+    await browser.goto(login_url, wait_until="domcontentloaded")
     await expect(browser).to_have_url(re.compile(r".*/login"))
     await expect(browser).to_have_title("JupyterHub")
     form = browser.locator('//*[@id="login-main"]/form')
@@ -59,7 +77,7 @@ async def test_open_login_page(app, browser):
 async def test_submit_login_form(app, browser, user_special_chars):
     user = user_special_chars.user
     login_url = url_path_join(public_host(app), app.hub.base_url, "login")
-    await browser.goto(login_url)
+    await browser.goto(login_url, wait_until="domcontentloaded")
     await login(browser, user.name, password=user.name)
     expected_url = public_url(app, user)
     await browser.wait_for_url(expected_url)
@@ -221,21 +239,13 @@ async def test_login_otp(request, app, browser, username, request_otp):
 
 async def open_spawn_pending(app, browser, user_special_chars):
     user = user_special_chars.user
-    url = url_path_join(
-        public_host(app),
-        url_concat(
-            url_path_join(app.base_url, "login"),
-            {"next": url_path_join(app.base_url, "hub/home")},
-        ),
-    )
-    await browser.goto(url)
-    await login(browser, user.name, password=user.name)
+    await login_home(browser, app, user.name)
     url_spawn = url_path_join(
         public_host(app),
         app.hub.base_url,
         '/spawn-pending/' + user_special_chars.urlname,
     )
-    await browser.goto(url_spawn)
+    await browser.goto(url_spawn, wait_until="domcontentloaded")
     await expect(browser).to_have_url(url_spawn)
 
 
@@ -318,8 +328,7 @@ async def test_spawn_pending_server_ready(app, browser, user_special_chars):
     await launch_btn.click()
     await browser.wait_for_selector("button", state="detached")
     home_page = url_path_join(public_host(app), ujoin(app.base_url, "hub/home"))
-    await browser.goto(home_page)
-    await browser.wait_for_load_state("domcontentloaded")
+    await browser.goto(home_page, wait_until="domcontentloaded")
     # checking that server is running and two butons present on the home page
     stop_start_btns = browser.locator('//div[@class="text-center"]').get_by_role(
         "button"
@@ -334,19 +343,9 @@ async def test_spawn_pending_server_ready(app, browser, user_special_chars):
 # HOME PAGE
 
 
-async def open_home_page(app, browser, user):
-    """function to open the home page"""
-
-    home_page = url_escape(app.base_url) + "hub/home"
-    url = url_path_join(public_host(app), app.hub.base_url, "/login?next=" + home_page)
-    await browser.goto(url)
-    await login(browser, user.name, password=str(user.name))
-    await expect(browser).to_have_url(re.compile(".*/hub/home"))
-
-
 async def test_home_nav_collapse(app, browser, user_special_chars):
     user = user_special_chars.user
-    await open_home_page(app, browser, user)
+    await login_home(browser, app, user.name)
     nav = browser.locator(".navbar")
     navbar_collapse = nav.locator(".navbar-collapse")
     logo = nav.locator("#jupyterhub-logo")
@@ -407,7 +406,7 @@ async def test_start_button_server_not_started(app, browser, user_special_chars)
     after starting 2 buttons are available"""
     user = user_special_chars.user
     urlname = user_special_chars.urlname
-    await open_home_page(app, browser, user)
+    await login_home(browser, app, user.name)
     # checking that only one button is presented
     start_stop_btns = browser.locator('//div[@class="text-center"]').get_by_role(
         "button"
@@ -445,7 +444,7 @@ async def test_stop_button(app, browser, user_special_chars):
     the start button is displayed with new name"""
 
     user = user_special_chars.user
-    await open_home_page(app, browser, user)
+    await login_home(browser, app, user.name)
     # checking that only one button is presented
     start_stop_btns = browser.locator('//div[@class="text-center"]').get_by_role(
         "button"
@@ -475,11 +474,9 @@ async def test_stop_button(app, browser, user_special_chars):
 async def open_token_page(app, browser, user):
     """function to open the token page"""
 
-    token_page = url_escape(app.base_url) + "hub/token"
-    url = url_path_join(public_host(app), app.hub.base_url, "/login?next=" + token_page)
-    await browser.goto(url)
-    await login(browser, user.name, password=str(user.name))
-    await expect(browser).to_have_url(re.compile(".*/hub/token"))
+    token_page = url_path_join(public_url(app), "hub/token")
+    await login_home(browser, app, user.name)
+    await browser.goto(token_page, wait_until="domcontentloaded")
 
 
 @pytest.mark.parametrize(
@@ -611,7 +608,7 @@ async def test_request_token_expiration(
     urlname = user_special_chars.urlname
     if token_opt == "server_up":
         # open the home page
-        await open_home_page(app, browser, user)
+        await login_home(browser, app, user.name)
         # start server via clicking on the Start button
         async with browser.expect_navigation(url=f"**/user/{urlname}/"):
             await browser.locator("#start").click()
@@ -778,7 +775,7 @@ async def test_revoke_token(app, browser, token_type, user_special_chars):
 
     user = user_special_chars.user
     # open the home page
-    await open_home_page(app, browser, user)
+    await login_home(browser, app, user.name)
     if token_type == "server_up" or token_type == "both":
         # Start server via clicking on the Start button
         async with browser.expect_navigation(
@@ -904,9 +901,9 @@ async def test_menu_bar(app, browser, page, logged_in, user_special_chars):
 async def test_user_logout(app, browser, url, user_special_chars):
     user = user_special_chars.user
     if "/hub/home" in url:
-        await open_home_page(app, browser, user)
+        await login_home(browser, app, user.name)
     elif "/hub/token" in url:
-        await open_home_page(app, browser, user)
+        await login_home(browser, app, user.name)
     elif "/hub/spawn" in url:
         await open_spawn_pending(app, browser, user_special_chars)
     logout_btn = browser.get_by_role("button", name="Logout")
@@ -1073,20 +1070,15 @@ async def test_oauth_page(
 
 async def open_admin_page(app, browser, login_as=None):
     """Login as `user` and open the admin page"""
-    admin_page = url_escape(app.base_url) + "hub/admin"
     if login_as:
-        user = login_as
-        url = url_path_join(
-            public_host(app), app.hub.base_url, "/login?next=" + admin_page
-        )
-        await browser.goto(url)
-        await login(browser, user.name, password=str(user.name))
-        await expect(browser).to_have_url(re.compile(".*/hub/admin"))
-    else:
-        # url = url_path_join(public_host(app), app.hub.base_url, "/login?next=" + admin_page)
-        await browser.goto(admin_page)
-        await expect(browser).to_have_url(re.compile(".*/hub/admin"))
-    await browser.wait_for_load_state("networkidle")
+        await login_home(browser, app, login_as.name)
+
+    async with browser.expect_navigation(
+        url=re.compile(".*/hub/admin"), wait_until="domcontentloaded"
+    ):
+        await browser.goto(url_path_join(public_url(app), "hub/admin"))
+    # wait for an element to be rendered by react
+    await expect(browser.locator(".pagination-footer")).to_be_visible()
 
 
 def create_list_of_users(create_user_with_scopes, n):
@@ -1230,7 +1222,6 @@ async def test_search_on_admin_page(
     element_search = browser.locator('//input[@name="user_search"]')
     await element_search.click()
     await element_search.fill(search_value, force=True)
-    await browser.wait_for_load_state("networkidle")
     # get the result of the search from db
     total = (
         app.db.query(orm.User).filter(orm.User.name.like(f'%{search_value}%')).count()
@@ -1259,7 +1250,6 @@ async def test_search_on_admin_page(
             await expect(element).to_contain_text(re.compile(f".*{search_value}.*"))
         # click on Next button to verify that the rest part of filtered list is displayed on the next page
         await browser.get_by_role("button", name="Next").click()
-        await browser.wait_for_load_state("networkidle")
         filtered_list_on_next_page = browser.locator('//tr[@class="user-row"]')
         await expect(filtered_list_on_page).to_have_count(total - 50)
         for element in await filtered_list_on_next_page.get_by_test_id(
@@ -1305,8 +1295,11 @@ async def test_start_stop_server_on_admin_page(
         await stop_btn.click()
 
     user1, user2 = create_list_of_users(create_user_with_scopes, 2)
+    users_count_db = app.db.query(orm.User).count()
     await open_admin_page(app, browser, admin_user)
-    await browser.wait_for_load_state("networkidle")
+    await expect(browser.locator('//td[@data-testid="user-row-name"]')).to_have_count(
+        users_count_db
+    )
     users = await browser.locator('//td[@data-testid="user-row-name"]').all()
     users_list = [await user.text_content() for user in users]
     users_list = [user.strip() for user in users_list]
@@ -1486,7 +1479,7 @@ async def test_singleuser_xsrf(
     browser_user = create_user_with_scopes("self", "access:servers")
     # login browser_user
     login_url = url_path_join(public_host(app), app.hub.base_url, "login")
-    await browser.goto(login_url)
+    await browser.goto(login_url, wait_until="domcontentloaded")
     await login(browser, browser_user.name, browser_user.name)
     # end up at single-user
     await browser.wait_for_url(re.compile(rf".*/user/{browser_user.name}/.*"))
