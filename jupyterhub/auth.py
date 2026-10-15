@@ -802,9 +802,7 @@ class Authenticator(LoggingConfigurable):
         )
 
         if not blocked_pass:
-            self.log.warning(
-                "User %r blocked. Stop authentication", log_username
-            )
+            self.log.warning("User %r blocked. Stop authentication", log_username)
             return
 
         allowed_pass = self.allow_all
