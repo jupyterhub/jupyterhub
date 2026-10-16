@@ -456,7 +456,7 @@ def compare_token(compare, token):
 
     Uses the same algorithm and salt of the hashed token for comparison.
     """
-    if len(token) >= _TOKEN_MAX_LEN:
+    if len(token) > _TOKEN_MAX_LEN:
         # don't bother hashing tokens that are too long to be valid
         return False
     algorithm, srounds, salt, _ = compare.split(':')
