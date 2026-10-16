@@ -38,6 +38,9 @@ from ._memoize import DoNotCache, FrozenDict, lru_cache_key
    """
 scope_definitions = {
     '(no_scope)': {'description': 'Identify the owner of the requesting entity.'},
+    'openid': {
+        'description': 'Identify the owner of the requesting entity. Added in JupyterHub 6.2, equivalent to prior default of specifying no scope.',
+    },
     'self': {
         'description': 'Your own resources',
         'doc_description': 'The user’s own resources _(metascope for users, resolves to (no_scope) for services)_',
