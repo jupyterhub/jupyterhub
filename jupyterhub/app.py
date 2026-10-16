@@ -3287,6 +3287,7 @@ class JupyterHub(Application):
             login_url=url_path_join(base_url, 'login'),
             token_expires_in=self.oauth_token_expires_in,
             require_pkce=self.oauth_require_pkce,
+            token_signing_keys=self.token_signing_keys_loaded,
         )
 
     def cleanup_oauth_clients(self):
