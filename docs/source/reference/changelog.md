@@ -22,6 +22,27 @@ Contributors to major version bumps in JupyterHub include:
 
 ## 6.1
 
+### 6.1.1 - 2026-10-20
+
+6.1.1 fixes a regression in 6.1.0 where 64-character tokens were rejected as invalid,
+when it should have rejected 65+ character tokens.
+This fix has also been backported to 5.5.4
+
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/6.1.0...6.1.1))
+
+#### Bugs fixed
+
+- Reject tokens larger than the max_length [#5567](https://github.com/jupyterhub/jupyterhub/pull/5567) ([@enolfc](https://github.com/enolfc), [@minrk](https://github.com/minrk))
+
+#### Contributors to this release
+
+The following people contributed discussions, new ideas, code and documentation contributions, and review.
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/use/#how-does-this-tool-define-contributions-in-the-reports).
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2026-10-14&to=2026-10-20&type=c))
+
+@enolfc ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aenolfc+updated%3A2026-10-14..2026-10-20&type=Issues)) | @manics ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amanics+updated%3A2026-10-14..2026-10-20&type=Issues)) | @minrk ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk+updated%3A2026-10-14..2026-10-20&type=Issues))
+
 ### 6.1.0 - 2026-10-14
 
 6.1.0 is a small release, fixing some more regressions in 6.0 and adds a few new features.
