@@ -22,6 +22,27 @@ Contributors to major version bumps in JupyterHub include:
 
 ## 6.1
 
+### 6.1.1 - 2026-10-20
+
+6.1.1 fixes a regression in 6.1.0 where 64-character tokens were rejected as invalid,
+when it should have rejected 65+ character tokens.
+This fix has also been backported to 5.5.4
+
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/6.1.0...6.1.1))
+
+#### Bugs fixed
+
+- Reject tokens larger than the max_length [#5567](https://github.com/jupyterhub/jupyterhub/pull/5567) ([@enolfc](https://github.com/enolfc), [@minrk](https://github.com/minrk))
+
+#### Contributors to this release
+
+The following people contributed discussions, new ideas, code and documentation contributions, and review.
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/use/#how-does-this-tool-define-contributions-in-the-reports).
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2026-10-14&to=2026-10-20&type=c))
+
+@enolfc ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aenolfc+updated%3A2026-10-14..2026-10-20&type=Issues)) | @manics ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amanics+updated%3A2026-10-14..2026-10-20&type=Issues)) | @minrk ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk+updated%3A2026-10-14..2026-10-20&type=Issues))
+
 ### 6.1.0 - 2026-10-14
 
 6.1.0 is a small release, fixing some more regressions in 6.0 and adds a few new features.
@@ -236,6 +257,26 @@ See [our definition of contributors](https://github-activity.readthedocs.io/en/l
 @agoose77 ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aagoose77+updated%3A2025-10-24..2026-09-01&type=Issues)) | @anny0811 ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aanny0811+updated%3A2025-10-24..2026-09-01&type=Issues)) | @ateucher ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aateucher+updated%3A2025-10-24..2026-09-01&type=Issues)) | @betatim ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Abetatim+updated%3A2025-10-24..2026-09-01&type=Issues)) | @bl-aire ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Abl-aire+updated%3A2025-10-24..2026-09-01&type=Issues)) | @clhedrick ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aclhedrick+updated%3A2025-10-24..2026-09-01&type=Issues)) | @consideRatio ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3AconsideRatio+updated%3A2025-10-24..2026-09-01&type=Issues)) | @dometto ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Adometto+updated%3A2025-10-24..2026-09-01&type=Issues)) | @dragz ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Adragz+updated%3A2025-10-24..2026-09-01&type=Issues)) | @erawn ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aerawn+updated%3A2025-10-24..2026-09-01&type=Issues)) | @ericvd-ucb ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aericvd-ucb+updated%3A2025-10-24..2026-09-01&type=Issues)) | @jezwilkinson ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ajezwilkinson+updated%3A2025-10-24..2026-09-01&type=Issues)) | @jnywong ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ajnywong+updated%3A2025-10-24..2026-09-01&type=Issues)) | @jrdnbradford ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ajrdnbradford+updated%3A2025-10-24..2026-09-01&type=Issues)) | @kellyrowland ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Akellyrowland+updated%3A2025-10-24..2026-09-01&type=Issues)) | @kreuzert ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Akreuzert+updated%3A2025-10-24..2026-09-01&type=Issues)) | @LUC4R4T0R ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3ALUC4R4T0R+updated%3A2025-10-24..2026-09-01&type=Issues)) | @manics ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amanics+updated%3A2025-10-24..2026-09-01&type=Issues)) | @milliams ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amilliams+updated%3A2025-10-24..2026-09-01&type=Issues)) | @minrk ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk+updated%3A2025-10-24..2026-09-01&type=Issues)) | @mynkyu ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amynkyu+updated%3A2025-10-24..2026-09-01&type=Issues)) | @nsychev ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ansychev+updated%3A2025-10-24..2026-09-01&type=Issues)) | @Paul2708 ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3APaul2708+updated%3A2025-10-24..2026-09-01&type=Issues)) | @Rameshkumar31595 ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3ARameshkumar31595+updated%3A2025-10-24..2026-09-01&type=Issues)) | @rgaiacs ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Argaiacs+updated%3A2025-10-24..2026-09-01&type=Issues)) | @shaneknapp ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ashaneknapp+updated%3A2025-10-24..2026-09-01&type=Issues)) | @sixonenines ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Asixonenines+updated%3A2025-10-24..2026-09-01&type=Issues)) | @tbizouerne ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Atbizouerne+updated%3A2025-10-24..2026-09-01&type=Issues)) | @Tech-Abhang ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3ATech-Abhang+updated%3A2025-10-24..2026-09-01&type=Issues)) | @wilkinvr ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Awilkinvr+updated%3A2025-10-24..2026-09-01&type=Issues)) | @willingc ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Awillingc+updated%3A2025-10-24..2026-09-01&type=Issues)) | @yuvipanda ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ayuvipanda+updated%3A2025-10-24..2026-09-01&type=Issues))
 
 ## 5.5
+
+### 5.5.4 - 2026-10-20
+
+5.5.4 fixes a regression in 5.5.3 where 64-character tokens were rejected as invalid,
+when it should have rejected 65+ character tokens.
+
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/5.5.3...5.5.4))
+
+#### Bugs fixed
+
+- Reject tokens larger than the max_length [#5567](https://github.com/jupyterhub/jupyterhub/pull/5567) ([@enolfc](https://github.com/enolfc), [@minrk](https://github.com/minrk))
+
+#### Contributors to this release
+
+The following people contributed discussions, new ideas, code and documentation contributions, and review.
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/use/#how-does-this-tool-define-contributions-in-the-reports).
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2026-10-14&to=2026-10-20&type=c))
+
+@enolfc ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aenolfc+updated%3A2026-10-14..2026-10-20&type=Issues)) | @manics ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amanics+updated%3A2026-10-14..2026-10-20&type=Issues)) | @minrk ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk+updated%3A2026-10-14..2026-10-20&type=Issues))
 
 ### 5.5.3 - 2026-10-14
 
