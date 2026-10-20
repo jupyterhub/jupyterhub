@@ -237,6 +237,26 @@ See [our definition of contributors](https://github-activity.readthedocs.io/en/l
 
 ## 5.5
 
+### 5.5.4 - 2026-10-20
+
+5.5.4 fixes a regression in 5.5.3 where 64-character tokens were rejected as invalid,
+when it should have rejected 65+ character tokens.
+
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/5.5.3...5.5.4))
+
+#### Bugs fixed
+
+- Reject tokens larger than the max_length [#5567](https://github.com/jupyterhub/jupyterhub/pull/5567) ([@enolfc](https://github.com/enolfc), [@minrk](https://github.com/minrk))
+
+#### Contributors to this release
+
+The following people contributed discussions, new ideas, code and documentation contributions, and review.
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/use/#how-does-this-tool-define-contributions-in-the-reports).
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2026-10-14&to=2026-10-20&type=c))
+
+@enolfc ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aenolfc+updated%3A2026-10-14..2026-10-20&type=Issues)) | @manics ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amanics+updated%3A2026-10-14..2026-10-20&type=Issues)) | @minrk ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk+updated%3A2026-10-14..2026-10-20&type=Issues))
+
 ### 5.5.3 - 2026-10-14
 
 5.5.3 is a security backport release, fixing a collection of moderate severity vulnerabilities, all of which require valid authentication, and only one of which affects most JupyterHub deployments.
