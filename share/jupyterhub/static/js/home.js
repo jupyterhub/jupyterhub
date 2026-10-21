@@ -125,7 +125,10 @@ require(["jquery", "moment", "jhapi", "utils"], function (
 
   $("#share").click(function () {
     console.log("Share button clicked");
-    //TODO: add modal with share menu and options
+    //TODO: add share menu and options to the modal
+    var dialog = $("#share-server-dialog");
+    var modal = new bootstrap.Modal(dialog[0]);
+    modal.show();
   });
 
   $(".new-server-btn").click(newServer);

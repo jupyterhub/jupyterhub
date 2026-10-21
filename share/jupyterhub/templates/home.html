@@ -102,6 +102,10 @@
       </table>
     {% endif %}
   </div>
+  {% call modal('Share Server', btn_label='Done') %}
+  <p>foo</p>
+    <!-- TODO: list of users, share with next to each. also, a share link generator button-->
+  {% endcall %}
 {% endblock main %}
 {% block script %}
   {{ super() }}
