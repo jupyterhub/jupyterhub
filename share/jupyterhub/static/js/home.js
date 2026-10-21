@@ -131,6 +131,10 @@ require(["jquery", "moment", "jhapi", "utils"], function (
     modal.show();
   });
 
+  $("#generate-share-link").click(function () {
+    //TODO: issue a sharing code for the default server
+  });
+
   $(".new-server-btn").click(newServer);
   $(".new-server-name").on("keypress", function (e) {
     if (e.which === 13) {

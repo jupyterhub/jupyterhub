@@ -103,8 +103,14 @@
     {% endif %}
   </div>
   {% call modal('Share Server', btn_label='Done') %}
-  <p>foo</p>
-    <!-- TODO: list of users, share with next to each. also, a share link generator button-->
+    <!-- a share link generator button
+    pseudo code:
+    {button labeled "generate share link"}
+      {on click, generate a share link based on: https://jupyterhub.readthedocs.io/en/stable/tutorial/sharing.html#issue-a-sharing-code}
+      {"copy link to clipboard" button}
+    -->
+    <button type="button" id="generate-share-link" class="btn btn-primary">Generate Share Link</button>
+    <!-- TODO: list of users, share with next to each.-->
   {% endcall %}
 {% endblock main %}
 {% block script %}
