@@ -112,6 +112,7 @@ require(["jquery", "moment", "jhapi", "utils"], function (
     api.stop_server(user, {
       success: function () {
         $("#stop").hide();
+        $("#share").hide();
         $("#start")
           .text("Start My Server")
           .attr("title", "Start your default server")
@@ -120,6 +121,11 @@ require(["jquery", "moment", "jhapi", "utils"], function (
           .off("click");
       },
     });
+  });
+
+  $("#share").click(function () {
+    console.log("Share button clicked");
+    //TODO: add modal with share menu and options
   });
 
   $(".new-server-btn").click(newServer);
