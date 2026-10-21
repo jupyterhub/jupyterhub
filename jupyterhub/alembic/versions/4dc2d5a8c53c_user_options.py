@@ -1,4 +1,4 @@
-"""persist user_options
+"""1.0: persist user_options
 
 Revision ID: 4dc2d5a8c53c
 Revises: 896818069c98

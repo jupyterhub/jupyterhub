@@ -1,4 +1,4 @@
-"""api_token_scopes
+"""3.0: api_token_scopes
 
 Revision ID: 651f5419b74d
 Revises: 833da8570507
