@@ -134,9 +134,16 @@ require(["jquery", "moment", "jhapi", "utils"], function (
     api.api_request("share-codes/" + user + "/", {
       type: "POST",
       success: function (reply) {
-        console.log("Share url:", reply.full_accept_url || reply.accept_url);
+        var url =
+          reply.full_accept_url || window.location.origin + reply.accept_url;
+        $("#share-link").val(url);
+        $("#share-link-group").removeClass("hidden");
       },
     });
+  });
+
+  $("#copy-share-link").click(function () {
+    navigator.clipboard.writeText($("#share-link").val());
   });
 
   $(".new-server-btn").click(newServer);
