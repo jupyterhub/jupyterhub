@@ -124,7 +124,6 @@ require(["jquery", "moment", "jhapi", "utils"], function (
   });
 
   $("#share").click(function () {
-    console.log("Share button clicked");
     //TODO: add share menu and options to the modal
     var dialog = $("#share-server-dialog");
     var modal = new bootstrap.Modal(dialog[0]);
@@ -132,7 +131,12 @@ require(["jquery", "moment", "jhapi", "utils"], function (
   });
 
   $("#generate-share-link").click(function () {
-    //TODO: issue a sharing code for the default server
+    api.api_request("share-codes/" + user + "/", {
+      type: "POST",
+      success: function (reply) {
+        console.log("Share url:", reply.full_accept_url || reply.accept_url);
+      },
+    });
   });
 
   $(".new-server-btn").click(newServer);
