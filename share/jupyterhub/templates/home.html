@@ -111,6 +111,10 @@
     -->
     <small class="form-text d-block">Share links expire after 1 day, but people who already used the link and accepted keep access.</small>
     <button type="button" id="generate-share-link" class="btn btn-primary">Generate Share Link</button>
+    <div id="share-link-group" class="input-group mt-2 hidden">
+      <input type="text" id="share-link" class="form-control" readonly aria-label="share link">
+      <button type="button" id="copy-share-link" class="btn btn-outline-secondary">Copy</button>
+    </div>
     <!-- TODO: list of users, share with next to each.-->
   {% endcall %}
 {% endblock main %}
