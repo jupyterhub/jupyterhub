@@ -13,7 +13,7 @@ where the version number is meant to indicate the amount of effort required to u
 
 Contributors to major version bumps in JupyterHub include:
 
-- Database schema changes that require migrations and are hard to roll back
+- Database changes that may be hard to reverse
 - Increasing the minimum required Python version
 - Large new features
 - Breaking changes likely to affect users
