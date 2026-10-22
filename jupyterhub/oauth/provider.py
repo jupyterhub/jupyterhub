@@ -11,6 +11,7 @@ from tornado.log import app_log
 from .. import orm
 from ..roles import roles_to_scopes
 from ..scopes import (
+    Scope,
     _check_scopes_exist,
     _resolve_requested_scopes,
     access_scopes,
@@ -160,10 +161,10 @@ class JupyterHubRequestValidator(RequestValidator):
         if orm_client is None:
             raise ValueError(f"No such client: {client_id}")
         scopes = set(orm_client.allowed_scopes)
-        if 'inherit' not in scopes:
+        if Scope.inherit not in scopes:
             # add identify-user scope
             # and access-service scope
-            scopes |= identify_scopes() | access_scopes(orm_client)
+            scopes |= identify_scopes() | access_scopes(orm_client) | {Scope.openid}
         return scopes
 
     def get_original_scopes(self, refresh_token, request, *args, **kwargs):

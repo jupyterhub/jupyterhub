@@ -16,6 +16,7 @@ from ._version import __version__, _check_version
 from .crypto import CryptKeeper, EncryptionUnavailable, InvalidToken, decrypt, encrypt
 from .metrics import RUNNING_SERVERS, TOTAL_USERS
 from .objects import Server
+from .scopes import Scope
 from .slugs import is_valid_display_name, is_valid_safe_slug
 from .spawner import LocalProcessSpawner, SpawnException
 from .utils import (
@@ -875,7 +876,7 @@ class User:
         }
         # ensure activity scope is requested, since activity doesn't work without
         activity_scope = "users:activity!user"
-        if not {activity_scope, "users:activity", "inherit"}.intersection(
+        if not {activity_scope, "users:activity", Scope.inherit}.intersection(
             requested_scopes
         ):
             self.log.warning(
@@ -884,7 +885,7 @@ class User:
             requested_scopes |= {activity_scope}
 
         have_scopes = roles.roles_to_scopes(roles.get_roles_for(self.orm_user))
-        have_scopes |= {"inherit"}
+        have_scopes |= Scope.ALWAYS_SCOPES
         jupyterhub_client = (
             db.query(orm.OAuthClient)
             .filter_by(
