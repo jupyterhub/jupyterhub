@@ -79,6 +79,9 @@ async def test_upgrade(tmpdir, hub_version):
 
     cfg = Config()
     cfg.JupyterHub.db_url = db_url
+    cfg.JupyterHub.authenticator_class = "dummy"
+    # disable auto-upgrade, should raise
+    cfg.JupyterHub.upgrade_db = False
 
     tokenapp = NewToken(config=cfg)
     tokenapp.initialize(['admin'])
