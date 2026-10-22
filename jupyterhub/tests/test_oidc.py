@@ -38,3 +38,18 @@ async def test_token_signing(app):
     signing_key = jwks_client.get_signing_key_from_jwt(token)
     # resolve signing key with jwks client
     decoded = jwt.decode(token, signing_key, audience="abc123", algorithms=["RS256"])
+
+
+async def test_oidc_id_token(app):
+    provider = app.oauth_provider
+    jwks_client = jwt.PyJWKClient(public_url(app, path="hub/.well-known/jwks.json"))
+    # jwks_client is sync
+    await asyncio.get_running_loop().run_in_executor(None, jwks_client.fetch_data)
+    keys = jwks_client.get_signing_keys()
+    assert keys
+    kid, key = next(iter(app.token_signing_keys_loaded.items()))
+    payload = {"aud": "abc123"}
+    token = jwt.encode(payload, key, headers={"kid": kid}, algorithm="RS256")
+    signing_key = jwks_client.get_signing_key_from_jwt(token)
+    # resolve signing key with jwks client
+    decoded = jwt.decode(token, signing_key, audience="abc123", algorithms=["RS256"])

@@ -8,6 +8,7 @@ from binascii import hexlify
 from unittest import mock
 from urllib.parse import parse_qs, urlparse
 
+import jwt
 import pytest
 from bs4 import BeautifulSoup
 from pytest import raises
@@ -717,3 +718,49 @@ async def test_pkce(
     # expect_success: all okay
     assert dest_url == url
     assert r.status_code == 200
+
+
+async def test_oidc(
+    app,
+    mockservice_url,
+    create_user_with_scopes,
+):
+    user = create_user_with_scopes("access:services")
+    app.db.commit()
+
+    s = AsyncSession()
+    name = user.name
+    s.cookies = await app.login_user(name)
+
+    url = public_url(app, mockservice_url) + "owhoami"
+    url_with_param = url_concat(url, {"request-scope": "openid"})
+
+    test_settings = {}
+    test_settings.update(app.tornado_settings)
+    test_settings["oauth_no_confirm_list"] = {mockservice_url.oauth_client_id}
+    with (mock.patch.dict(app.tornado_settings, test_settings),):
+        r = await s.get(url_with_param)
+
+    # useful to debug failures:
+    print(r.url, [_r.url for _r in r.history])
+
+    dest_url, _, query_s = r.url.partition("?")
+    # expect_success: all okay
+    assert dest_url == url
+    assert r.status_code == 200
+    user = r.json()
+    assert "id_token" in user
+    id_token_jwt = user["id_token"]
+    signing_key = next(iter(app.token_signing_keys_loaded.values())).public_key()
+    id_token = jwt.decode(
+        id_token_jwt,
+        signing_key,
+        audience=mockservice_url.oauth_client_id,
+        algorithms=["RS256"],
+    )
+    assert id_token["sub"] == name
+    assert set(id_token["scopes"]) == {
+        f"access:services!service={mockservice_url.name}",
+        f"read:users:name!user={name}",
+        f"read:users:groups!user={name}",
+    }

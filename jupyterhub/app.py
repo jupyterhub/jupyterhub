@@ -3360,7 +3360,7 @@ class JupyterHub(Application):
         base_url = self.hub.base_url
         self.oauth_provider = make_provider(
             lambda: self.db,
-            url_prefix=url_path_join(base_url, 'api/oauth2'),
+            url_prefix=base_url,
             login_url=url_path_join(base_url, 'login'),
             token_expires_in=self.oauth_token_expires_in,
             require_pkce=self.oauth_require_pkce,
