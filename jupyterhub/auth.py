@@ -788,8 +788,13 @@ class Authenticator(LoggingConfigurable):
         authenticated['name'] = username = self.normalize_username(
             authenticated['name']
         )
+        # username is user-controlled input, don't log it in full
+        # (same treatment as failed-login logging in handlers/base.py)
+        log_username = username
+        if len(username) > 32:
+            log_username = f"{username[:16]}...({len(username)} chars)"
         if not self.validate_username(username):
-            self.log.warning("Disallowing invalid username %r.", username)
+            self.log.warning("Disallowing invalid username %r.", log_username)
             return
 
         blocked_pass = await maybe_future(
@@ -797,7 +802,7 @@ class Authenticator(LoggingConfigurable):
         )
 
         if not blocked_pass:
-            self.log.warning("User %r blocked. Stop authentication", username)
+            self.log.warning("User %r blocked. Stop authentication", log_username)
             return
 
         allowed_pass = self.allow_all
@@ -816,7 +821,7 @@ class Authenticator(LoggingConfigurable):
 
             return authenticated
         else:
-            self.log.warning("User %r not allowed.", username)
+            self.log.warning("User %r not allowed.", log_username)
             return
 
     async def refresh_user(self, user, handler=None):
