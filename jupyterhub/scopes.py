@@ -19,7 +19,6 @@ import functools
 import inspect
 import re
 import warnings
-from enum import Enum
 from functools import lru_cache
 from itertools import chain
 from textwrap import indent
@@ -193,8 +192,13 @@ scope_definitions = {
 }
 
 
-class Scope(Enum):
+class Scope:
     ALL = True
+    # always have these
+    ALWAYS_SCOPES = {"inherit", "openid"}
+
+    inherit = "inherit"
+    openid = "openid"
 
 
 def _intersection_cache_key(scopes_a, scopes_b, db=None):
@@ -392,7 +396,7 @@ def get_scopes_for(orm_object):
                 owner_scopes |= frozenset(share.scopes)
 
         token_scopes = set(orm_object.scopes)
-        if 'inherit' in token_scopes:
+        if Scope.inherit in token_scopes:
             # token_scopes includes 'inherit',
             # so we know the intersection is exactly the owner's scopes
             # only thing we miss by short-circuiting here: warning about excluded extra scopes
@@ -862,10 +866,10 @@ def _check_token_scopes(scopes, owner, oauth_client):
         ValueError: if requested scopes exceed owner's assigned scopes
     """
     scopes = set(scopes)
-    if scopes.issubset({"inherit"}):
-        # nothing to check for simple 'inherit' scopes
+    if scopes.issubset(Scope.ALWAYS_SCOPES):
+        # nothing to check for scopes that are always held
         return
-    scopes.discard("inherit")
+    scopes -= Scope.ALWAYS_SCOPES
     # common short circuit
     token_scopes = expand_scopes(scopes, owner=owner, oauth_client=oauth_client)
 

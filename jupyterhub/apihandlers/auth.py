@@ -10,6 +10,7 @@ from oauthlib import oauth2
 from tornado import web
 
 from .. import orm, roles, scopes
+from ..scopes import Scope
 from ..utils import get_browser_protocol, token_authenticated, utcnow
 from .base import APIHandler, BaseHandler
 
@@ -305,7 +306,7 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
             # rather than the expanded_scope intersection
 
             required_scopes = {*scopes.identify_scopes(), *scopes.access_scopes(client)}
-            user_scopes |= {"inherit", *required_scopes}
+            user_scopes |= Scope.ALWAYS_SCOPES | required_scopes
 
             allowed_scopes, disallowed_scopes = scopes._resolve_requested_scopes(
                 requested_scopes,
@@ -349,12 +350,12 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
                         "filter": "",
                     }
                 ]
-            elif 'inherit' in scopes_to_describe:
-                allowed_scopes = scopes_to_describe = ['inherit']
+            elif Scope.inherit in scopes_to_describe:
+                allowed_scopes = scopes_to_describe = [Scope.inherit]
                 scope_descriptions = [
                     {
-                        "scope": "inherit",
-                        "description": scopes.scope_definitions['inherit'][
+                        "scope": Scope.inherit,
+                        "description": scopes.scope_definitions[Scope.inherit][
                             'description'
                         ],
                         "filter": "",

@@ -1197,6 +1197,9 @@ class APIToken(Hashed, Base):
         oauth_client=None,
     ):
         """Generate a new API token for a user or service"""
+        # need lazy import
+        from .scopes import Scope
+
         assert user or service
         assert not (user and service)
         db = inspect(user or service).session
@@ -1221,7 +1224,7 @@ class APIToken(Hashed, Base):
             # use the default 'token' role to specify default permissions for API tokens
             default_token_role = Role.find(db, 'token')
             if not default_token_role:
-                scopes = ["inherit"]
+                scopes = [Scope.inherit]
             else:
                 scopes = roles_to_scopes([default_token_role])
         elif roles is not None:
