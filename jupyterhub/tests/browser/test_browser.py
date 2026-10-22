@@ -354,12 +354,11 @@ async def test_spawn_pending_server_ready(app, browser, user_special_chars):
     stop_start_btns = browser.locator('//div[@class="text-center"]').get_by_role(
         "button"
     )
-    expected_btns_name = ["Stop My Server", "My Server", "Share My Server"]
-    await expect(stop_start_btns).to_have_count(3)
+    expected_btns_name = ["Stop My Server", "My Server"]
+    await expect(stop_start_btns).to_have_count(2)
     await expect(stop_start_btns).to_have_text(expected_btns_name)
     await expect(stop_start_btns.nth(0)).to_have_id("stop")
     await expect(stop_start_btns.nth(1)).to_have_id("start")
-    await expect(stop_start_btns.nth(2)).to_have_id("share")
 
 
 async def test_spawn_named_server_with_form(
@@ -498,9 +497,9 @@ async def test_start_button_server_not_started(app, browser, user_special_chars)
     # return to Home page
     next_url = url_path_join(public_host(app), app.base_url, '/hub/home')
     await browser.goto(next_url)
-    # verify that 3 buttons are displayed on the home page
-    await expect(start_stop_btns).to_have_count(3)
-    expected_btns_names = ["Stop My Server", "My Server", "Share My Server"]
+    # verify that 2 buttons are displayed on the home page
+    await expect(start_stop_btns).to_have_count(2)
+    expected_btns_names = ["Stop My Server", "My Server"]
     await expect(start_stop_btns).to_have_text(expected_btns_names)
     [
         await expect(start_stop_btn).to_be_enabled()
