@@ -17,7 +17,7 @@
           {% if not default_server.active %}Start{% endif %}
           My Server
         </a>
-        {% if default_server.active %}<a id="share"
+        {% if default_server.active and can_share %}<a id="share"
    role="button"
    class="btn btn-lg btn-primary">Share My Server</a>{% endif %}
       </div>
