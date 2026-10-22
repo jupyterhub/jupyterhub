@@ -146,7 +146,23 @@ require(["jquery", "moment", "jhapi", "utils"], function (
         var list = $("#share-list").empty();
         shares.forEach(function (share) {
           var name = share.user ? share.user.name : share.group.name;
-          list.append($("<li>").addClass("list-group-item").text(name));
+          var item = $("<li>").addClass("list-group-item").text(name);
+          $("<button>")
+            .addClass("btn btn-xs btn-danger float-end")
+            .text("Revoke")
+            .click(function () {
+              api.api_request("shares/" + user + "/", {
+                type: "PATCH",
+                data: JSON.stringify(
+                  share.user ? { user: name } : { group: name },
+                ),
+                success: function () {
+                  item.remove();
+                },
+              });
+            })
+            .appendTo(item);
+          list.append(item);
         });
       },
     });
@@ -160,6 +176,18 @@ require(["jquery", "moment", "jhapi", "utils"], function (
           reply.full_accept_url || window.location.origin + reply.accept_url;
         $("#share-link").val(url);
         $("#share-link-group").removeClass("hidden");
+      },
+    });
+  });
+
+  $("#revoke-all-shares").click(function () {
+    if (!confirm("Revoke access for everyone this server is shared with?")) {
+      return;
+    }
+    api.api_request("shares/" + user + "/", {
+      type: "DELETE",
+      success: function () {
+        $("#share-list").empty();
       },
     });
   });
