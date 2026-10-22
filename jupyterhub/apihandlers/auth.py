@@ -92,7 +92,7 @@ class OAuthHandler:
         (uri, http_method, body, headers)
         """
         return (
-            self.request.uri,
+            self.request.full_url(),
             self.request.method,
             self.request.body,
             self.request.headers,
@@ -218,6 +218,7 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
         authorized_scopes = set()
         for token in existing_tokens:
             authorized_scopes.update(token.scopes)
+            authorized_scopes.add(Scope.openid)
 
         if authorized_scopes:
             if set(requested_scopes).issubset(authorized_scopes):
@@ -226,9 +227,10 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
                 )
                 return False
             else:
+                additional_scopes = set(requested_scopes).difference(authorized_scopes)
                 self.log.debug(
                     f"User {user.name} has authorized {oauth_client.identifier}"
-                    f" for scopes {authorized_scopes}, confirming additional scopes {requested_scopes}"
+                    f" for scopes {authorized_scopes}, confirming additional scopes {additional_scopes}"
                 )
         # default: require confirmation
         return True

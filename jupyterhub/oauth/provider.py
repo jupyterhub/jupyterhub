@@ -3,6 +3,10 @@
 implements https://oauthlib.readthedocs.io/en/latest/oauth2/server.html
 """
 
+import time
+from urllib.parse import urlparse
+
+import jwt
 from oauthlib import uri_validate
 from oauthlib.oauth2.rfc6749.grant_types import authorization_code, base
 from oauthlib.openid import RequestValidator, Server
@@ -35,10 +39,14 @@ base.is_absolute_uri = is_absolute_uri
 
 
 class JupyterHubRequestValidator(RequestValidator):
-    def __init__(self, db, require_pkce=False, *, token_signing_keys):
+    def __init__(
+        self, db, require_pkce=False, *, url_prefix, issuer=None, token_signing_keys
+    ):
         self.db = db
         self.require_pkce = require_pkce
         self.token_signing_keys = token_signing_keys
+        self.issuer = issuer
+        self.url_prefix = url_prefix
         super().__init__()
 
     def authenticate_client(self, request, *args, **kwargs):
@@ -662,6 +670,7 @@ class JupyterHubRequestValidator(RequestValidator):
             requested_scopes = roles_to_scopes(requested_roles)
 
         client_allowed_scopes = set(orm_client.allowed_scopes)
+        client_allowed_scopes |= {Scope.openid}
 
         # scope resolution only works if we have a user defined
         user = request.user or getattr(self, "_current_user")
@@ -715,12 +724,12 @@ class JupyterHubRequestValidator(RequestValidator):
         orm_code = orm.OAuthCode.find(self.db, code=code)
         if orm_code is None:
             app_log.debug("No such code: %s", code)
-            return False
+            return []
         if orm_code.client_id != client_id:
             app_log.debug(
                 "OAuth code client id mismatch: %s != %s", client_id, orm_code.client_id
             )
-            return False
+            return []
         return orm_code.scopes
 
     def get_authorization_code_nonce(self, client_id, code, redirect_uri, request):
@@ -745,7 +754,14 @@ class JupyterHubRequestValidator(RequestValidator):
         Method is used by:
             - Authorization Token Grant Dispatcher
         """
-        raise NotImplementedError('Subclasses must implement this method.')
+        orm_code = orm.OAuthCode.find(self.db, code=code)
+        if orm_code is None:
+            raise KeyError(f"No such code: {code}")
+        if orm_code.client_id != client_id:
+            raise ValueError(
+                f"OAuth Code client id mismatch: {client_id} != {orm_code.client_id}"
+            )
+        return orm_code.nonce
 
     def get_jwt_bearer_token(self, token, token_handler, request):
         """Get JWT Bearer token or OpenID Connect ID token
@@ -762,45 +778,6 @@ class JupyterHubRequestValidator(RequestValidator):
             - JWTToken.create_token
         """
         raise NotImplementedError('Subclasses must implement this method.')
-
-    def get_id_token(self, token, token_handler, request):
-        """Get OpenID Connect ID token
-
-        This method is OPTIONAL and is NOT RECOMMENDED.
-        `finalize_id_token` SHOULD be implemented instead. However, if you
-        want a full control over the minting of the `id_token`, you
-        MAY want to override `get_id_token` instead of using
-        `finalize_id_token`.
-
-        In the OpenID Connect workflows when an ID Token is requested this method is called.
-        Subclasses should implement the construction, signing and optional encryption of the
-        ID Token as described in the OpenID Connect spec.
-
-        In addition to the standard OAuth2 request properties, the request may also contain
-        these OIDC specific properties which are useful to this method:
-
-            - nonce, if workflow is implicit or hybrid and it was provided
-            - claims, if provided to the original Authorization Code request
-
-        The token parameter is a dict which may contain an ``access_token`` entry, in which
-        case the resulting ID Token *should* include a calculated ``at_hash`` claim.
-
-        Similarly, when the request parameter has a ``code`` property defined, the ID Token
-        *should* include a calculated ``c_hash`` claim.
-
-        http://openid.net/specs/openid-connect-core-1_0.html (sections `3.1.3.6`_, `3.2.2.10`_, `3.3.2.11`_)
-
-        .. _`3.1.3.6`: http://openid.net/specs/openid-connect-core-1_0.html#CodeIDToken
-        .. _`3.2.2.10`: http://openid.net/specs/openid-connect-core-1_0.html#ImplicitIDToken
-        .. _`3.3.2.11`: http://openid.net/specs/openid-connect-core-1_0.html#HybridIDToken
-
-        :param token: A Bearer token dict
-        :param token_handler: the token handler (BearerToken class)
-        :param request: OAuthlib request.
-        :type request: oauthlib.common.Request
-        :return: The ID Token (a JWS signed JWT)
-        """
-        return None
 
     def finalize_id_token(self, id_token, token, token_handler, request):
         """Finalize OpenID Connect ID token & Sign or Encrypt.
@@ -843,7 +820,21 @@ class JupyterHubRequestValidator(RequestValidator):
         :type request: oauthlib.common.Request
         :return: The ID Token (a JWS signed JWT or JWE encrypted JWT)
         """
-        raise NotImplementedError('Subclasses must implement this method.')
+        kid, private_key = next(iter(self.token_signing_keys.items()))
+        if self.issuer:
+            issuer = self.issuer
+        else:
+            # derive from request.uri
+            parsed = urlparse(request.uri)
+            issuer = f"{parsed.scheme}://{parsed.netloc}{self.url_prefix.rstrip("/")}"
+        id_token["iss"] = issuer
+        id_token["sub"] = request.user.name
+        # configurable expiration for id token?
+        expires_in = token["expires_in"] or 1209600
+        id_token["exp"] = int(time.time() + expires_in)
+        return jwt.encode(
+            id_token, private_key, headers={"kid": kid}, algorithm="RS256"
+        )
 
     def validate_jwt_bearer_token(self, token, scopes, request):
         """Ensure the JWT Bearer token or OpenID Connect ID token are valids and authorized access to scopes.
@@ -949,7 +940,10 @@ class JupyterHubRequestValidator(RequestValidator):
             - OpenIDConnectImplicit
             - OpenIDConnectHybrid
         """
-        raise NotImplementedError('Subclasses must implement this method.')
+        if id_token_hint or claims:
+            raise NotImplementedError("user match not implemented")
+        # specific user not requested, it's okay
+        return True
 
     def get_userinfo_claims(self, request):
         """Return the UserInfo claims in JSON or Signed or Encrypted.
@@ -1061,13 +1055,18 @@ def make_provider(
     login_url,
     *,
     token_signing_keys,
+    issuer=None,
     require_pkce=False,
     **oauth_server_kwargs,
 ):
     """Make an OAuth provider"""
     db = session_factory()
     validator = JupyterHubRequestValidator(
-        db, token_signing_keys=token_signing_keys, require_pkce=require_pkce
+        db,
+        token_signing_keys=token_signing_keys,
+        url_prefix=url_prefix,
+        issuer=issuer,
+        require_pkce=require_pkce,
     )
     server = JupyterHubOAuthServer(db, validator, **oauth_server_kwargs)
     # attach validator to server as attribute
