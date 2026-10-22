@@ -1331,6 +1331,9 @@ class OAuthCode(Expiring, Base):
     code_challenge = Column(Unicode(255), nullable=True)
     code_challenge_method = Column(Unicode(64), nullable=True)
 
+    # Nonce added in 6.2
+    nonce = Column(Unicode(64), nullable=True)
+
     @staticmethod
     def now():
         return utcnow(with_tz=True).timestamp()

@@ -267,7 +267,6 @@ class JupyterHubRequestValidator(RequestValidator):
         )
         if orm_client is None:
             raise ValueError(f"No such client: {client_id}")
-
         orm_code = orm.OAuthCode(
             code=code['code'],
             code_challenge=request.code_challenge,
@@ -277,6 +276,7 @@ class JupyterHubRequestValidator(RequestValidator):
             scopes=list(request.scopes),
             redirect_uri=orm_client.redirect_uri,
             session_id=request.session_id,
+            nonce=request.nonce,
         )
         self.db.add(orm_code)
         orm_code.client = orm_client
