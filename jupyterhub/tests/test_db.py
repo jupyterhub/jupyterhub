@@ -146,6 +146,8 @@ async def test_downgrade(tmpdir, hub_version, expected_revision):
             "jupyterhub",
             "downgrade-db",
             hub_version,
+            "--JupyterHub.db_url",
+            db_url,
         ]
     )
 
@@ -164,6 +166,8 @@ async def test_downgrade(tmpdir, hub_version, expected_revision):
             "-m",
             "jupyterhub",
             "upgrade-db",
+            "--JupyterHub.db_url",
+            db_url,
         ]
     )
     with engine.begin() as connection:
