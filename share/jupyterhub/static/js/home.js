@@ -131,11 +131,20 @@ require(["jquery", "moment", "jhapi", "utils"], function (
     loadShareList();
   });
 
-  function loadShareList() {
+  function loadShareList(offset, shares) {
+    offset = offset || 0;
+    shares = shares || [];
     api.api_request("shares/" + user + "/", {
+      data: "offset=" + offset,
       success: function (reply) {
+        shares = shares.concat(reply.items);
+        var next = reply._pagination && reply._pagination.next;
+        if (next) {
+          loadShareList(next.offset, shares);
+          return;
+        }
         var list = $("#share-list").empty();
-        reply.items.forEach(function (share) {
+        shares.forEach(function (share) {
           var name = share.user ? share.user.name : share.group.name;
           list.append($("<li>").addClass("list-group-item").text(name));
         });

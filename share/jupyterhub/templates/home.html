@@ -122,7 +122,9 @@
     <!-- list of users that have access to the server -->
     <!-- TODO: list of users, share with next to each.-->
     <h6 class="mt-3">Shared with</h6>
-    <ul id="share-list" class="list-group">
+    <ul id="share-list"
+        class="list-group overflow-auto"
+        style="max-height: 300px">
     </ul>
   {% endcall %}
 {% endblock main %}
