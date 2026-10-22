@@ -128,7 +128,20 @@ require(["jquery", "moment", "jhapi", "utils"], function (
     var dialog = $("#share-server-dialog");
     var modal = new bootstrap.Modal(dialog[0]);
     modal.show();
+    loadShareList();
   });
+
+  function loadShareList() {
+    api.api_request("shares/" + user + "/", {
+      success: function (reply) {
+        var list = $("#share-list").empty();
+        reply.items.forEach(function (share) {
+          var name = share.user ? share.user.name : share.group.name;
+          list.append($("<li>").addClass("list-group-item").text(name));
+        });
+      },
+    });
+  }
 
   $("#generate-share-link").click(function () {
     api.api_request("share-codes/" + user + "/", {
