@@ -5,7 +5,7 @@ OpenID Connect (OIDC) handlers
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import json
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlunparse
 
 from jwt.algorithms import RSAAlgorithm
 
@@ -25,7 +25,7 @@ class OpenIDConfigurationHandler(APIHandler):
     def get(self):
         public_url = self.settings.get("public_url")
         if public_url:
-            hub_url = url_path_join(public_url, "hub")
+            hub_url = url_path_join(urlunparse(public_url), "hub")
         else:
             self.log.warning("Guessing public URL for OIDC.")
             full_url = urlparse(self.request.full_url())
