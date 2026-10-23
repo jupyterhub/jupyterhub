@@ -129,11 +129,11 @@ In general, you select your database backend with [](JupyterHub.db_url), and can
 [Upgrading JupyterHub](howto:upgrading-jupyterhub) often requires an upgrade to the database schema.
 
 - starting jupyterhub after upgrading will update the schema by default. It is always a good idea to backup your database before upgrading.
-- when your database is sqlite, JupyterHub will automatically make a backup copy before any upgrade/downgrade operations. JupyterHub does not do automatic for other SQL databases, such as Postgres.
+- when your database is sqlite, JupyterHub will automatically make a backup copy before any upgrade/downgrade operations. JupyterHub does not create automatic backups for other SQL databases, such as Postgres.
 - `jupyterhub upgrade-db` can be used to execute a schema upgrade directly.
-- `jupyterhub downgrade-db` is new in Jupyterhub 6.2, and can be used to roll back the schema prior.
+- `jupyterhub downgrade-db` is new in Jupyterhub 6.2, and can be used to roll back to an older schema.
   - Note: you must run `downgrade-db` _before_ downgrading JupyterHub, because e.g. JupyterHub 5 doesn't know how to downgrade from schema changes in JupyterHub 6.
-  - It may often be simpler to restore from backup than running `downgrade-db` (this was the only option prior to JupyterHub 6.2, short of advanced invocations of `python3 -m juptyerhub.dbutil alembic downgrade`, for which `downgrade-db` is a shortcut).
+  - It may often be simpler to restore from backup than running `downgrade-db` (this was the only option prior to JupyterHub 6.2, short of advanced invocations of `python3 -m jupyterhub.dbutil alembic downgrade`, for which `downgrade-db` is a shortcut).
 
 ```{versionchanged} 6.2
 After several years of safe schema upgrades, starting in JupyterHub 6.2, JupyterHub will upgrade the database schema by default when JupyterHub starts.

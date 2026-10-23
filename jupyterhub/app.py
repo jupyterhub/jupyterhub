@@ -261,7 +261,7 @@ class UpgradeDB(Application):
 
 
 class DowngradeDB(Application):
-    """Upgrade the JupyterHub database schema."""
+    """Downgrade the JupyterHub database schema."""
 
     name = 'jupyterhub-downgrade-db'
     version = jupyterhub.__version__
@@ -1646,7 +1646,7 @@ class JupyterHub(Application):
         help="""
         Upgrade the database automatically on start.
 
-        Set to False to require explicit upgrades via `jupyerhub upgrade-db`.
+        Set to False to require explicit upgrades via `jupyterhub upgrade-db`.
 
         Only SQLite databases will be backed up to a local file automatically.
 

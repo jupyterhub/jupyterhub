@@ -116,7 +116,7 @@ def backup_db_file(db_file, log=None):
 
 
 def rollback(db_url, *, revision, backup=True, log=None):
-    """Upgrade a database if needed
+    """Downgrade a database if needed
 
     If the database is sqlite, a backup file will be created with a timestamp.
     Other database systems should perform their own backups prior to calling this.
@@ -133,7 +133,7 @@ def rollback(db_url, *, revision, backup=True, log=None):
     else:
         db_log_url = db_url
     log.info("Downgrading %s to %s", db_log_url, revision)
-    # we need to upgrade, backup the database
+    # we need to downgrade, backup the database
     if backup and db_url.startswith('sqlite:///'):
         db_file = db_url.split(':///', 1)[1]
         backup_db_file(db_file, log=log)
