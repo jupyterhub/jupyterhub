@@ -12,6 +12,10 @@ docs/source/includes/metrics_table.md
 
 .ipynb_checkpoints
 .virtual_documents
+.ipython
+.jupyter
+.npm
+Library
 
 jsx/build/
 # ignore config file at the top-level of the repo
