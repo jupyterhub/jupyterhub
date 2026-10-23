@@ -41,6 +41,7 @@ from traitlets.config import LoggingConfigurable
 from . import orm
 from .objects import Server
 from .roles import roles_to_scopes
+from .scopes import Scope
 from .traitlets import ByteSpecification, Callable, Command
 from .utils import (
     AnyTimeoutError,
@@ -506,8 +507,9 @@ class Spawner(LoggingConfigurable):
                     raise ValueError(f"No such role(s): {', '.join(missing_roles)}")
                 scopes.extend(roles_to_scopes(roles))
 
-        # always add access scope
+        # always add access scope, openid
         scopes.append(f"access:servers!server={self.user.name}/{self.name}")
+        scopes.append(Scope.openid)
         return sorted(set(scopes))
 
     server_token_scopes = Union(

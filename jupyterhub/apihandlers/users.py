@@ -5,10 +5,12 @@
 import asyncio
 import inspect
 import json
+import time
 from contextlib import aclosing
 from datetime import timedelta, timezone
 
 from dateutil.parser import parse as parse_date
+from oauthlib.common import Request
 from sqlalchemy import func, or_
 from sqlalchemy.orm import joinedload, raiseload, selectinload  # noqa
 from tornado import web
@@ -16,7 +18,7 @@ from tornado.iostream import StreamClosedError
 
 from .. import orm, scopes
 from ..roles import assign_default_roles
-from ..scopes import needs_scope
+from ..scopes import Scope, needs_scope
 from ..user import User
 from ..utils import (
     format_exception,
@@ -77,6 +79,26 @@ class SelfAPIHandler(APIHandler):
         # add scopes to identify model,
         # but not the scopes we added to ensure we could read our own model
         model["scopes"] = sorted(self.expanded_scopes.difference(_added_scopes))
+        if token:
+            # request id_token with scopes
+            # create an id token, added in 6.0
+            # TODO: only if 'openid' in scopes?
+            if True or Scope.openid in self.expanded_scopes:
+                req = Request(self.request.full_url())
+                req.user = user
+                id_token_claims = {
+                    "aud": token.oauth_client.identifier,
+                    "iat": int(time.time()),
+                    "scopes": model["scopes"],
+                }
+                model["id_token"] = (
+                    self.oauth_provider.request_validator.finalize_id_token(
+                        id_token=id_token_claims,
+                        token={"expires_in": token.expires_in},
+                        token_handler=self.oauth_provider.tokens["JWT"],
+                        request=req,
+                    )
+                )
         self.write(json.dumps(model))
 
 

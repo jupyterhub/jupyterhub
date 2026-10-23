@@ -2254,6 +2254,9 @@ components:
           tokenUrl: /hub/api/oauth2/token
           scopes:
             (no_scope): Identify the owner of the requesting entity.
+            openid: Identify the owner of the requesting entity. Added in 
+              JupyterHub 6.2, equivalent to prior default of specifying no 
+              scope.
             self: The user’s own resources _(metascope for users, resolves to 
               (no_scope) for services)_
             inherit: Everything that the token-owning entity can access 

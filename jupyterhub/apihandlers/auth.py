@@ -10,6 +10,7 @@ from oauthlib import oauth2
 from tornado import web
 
 from .. import orm, roles, scopes
+from ..scopes import Scope
 from ..utils import get_browser_protocol, token_authenticated, utcnow
 from .base import APIHandler, BaseHandler
 
@@ -91,7 +92,7 @@ class OAuthHandler:
         (uri, http_method, body, headers)
         """
         return (
-            self.request.uri,
+            self.request.full_url(),
             self.request.method,
             self.request.body,
             self.request.headers,
@@ -217,6 +218,7 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
         authorized_scopes = set()
         for token in existing_tokens:
             authorized_scopes.update(token.scopes)
+            authorized_scopes.add(Scope.openid)
 
         if authorized_scopes:
             if set(requested_scopes).issubset(authorized_scopes):
@@ -225,9 +227,10 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
                 )
                 return False
             else:
+                additional_scopes = set(requested_scopes).difference(authorized_scopes)
                 self.log.debug(
                     f"User {user.name} has authorized {oauth_client.identifier}"
-                    f" for scopes {authorized_scopes}, confirming additional scopes {requested_scopes}"
+                    f" for scopes {authorized_scopes}, confirming additional scopes {additional_scopes}"
                 )
         # default: require confirmation
         return True
@@ -305,7 +308,7 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
             # rather than the expanded_scope intersection
 
             required_scopes = {*scopes.identify_scopes(), *scopes.access_scopes(client)}
-            user_scopes |= {"inherit", *required_scopes}
+            user_scopes |= Scope.ALWAYS_SCOPES | required_scopes
 
             allowed_scopes, disallowed_scopes = scopes._resolve_requested_scopes(
                 requested_scopes,
@@ -349,12 +352,12 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
                         "filter": "",
                     }
                 ]
-            elif 'inherit' in scopes_to_describe:
-                allowed_scopes = scopes_to_describe = ['inherit']
+            elif Scope.inherit in scopes_to_describe:
+                allowed_scopes = scopes_to_describe = [Scope.inherit]
                 scope_descriptions = [
                     {
-                        "scope": "inherit",
-                        "description": scopes.scope_definitions['inherit'][
+                        "scope": Scope.inherit,
+                        "description": scopes.scope_definitions[Scope.inherit][
                             'description'
                         ],
                         "filter": "",
