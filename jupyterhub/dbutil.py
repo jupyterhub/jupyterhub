@@ -132,7 +132,8 @@ def rollback(db_url, *, revision, backup=True, log=None):
         db_log_url = urlinfo.geturl()
     else:
         db_log_url = db_url
-    log.info("Downgrading %s to %s", db_log_url, revision)
+    if log:
+        log.info("Downgrading %s to %s", db_log_url, revision)
     # we need to downgrade, backup the database
     if backup and db_url.startswith('sqlite:///'):
         db_file = db_url.split(':///', 1)[1]
