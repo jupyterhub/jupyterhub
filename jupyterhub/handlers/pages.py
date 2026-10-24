@@ -103,6 +103,7 @@ class HomeHandler(BaseHandler):
             spawners=spawners,
             default_server=user.spawner,
             invalid_server_names=invalid_server_names,
+            can_share=self.has_scope(f"shares!server={user.name}/"),
         )
         self.finish(html)
 

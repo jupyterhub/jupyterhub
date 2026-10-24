@@ -112,6 +112,7 @@ require(["jquery", "moment", "jhapi", "utils"], function (
     api.stop_server(user, {
       success: function () {
         $("#stop").hide();
+        $("#share").hide();
         $("#start")
           .text("Start My Server")
           .attr("title", "Start your default server")
@@ -120,6 +121,79 @@ require(["jquery", "moment", "jhapi", "utils"], function (
           .off("click");
       },
     });
+  });
+
+  $("#share").click(function () {
+    //TODO: add share menu and options to the modal
+    var dialog = $("#share-server-dialog");
+    var modal = new bootstrap.Modal(dialog[0]);
+    modal.show();
+    loadShareList();
+  });
+
+  function loadShareList(offset, shares) {
+    offset = offset || 0;
+    shares = shares || [];
+    api.api_request("shares/" + user + "/", {
+      data: "offset=" + offset,
+      success: function (reply) {
+        shares = shares.concat(reply.items);
+        var next = reply._pagination && reply._pagination.next;
+        if (next) {
+          loadShareList(next.offset, shares);
+          return;
+        }
+        var list = $("#share-list").empty();
+        shares.forEach(function (share) {
+          var name = share.user ? share.user.name : share.group.name;
+          var item = $("<li>").addClass("list-group-item").text(name);
+          $("<button>")
+            .addClass("btn btn-xs btn-danger float-end")
+            .text("Revoke")
+            .click(function () {
+              api.api_request("shares/" + user + "/", {
+                type: "PATCH",
+                data: JSON.stringify(
+                  share.user ? { user: name } : { group: name },
+                ),
+                success: function () {
+                  item.remove();
+                },
+              });
+            })
+            .appendTo(item);
+          list.append(item);
+        });
+      },
+    });
+  }
+
+  $("#generate-share-link").click(function () {
+    api.api_request("share-codes/" + user + "/", {
+      type: "POST",
+      success: function (reply) {
+        var url =
+          reply.full_accept_url || window.location.origin + reply.accept_url;
+        $("#share-link").val(url);
+        $("#share-link-group").removeClass("hidden");
+      },
+    });
+  });
+
+  $("#revoke-all-shares").click(function () {
+    if (!confirm("Revoke access for everyone this server is shared with?")) {
+      return;
+    }
+    api.api_request("shares/" + user + "/", {
+      type: "DELETE",
+      success: function () {
+        $("#share-list").empty();
+      },
+    });
+  });
+
+  $("#copy-share-link").click(function () {
+    navigator.clipboard.writeText($("#share-link").val());
   });
 
   $(".new-server-btn").click(newServer);

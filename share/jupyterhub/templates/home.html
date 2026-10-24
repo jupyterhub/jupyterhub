@@ -17,6 +17,9 @@
           {% if not default_server.active %}Start{% endif %}
           My Server
         </a>
+        {% if default_server.active and can_share %}<a id="share"
+   role="button"
+   class="btn btn-lg btn-primary">Share My Server</a>{% endif %}
       </div>
     </div>
     {% if allow_named_servers %}
@@ -99,6 +102,36 @@
       </table>
     {% endif %}
   </div>
+  {% call modal('Share Server', btn_label='Done') %}
+    <!-- a share link generator button
+    pseudo code:
+    {button labeled "generate share link"}
+      {on click, generate a share link based on: https://jupyterhub.readthedocs.io/en/stable/tutorial/sharing.html#issue-a-sharing-code}
+      {"copy link to clipboard" button}
+    -->
+    <small class="form-text d-block">Share links expire after 1 day, but people who already used the link and accepted keep access.</small>
+    <button type="button" id="generate-share-link" class="btn btn-primary">Generate Share Link</button>
+    <div id="share-link-group" class="input-group mt-2 hidden">
+      <input type="text"
+             id="share-link"
+             class="form-control"
+             readonly
+             aria-label="share link">
+      <button type="button" id="copy-share-link" class="btn btn-outline-secondary">Copy</button>
+    </div>
+    <!-- list of users that have access to the server -->
+    <!-- TODO: list of users, share with next to each.-->
+    <h6 class="mt-3">
+      Shared with
+      <button type="button"
+              id="revoke-all-shares"
+              class="btn btn-xs btn-danger float-end">Revoke All</button>
+    </h6>
+    <ul id="share-list"
+        class="list-group overflow-auto"
+        style="max-height: 300px">
+    </ul>
+  {% endcall %}
 {% endblock main %}
 {% block script %}
   {{ super() }}
