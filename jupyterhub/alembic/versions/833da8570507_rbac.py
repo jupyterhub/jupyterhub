@@ -1,5 +1,5 @@
 """
-rbac changes for jupyterhub 2.0
+2.0: RBAC
 
 Revision ID: 833da8570507
 Revises: 4dc2d5a8c53c

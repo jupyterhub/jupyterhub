@@ -108,6 +108,12 @@ jupyterhub upgrade-db
 This should find the location of your database, and run the necessary upgrades
 for it.
 
+```{note}
+Starting in JupyterHub 6.2, the explicit `upgrade-db` step is optional,
+as the database will be upgraded by default on startup.
+To opt out of this, set `JupyterHub.upgrade_db = False` to preserve pre-6.2 behavior
+```
+
 ### What happens if I delete my database?
 
 Information that resides only in the Hub database includes:
@@ -137,3 +143,34 @@ process again.
    deal with any deprecated options.
 
 Congratulations, your JupyterHub has been upgraded!
+
+## Rolling back upgrades
+
+If something goes wrong and you need to downgrade JupyterHub, you likely need to roll back database changes.
+Often, the easiest way to do this is to restore the database from the backup you made (you did make a backup, right?) prior to upgrade.
+
+JupyterHub 6.2 adds a `jupyterhub downgrade-db` command, which lets you roll back the database upgrade in-place.
+This is rarely used, and supported on a best-effort basis, but most schema upgrades are simple column/table additions which can be safely reversed.
+
+Schema downgrades must be done **before downgrading the JupyterHub package**, because e.g. JupyterHub 6 knows how to downgrade to JupyterHub 5, but JupyterHub 5 does not.
+
+If you are downgrading from an older version of JupyterHub, you can access the `alembic downgrade` command via the `python3 -m jupyterhub.dbutil alembic` utility.
+A table of recent revisions:
+
+| JupyterHub Version | alembic revision |
+| ------------------ | ---------------- |
+| 6.0-6.1            | `f460b0348206`   |
+| 5.x                | `4621fec11365`   |
+| 4.x                | `0eee8c825d24`   |
+
+So to downgrade from JupyterHub 6.0 to JupyterHub 5:
+
+```
+python3 -m jupyterhub.dbutil alembic downgrade 4621fec11365
+```
+
+or from JupyterHub 6.2 to 6.1:
+
+```
+jupyterhub downgrade-db 6.1
+```

@@ -1,4 +1,4 @@
-"""added properties column
+"""4.0: added properties column
 
 Revision ID: 0eee8c825d24
 Revises: 833da8570507

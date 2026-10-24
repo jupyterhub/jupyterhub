@@ -85,6 +85,20 @@ def upgrade(db_url, revision='head'):
         check_call(['alembic', '-c', alembic_ini, 'upgrade', revision])
 
 
+def downgrade(db_url, revision):
+    """Downgrade the given database to revision.
+
+    db_url: str
+        The SQLAlchemy database url, e.g. `sqlite:///jupyterhub.sqlite`.
+    revision: str
+        The alembic revision to upgrade to.
+
+    .. versionadded:: 6.2
+    """
+    with _temp_alembic_ini(db_url) as alembic_ini:
+        check_call(['alembic', '-c', alembic_ini, 'downgrade', revision])
+
+
 def backup_db_file(db_file, log=None):
     """Backup a database file if it exists"""
     timestamp = datetime.now().strftime('.%Y-%m-%d-%H%M%S')
@@ -99,6 +113,32 @@ def backup_db_file(db_file, log=None):
     if log:
         log.info("Backing up %s => %s", db_file, backup_db_file)
     shutil.copy(db_file, backup_db_file)
+
+
+def rollback(db_url, *, revision, backup=True, log=None):
+    """Downgrade a database if needed
+
+    If the database is sqlite, a backup file will be created with a timestamp.
+    Other database systems should perform their own backups prior to calling this.
+
+    .. versionadded:: 6.2
+    """
+    urlinfo = urlparse(db_url)
+    if urlinfo.password:
+        # avoid logging the database password
+        urlinfo = urlinfo._replace(
+            netloc=f'{urlinfo.username}:[redacted]@{urlinfo.hostname}:{urlinfo.port}'
+        )
+        db_log_url = urlinfo.geturl()
+    else:
+        db_log_url = db_url
+    if log:
+        log.info("Downgrading %s to %s", db_log_url, revision)
+    # we need to downgrade, backup the database
+    if backup and db_url.startswith('sqlite:///'):
+        db_file = db_url.split(':///', 1)[1]
+        backup_db_file(db_file, log=log)
+    downgrade(db_url, revision)
 
 
 def upgrade_if_needed(db_url, *, db_kwargs=None, backup=True, log=None):

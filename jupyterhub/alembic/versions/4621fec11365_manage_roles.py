@@ -1,4 +1,4 @@
-"""manage roles
+"""5.0: manage roles
 
 Revision ID: 4621fec11365
 Revises: 3c2384c5aae1

@@ -1,4 +1,4 @@
-"""Add display_name to spawners
+"""6.0: Add display_name to spawners
 
 Revision ID: f460b0348206
 Revises: ff1860e38070

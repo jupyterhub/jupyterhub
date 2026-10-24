@@ -2,19 +2,25 @@ import os
 import sys
 import tempfile
 from glob import glob
-from subprocess import check_call
+from subprocess import CalledProcessError, check_call
 
+import alembic.command
+import alembic.config
 import pytest
+from alembic.script import ScriptDirectory
 from packaging.version import parse as V
 from pytest import raises
+from sqlalchemy import create_engine, text
 from traitlets.config import Config
 
 from .. import orm
 from ..app import NewToken, UpgradeDB
+from ..dbutil import _temp_alembic_ini
 from ..scopes import _check_scopes_exist
+from .populate_db import populate_db
 
 here = os.path.abspath(os.path.dirname(__file__))
-populate_db = os.path.join(here, 'populate_db.py')
+populate_db_py = os.path.join(here, 'populate_db.py')
 
 
 pytestmark = pytest.mark.db
@@ -46,7 +52,7 @@ def generate_old_db(env_dir, hub_version, db_url):
         else:
             pkgs.append('psycopg[binary]')
     check_call([env_pip, 'install'] + pkgs)
-    check_call([env_py, populate_db, db_url])
+    check_call([env_py, populate_db_py, db_url])
 
 
 # changes to this version list must also be reflected
@@ -73,6 +79,9 @@ async def test_upgrade(tmpdir, hub_version):
 
     cfg = Config()
     cfg.JupyterHub.db_url = db_url
+    cfg.JupyterHub.authenticator_class = "dummy"
+    # disable auto-upgrade, should raise
+    cfg.JupyterHub.upgrade_db = False
 
     tokenapp = NewToken(config=cfg)
     tokenapp.initialize(['admin'])
@@ -80,7 +89,7 @@ async def test_upgrade(tmpdir, hub_version):
         tokenapp.start()
 
     if 'sqlite' in db_url:
-        fname = db_url.split(':///')[1]
+        db_url.split(':///')[1]
         sqlite_files = glob(os.path.join(str(tmpdir), 'jupyterhub.sqlite*'))
         assert len(sqlite_files) == 1
 
@@ -109,3 +118,90 @@ async def test_upgrade(tmpdir, hub_version):
     for assignment_table in orm._role_associations.values():
         for assignment in db.query(assignment_table):
             assert assignment.managed_by_auth is False
+
+
+@pytest.mark.parametrize(
+    'hub_version, expected_revision',
+    [
+        ('5', '4621fec11365'),
+        ('6.1', 'f460b0348206'),
+    ],
+)
+async def test_downgrade(tmpdir, hub_version, expected_revision):
+    db_url = os.getenv('JUPYTERHUB_TEST_DB_URL')
+    if db_url:
+        db_url += '_downgrade_' + hub_version.replace('.', '')
+    else:
+        db_url = 'sqlite:///jupyterhub.sqlite'
+    tmpdir.chdir()
+    populate_db(db_url)
+    with _temp_alembic_ini(db_url) as ini:
+        cfg = alembic.config.Config(ini)
+        scripts = ScriptDirectory.from_config(cfg)
+        head = scripts.get_heads()[0]
+    check_call(
+        [
+            sys.executable,
+            "-m",
+            "jupyterhub",
+            "downgrade-db",
+            hub_version,
+            "--JupyterHub.db_url",
+            db_url,
+        ]
+    )
+
+    engine = create_engine(db_url)
+    with engine.begin() as connection:
+        alembic_revision = connection.execute(
+            text('SELECT version_num FROM alembic_version')
+        ).first()[0]
+
+    # check downgraded state?
+    assert alembic_revision == expected_revision
+
+    check_call(
+        [
+            sys.executable,
+            "-m",
+            "jupyterhub",
+            "upgrade-db",
+            "--JupyterHub.db_url",
+            db_url,
+        ]
+    )
+    with engine.begin() as connection:
+        alembic_revision = connection.execute(
+            text('SELECT version_num FROM alembic_version')
+        ).first()[0]
+    assert alembic_revision == head
+
+
+@pytest.mark.parametrize(
+    "version",
+    [
+        None,
+        "1.0",
+        "9.5",
+        "notaversion",
+    ],
+)
+async def test_downgrade_bad(tmpdir, capfd, version):
+    cmd = [
+        sys.executable,
+        "-m",
+        "jupyterhub",
+        "downgrade-db",
+    ]
+    if version is not None:
+        cmd.append(version)
+    with pytest.raises(CalledProcessError):
+        check_call(cmd)
+    out = capfd.readouterr()
+    assert "Traceback" not in out.err
+    if version is None:
+        assert "Specify a JupyterHub version" in out.err
+    elif version == "notaversion":
+        assert "Invalid version" in out.err
+    else:
+        assert f"{version} not supported" in out.err

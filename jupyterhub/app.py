@@ -30,6 +30,8 @@ import tornado.options
 from dateutil.parser import parse as parse_date
 from jinja2 import ChoiceLoader, Environment, FileSystemLoader, PrefixLoader
 from jupyter_events.logger import EventLogger
+from packaging.specifiers import SpecifierSet
+from packaging.version import Version
 from sqlalchemy.exc import OperationalError, SQLAlchemyError
 from sqlalchemy.orm import selectinload
 from tornado import web
@@ -148,8 +150,23 @@ hub_flags = {
         {'JupyterHub': {'upgrade_db': True}},
         """Automatically upgrade the database if needed on startup.
 
-        Only safe if the database has been backed up.
+        This is the default, starting with JupyterHub 6.2.
+
+        Usually safe, but always good to backup your database first
+        (and continuously!).
+
         Only SQLite database files will be backed up automatically.
+        """,
+    ),
+    'no-upgrade-db': (
+        {'JupyterHub': {'upgrade_db': False}},
+        """Disable automatic db upgrade.
+
+        If set, JupyterHub will abort if the current schema doesn't match.
+
+        To upgrade explicitly, run `jupyterhub upgrade-db`.
+
+        .. versionadded:: 6.2
         """,
     ),
     'no-ssl': (
@@ -243,6 +260,57 @@ class UpgradeDB(Application):
         dbutil.upgrade_if_needed(hub.db_url, log=self.log, db_kwargs=hub.db_kwargs)
 
 
+class DowngradeDB(Application):
+    """Downgrade the JupyterHub database schema."""
+
+    name = 'jupyterhub-downgrade-db'
+    version = jupyterhub.__version__
+    description = """Downgrade the database to a past schema version.
+
+    Useful prior to rolling back a JupyterHub upgrade.
+
+    Specify the version of JupyterHub to downgrade to.
+
+    Only 1-2 past major versions of JupyterHub are supported.
+
+    Make sure to backup your database first!
+    If your db is sqlite, a backup copy will be made before downgrading.
+
+    Usage:
+
+        jupyterhub downgrade-db 6.0
+    """
+    aliases = common_aliases
+    classes = []
+    version_revisions = {
+        SpecifierSet(">=6.0,<6.2"): "f460b0348206",
+        SpecifierSet(">=5.0,<6.0"): "4621fec11365",
+        # don't support downgrade more than one major version
+        # SpecifierSet(">=4.0,<5.0"): "0eee8c825d24",
+    }
+
+    def start(self):
+        hub = JupyterHub(parent=self)
+        hub.load_config_file(hub.config_file)
+        self.log = hub.log
+        if len(self.extra_args) != 1:
+            self.exit("Specify a JupyterHub version to downgrade to.")
+
+        v = self.extra_args[0]
+        try:
+            target_version = Version(v)
+        except Exception as e:
+            # avoid traceback on invalid version
+            self.exit(str(e))
+        for range, revision in self.version_revisions.items():
+            if target_version in range:
+                self.log.info("JupyterHub %s: db revision %s", v, revision)
+                break
+        else:
+            self.exit(f"Downgrade to JupyterHub {v} not supported.")
+        dbutil.rollback(hub.db_url, revision=revision, log=self.log)
+
+
 class JupyterHub(Application):
     """An Application for starting a Multi-User Jupyter Notebook server."""
 
@@ -277,6 +345,10 @@ class JupyterHub(Application):
         'upgrade-db': (
             UpgradeDB,
             "Upgrade your JupyterHub state database to the current version.",
+        ),
+        'downgrade-db': (
+            DowngradeDB,
+            "Downgrade your JupyterHub state database as part of rolling back an update (new in JupyterHub 6.2).",
         ),
     }
 
@@ -1570,11 +1642,16 @@ class JupyterHub(Application):
         """).tag(config=True)
 
     upgrade_db = Bool(
-        False,
-        help="""Upgrade the database automatically on start.
+        True,
+        help="""
+        Upgrade the database automatically on start.
 
-        Only safe if database is regularly backed up.
+        Set to False to require explicit upgrades via `jupyterhub upgrade-db`.
+
         Only SQLite databases will be backed up to a local file automatically.
+
+        .. versionchanged:: 6.2
+            Default changed to True.
     """,
     ).tag(config=True)
     reset_db = Bool(False, help="Purge and reset the database.").tag(config=True)

@@ -1,4 +1,4 @@
-"""Add APIToken.expires_at
+"""0.9: Add APIToken.expires_at
 
 Revision ID: 896818069c98
 Revises: d68c98b66cd4
