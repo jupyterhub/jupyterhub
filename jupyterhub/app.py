@@ -894,6 +894,9 @@ class JupyterHub(Application):
             # if subdomain_host is specified, use it by default
             return self.subdomain_host + self.base_url
         else:
+            self.log.warning(
+                "JupyterHub.public_url not specified. OIDC may provide inconsistent values for `issuer`."
+            )
             return ""
 
     @validate("public_url")
