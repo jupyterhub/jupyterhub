@@ -1,6 +1,9 @@
-"""Utilities for hooking up oauth2 to JupyterHub's database
+"""Utilities for hooking up OAuth2/OpenID Connect to JupyterHub's database
 
 implements https://oauthlib.readthedocs.io/en/latest/oauth2/server.html
+and https://oauthlib.readthedocs.io/en/latest/oauth2/oidc.html
+
+oidc spec: https://openid.net/specs/openid-connect-basic-1_0.html
 """
 
 import time
@@ -616,8 +619,9 @@ class JupyterHubRequestValidator(RequestValidator):
             - Authorization Code Grant
             - Implicit Grant
         """
-        # TODO
-        return True
+        # only support authorization code grants,
+        # not implicit, etc.
+        return response_type == "code"
 
     def validate_scopes(self, client_id, scopes, client, request, *args, **kwargs):
         """Ensure the client is authorized access to requested scopes.
