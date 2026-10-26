@@ -752,14 +752,35 @@ async def test_oidc(
     assert "id_token" in user
     id_token_jwt = user["id_token"]
     signing_key = next(iter(app.token_signing_keys_loaded.values())).public_key()
-    id_token = jwt.decode(
-        id_token_jwt,
-        signing_key,
-        audience=mockservice_url.oauth_client_id,
-        algorithms=["RS256"],
-    )
+    if app.public_url:
+        issuer = url_path_join(app.public_url, "hub")
+    else:
+        issuer = app.hub.url.rstrip("/")
+    audience = mockservice_url.oauth_client_id
+    try:
+        id_token = jwt.decode(
+            id_token_jwt,
+            signing_key,
+            audience=audience,
+            issuer=issuer,
+            algorithms=["RS256"],
+        )
+    except Exception:
+        print(f"{id_token_jwt=}")
+        id_token = jwt.decode(
+            id_token_jwt,
+            options={"verify_signature": False},
+        )
+        print(f"{id_token=}")
+        # re-assert audience, issuer for nicer errors
+        assert id_token["aud"] == audience
+        assert id_token["iss"] == issuer
+        # re-raise original if that wasn't the issue
+        raise
+
     assert id_token["sub"] == name
     assert set(id_token["scopes"]) == {
+        "openid",
         f"access:services!service={mockservice_url.name}",
         f"read:users:name!user={name}",
         f"read:users:groups!user={name}",
