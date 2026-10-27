@@ -963,6 +963,21 @@ async def test_user_rename(
     assert renamed.id == user.id
 
 
+async def test_user_no_name_change(app, user):
+    username = user.name
+    r = await api_request(
+        app,
+        'users',
+        user.name,
+        method='patch',
+        data=json.dumps({'name': username, "admin": True}),
+    )
+    assert user.name == username
+    found = find_user(app.db, username)
+    assert found is not None
+    assert user.admin is True
+
+
 @pytest.mark.parametrize(
     "new_name",
     [
