@@ -417,7 +417,6 @@ def get_scopes_for(orm_object):
 
         # reduce to collapse multiple filters on the same scope
         # to avoid spurious logs about discarded scopes
-        token_scopes.update(identify_scopes(owner))
         token_scopes = reduce_scopes(token_scopes)
 
         intersection = _intersect_expanded_scopes(
