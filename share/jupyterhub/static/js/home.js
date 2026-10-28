@@ -149,8 +149,19 @@ require(["jquery", "moment", "jhapi", "utils"], function (
         }
         var list = $("#user-list").empty();
         users.forEach(function (u) {
-          if (u.name === user) return;
-          list.append($("<li>").addClass("list-group-item").text(u.name));
+          var name = u.name;
+          if (name === user) {
+            return;
+          }
+          var item = $("<li>").addClass("list-group-item").text(name);
+          $("<button>")
+            .addClass("btn btn-xs btn-primary float-end")
+            .text("Invite")
+            .click(function () {
+              // TODO: invite user
+            })
+            .appendTo(item);
+          list.append(item);
         });
       },
     });
