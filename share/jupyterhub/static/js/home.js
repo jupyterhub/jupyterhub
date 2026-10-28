@@ -158,7 +158,13 @@ require(["jquery", "moment", "jhapi", "utils"], function (
             .addClass("btn btn-xs btn-primary float-end")
             .text("Invite")
             .click(function () {
-              // TODO: invite user
+              api.api_request("shares/" + user + "/", {
+                type: "POST",
+                data: JSON.stringify({ user: name }),
+                success: function () {
+                  loadShareList();
+                },
+              });
             })
             .appendTo(item);
           list.append(item);
