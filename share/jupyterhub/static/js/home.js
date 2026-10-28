@@ -130,7 +130,6 @@ require(["jquery", "moment", "jhapi", "utils"], function (
   }
 
   $(document).on("click", ".share-server", function () {
-    //TODO: add share menu and options to the modal
     shareServer = $(this).attr("data-server-name") || "";
     $("#share-link").val("");
     $("#share-link-group").addClass("hidden");
