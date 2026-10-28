@@ -19,7 +19,7 @@
         </a>
         {% if default_server.active and can_share %}<a id="share"
    role="button"
-   class="btn btn-lg btn-primary">Share My Server</a>{% endif %}
+   class="share-server btn btn-lg btn-primary">Share My Server</a>{% endif %}
       </div>
     </div>
     {% if allow_named_servers %}
@@ -95,6 +95,11 @@
                 <button type="button"
                         class="delete-server btn btn-xs btn-danger{% if spawner.active %} hidden{% endif %}"
                         id="delete-{{ spawner.name }}">delete</button>
+                {% if can_share %}
+                  <button type="button"
+                          class="share-server btn btn-xs btn-primary"
+                          data-server-name="{{ spawner.name }}">share</button>
+                {% endif %}
               </td>
             </tr>
           {% endfor %}

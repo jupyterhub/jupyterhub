@@ -129,7 +129,7 @@ require(["jquery", "moment", "jhapi", "utils"], function (
     return kind + "/" + user + "/" + shareServer;
   }
 
-  $("#share").click(function () {
+  $(document).on("click", ".share-server", function () {
     //TODO: add share menu and options to the modal
     shareServer = $(this).attr("data-server-name") || "";
     $("#share-link").val("");
