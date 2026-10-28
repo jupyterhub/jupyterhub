@@ -104,7 +104,10 @@ class HomeHandler(BaseHandler):
             default_server=user.spawner,
             invalid_server_names=invalid_server_names,
             can_share=self.has_scope(f"shares!server={user.name}/"),
-            can_list_users=self.has_scope("list:users"),
+            can_invite_users=self.has_scope("list:users")
+            and self.has_scope("read:users:name"),
+            can_invite_groups=self.has_scope("list:groups")
+            and self.has_scope("read:groups:name"),
         )
         self.finish(html)
 

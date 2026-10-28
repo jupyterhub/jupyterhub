@@ -135,12 +135,16 @@ require(["jquery", "moment", "jhapi", "utils"], function (
     $("#share-link-group").addClass("hidden");
     $("#share-list").empty();
     $("#user-list").empty();
+    $("#group-list").empty();
     var dialog = $("#share-server-dialog");
     var modal = new bootstrap.Modal(dialog[0]);
     modal.show();
     loadShareList();
     if ($("#user-list").length) {
       loadUserList();
+    }
+    if ($("#group-list").length) {
+      loadGroupList();
     }
   });
 
@@ -175,6 +179,46 @@ require(["jquery", "moment", "jhapi", "utils"], function (
               api.api_request(sharePath("shares"), {
                 type: "POST",
                 data: JSON.stringify({ user: name }),
+                success: function () {
+                  loadShareList();
+                },
+              });
+            })
+            .appendTo(item);
+          list.append(item);
+        });
+      },
+    });
+  }
+
+  function loadGroupList(offset, groups, server) {
+    offset = offset || 0;
+    groups = groups || [];
+    server = server === undefined ? shareServer : server;
+    api.api_request("groups", {
+      data: "offset=" + offset,
+      headers: { Accept: "application/jupyterhub-pagination+json" },
+      success: function (reply) {
+        groups = groups.concat(reply.items);
+        var next = reply._pagination && reply._pagination.next;
+        if (next) {
+          loadGroupList(next.offset, groups, server);
+          return;
+        }
+        if (server !== shareServer) {
+          return;
+        }
+        var list = $("#group-list").empty();
+        groups.forEach(function (g) {
+          var name = g.name;
+          var item = $("<li>").addClass("list-group-item").text(name);
+          $("<button>")
+            .addClass("btn btn-xs btn-primary float-end")
+            .text("Invite")
+            .click(function () {
+              api.api_request(sharePath("shares"), {
+                type: "POST",
+                data: JSON.stringify({ group: name }),
                 success: function () {
                   loadShareList();
                 },

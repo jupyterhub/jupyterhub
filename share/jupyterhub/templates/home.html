@@ -129,10 +129,19 @@
         style="max-height: 300px">
     </ul>
     <small class="form-text d-block mt-1">Revoking access may take a few minutes to propagate.</small>
-    {% if can_list_users %}
+    {% if can_invite_users %}
       <div id="share-with-users">
         <h6 class="mt-3">All Users</h6>
         <ul id="user-list"
+            class="list-group overflow-auto"
+            style="max-height: 300px">
+        </ul>
+      </div>
+    {% endif %}
+    {% if can_invite_groups %}
+      <div id="share-with-groups">
+        <h6 class="mt-3">All Groups</h6>
+        <ul id="group-list"
             class="list-group overflow-auto"
             style="max-height: 300px">
         </ul>
