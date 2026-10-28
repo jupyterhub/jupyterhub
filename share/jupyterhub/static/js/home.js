@@ -129,7 +129,32 @@ require(["jquery", "moment", "jhapi", "utils"], function (
     var modal = new bootstrap.Modal(dialog[0]);
     modal.show();
     loadShareList();
+    if ($("#user-list").length) {
+      loadUserList();
+    }
   });
+
+  function loadUserList(offset, users) {
+    offset = offset || 0;
+    users = users || [];
+    api.api_request("users", {
+      data: "offset=" + offset,
+      headers: { Accept: "application/jupyterhub-pagination+json" },
+      success: function (reply) {
+        users = users.concat(reply.items);
+        var next = reply._pagination && reply._pagination.next;
+        if (next) {
+          loadUserList(next.offset, users);
+          return;
+        }
+        var list = $("#user-list").empty();
+        users.forEach(function (u) {
+          if (u.name === user) return;
+          list.append($("<li>").addClass("list-group-item").text(u.name));
+        });
+      },
+    });
+  }
 
   function loadShareList(offset, shares) {
     offset = offset || 0;

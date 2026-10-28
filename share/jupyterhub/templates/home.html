@@ -131,6 +131,15 @@
         class="list-group overflow-auto"
         style="max-height: 300px">
     </ul>
+    {% if can_list_users %}
+      <div id="share-with-users">
+        <h6 class="mt-3">All Users</h6>
+        <ul id="user-list"
+            class="list-group overflow-auto"
+            style="max-height: 300px">
+        </ul>
+      </div>
+    {% endif %}
   {% endcall %}
 {% endblock main %}
 {% block script %}
