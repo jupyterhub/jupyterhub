@@ -123,8 +123,19 @@ require(["jquery", "moment", "jhapi", "utils"], function (
     });
   });
 
+  var shareServer = "";
+
+  function sharePath(kind) {
+    return kind + "/" + user + "/" + shareServer;
+  }
+
   $("#share").click(function () {
     //TODO: add share menu and options to the modal
+    shareServer = $(this).attr("data-server-name") || "";
+    $("#share-link").val("");
+    $("#share-link-group").addClass("hidden");
+    $("#share-list").empty();
+    $("#user-list").empty();
     var dialog = $("#share-server-dialog");
     var modal = new bootstrap.Modal(dialog[0]);
     modal.show();
@@ -134,9 +145,10 @@ require(["jquery", "moment", "jhapi", "utils"], function (
     }
   });
 
-  function loadUserList(offset, users) {
+  function loadUserList(offset, users, server) {
     offset = offset || 0;
     users = users || [];
+    server = server === undefined ? shareServer : server;
     api.api_request("users", {
       data: "offset=" + offset,
       headers: { Accept: "application/jupyterhub-pagination+json" },
@@ -144,7 +156,10 @@ require(["jquery", "moment", "jhapi", "utils"], function (
         users = users.concat(reply.items);
         var next = reply._pagination && reply._pagination.next;
         if (next) {
-          loadUserList(next.offset, users);
+          loadUserList(next.offset, users, server);
+          return;
+        }
+        if (server !== shareServer) {
           return;
         }
         var list = $("#user-list").empty();
@@ -158,7 +173,7 @@ require(["jquery", "moment", "jhapi", "utils"], function (
             .addClass("btn btn-xs btn-primary float-end")
             .text("Invite")
             .click(function () {
-              api.api_request("shares/" + user + "/", {
+              api.api_request(sharePath("shares"), {
                 type: "POST",
                 data: JSON.stringify({ user: name }),
                 success: function () {
@@ -173,16 +188,20 @@ require(["jquery", "moment", "jhapi", "utils"], function (
     });
   }
 
-  function loadShareList(offset, shares) {
+  function loadShareList(offset, shares, server) {
     offset = offset || 0;
     shares = shares || [];
-    api.api_request("shares/" + user + "/", {
+    server = server === undefined ? shareServer : server;
+    api.api_request(sharePath("shares"), {
       data: "offset=" + offset,
       success: function (reply) {
         shares = shares.concat(reply.items);
         var next = reply._pagination && reply._pagination.next;
         if (next) {
-          loadShareList(next.offset, shares);
+          loadShareList(next.offset, shares, server);
+          return;
+        }
+        if (server !== shareServer) {
           return;
         }
         var list = $("#share-list").empty();
@@ -193,7 +212,7 @@ require(["jquery", "moment", "jhapi", "utils"], function (
             .addClass("btn btn-xs btn-danger float-end")
             .text("Revoke")
             .click(function () {
-              api.api_request("shares/" + user + "/", {
+              api.api_request(sharePath("shares"), {
                 type: "PATCH",
                 data: JSON.stringify(
                   share.user ? { user: name } : { group: name },
@@ -211,7 +230,7 @@ require(["jquery", "moment", "jhapi", "utils"], function (
   }
 
   $("#generate-share-link").click(function () {
-    api.api_request("share-codes/" + user + "/", {
+    api.api_request(sharePath("share-codes"), {
       type: "POST",
       success: function (reply) {
         var url =
@@ -226,7 +245,7 @@ require(["jquery", "moment", "jhapi", "utils"], function (
     if (!confirm("Revoke access for everyone this server is shared with?")) {
       return;
     }
-    api.api_request("shares/" + user + "/", {
+    api.api_request(sharePath("shares"), {
       type: "DELETE",
       success: function () {
         $("#share-list").empty();
