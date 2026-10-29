@@ -285,6 +285,7 @@ class DowngradeDB(Application):
     aliases = common_aliases
     classes = []
     version_revisions = {
+        SpecifierSet(">=6.2,<7"): "7813d158bb88",
         SpecifierSet(">=6.0,<6.2"): "f460b0348206",
         SpecifierSet(">=5.0,<6.0"): "4621fec11365",
         # don't support downgrade more than one major version
@@ -304,6 +305,7 @@ class DowngradeDB(Application):
         except Exception as e:
             # avoid traceback on invalid version
             self.exit(str(e))
+
         for range, revision in self.version_revisions.items():
             if target_version in range:
                 self.log.info("JupyterHub %s: db revision %s", v, revision)
