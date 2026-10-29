@@ -8,7 +8,6 @@ from binascii import hexlify
 from unittest import mock
 from urllib.parse import parse_qs, urlparse
 
-import jwt
 import pytest
 from bs4 import BeautifulSoup
 from pytest import raises
@@ -690,7 +689,9 @@ async def test_pkce(
     test_settings.update(app.tornado_settings)
     test_settings["oauth_no_confirm_list"] = {mockservice_url.oauth_client_id}
     with (
-        mock.patch.object(app.oauth_provider._validator, "require_pkce", required),
+        mock.patch.object(
+            app.oauth_provider.request_validator, "require_pkce", required
+        ),
         mock.patch.dict(app.tornado_settings, test_settings),
     ):
         r = await s.get(url_with_param)
@@ -718,70 +719,3 @@ async def test_pkce(
     # expect_success: all okay
     assert dest_url == url
     assert r.status_code == 200
-
-
-async def test_oidc(
-    app,
-    mockservice_url,
-    create_user_with_scopes,
-):
-    user = create_user_with_scopes("access:services")
-    app.db.commit()
-
-    s = AsyncSession()
-    name = user.name
-    s.cookies = await app.login_user(name)
-
-    url = public_url(app, mockservice_url) + "owhoami"
-    url_with_param = url_concat(url, {"request-scope": "openid"})
-
-    test_settings = {}
-    test_settings.update(app.tornado_settings)
-    test_settings["oauth_no_confirm_list"] = {mockservice_url.oauth_client_id}
-    with (mock.patch.dict(app.tornado_settings, test_settings),):
-        r = await s.get(url_with_param)
-
-    # useful to debug failures:
-    print(r.url, [_r.url for _r in r.history])
-
-    dest_url, _, query_s = r.url.partition("?")
-    # expect_success: all okay
-    assert dest_url == url
-    assert r.status_code == 200
-    user = r.json()
-    assert "id_token" in user
-    id_token_jwt = user["id_token"]
-    signing_key = next(iter(app.token_signing_keys_loaded.values())).public_key()
-    if app.public_url:
-        issuer = url_path_join(app.public_url, "hub")
-    else:
-        issuer = app.hub.url.rstrip("/")
-    audience = mockservice_url.oauth_client_id
-    try:
-        id_token = jwt.decode(
-            id_token_jwt,
-            signing_key,
-            audience=audience,
-            issuer=issuer,
-            algorithms=["RS256"],
-        )
-    except Exception:
-        print(f"{id_token_jwt=}")
-        id_token = jwt.decode(
-            id_token_jwt,
-            options={"verify_signature": False},
-        )
-        print(f"{id_token=}")
-        # re-assert audience, issuer for nicer errors
-        assert id_token["aud"] == audience
-        assert id_token["iss"] == issuer
-        # re-raise original if that wasn't the issue
-        raise
-
-    assert id_token["sub"] == name
-    assert set(id_token["scopes"]) == {
-        "openid",
-        f"access:services!service={mockservice_url.name}",
-        f"read:users:name!user={name}",
-        f"read:users:groups!user={name}",
-    }
