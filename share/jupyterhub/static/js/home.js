@@ -112,6 +112,7 @@ require(["jquery", "moment", "jhapi", "utils"], function (
     api.stop_server(user, {
       success: function () {
         $("#stop").hide();
+        $("#share").hide();
         $("#start")
           .text("Start My Server")
           .attr("title", "Start your default server")
@@ -120,6 +121,183 @@ require(["jquery", "moment", "jhapi", "utils"], function (
           .off("click");
       },
     });
+  });
+
+  var shareServer = "";
+
+  function sharePath(kind) {
+    return kind + "/" + user + "/" + shareServer;
+  }
+
+  $(document).on("click", ".share-server", function () {
+    shareServer = $(this).attr("data-server-name") || "";
+    $("#share-link").val("");
+    $("#share-link-group").addClass("hidden");
+    $("#share-list").empty();
+    $("#user-list").empty();
+    $("#group-list").empty();
+    var dialog = $("#share-server-dialog");
+    var modal = new bootstrap.Modal(dialog[0]);
+    modal.show();
+    loadShareList();
+    if ($("#user-list").length) {
+      loadUserList();
+    }
+    if ($("#group-list").length) {
+      loadGroupList();
+    }
+  });
+
+  function loadUserList(offset, users, server) {
+    offset = offset || 0;
+    users = users || [];
+    server = server === undefined ? shareServer : server;
+    api.api_request("users", {
+      data: "offset=" + offset,
+      headers: { Accept: "application/jupyterhub-pagination+json" },
+      success: function (reply) {
+        users = users.concat(reply.items);
+        var next = reply._pagination && reply._pagination.next;
+        if (next) {
+          loadUserList(next.offset, users, server);
+          return;
+        }
+        if (server !== shareServer) {
+          return;
+        }
+        var list = $("#user-list").empty();
+        users.forEach(function (u) {
+          var name = u.name;
+          if (name === user) {
+            return;
+          }
+          var item = $("<li>").addClass("list-group-item").text(name);
+          $("<button>")
+            .addClass("btn btn-xs btn-primary float-end")
+            .text("Invite")
+            .click(function () {
+              api.api_request(sharePath("shares"), {
+                type: "POST",
+                data: JSON.stringify({ user: name }),
+                success: function () {
+                  loadShareList();
+                },
+              });
+            })
+            .appendTo(item);
+          list.append(item);
+        });
+      },
+    });
+  }
+
+  function loadGroupList(offset, groups, server) {
+    offset = offset || 0;
+    groups = groups || [];
+    server = server === undefined ? shareServer : server;
+    api.api_request("groups", {
+      data: "offset=" + offset,
+      headers: { Accept: "application/jupyterhub-pagination+json" },
+      success: function (reply) {
+        groups = groups.concat(reply.items);
+        var next = reply._pagination && reply._pagination.next;
+        if (next) {
+          loadGroupList(next.offset, groups, server);
+          return;
+        }
+        if (server !== shareServer) {
+          return;
+        }
+        var list = $("#group-list").empty();
+        groups.forEach(function (g) {
+          var name = g.name;
+          var item = $("<li>").addClass("list-group-item").text(name);
+          $("<button>")
+            .addClass("btn btn-xs btn-primary float-end")
+            .text("Invite")
+            .click(function () {
+              api.api_request(sharePath("shares"), {
+                type: "POST",
+                data: JSON.stringify({ group: name }),
+                success: function () {
+                  loadShareList();
+                },
+              });
+            })
+            .appendTo(item);
+          list.append(item);
+        });
+      },
+    });
+  }
+
+  function loadShareList(offset, shares, server) {
+    offset = offset || 0;
+    shares = shares || [];
+    server = server === undefined ? shareServer : server;
+    api.api_request(sharePath("shares"), {
+      data: "offset=" + offset,
+      success: function (reply) {
+        shares = shares.concat(reply.items);
+        var next = reply._pagination && reply._pagination.next;
+        if (next) {
+          loadShareList(next.offset, shares, server);
+          return;
+        }
+        if (server !== shareServer) {
+          return;
+        }
+        var list = $("#share-list").empty();
+        shares.forEach(function (share) {
+          var name = share.user ? share.user.name : share.group.name;
+          var item = $("<li>").addClass("list-group-item").text(name);
+          $("<button>")
+            .addClass("btn btn-xs btn-danger float-end")
+            .text("Revoke")
+            .click(function () {
+              api.api_request(sharePath("shares"), {
+                type: "PATCH",
+                data: JSON.stringify(
+                  share.user ? { user: name } : { group: name },
+                ),
+                success: function () {
+                  item.remove();
+                },
+              });
+            })
+            .appendTo(item);
+          list.append(item);
+        });
+      },
+    });
+  }
+
+  $("#generate-share-link").click(function () {
+    api.api_request(sharePath("share-codes"), {
+      type: "POST",
+      success: function (reply) {
+        var url =
+          reply.full_accept_url || window.location.origin + reply.accept_url;
+        $("#share-link").val(url);
+        $("#share-link-group").removeClass("hidden");
+      },
+    });
+  });
+
+  $("#revoke-all-shares").click(function () {
+    if (!confirm("Revoke access for everyone this server is shared with?")) {
+      return;
+    }
+    api.api_request(sharePath("shares"), {
+      type: "DELETE",
+      success: function () {
+        $("#share-list").empty();
+      },
+    });
+  });
+
+  $("#copy-share-link").click(function () {
+    navigator.clipboard.writeText($("#share-link").val());
   });
 
   $(".new-server-btn").click(newServer);
