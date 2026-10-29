@@ -15,8 +15,8 @@ c.JupyterHub.public_url = 'http://127.0.0.1:8000'
 
 # users have access to services
 c.JupyterHub.extra_user_scopes = {"access:services"}
-# server token also has access to services
-c.Spawner.server_token_scopes = ["access:services"]
+# server token also has access to services and itself
+c.Spawner.server_token_scopes = ["access:services", "access:servers!server"]
 
 c.JupyterHub.services = [
     # register oauth2-proxy as a service

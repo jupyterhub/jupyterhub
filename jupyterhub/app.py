@@ -894,9 +894,6 @@ class JupyterHub(Application):
             # if subdomain_host is specified, use it by default
             return self.subdomain_host + self.base_url
         else:
-            self.log.warning(
-                "JupyterHub.public_url not specified. OIDC may provide inconsistent values for `issuer`."
-            )
             return ""
 
     @validate("public_url")
@@ -3361,6 +3358,15 @@ class JupyterHub(Application):
 
     def init_oauth(self):
         base_url = self.hub.base_url
+        if self.public_url:
+            issuer = url_path_join(self.public_url, "hub")
+        else:
+            # guess from proxy bind url
+            issuer = url_path_join(Server.from_url(self.bind_url).url, "hub")
+            self.log.warning(
+                f"JupyterHub.public_url not specified, using OIDC issuer={issuer}"
+            )
+
         self.oauth_provider = make_provider(
             lambda: self.db,
             url_prefix=base_url,
@@ -3368,7 +3374,7 @@ class JupyterHub(Application):
             token_expires_in=self.oauth_token_expires_in,
             require_pkce=self.oauth_require_pkce,
             token_signing_keys=self.token_signing_keys_loaded,
-            issuer=url_path_join(self.public_url, "hub") if self.public_url else None,
+            issuer=issuer,
         )
 
     def cleanup_oauth_clients(self):

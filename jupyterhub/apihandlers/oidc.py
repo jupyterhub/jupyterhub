@@ -10,6 +10,7 @@ from urllib.parse import urlparse, urlunparse
 from jwt.algorithms import RSAAlgorithm
 
 from .. import scopes
+from ..oauth.provider import GrantType
 from ..utils import url_path_join
 from .base import APIHandler
 
@@ -23,7 +24,8 @@ class OpenIDConfigurationHandler(APIHandler):
     """
 
     def get(self):
-        public_url = self.settings.get("public_url")
+        ouath_provider = self.settings["oauth_provider"]
+        public_url = self.settings["public_url"]
         if public_url:
             hub_url = url_path_join(urlunparse(public_url), "hub")
         else:
@@ -35,9 +37,9 @@ class OpenIDConfigurationHandler(APIHandler):
         oauth2 = url_path_join(hub_url, "api/oauth2")
         available_scopes = sorted(scopes.scope_definitions.keys())
         available_scopes.remove("(no_scope)")
-        #
+
         openid_config = {
-            "issuer": hub_url,
+            "issuer": ouath_provider.issuer,
             "authorization_endpoint": url_path_join(oauth2, "authorize"),
             "token_endpoint": url_path_join(oauth2, "token"),
             "userinfo_endpoint": url_path_join(hub_url, "api/user"),
@@ -60,15 +62,15 @@ class OpenIDConfigurationHandler(APIHandler):
                 "exp",
                 "iat",
                 "iss",
+                "kind",
                 "name",
                 "sub",
             ],
             "code_challenge_methods_supported": ["S256"],
             "grant_types_supported": [
-                # for now, only authorization code
                 "authorization_code",
                 # "refresh_token",
-                # "urn:ietf:params:oauth:grant-type:jwt-bearer"
+                GrantType.TOKEN_EXCHANGE,
             ],
         }
         self.write(json.dumps(openid_config))

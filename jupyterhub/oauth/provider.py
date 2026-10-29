@@ -7,7 +7,6 @@ oidc spec: https://openid.net/specs/openid-connect-basic-1_0.html
 """
 
 import time
-from urllib.parse import urlparse
 
 import jwt
 from oauthlib import uri_validate
@@ -39,6 +38,15 @@ def is_absolute_uri(uri):
 
 authorization_code.is_absolute_uri = is_absolute_uri
 base.is_absolute_uri = is_absolute_uri
+
+
+class GrantType:
+    TOKEN_EXCHANGE = "urn:ietf:params:oauth:grant-type:token-exchange"
+
+
+class TokenType:
+    JWT = "urn:ietf:params:oauth:token-type:jwt"
+    ACCESS_TOKEN = "urn:ietf:params:oauth:token-type:access_token"
 
 
 class JupyterHubRequestValidator(RequestValidator):
@@ -825,14 +833,10 @@ class JupyterHubRequestValidator(RequestValidator):
         :return: The ID Token (a JWS signed JWT or JWE encrypted JWT)
         """
         kid, private_key = next(iter(self.token_signing_keys.items()))
-        if self.issuer:
-            issuer = self.issuer
-        else:
-            # derive from request.uri
-            parsed = urlparse(request.uri)
-            issuer = f"{parsed.scheme}://{parsed.netloc}{self.url_prefix.rstrip("/")}"
-        id_token["iss"] = issuer
-        id_token["sub"] = request.user.name
+        id_token["iss"] = self.issuer
+        id_token["sub"] = f"{request.user.kind}/{request.user.name}"
+        id_token["name"] = request.user.name
+        id_token["kind"] = request.user.kind
         # configurable expiration for id token?
         expires_in = token["expires_in"] or 1209600
         id_token["exp"] = int(time.time() + expires_in)
@@ -997,6 +1001,14 @@ class JupyterHubOAuthServer(Server):
         self.db = db
         super().__init__(validator, *args, **kwargs)
 
+    @property
+    def issuer(self):
+        return self.request_validator.issuer
+
+    @property
+    def token_signing_keys(self):
+        return self.request_validator.token_signing_keys
+
     def add_client(
         self,
         client_id,
@@ -1073,8 +1085,4 @@ def make_provider(
         require_pkce=require_pkce,
     )
     server = JupyterHubOAuthServer(db, validator, **oauth_server_kwargs)
-    # attach validator to server as attribute
-    # oauthlib doesn't provide a public handle via server.
-    # we only need this for tests.
-    server._validator = validator
     return server

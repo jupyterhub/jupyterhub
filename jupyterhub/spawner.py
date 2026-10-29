@@ -1381,6 +1381,7 @@ class Spawner(LoggingConfigurable):
         # the public URLs of this server and the Hub
         env["JUPYTERHUB_PUBLIC_URL"] = self.public_url
         env["JUPYTERHUB_PUBLIC_HUB_URL"] = self.public_hub_url
+        env["JUPYTERHUB_PUBLIC_BASE_URL"] = self.public_hub_url[:-4]
 
         # Put in limit and guarantee info if they exist.
         # Note that this is for use by the humans / notebook extensions in the

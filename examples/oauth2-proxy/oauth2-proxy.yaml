@@ -27,15 +27,8 @@ providers:
       # must match JupyterHub public URL
       issuerURL: http://127.0.0.1:8000/hub
       # `sub` is the userid field in the JWT
+      # it is the form 'user/username' or 'service/servicename'
       userIDClaim: sub
-      # populate 'audiences' from the scope list,
-      # and accept access:services scopes
-      audienceClaims:
-        - scopes
-        - aud
-      extraAudiences:
-        - access:services
-        - access:services!service=service-oauth2-proxy
     # scope requested for oauth triggered by browser visits
     scope: openid
     profileURL: http://127.0.0.1:8000/hub/api/user
