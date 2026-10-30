@@ -12,6 +12,10 @@ docs/source/includes/metrics_table.md
 
 .ipynb_checkpoints
 .virtual_documents
+.ipython
+.jupyter
+.npm
+Library
 
 jsx/build/
 # ignore config file at the top-level of the repo
@@ -38,6 +42,7 @@ pip-wheel-metadata
 docs/source/reference/metrics.rst
 oldest-requirements.txt
 jupyterhub-proxy.pid
+jupyterhub_token_keys
 examples/server-api/service-token
 
 *.hot-update*

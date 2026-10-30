@@ -8,8 +8,7 @@ import pytest
 from requests.exceptions import ConnectionError, SSLError
 
 from ..utils import AnyTimeoutError
-from .test_api import add_user
-from .utils import async_requests
+from .utils import add_user, async_requests
 
 ssl_enabled = True
 

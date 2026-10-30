@@ -37,6 +37,10 @@ class SelfAPIHandler(APIHandler):
     Based on the authentication info. Acts as a 'whoami' for auth tokens.
     """
 
+    # accept any jwt audience on the userinfo endpoint
+    jwt_audience = None
+    jwt_decode_options = {"verify_aud": False}
+
     async def get(self):
         user = self.current_user
         if user is None:

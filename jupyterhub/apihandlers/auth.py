@@ -3,13 +3,17 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import json
+import time
 from unittest import mock
-from urllib.parse import parse_qsl, quote, urlencode, urlparse, urlunparse
+from urllib.parse import parse_qsl, quote, unquote, urlencode, urlparse, urlunparse
 
 from oauthlib import oauth2
+from oauthlib.common import Request
 from tornado import web
 
 from .. import orm, roles, scopes
+from ..oauth.provider import GrantType, TokenType
+from ..scopes import Scope
 from ..utils import get_browser_protocol, token_authenticated, utcnow
 from .base import APIHandler, BaseHandler
 
@@ -91,7 +95,7 @@ class OAuthHandler:
         (uri, http_method, body, headers)
         """
         return (
-            self.request.uri,
+            self.request.full_url(),
             self.request.method,
             self.request.body,
             self.request.headers,
@@ -217,6 +221,7 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
         authorized_scopes = set()
         for token in existing_tokens:
             authorized_scopes.update(token.scopes)
+            authorized_scopes.add(Scope.openid)
 
         if authorized_scopes:
             if set(requested_scopes).issubset(authorized_scopes):
@@ -225,9 +230,10 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
                 )
                 return False
             else:
+                additional_scopes = set(requested_scopes).difference(authorized_scopes)
                 self.log.debug(
                     f"User {user.name} has authorized {oauth_client.identifier}"
-                    f" for scopes {authorized_scopes}, confirming additional scopes {requested_scopes}"
+                    f" for scopes {authorized_scopes}, confirming additional scopes {additional_scopes}"
                 )
         # default: require confirmation
         return True
@@ -304,8 +310,12 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
             # 'raw' scope intersection,
             # rather than the expanded_scope intersection
 
-            required_scopes = {*scopes.identify_scopes(), *scopes.access_scopes(client)}
-            user_scopes |= {"inherit", *required_scopes}
+            required_scopes = {
+                *Scope.ALWAYS_SCOPES,
+                *scopes.identify_scopes(),
+                *scopes.access_scopes(client),
+            }
+            user_scopes |= required_scopes
 
             allowed_scopes, disallowed_scopes = scopes._resolve_requested_scopes(
                 requested_scopes,
@@ -349,12 +359,12 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
                         "filter": "",
                     }
                 ]
-            elif 'inherit' in scopes_to_describe:
-                allowed_scopes = scopes_to_describe = ['inherit']
+            elif Scope.inherit in scopes_to_describe:
+                allowed_scopes = scopes_to_describe = [Scope.inherit]
                 scope_descriptions = [
                     {
-                        "scope": "inherit",
-                        "description": scopes.scope_definitions['inherit'][
+                        "scope": Scope.inherit,
+                        "description": scopes.scope_definitions[Scope.inherit][
                             'description'
                         ],
                         "filter": "",
@@ -409,8 +419,256 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
             self.send_oauth_response(headers, body, status)
 
 
+def _lookup_resource(resource_url, db, *, base_url, public_url, log):
+    """
+    lookup a resource by OAuth Resource URL
+
+    e.g. https://hub.example.org/services/service-name
+
+    Note: this is always the format, even if the service
+    or subdomains are in use.
+
+    Keep private because inputs may change
+
+    raises 400: invalid resource if it couldn't possibly be valid,
+    otherwise returns None for no match.
+
+    Returns OAuthClient on match.
+    """
+    resource_parsed = urlparse(resource_url)
+    # check host only if public_url is specified
+    # alternative: don't support resource lookup if public_url not specified
+    # (not much point in rejecting it, not a security issue)
+    if public_url and (
+        resource_parsed.netloc != public_url.netloc
+        or resource_parsed.scheme != public_url.scheme
+    ):
+        raise web.HTTPError(400, "invalid resource (host)")
+
+    full_path = resource_parsed.path.strip("/").split("/")
+    if base_url == "/":
+        # splitting an empty string gives [""]
+        prefix = []
+    else:
+        prefix = base_url.strip("/").split("/")
+    if base_url and full_path[: len(prefix)] != prefix:
+        print(prefix, full_path)
+        raise web.HTTPError(400, "invalid resource (path prefix)")
+    path_parts = full_path[len(prefix) :]
+    # path parts, may be one of:
+    # /hub
+    # /users/name[/server_name]
+    # /services/name
+    if len(path_parts) == 1 and path_parts[0] == "hub":
+        return db.query(orm.OAuthClient).filter_by(identifier="jupyterhub").first()
+    if not 2 <= len(path_parts) <= 3:
+        raise web.HTTPError(400, "invalid resource (path length)")
+    kind, escaped_name = path_parts[:2]
+    try:
+        name = unquote(escaped_name)
+    except Exception:
+        return None
+
+    match kind:
+        case "users":
+            # lookup user by name, optionally with server name
+            if len(path_parts) == 3:
+                server_name = path_parts[2]
+            else:
+                server_name = ""
+            audience_client = (
+                db.query(orm.OAuthClient)
+                .join(orm.Spawner)
+                .join(orm.User)
+                .where(orm.User.name == name, orm.Spawner.name == server_name)
+                .first()
+            )
+            return audience_client
+        case "services":
+            if len(path_parts) == 3:
+                raise web.HTTPError(400, "invalid resource (path length)")
+            # lookup service by name
+            return (
+                db.query(orm.OAuthClient)
+                .join(orm.Service)
+                .where(orm.Service.name == name)
+                .first()
+            )
+        case _:
+            raise web.HTTPError(400, "invalid resource")
+
+
 class OAuthTokenHandler(OAuthHandler, APIHandler):
+    _accept_cookie_auth = False
+
+    def get_auth_token(self):
+        grant_type = self.get_argument("grant_type", None)
+        # token exchange identifies the client by subject_token argument
+        if grant_type == GrantType.TOKEN_EXCHANGE:
+            return self.get_argument("subject_token", None)
+        else:
+            return super().get_auth_token()
+
+    def _token_exchange(self):
+        """Perform RFC 8693 token-exchange
+
+        https://oauth.net/2/token-exchange/
+        https://www.rfc-editor.org/info/rfc8693/
+
+        Given a Bearer token, return a JWT Bearer token.
+
+        Resulting JWT is always bound to exactly one audience,
+        stripping other access scopes.
+        """
+        # validate arguments
+        # REQUIRED. Value MUST be set to urn:...token-exchange
+        grant_type = self.get_argument("grant_type")
+        if grant_type != GrantType.TOKEN_EXCHANGE:
+            raise web.HTTPError(400, f"grant_type must be {GrantType.TOKEN_EXCHANGE}")
+        token_type = self.get_argument("requested_token_type", TokenType.JWT)
+        if token_type != TokenType.JWT:
+            raise web.HTTPError(400, f"requested_token_type must be {TokenType.JWT}")
+        expires_in = self.get_argument("expires_in", 3600)
+        try:
+            expires_in = int(expires_in)
+            if expires_in <= 0:
+                raise ValueError("expires_in must be a positive integer")
+        except (ValueError, TypeError):
+            raise web.HTTPError(400, "expires_in must be a positive integer")
+        # Future: do we require singular audience?
+        # spec doesn't force us to, but it certainly simplifies things
+        audience = self.get_argument("audience", None)
+        resource = self.get_argument("resource", None)
+        if not bool(resource) ^ bool(audience):
+            raise web.HTTPError(400, "Specify exactly one audience or resource")
+        audience_client = None
+        if resource:
+            # lookup audience by resource URL
+            audience_client = _lookup_resource(
+                resource,
+                self.db,
+                base_url=self.base_url,
+                public_url=self.public_url,
+                log=self.log,
+            )
+            if audience_client is None:
+                self.log.warning("No such resource: %s", resource[-32:])
+        elif audience:
+            audience_client = (
+                self.db.query(orm.OAuthClient).filter_by(identifier=audience).first()
+            )
+            if audience_client is None:
+                # no such audience
+                self.log.warning("No such audience: %s", audience[:32])
+
+        # check subject_token
+        subject_token_type = self.get_argument("subject_token_type")
+        match subject_token_type:
+            case TokenType.JWT:
+                token_claims = self.get_jwt_claims()
+                if not token_claims:
+                    raise web.HTTPError(400, "subject_token is not an access_token")
+                token_expires_in = token_claims["exp"] - time.time()
+                raise NotImplementedError("JWT access token not implemented yet")
+            case TokenType.ACCESS_TOKEN:
+                orm_token = self.get_token()
+                if orm_token is None:
+                    raise web.HTTPError(400, "subject_token is not an access_token")
+                token_expires_in = orm_token.expires_in
+            case _:
+                msg = f"subject_token_type must be {TokenType.JWT} or {TokenType.ACCESS_TOKEN}"
+                raise web.HTTPError(400, msg)
+
+        token = self.get_token()
+
+        have_scopes = self.expanded_scopes
+
+        # validate access to target audience
+        if audience_client is not None:
+            access_scopes = scopes.access_scopes(audience_client)
+        # same error for both no access and no such resource
+        # to avoid existence check of resources you don't have access to
+        if audience_client is None or (
+            access_scopes
+            and not all(
+                scopes.has_scope(scope, have_scopes, db=self.db)
+                for scope in access_scopes
+            )
+        ):
+            if resource:
+                which = f"resource: {resource}"
+            else:
+                which = f"audience: {audience}"
+            raise web.HTTPError(403, f"No permission to access {which}")
+
+        # reduce allowed access scopes to target-only
+        allowed_scopes = {
+            s for s in have_scopes if not s.startswith("access:")
+        } | access_scopes
+
+        raw_requested_scopes = self.get_argument("scope", "").strip().split()
+        if raw_requested_scopes == ["inherit"]:
+            # 'inherit' - grant all parent token scopes
+            assigned_scopes = allowed_scopes
+        elif not raw_requested_scopes:
+            # none requested, grant only audience access scopes
+            assigned_scopes = access_scopes
+        else:
+            # validate requested scopes
+            requested_scopes = scopes.expand_scopes(
+                raw_requested_scopes,
+                owner=self.current_user,
+                oauth_client=audience_client,
+            )
+            excess_scopes = requested_scopes.difference(allowed_scopes)
+            if excess_scopes:
+                raise web.HTTPError(
+                    403,
+                    "Not allowing scopes not held by request: %s",
+                    ', '.join(excess_scopes),
+                )
+            assigned_scopes = requested_scopes
+
+        # TODO: configurable expires_in limit
+        # for now: limit to 1 day because JWT bearer tokens cannot be revoked
+        max_expires_in = 86_400
+        if token_expires_in and token_expires_in < max_expires_in:
+            # make sure it's positive
+            max_expires_in = token_expires_in
+        expires_in = max(min(expires_in, max_expires_in), 1)
+
+        # issue JWT Bearer token
+        # JWT Bearer tokens have a `scopes` field,
+        # unlike id_tokens.
+        req = Request(self.request.full_url())
+        req.user = self.current_user
+        issued_at = int(time.time())
+        token_claims = {
+            "aud": audience_client.identifier,
+            "iat": issued_at,
+            "scopes": sorted(assigned_scopes),
+        }
+        access_token = self.oauth_provider.request_validator.finalize_id_token(
+            id_token=token_claims,
+            token={"expires_in": expires_in},
+            token_handler=self.oauth_provider.tokens["JWT"],
+            request=req,
+        )
+        self.write(
+            json.dumps(
+                {
+                    "access_token": access_token,
+                    "token_type": TokenType.JWT,
+                    "expires_in": expires_in,
+                }
+            )
+        )
+
     def post(self):
+        grant_type = self.get_argument("grant_type", None)
+        if grant_type == GrantType.TOKEN_EXCHANGE:
+            return self._token_exchange()
+
         uri, http_method, body, headers = self.extract_oauth_params()
         credentials = {}
 

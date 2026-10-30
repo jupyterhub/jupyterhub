@@ -27,6 +27,8 @@ from urllib.parse import unquote, urlparse, urlunparse
 
 import tornado.httpserver
 import tornado.options
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
 from dateutil.parser import parse as parse_date
 from jinja2 import ChoiceLoader, Environment, FileSystemLoader, PrefixLoader
 from jupyter_events.logger import EventLogger
@@ -283,6 +285,7 @@ class DowngradeDB(Application):
     aliases = common_aliases
     classes = []
     version_revisions = {
+        SpecifierSet(">=6.2,<7"): "7813d158bb88",
         SpecifierSet(">=6.0,<6.2"): "f460b0348206",
         SpecifierSet(">=5.0,<6.0"): "4621fec11365",
         # don't support downgrade more than one major version
@@ -302,6 +305,7 @@ class DowngradeDB(Application):
         except Exception as e:
             # avoid traceback on invalid version
             self.exit(str(e))
+
         for range, revision in self.version_revisions.items():
             if target_version in range:
                 self.log.info("JupyterHub %s: db revision %s", v, revision)
@@ -1338,9 +1342,94 @@ class JupyterHub(Application):
         'jupyterhub_cookie_secret', help="""File in which to store the cookie secret."""
     ).tag(config=True)
 
+    token_signing_keys = Dict(
+        key_trait=Unicode(),
+        value_trait=Unicode(),
+        help="""
+        PEM-formatted RSA keys for signing OIDC Tokens.
+        
+        Dict keys will be used as key ids (used in JWKs endpoint).
+        
+        If empty, keys will be loaded from `token_signing_keys_dir`.
+        
+        If `token_signing_keys` is empty and `token_signing_keys_dir` does not exist or is empty,
+        a single key will be generated and loaded.
+        """,
+    ).tag(config=True)
+
+    token_signing_keys_dir = Unicode(
+        "jupyterhub_token_keys",
+        help="""Directory in which to store token-signing keys.""",
+    ).tag(config=True)
+
+    token_signing_keys_loaded = Dict(
+        key_trait=Unicode(),
+        value_trait=Instance(rsa.RSAPrivateKey),
+        help="""
+        The loaded version of token_signing_keys.
+        
+        Actual RSAKey objects, not strings, not configurable.
+        """,
+    )
+
+    @default("token_signing_keys_loaded")
+    def _load_token_keys(self):
+        loaded_keys = {}
+        if not self.token_signing_keys:
+            # keys not directly configured, load from keys directory
+            keys_dir = Path(self.token_signing_keys_dir)
+            self.log.info("Loading signing keys: %s", keys_dir / "*.key")
+            if not keys_dir.exists():
+                self.log.info("Creating signing keys dir: %s", keys_dir)
+                keys_dir.mkdir(mode=0o700)
+
+            key_paths = list(keys_dir.glob("*.key"))
+            if not key_paths:
+                # no keys yet, generate one
+                key_path = keys_dir / "k1.key"
+                self.log.info("Generating new RSA key %s", key_path)
+                private_key = rsa.generate_private_key(
+                    public_exponent=65537, key_size=2048
+                )
+                pem = private_key.private_bytes(
+                    encoding=serialization.Encoding.PEM,
+                    format=serialization.PrivateFormat.PKCS8,
+                    encryption_algorithm=serialization.NoEncryption(),
+                )
+                with key_path.open("wb") as f:
+                    if not _mswindows:  # Windows permissions don't follow POSIX rules
+                        try:
+                            os.fchmod(f.fileno(), 0o600)
+                        except OSError:
+                            self.log.warning(
+                                "Failed to set permissions on %s", key_path
+                            )
+                    f.write(pem)
+                key_paths = list(keys_dir.glob("*.key"))
+
+            for key_path in key_paths:
+                key_id = key_path.stem
+                self.log.debug("Loading signing key %s from %s", key_id, key_path)
+                self.token_signing_keys[key_id] = key_path.read_text()
+        else:
+            self.log.info("JupyterHub.token_signing_keys configured directly")
+
+        for key_id, key_text in self.token_signing_keys.items():
+            self.log.debug("Loading signing key %s", key_id)
+            private_key = serialization.load_pem_private_key(
+                key_text.encode(), password=None
+            )
+            loaded_keys[key_id] = private_key
+        self.log.info(
+            "Loaded %i signing key(s): %s",
+            len(loaded_keys),
+            ' '.join(loaded_keys.keys()),
+        )
+        return loaded_keys
+
     api_tokens = Dict(
         Unicode(),
-        help="""PENDING DEPRECATION: consider using services
+        help="""PENDING DEPRECATION since JupyterHub 0.8: consider using services
 
         Dict of token:username to be loaded into the database.
 
@@ -1991,13 +2080,13 @@ class JupyterHub(Application):
             self.log.info("Writing %s to %s", trait_name, secret_file)
             text_secret = binascii.b2a_hex(secret).decode('ascii')
             with open(secret_file, 'w') as f:
+                if not _mswindows:  # Windows permissions don't follow POSIX rules
+                    try:
+                        os.fchmod(f.fileno(), 0o600)
+                    except OSError:
+                        self.log.warning("Failed to set permissions on %s", secret_file)
                 f.write(text_secret)
                 f.write('\n')
-            if not _mswindows:  # Windows permissions don't follow POSIX rules
-                try:
-                    os.chmod(secret_file, 0o600)
-                except OSError:
-                    self.log.warning("Failed to set permissions on %s", secret_file)
         # store the loaded trait value
         self.cookie_secret = secret
 
@@ -3271,12 +3360,23 @@ class JupyterHub(Application):
 
     def init_oauth(self):
         base_url = self.hub.base_url
+        if self.public_url:
+            issuer = url_path_join(self.public_url, "hub")
+        else:
+            # guess from proxy bind url
+            issuer = url_path_join(Server.from_url(self.bind_url).url, "hub")
+            self.log.warning(
+                f"JupyterHub.public_url not specified, using OIDC issuer={issuer}"
+            )
+
         self.oauth_provider = make_provider(
             lambda: self.db,
-            url_prefix=url_path_join(base_url, 'api/oauth2'),
+            url_prefix=base_url,
             login_url=url_path_join(base_url, 'login'),
             token_expires_in=self.oauth_token_expires_in,
             require_pkce=self.oauth_require_pkce,
+            token_signing_keys=self.token_signing_keys_loaded,
+            issuer=issuer,
         )
 
     def cleanup_oauth_clients(self):
@@ -3399,6 +3499,7 @@ class JupyterHub(Application):
             static_url_prefix=url_path_join(self.hub.base_url, 'static/'),
             static_handler_class=CacheControlStaticFilesHandler,
             token_expires_in_max_seconds=self.token_expires_in_max_seconds,
+            token_signing_keys=self.token_signing_keys_loaded,
             subdomain_hook=self.subdomain_hook,
             template_path=self.template_paths,
             template_vars=self.template_vars,
