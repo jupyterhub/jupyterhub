@@ -14,6 +14,9 @@
       {% endif %}
       {% if extra_error_html %}<p>{{ extra_error_html | safe }}</p>{% endif %}
     {% endblock error_detail %}
+    {% if login_url %}
+      <p><a class="btn btn-lg btn-primary" href="{{ login_url }}">Try again</a></p>
+    {% endif %}
   </div>
 {% endblock main %}
 {% block script %}
