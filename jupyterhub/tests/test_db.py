@@ -13,6 +13,8 @@ from pytest import raises
 from sqlalchemy import create_engine, text
 from traitlets.config import Config
 
+import jupyterhub
+
 from .. import orm
 from ..app import NewToken, UpgradeDB
 from ..dbutil import _temp_alembic_ini
@@ -124,7 +126,9 @@ async def test_upgrade(tmpdir, hub_version):
     'hub_version, expected_revision',
     [
         ('5', '4621fec11365'),
-        ('6.1', 'f460b0348206'),
+        ('6.1.1', 'f460b0348206'),
+        ('6.2', '7813d158bb88'),
+        ('head', 'head'),
     ],
 )
 async def test_downgrade(tmpdir, hub_version, expected_revision):
@@ -139,6 +143,13 @@ async def test_downgrade(tmpdir, hub_version, expected_revision):
         cfg = alembic.config.Config(ini)
         scripts = ScriptDirectory.from_config(cfg)
         head = scripts.get_heads()[0]
+
+    if hub_version == 'head':
+        # trim dev suffix from current version, if any
+        # make sure current version is always valid and in-range
+        hub_version = '.'.join(map(str, jupyterhub.version_info[:3]))
+    if expected_revision == 'head':
+        expected_revision = head
     check_call(
         [
             sys.executable,
@@ -182,7 +193,7 @@ async def test_downgrade(tmpdir, hub_version, expected_revision):
     [
         None,
         "1.0",
-        "9.5",
+        "99.5",
         "notaversion",
     ],
 )

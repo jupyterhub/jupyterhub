@@ -689,7 +689,9 @@ async def test_pkce(
     test_settings.update(app.tornado_settings)
     test_settings["oauth_no_confirm_list"] = {mockservice_url.oauth_client_id}
     with (
-        mock.patch.object(app.oauth_provider._validator, "require_pkce", required),
+        mock.patch.object(
+            app.oauth_provider.request_validator, "require_pkce", required
+        ),
         mock.patch.dict(app.tornado_settings, test_settings),
     ):
         r = await s.get(url_with_param)

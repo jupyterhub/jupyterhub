@@ -6,6 +6,8 @@ JupyterHub uses [OAuth 2](https://oauth.net/2/) as an internal mechanism for aut
 As such, JupyterHub itself always functions as an OAuth **provider**.
 You can find out more about what that means [below](oauth-terms).
 
+As of JupyterHub 6.2, JupyterHub is also an [OIDC] Provider.
+
 Additionally, JupyterHub is _often_ deployed with [OAuthenticator](https://oauthenticator.readthedocs.io),
 where an external identity provider, such as GitHub or KeyCloak, is used to authenticate users.
 When this is the case, there are _two_ nested OAuth flows:
@@ -48,6 +50,8 @@ You can also read more in detail [here](https://www.oauth.com/oauth2-servers/def
   for a **token** at the conclusion of OAuth,
   in what's generally called the "OAuth callback handler."
 - **PKCE**: pronounced "pixie", this is an additional layer of security to verify the oauth process.
+- **OIDC**: short for OpenID Connect, this is a layer of standardization _on top of_ OAuth, making configuration simpler. JupyterHub is an OIDC provider as of 6.2.
+- **JWT**: JSON Web Token - a format of tokens used in OIDC, and supported by JupyterHub starting in 6.2.
 
 ## One oauth flow
 
@@ -344,9 +348,192 @@ Logging out of JupyterHub means clearing and revoking many of these credentials:
 
 - The `jupyterhub-hub-login` cookie is revoked, meaning the next request to the Hub itself will require a new login.
 - The token stored in the `jupyterhub-user-username` cookie for the single-user server
-  will be revoked, based on its associaton with `jupyterhub-session-id`, but the _cookie itself cannot be cleared at this point_
+  will be revoked, based on its association with `jupyterhub-session-id`, but the _cookie itself cannot be cleared at this point_
 - The shared `jupyterhub-session-id` is cleared, which ensures that the HubAuth **token response cache** will not be used,
   and the next request with the expired token will ask the Hub, which will inform the single-user server that the token has expired
+
+(oidc)=
+
+## OpenID Connect and JSON Web Tokens
+
+Support for OpenID Connect (OIDC) and JSON Web Tokens (JWT) are new in JupyterHub 6.2.
+
+OIDC means that all the configuration information you need to authenticate with JupyterHub is the "issuer url",
+which is your `{JupyterHub.public_url}/hub`.
+From this information, an OIDC client can request
+
+```
+{issuer_url}/.well-known/openid-configuration
+```
+
+and receive all the information needed to implement OAuth with JupyterHub, such as the `authorization_endpoint`, `token_endpoint`, etc.
+
+When OAuth completes with the `openid` scope, included in the token response is an `id_token` field,
+which is a JWT.
+This is a signed token describing the authenticated user,
+which can be used to verify the user _without_ any requests to the Hub,
+because the _signature_ can be verified, using something called JSON Web Keys (JWKs),
+found at `jwks_uri` in the openid configuration.
+
+### Token Exchange and JWT Bearer tokens
+
+JupyterHub API tokens are generally opaque strings, which must be passed to JupyterHub to check what user they correspond to, what permissions they have, etc.
+However, JupyterHub 6.2 also introduces support for JWT _Bearer tokens_.
+
+```{note}
+When relying on JupyterHub's OIDC features,
+it is strongly recommended to set `JupyterHub.public_url` to the public URL of your deployment.
+This affects things like the OIDC issuer and resource URLs,
+and JupyterHub will have to guess at these values if they are not set,
+and the guessed values can change over time.
+```
+
+Differences between API tokens, OIDC id_tokens, and JWT Bearer tokens (in JupyterHub):
+
+|                                                            | API token | id_token | JWT Bearer token |
+| ---------------------------------------------------------- | --------- | -------- | ---------------- |
+| can be verified without a request to the Hub               | ❌        | ✅       | ✅               |
+| can be used to access JupyterHub APIs or services          | ✅        | ❌       | ✅               |
+| tied to single JupyterHub service (audience)               | ❌        | ✅       | ✅               |
+| can be used to access multiple JupyterHub APIs or services | ✅        | ❌       | ❌               |
+| can be revoked                                             | ✅        | ❌       | ❌               |
+| can change permissions over time                           | ✅        | ❌       | ❌               |
+
+There's an advantage of JWT Bearer tokens, in that they can be verified without any requests to the Hub.
+However, this also means they cannot be _revoked_, and they can only be for a single **audience**, so they are limited to a shorter lifetime (default 1 hour, max 1 day).
+
+To get a JWT Bearer token, first you need a regular API token with access to some APIs.
+You can make a [Token Exchange] request, following [RFC8693] to JupyterHub's `token_endpoint`,
+to exchange an API token for a JWT Bearer token for a specific audience.
+
+RFC 8693 specifies a few arguments that we'll always provide:
+
+| field                | value                                             |
+| -------------------- | ------------------------------------------------- |
+| `grant_type`         | `urn:ietf:params:oauth:grant-type:token-exchange` |
+| `subject_token_type` | `urn:ietf:params:oauth:token-type:access_token`   |
+| `subject_token`      | our existing JupyterHub API token                 |
+
+We will then need to specify the one "audience" (JupyterHub server, service, or the Hub itself) that the token may be used to address.
+There are two ways to specify an audience:
+
+- `audience` if you already know the oauth client id you want to talk to (e.g. the `$JUPYTERHUB_CLIENT_ID` environment variable for a JupyterHub server or managed service).
+- `resource` is a URL identifying the resource.
+
+A resource url will always start with JupyterHub's public URL and have one of the forms:
+
+```
+https://hub.example/hub
+https://hub.example/user/:user_name[/:server_name]
+https://hub.example/services/:service_name
+```
+
+```{note}
+Eeven when using per-user or per-service subdomains or non-proxied external services,
+resource URLs always begin with the Hub's public url as the base.
+In the default JupyterHub configuration, these are the actual addresses where the services can be accessed,
+but they are not guaranteed to be.
+```
+
+There are also _optional_ fields, like `expires_in`
+
+| `expires_in` | expiry in seconds (default: 1 hour, cannot exceed 1 day or issuing token's expiration, whichever is lower) |
+| `scope` | space-delimited list of JupyterHub scopes to grant the token |
+
+If `scope` is not specified, the resulting token will have the minimal scopes required to access the audience (e.g. `access:services!service=service-name`).
+If `scope` is the singular `inherit`, the JWT will have all the scopes of the requesting token,
+_excluding_ any access scopes to audiences other than the specified audience.
+`scope` is not permitted to exceed any of the scopes held by the requesting token.
+
+An example of a token-exchange request, given an API token:
+
+```python
+import os
+import requests
+
+# your inputs
+public_url = "https://hub.example"
+api_token = "..."
+
+
+openid_url = f"{public_url}/hub/.well-known/openid-configuration"
+openid_configuration = requests.get(openid_url).json()
+token_endpoint = openid_configuration["token_endpoint"]
+resource_url = f"{public_url}/services/service-oauth2-proxy",
+
+r = requests.post(
+    token_endpoint,
+    data={
+        "subject_token": api_token,
+        "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+        "subject_token_type": "urn:ietf:params:oauth:token-type:access_token",
+        "resource": resource_url,
+    },
+)
+r.json()
+```
+
+which will return something like
+
+```python
+{'access_token': 'eyJhbGciOiJSUzI1NiIsImtpZCI6ImsxIiwidHlwIjoiSldUIn0.eyJhdWQiOiJzZXJ2aWNlLW9hdXRoMi1wcm94eSIsImlhdCI6MTc5MzI5MTYzMCwic2NvcGVzIjpbImFjY2VzczpzZXJ2aWNlcyFzZXJ2aWNlPW9hdXRoMi1wcm94eSJdLCJpc3MiOiJodHRwOi8vMTI3LjAuMC4xOjgwMDAvaHViIiwic3ViIjoidXNlci90ZXN0IiwibmFtZSI6InRlc3QiLCJraW5kIjoidXNlciIsImV4cCI6MTc5MzI5NTIzMH0.HQymN86uY7BmlZzuSvrVVkgJxNGTS0rGAkeH7fdxmbFjrDNEwefaxUGsRgP-wrpNaOiOuOV7mAlxLHXLidG0FvTnSItDzp3VuFieBkYNMB3Z5MIGe8g5dNmqwVteNsHuGLjzSx0l-AkYy8KGGIAYyqKRjsJ0N5_Ir80AuamARV5vqZtmvToN0b4VjanDQYXExOYVX1WbIVdotbCe4rhUPmBX8EFbdu8YRdtgVcQ1R-c5z8hc0ajinqziGLxWeP0xIyTN8xkXGoEfWrrCU_QtszCms8Lvvt-EBLwXuObFjOk3Kw2vkQFhwC_2sVPL4kv-uLmbj1BkX9_8u9znvPn3mg',
+ 'token_type': 'urn:ietf:params:oauth:token-type:jwt',
+ 'expires_in': 3600}
+```
+
+which can be used to access the target service.
+
+[Token Exchange]: https://oauth.net/2/token-exchange/
+[RFC8693]: https://www.rfc-editor.org/rfc/rfc8693
+
+### Validating a JWT
+
+If you want to validate a JWT Bearer token to protect your service, OIDC specifies how to do that,
+and the `pyjwt` package provides a useful implementation.
+When accepting a JWT that was not issued directly to your service, it is important to verify:
+
+1. (most important) the signature
+2. the issuer (`iss`)
+3. the audience (`aud`)
+4. the expiration (`exp`)
+
+pyjwt will do all that for you. Starting from the `openid_configuration` above,
+given a `jwt_bearer` token
+
+```python
+import jwt
+
+audience = "my_client_id"
+issuer = openid_configuration["issuer"]
+jwks_uri = openid_configuration["jwks_uri"]
+
+jwks_client = jwt.PyJWKClient(openid_configuration["jwks_uri"])
+jwt_bearer = r.json()["access_token"]
+signing_key = jwks_client.get_signing_key_from_jwt(jwt_bearer)
+# jwt.decode will verify audience, signature, issuer, expiration
+claims = jwt.decode(
+  jwt_bearer,
+  signing_key,
+  audience=audience,
+  issuer=issuer,
+  algorithms=["RS256"],
+)
+```
+
+which will look like:
+
+```python
+{'aud': 'service-oauth2-proxy',
+ 'iat': 1793318246,
+ 'scopes': ['access:services!service=oauth2-proxy'],
+ 'iss': 'http://127.0.0.1:8000/hub',
+ 'sub': 'user/test',
+ 'name': 'test',
+ 'kind': 'user',
+ 'exp': 1793321846}
+```
+
+and can be used to manage access to your service without any requests to the Hub.
 
 ## Extra bits
 
