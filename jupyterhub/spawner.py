@@ -1928,6 +1928,10 @@ def set_user_setuid(username, chdir=True):
             current_groups = set(os.getgroups())
             extra_groups = current_groups.difference(gids)
             if extra_groups:
+                # preexec_fn swallows the raised exception message so print it
+                print(
+                    f'Failed to drop groups: {extra_groups}, aborting', file=sys.stderr
+                )
                 raise PermissionError(f"Failed to drop groups: {extra_groups}")
 
         # start in the user's home dir
