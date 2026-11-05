@@ -127,7 +127,7 @@ async def test_upgrade(tmpdir, hub_version):
     [
         ('5', '4621fec11365'),
         ('6.1.1', 'f460b0348206'),
-        ('6.2', '7813d158bb88'),
+        ('6.3', '7813d158bb88'),
         ('head', 'head'),
     ],
 )

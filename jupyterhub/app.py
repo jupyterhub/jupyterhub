@@ -285,8 +285,8 @@ class DowngradeDB(Application):
     aliases = common_aliases
     classes = []
     version_revisions = {
-        SpecifierSet(">=6.2,<7"): "7813d158bb88",
-        SpecifierSet(">=6.0,<6.2"): "f460b0348206",
+        SpecifierSet(">=6.3,<7"): "7813d158bb88",
+        SpecifierSet(">=6.0,<6.3"): "f460b0348206",
         SpecifierSet(">=5.0,<6.0"): "4621fec11365",
         # don't support downgrade more than one major version
         # SpecifierSet(">=4.0,<5.0"): "0eee8c825d24",

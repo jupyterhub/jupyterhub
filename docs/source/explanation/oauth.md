@@ -6,7 +6,7 @@ JupyterHub uses [OAuth 2](https://oauth.net/2/) as an internal mechanism for aut
 As such, JupyterHub itself always functions as an OAuth **provider**.
 You can find out more about what that means [below](oauth-terms).
 
-As of JupyterHub 6.2, JupyterHub is also an [OIDC] Provider.
+As of JupyterHub 6.3, JupyterHub is also an [OIDC] Provider.
 
 Additionally, JupyterHub is _often_ deployed with [OAuthenticator](https://oauthenticator.readthedocs.io),
 where an external identity provider, such as GitHub or KeyCloak, is used to authenticate users.
@@ -50,8 +50,8 @@ You can also read more in detail [here](https://www.oauth.com/oauth2-servers/def
   for a **token** at the conclusion of OAuth,
   in what's generally called the "OAuth callback handler."
 - **PKCE**: pronounced "pixie", this is an additional layer of security to verify the oauth process.
-- **OIDC**: short for OpenID Connect, this is a layer of standardization _on top of_ OAuth, making configuration simpler. JupyterHub is an OIDC provider as of 6.2.
-- **JWT**: JSON Web Token - a format of tokens used in OIDC, and supported by JupyterHub starting in 6.2.
+- **OIDC**: short for OpenID Connect, this is a layer of standardization _on top of_ OAuth, making configuration simpler. JupyterHub is an OIDC provider as of 6.3.
+- **JWT**: JSON Web Token - a format of tokens used in OIDC, and supported by JupyterHub starting in 6.3.
 
 ## One oauth flow
 
@@ -356,7 +356,7 @@ Logging out of JupyterHub means clearing and revoking many of these credentials:
 
 ## OpenID Connect and JSON Web Tokens
 
-Support for OpenID Connect (OIDC) and JSON Web Tokens (JWT) are new in JupyterHub 6.2.
+Support for OpenID Connect (OIDC) and JSON Web Tokens (JWT) are new in JupyterHub 6.3.
 
 OIDC means that all the configuration information you need to authenticate with JupyterHub is the "issuer url",
 which is your `{JupyterHub.public_url}/hub`.
@@ -378,7 +378,7 @@ found at `jwks_uri` in the openid configuration.
 ### Token Exchange and JWT Bearer tokens
 
 JupyterHub API tokens are generally opaque strings, which must be passed to JupyterHub to check what user they correspond to, what permissions they have, etc.
-However, JupyterHub 6.2 also introduces support for JWT _Bearer tokens_.
+However, JupyterHub 6.3 also introduces support for JWT _Bearer tokens_.
 
 ```{note}
 When relying on JupyterHub's OIDC features,

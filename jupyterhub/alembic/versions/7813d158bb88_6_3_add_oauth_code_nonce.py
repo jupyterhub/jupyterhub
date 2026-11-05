@@ -1,4 +1,4 @@
-"""6.2: add oauth_code.nonce
+"""6.3: add oauth_code.nonce
 
 Revision ID: 7813d158bb88
 Revises: f460b0348206
