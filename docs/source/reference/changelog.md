@@ -20,6 +20,50 @@ Contributors to major version bumps in JupyterHub include:
 
 ## [Unreleased]
 
+## 6.2
+
+### 6.2.0 - 2026-11-05
+
+6.2.0 is a small release, fixing some regressions in 6.1.
+One change is that the JupyterHub database schema is now upgraded at startup _by default_,
+equivalent to `jupyterhub --upgrade-db`.
+You can opt out of this new default by explicitly setting the old default value
+
+```python
+c.JupyterHub.upgrade_db = False
+```
+
+in your jupyterhub_config.
+
+This has long been the default for deployments using the JupyterHub helm chart,
+so it is not a change in practice for many users.
+
+There is no database schema change in this release.
+
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/6.1.1...6.2.0))
+
+#### New features added
+
+- upgrade db by default, add `jupyterhub downgrade-db` [#5575](https://github.com/jupyterhub/jupyterhub/pull/5575) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics))
+
+#### Bugs fixed
+
+- Print exception message thrown in LocalProcessSpawner preexec_fn [#5584](https://github.com/jupyterhub/jupyterhub/pull/5584) ([@manics](https://github.com/manics), [@minrk](https://github.com/minrk))
+- patch /api/users: fix regression when name is specified with no change [#5579](https://github.com/jupyterhub/jupyterhub/pull/5579) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics))
+
+#### Maintenance and upkeep improvements
+
+- Truncate username in auth rejection log messages [#5565](https://github.com/jupyterhub/jupyterhub/pull/5565) ([@LeoWSY-hashblue](https://github.com/LeoWSY-hashblue), [@minrk](https://github.com/minrk))
+
+#### Contributors to this release
+
+The following people contributed discussions, new ideas, code and documentation contributions, and review.
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/use/#how-does-this-tool-define-contributions-in-the-reports).
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2026-10-20&to=2026-11-05&type=c))
+
+@LeoWSY-hashblue ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3ALeoWSY-hashblue+updated%3A2026-10-20..2026-11-05&type=Issues)) | @manics ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amanics+updated%3A2026-10-20..2026-11-05&type=Issues)) | @meeseeksmachine ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ameeseeksmachine+updated%3A2026-10-20..2026-11-05&type=Issues)) | @minrk ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk+updated%3A2026-10-20..2026-11-05&type=Issues))
+
 ## 6.1
 
 ### 6.1.1 - 2026-10-20
@@ -257,6 +301,26 @@ See [our definition of contributors](https://github-activity.readthedocs.io/en/l
 @agoose77 ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aagoose77+updated%3A2025-10-24..2026-09-01&type=Issues)) | @anny0811 ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aanny0811+updated%3A2025-10-24..2026-09-01&type=Issues)) | @ateucher ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aateucher+updated%3A2025-10-24..2026-09-01&type=Issues)) | @betatim ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Abetatim+updated%3A2025-10-24..2026-09-01&type=Issues)) | @bl-aire ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Abl-aire+updated%3A2025-10-24..2026-09-01&type=Issues)) | @clhedrick ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aclhedrick+updated%3A2025-10-24..2026-09-01&type=Issues)) | @consideRatio ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3AconsideRatio+updated%3A2025-10-24..2026-09-01&type=Issues)) | @dometto ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Adometto+updated%3A2025-10-24..2026-09-01&type=Issues)) | @dragz ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Adragz+updated%3A2025-10-24..2026-09-01&type=Issues)) | @erawn ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aerawn+updated%3A2025-10-24..2026-09-01&type=Issues)) | @ericvd-ucb ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aericvd-ucb+updated%3A2025-10-24..2026-09-01&type=Issues)) | @jezwilkinson ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ajezwilkinson+updated%3A2025-10-24..2026-09-01&type=Issues)) | @jnywong ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ajnywong+updated%3A2025-10-24..2026-09-01&type=Issues)) | @jrdnbradford ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ajrdnbradford+updated%3A2025-10-24..2026-09-01&type=Issues)) | @kellyrowland ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Akellyrowland+updated%3A2025-10-24..2026-09-01&type=Issues)) | @kreuzert ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Akreuzert+updated%3A2025-10-24..2026-09-01&type=Issues)) | @LUC4R4T0R ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3ALUC4R4T0R+updated%3A2025-10-24..2026-09-01&type=Issues)) | @manics ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amanics+updated%3A2025-10-24..2026-09-01&type=Issues)) | @milliams ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amilliams+updated%3A2025-10-24..2026-09-01&type=Issues)) | @minrk ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk+updated%3A2025-10-24..2026-09-01&type=Issues)) | @mynkyu ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amynkyu+updated%3A2025-10-24..2026-09-01&type=Issues)) | @nsychev ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ansychev+updated%3A2025-10-24..2026-09-01&type=Issues)) | @Paul2708 ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3APaul2708+updated%3A2025-10-24..2026-09-01&type=Issues)) | @Rameshkumar31595 ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3ARameshkumar31595+updated%3A2025-10-24..2026-09-01&type=Issues)) | @rgaiacs ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Argaiacs+updated%3A2025-10-24..2026-09-01&type=Issues)) | @shaneknapp ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ashaneknapp+updated%3A2025-10-24..2026-09-01&type=Issues)) | @sixonenines ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Asixonenines+updated%3A2025-10-24..2026-09-01&type=Issues)) | @tbizouerne ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Atbizouerne+updated%3A2025-10-24..2026-09-01&type=Issues)) | @Tech-Abhang ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3ATech-Abhang+updated%3A2025-10-24..2026-09-01&type=Issues)) | @wilkinvr ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Awilkinvr+updated%3A2025-10-24..2026-09-01&type=Issues)) | @willingc ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Awillingc+updated%3A2025-10-24..2026-09-01&type=Issues)) | @yuvipanda ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ayuvipanda+updated%3A2025-10-24..2026-09-01&type=Issues))
 
 ## 5.5
+
+### 5.5.5 - 2026-11-05
+
+5.5.5 fixes a couple more regressions in 5.5.3.
+
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/5.5.4...5.5.5))
+
+#### Bugs fixed
+
+- Print exception message thrown in LocalProcessSpawner preexec_fn [#5584](https://github.com/jupyterhub/jupyterhub/pull/5584) ([@manics](https://github.com/manics), [@minrk](https://github.com/minrk))
+- patch /api/users: fix regression when name is specified with no change [#5579](https://github.com/jupyterhub/jupyterhub/pull/5579) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics))
+
+#### Contributors to this release
+
+The following people contributed discussions, new ideas, code and documentation contributions, and review.
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/use/#how-does-this-tool-define-contributions-in-the-reports).
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2026-10-20&to=2026-11-05&type=c))
+
+@manics ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amanics+updated%3A2026-10-20..2026-11-05&type=Issues)) | @minrk ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk+updated%3A2026-10-20..2026-11-05&type=Issues))
 
 ### 5.5.4 - 2026-10-20
 
