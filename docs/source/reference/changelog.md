@@ -302,6 +302,26 @@ See [our definition of contributors](https://github-activity.readthedocs.io/en/l
 
 ## 5.5
 
+### 5.5.5 - 2026-11-05
+
+5.5.5 fixes a couple more regressions in 5.5.3.
+
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/5.5.4...5.5.5))
+
+#### Bugs fixed
+
+- Print exception message thrown in LocalProcessSpawner preexec_fn [#5584](https://github.com/jupyterhub/jupyterhub/pull/5584) ([@manics](https://github.com/manics), [@minrk](https://github.com/minrk))
+- patch /api/users: fix regression when name is specified with no change [#5579](https://github.com/jupyterhub/jupyterhub/pull/5579) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics))
+
+#### Contributors to this release
+
+The following people contributed discussions, new ideas, code and documentation contributions, and review.
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/use/#how-does-this-tool-define-contributions-in-the-reports).
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2026-10-20&to=2026-11-05&type=c))
+
+@manics ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amanics+updated%3A2026-10-20..2026-11-05&type=Issues)) | @minrk ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk+updated%3A2026-10-20..2026-11-05&type=Issues))
+
 ### 5.5.4 - 2026-10-20
 
 5.5.4 fixes a regression in 5.5.3 where 64-character tokens were rejected as invalid,
