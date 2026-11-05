@@ -1383,7 +1383,7 @@ async def test_start_stop_server_on_admin_page(
     users = await browser.locator('//td[@data-testid="user-row-name"]').all()
     users_list = [await user.text_content() for user in users]
     users_list = [user.strip() for user in users_list]
-    assert {user1.name, user2.name}.issubset({e for e in users_list})
+    assert {user1.name, user2.name}.issubset({*users_list})
 
     # check that all users have correct link for Spawn Page
     spawn_page_btns = browser.locator(

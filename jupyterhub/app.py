@@ -4126,7 +4126,7 @@ class JupyterHub(Application):
             except StopAsyncIteration as e:
                 self.log.error("Caught StopAsyncIteration Exception", exc_info=True)
 
-            tasks = [t for t in asyncio.all_tasks()]
+            tasks = [*asyncio.all_tasks()]
             for t in tasks:
                 self.log.debug("Task status: %s", t)
         self._stop_event_loop()
