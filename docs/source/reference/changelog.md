@@ -22,9 +22,9 @@ Contributors to major version bumps in JupyterHub include:
 
 ## 6.2
 
-### 6.2.0 - 2026-11-XX
+### 6.2.0 - 2026-11-05
 
-6.2.0 is a small release, fixing some regressions in.
+6.2.0 is a small release, fixing some regressions in 6.1.
 One change is that the JupyterHub database schema is now upgraded at startup _by default_,
 equivalent to `jupyterhub --upgrade-db`.
 You can opt out of this new default by explicitly setting the old default value
