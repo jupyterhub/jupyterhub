@@ -452,7 +452,6 @@ def _lookup_resource(resource_url, db, *, base_url, public_url, log):
     else:
         prefix = base_url.strip("/").split("/")
     if base_url and full_path[: len(prefix)] != prefix:
-        print(prefix, full_path)
         raise web.HTTPError(400, "invalid resource (path prefix)")
     path_parts = full_path[len(prefix) :]
     # path parts, may be one of:
