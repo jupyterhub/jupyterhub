@@ -393,6 +393,9 @@ class UserAPIHandler(APIHandler):
                 raise web.HTTPError(403, "Only admins can grant admin permissions")
         for key, value in data.items():
             if key == 'name':
+                if not new_name:
+                    # no change
+                    continue
                 # already normalized and validated
                 value = new_name
             value_s = "..." if key == "auth_state" else repr(value)
