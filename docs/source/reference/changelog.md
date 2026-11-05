@@ -20,6 +20,50 @@ Contributors to major version bumps in JupyterHub include:
 
 ## [Unreleased]
 
+## 6.2
+
+### 6.2.0 - 2026-11-XX
+
+6.2.0 is a small release, fixing some regressions in.
+One change is that the JupyterHub database schema is now upgraded at startup _by default_,
+equivalent to `jupyterhub --upgrade-db`.
+You can opt out of this new default by explicitly setting the old default value
+
+```python
+c.JupyterHub.upgrade_db = False
+```
+
+in your jupyterhub_config.
+
+This has long been the default for deployments using the JupyterHub helm chart,
+so it is not a change in practice for many users.
+
+There is no database schema change in this release.
+
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/6.1.1...6.2.0))
+
+#### New features added
+
+- upgrade db by default, add `jupyterhub downgrade-db` [#5575](https://github.com/jupyterhub/jupyterhub/pull/5575) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics))
+
+#### Bugs fixed
+
+- Print exception message thrown in LocalProcessSpawner preexec_fn [#5584](https://github.com/jupyterhub/jupyterhub/pull/5584) ([@manics](https://github.com/manics), [@minrk](https://github.com/minrk))
+- patch /api/users: fix regression when name is specified with no change [#5579](https://github.com/jupyterhub/jupyterhub/pull/5579) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics))
+
+#### Maintenance and upkeep improvements
+
+- Truncate username in auth rejection log messages [#5565](https://github.com/jupyterhub/jupyterhub/pull/5565) ([@LeoWSY-hashblue](https://github.com/LeoWSY-hashblue), [@minrk](https://github.com/minrk))
+
+#### Contributors to this release
+
+The following people contributed discussions, new ideas, code and documentation contributions, and review.
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/use/#how-does-this-tool-define-contributions-in-the-reports).
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2026-10-20&to=2026-11-05&type=c))
+
+@LeoWSY-hashblue ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3ALeoWSY-hashblue+updated%3A2026-10-20..2026-11-05&type=Issues)) | @manics ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amanics+updated%3A2026-10-20..2026-11-05&type=Issues)) | @meeseeksmachine ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ameeseeksmachine+updated%3A2026-10-20..2026-11-05&type=Issues)) | @minrk ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk+updated%3A2026-10-20..2026-11-05&type=Issues))
+
 ## 6.1
 
 ### 6.1.1 - 2026-10-20
