@@ -17,6 +17,9 @@
           {% if not default_server.active %}Start{% endif %}
           My Server
         </a>
+        {% if default_server.active and can_share %}<a id="share"
+   role="button"
+   class="share-server btn btn-lg btn-primary">Share My Server</a>{% endif %}
       </div>
     </div>
     {% if allow_named_servers %}
@@ -92,6 +95,11 @@
                 <button type="button"
                         class="delete-server btn btn-xs btn-danger{% if spawner.active %} hidden{% endif %}"
                         id="delete-{{ spawner.name }}">delete</button>
+                {% if can_share %}
+                  <button type="button"
+                          class="share-server btn btn-xs btn-primary"
+                          data-server-name="{{ spawner.name }}">share</button>
+                {% endif %}
               </td>
             </tr>
           {% endfor %}
@@ -99,6 +107,47 @@
       </table>
     {% endif %}
   </div>
+  {% call modal('Share Server', btn_label='Done') %}
+    <small class="form-text d-block">Share links expire after 1 day, but people who already used the link and accepted keep access.</small>
+    <button type="button" id="generate-share-link" class="btn btn-primary">Generate Share Link</button>
+    <div id="share-link-group" class="input-group mt-2 hidden">
+      <input type="text"
+             id="share-link"
+             class="form-control"
+             readonly
+             aria-label="share link">
+      <button type="button" id="copy-share-link" class="btn btn-outline-secondary">Copy</button>
+    </div>
+    <h6 class="mt-3">
+      Shared with
+      <button type="button"
+              id="revoke-all-shares"
+              class="btn btn-xs btn-danger float-end">Revoke All</button>
+    </h6>
+    <ul id="share-list"
+        class="list-group overflow-auto"
+        style="max-height: 300px">
+    </ul>
+    <small class="form-text d-block mt-1">Revoking access may take a few minutes to propagate.</small>
+    {% if can_invite_users %}
+      <div id="share-with-users">
+        <h6 class="mt-3">All Users</h6>
+        <ul id="user-list"
+            class="list-group overflow-auto"
+            style="max-height: 300px">
+        </ul>
+      </div>
+    {% endif %}
+    {% if can_invite_groups %}
+      <div id="share-with-groups">
+        <h6 class="mt-3">All Groups</h6>
+        <ul id="group-list"
+            class="list-group overflow-auto"
+            style="max-height: 300px">
+        </ul>
+      </div>
+    {% endif %}
+  {% endcall %}
 {% endblock main %}
 {% block script %}
   {{ super() }}
