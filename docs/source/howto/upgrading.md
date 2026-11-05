@@ -159,7 +159,7 @@ A table of recent revisions:
 
 | JupyterHub Version | alembic revision |
 | ------------------ | ---------------- |
-| 6.0-6.1            | `f460b0348206`   |
+| 6.0-6.2            | `f460b0348206`   |
 | 5.x                | `4621fec11365`   |
 | 4.x                | `0eee8c825d24`   |
 

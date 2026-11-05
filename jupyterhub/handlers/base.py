@@ -14,6 +14,7 @@ import warnings
 from http.client import responses
 from urllib.parse import parse_qs, parse_qsl, urlencode, urlparse, urlunparse
 
+import jwt
 from jinja2 import TemplateNotFound
 from sqlalchemy.exc import SQLAlchemyError
 from tornado import web
@@ -54,6 +55,7 @@ from ..utils import (
     AnyTimeoutError,
     get_accepted_mimetype,
     get_browser_protocol,
+    is_jwt,
     maybe_future,
     safe_log,
     url_escape_path,
@@ -476,20 +478,114 @@ class BaseHandler(RequestHandler):
         orm_token = orm.APIToken.find(self.db, token)
         return orm_token
 
+    # by default, require JWT audience
+    jwt_audience = "jupyterhub"
+    jwt_decode_options = None
+
+    @functools.lru_cache
+    def get_jwt_claims(self):
+        """
+        get validated jwt cliams from authorization header
+
+        Returns None unless a token is a valid JWT Bearer token,
+        having validated:
+
+        - issuer (it's a JupyterHub JWT)
+        - audience (it's for talking to the hub, specifically)
+        - expiration
+        - scopes (it's not an id_token)
+        """
+        token = self.get_auth_token()
+        if token is None or not is_jwt(token):
+            return None
+
+        try:
+            header = jwt.get_unverified_header(token)
+        except jwt.PyJWTError:
+            # likely not a valid JWT
+            return None
+
+        kid = header.get("kid", None)
+        private_key = self.oauth_provider.token_signing_keys.get(kid, None)
+        if private_key is None:
+            self.log.warning("Ignoring JWT with invalid kid: %s", kid)
+            return None
+        public_key = private_key.public_key()
+        if self.oauth_provider.issuer:
+            issuer = self.oauth_provider.issuer
+        else:
+            # derive from request
+            parsed = urlparse(self.request.full_url())
+            issuer = f"{parsed.scheme}://{parsed.netloc}{self.hub.base_url}".rstrip("/")
+
+        try:
+            jwt_claims = jwt.decode(
+                token,
+                public_key,
+                issuer=issuer,
+                audience=self.jwt_audience,
+                algorithms=["RS256"],
+                options=self.jwt_decode_options,
+            )
+        except Exception as e:
+            self.log.warning("Not accepting JWT: %s", e)
+            return None
+        if "scopes" not in jwt_claims:
+            self.log.warning(
+                "Not accepting JWT id_token for %s as bearer token", jwt_claims["sub"]
+            )
+            return None
+        # record activity
+        self.log.info("got jwt claims!", jwt_claims)
+        return jwt_claims
+
+    def _get_current_user_jwt(self):
+        jwt_claims = self.get_jwt_claims()
+        if not jwt_claims:
+            return None
+        name = jwt_claims["name"]
+        match jwt_claims["kind"]:
+            case "user":
+                orm_user = orm.User.find(db=self.db, name=name)
+                if orm_user is None:
+                    self.log.warning(f"Received JWT for nonexistent user: {name}")
+                return orm_user
+            case "service":
+                orm_service = orm.Service.find(db=self.db, name=name)
+                if orm_service is None:
+                    self.log.warning(f"Received JWT for nonexistent service: {name}")
+                return orm_service
+            case kind:
+                # this shouldn't be possible
+                raise ValueError(f"invalid kind: {kind}")
+
     def get_current_user_token(self):
         """get_current_user from Authorization header token"""
-        # record token activity
         orm_token = self.get_token()
-        if orm_token is None:
+        orm_own = None
+        if orm_token:
+            orm_owner = orm_token.user or orm_token.service
+        else:
+            # not an API token, try JWT
+            orm_owner = self._get_current_user_jwt()
+        if not orm_owner:
             return None
+
+        # record token activity
         now = utcnow(with_tz=False)
-        recorded = self._record_activity(orm_token, now)
-        if orm_token.user:
+        recorded = False
+        if orm_token:
+            recorded = self._record_activity(orm_token, now)
+        if orm_owner.kind == "user":
             # FIXME: scopes should give us better control than this
             # don't consider API requests originating from a server
             # to be activity from the user
-            if not orm_token.note or not orm_token.note.startswith("Server at "):
-                recorded = self._record_activity(orm_token.user, now) or recorded
+            if (
+                not orm_token
+                or not orm_token.note
+                or not orm_token.note.startswith("Server at ")
+            ):
+                recorded = self._record_activity(orm_owner, now) or recorded
         if recorded:
             self.db.commit()
 
@@ -497,10 +593,10 @@ class BaseHandler(RequestHandler):
         # XSRF checks are skipped when using token auth
         self._token_authenticated = True
 
-        if orm_token.service:
-            return orm_token.service
-
-        return self._user_from_orm(orm_token.user)
+        if orm_owner.kind == "service":
+            return orm_owner
+        else:
+            return self._user_from_orm(orm_owner)
 
     def _user_for_cookie(self, cookie_name, cookie_value=None):
         """Get the User for a given cookie, if there is one"""
@@ -568,13 +664,23 @@ class BaseHandler(RequestHandler):
         return self._jupyterhub_user
 
     def _resolve_roles_and_scopes(self):
-        self.expanded_scopes = set()
+        self.expanded_scopes = frozenset()
         if self.current_user:
             orm_token = self.get_token()
             if orm_token:
                 self.expanded_scopes = scopes.get_scopes_for(orm_token)
             else:
-                self.expanded_scopes = scopes.get_scopes_for(self.current_user)
+                jwt_claims = self.get_jwt_claims()
+                owner_scopes = scopes.get_scopes_for(self.current_user)
+                if jwt_claims:
+                    # intersect jwt scopes
+                    jwt_scopes = frozenset(jwt_claims["scopes"])
+                    self.expanded_scopes = scopes._intersect_expanded_scopes(
+                        jwt_scopes,
+                        owner_scopes,
+                    )
+                else:
+                    self.expanded_scopes = owner_scopes
         self.parsed_scopes = scopes.parse_scopes(self.expanded_scopes)
 
     @functools.lru_cache

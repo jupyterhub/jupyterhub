@@ -177,7 +177,7 @@ notebook==6.5.7
     # via -r requirements.in
 notebook-shim==0.2.4
     # via nbclassic
-oauthlib==3.0.0
+oauthlib==3.2.2
     # via -r oldest-dependencies.txt
 packaging==26.2
     # via

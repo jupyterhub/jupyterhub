@@ -1069,3 +1069,17 @@ async def wait_for_shielded(f, timeout):
         return await f
     else:
         raise TimeoutError(f"{f} not done after {timeout}s")
+
+
+jwt_pat = re.compile(r"[a-z0-9_\-=]+\.[a-z0-9_\-=]+\.[a-z0-9_\-=]+", re.IGNORECASE)
+
+
+def is_jwt(token):
+    """Return whether a token should be treated as a JWT
+
+    Lightweight check, doesn't verify that it's valid.
+
+    For now, only checks that it's 3 url-safe base64-encoded segments,
+    separated by '.'.
+    """
+    return bool(jwt_pat.match(token))

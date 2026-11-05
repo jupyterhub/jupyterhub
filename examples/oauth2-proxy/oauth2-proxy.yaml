@@ -1,0 +1,45 @@
+# injectRequestHeaders is only supported
+# in alpha config,
+# but alpha config doesn't support basics like cookie-secret
+# so we need two files
+# ref: https://oauth2-proxy.github.io/oauth2-proxy/configuration/alpha-config
+injectRequestHeaders:
+  # inject our Bearer token for the proxied service
+  - name: Authorization
+    preserveRequestValue: false
+    values:
+      - secretSource:
+          value: Bearer super-secret-upstream-token
+  # also pass the authenticated user
+  - name: X-Forwarded-User
+    preserveRequestValue: false
+    values:
+      - claimSource:
+          claim: user
+providers:
+  - id: JupyterHub
+    provider: oidc
+    name: JupyterHub
+    # match client id/secret in jupyterhub_config
+    clientID: service-oauth2-proxy
+    clientSecret: 067480423daa83eb9d315cedeef75bbe58798c6
+    oidcConfig:
+      # must match JupyterHub public URL
+      issuerURL: http://127.0.0.1:8000/hub
+      # `sub` is the userid field in the JWT
+      # it is the form 'user/username' or 'service/servicename'
+      userIDClaim: sub
+    # scope requested for oauth triggered by browser visits
+    scope: openid
+    profileURL: http://127.0.0.1:8000/hub/api/user
+server:
+  # where the proxy service is running
+  bindAddress: 127.0.0.1:4180
+upstreamConfig:
+  upstreams:
+    # proxy authenticated requests to our echo server
+    - id: echo
+      path: /
+      # match url in echo.py
+      uri: http://127.0.0.1:9999
+      passHostHeader: false
