@@ -767,6 +767,7 @@ async def test_login_fail_xsrf_expired(app):
     login_error = login.find(class_="login_error")
     assert login_error
     assert "Try again" in login_error.text
+    assert login.find("a", string="Try again")
 
 
 @pytest.mark.parametrize(
