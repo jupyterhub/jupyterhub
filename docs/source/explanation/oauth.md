@@ -408,14 +408,14 @@ to exchange an API token for a JWT Bearer token for a specific audience.
 
 RFC 8693 specifies a few arguments that we'll always provide:
 
-| field                | value                                             |
-| -------------------- | ------------------------------------------------- |
-| `grant_type`         | `urn:ietf:params:oauth:grant-type:token-exchange` |
-| `subject_token_type` | `urn:ietf:params:oauth:token-type:access_token`   |
-| `subject_token`      | our existing JupyterHub API token                 |
+| field                | value                                                    |
+| -------------------- | -------------------------------------------------------- |
+| `grant_type`         | always `urn:ietf:params:oauth:grant-type:token-exchange` |
+| `subject_token_type` | always `urn:ietf:params:oauth:token-type:access_token`   |
+| `subject_token`      | your existing JupyterHub API token                       |
 
 We will then need to specify the one "audience" (JupyterHub server, service, or the Hub itself) that the token may be used to address.
-There are two ways to specify an audience:
+There are two arguments for specifying an audience:
 
 - `audience` if you already know the oauth client id you want to talk to (e.g. the `$JUPYTERHUB_CLIENT_ID` environment variable for a JupyterHub server or managed service).
 - `resource` is a URL identifying the resource.
@@ -481,7 +481,7 @@ which will return something like
  'expires_in': 3600}
 ```
 
-which can be used to access the target service.
+which can be used in the Authorization header to access the target service.
 
 [Token Exchange]: https://oauth.net/2/token-exchange/
 [RFC8693]: https://www.rfc-editor.org/rfc/rfc8693
@@ -503,12 +503,14 @@ given a `jwt_bearer` token
 ```python
 import jwt
 
-audience = "my_client_id"
+# from the response above
+jwt_bearer = r.json()["access_token"]
+
+audience = os.environ["JUPYTERHUB_CLIENT_ID"]
 issuer = openid_configuration["issuer"]
 jwks_uri = openid_configuration["jwks_uri"]
 
 jwks_client = jwt.PyJWKClient(openid_configuration["jwks_uri"])
-jwt_bearer = r.json()["access_token"]
 signing_key = jwks_client.get_signing_key_from_jwt(jwt_bearer)
 # jwt.decode will verify audience, signature, issuer, expiration
 claims = jwt.decode(
