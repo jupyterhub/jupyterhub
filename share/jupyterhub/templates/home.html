@@ -7,14 +7,21 @@
     <h1 class="visually-hidden">JupyterHub home page</h1>
     <div class="row">
       <div class="text-center">
-        {% if default_server.active %}<a id="stop" role="button" class="btn btn-lg btn-danger">Stop My Server</a>{% endif %}
-        <a id="start"
-           role="button"
-           class="btn btn-lg btn-primary"
-           href="{{ url }}">
-          {% if not default_server.active %}Start{% endif %}
-          My Server
-        </a>
+        {% set default_spawner = (user.all_spawners(include_default=True)|list)[0] %}
+        <a role="button"
+           class="stop-default btn btn-lg btn-danger{% if not default_server.ready %} hidden{% endif %}"
+           id="stop-default">Stop My Server</a>
+        {% if (not default_spawner.allowed_images and default_spawner.image) or default_server.user_options.image %}<a role="button"
+           class="start-default btn btn-lg btn-primary {% if default_server.ready %}hidden{% endif %} {% if default_server.pending %}disabled{% endif %}"
+           id="start-default">{% if not default_server.pending %}Start My Server{% else %}Server is pending{% endif %}</a>{% endif %}
+        <a role="button"
+           class="spawn-default btn btn-lg btn-light {% if default_server.ready %}hidden{% endif %}"
+           id="spawn-default"
+           href="{{ base_url }}spawn/{{ user.name }}">Spawn My Server</a>
+        <a role="button"
+           class="access-default btn btn-lg btn-primary {% if not default_server.ready %}hidden{% endif %}"
+           id="access-default"
+           href="{{ url }}">Access My Server</a>
       </div>
     </div>
     {% if allow_named_servers %}
@@ -69,13 +76,21 @@
               {# actions #}
               <td>
                 <a role="button"
-                   class="stop-server btn btn-xs btn-danger{% if not spawner.active %} hidden{% endif %}"
+                   {# stop is available if anything is happening _except_ rename #}
+                   class="stop-server btn btn-xs btn-danger{% if not spawner.ready or spawner.pending == "rename" %} hidden{% endif %}"
                    id="stop-{{ spawner.name }}">stop</a>
+                {% if (not spawner.allowed_images and (spawner.image or default_spawner.image)) or spawner.user_options.image %}<a role="button"
+                   class="start-server btn btn-xs btn-primary {% if spawner.ready %}hidden{% endif %} {% if spawner.pending %}disabled{% endif %}"
+                   id="start-{{ spawner.name }}">{% if not spawner.pending %}start{% else %}pend{% endif %}</a>{% endif %}
                 <a role="button"
-                   class="start-server btn btn-xs btn-primary {% if spawner.active %}hidden{% endif %}"
-                   id="start-{{ spawner.name }}"
-                   href="{{ base_url }}spawn/{{ user.name }}/{{ spawner.name }}">start</a>
-                <button role="button"
+                   class="spawn-server btn btn-xs btn-light {% if spawner.ready %}hidden{% endif %}"
+                   id="spawn-{{ spawner.name }}"
+                   href="{{ base_url }}spawn/{{ user.name }}/{{ spawner.name }}">spawn</a>
+                <a role="button"
+                   class="access-server btn btn-xs btn-primary {% if not spawner.ready %}hidden{% endif %}"
+                   id="access-{{ spawner.name }}"
+                   href="{{ user.server_url(spawner.name) }}">access</a>
+                <button type="button"
                         class="delete-server btn btn-xs btn-danger{% if spawner.active %} hidden{% endif %}"
                         id="delete-{{ spawner.name }}">delete</button>
               </td>

@@ -19,29 +19,70 @@ require(["jquery", "moment", "jhapi"], function ($, moment, JHAPI) {
 
   function disableRow(row) {
     row.find(".btn").attr("disabled", true).off("click");
+    row.find(".start-server").prop("disabled", true).addClass("disabled");
+    row.find(".start-server").text("pend");
   }
 
   function enableRow(row, running) {
     // enable buttons on a server row
     // once the server is running or not
     row.find(".btn").attr("disabled", false);
+    row.find(".start-server").click(startServer);
     row.find(".stop-server").click(stopServer);
     row.find(".delete-server").click(deleteServer);
 
     if (running) {
       row.find(".start-server").addClass("hidden");
+      row.find(".spawn-server").addClass("hidden");
       row.find(".delete-server").addClass("hidden");
       row.find(".stop-server").removeClass("hidden");
+      row.find(".access-server").removeClass("hidden");
       row.find(".server-link").removeClass("hidden");
     } else {
+      row.find(".start-server").prop("disabled", false).removeClass("disabled");
+      row.find(".start-server").text("start");
       row.find(".start-server").removeClass("hidden");
+      row.find(".spawn-server").removeClass("hidden");
       row.find(".delete-server").removeClass("hidden");
       row.find(".stop-server").addClass("hidden");
+      row.find(".access-server").addClass("hidden");
       row.find(".server-link").addClass("hidden");
     }
   }
 
-  function startServer() {
+  function startDefault() {
+    // before request
+    $("#start-default").prop("disabled", true).addClass("disabled");
+    $("#start-default").text("Server is pending");
+
+    // request
+    api.start_server(user, {
+      success: function () {
+        $("#start-default").addClass("hidden");
+        $("#spawn-default").addClass("hidden");
+        $("#stop-default").removeClass("hidden");
+        $("#access-default").removeClass("hidden");
+      },
+    });
+  }
+
+  function stopDefault() {
+    // before request
+    $("#start-default").prop("disabled", false).removeClass("disabled");
+    $("#start-default").text("Start My Server");
+
+    // request
+    api.stop_server(user, {
+      success: function () {
+        $("#start-default").removeClass("hidden");
+        $("#spawn-default").removeClass("hidden");
+        $("#stop-default").addClass("hidden");
+        $("#access-default").addClass("hidden");
+      },
+    });
+  }
+
+  function newServer() {
     var row = getRow($(this));
     var serverName = row.find(".new-server-name").val();
     if (serverName === "") {
@@ -50,6 +91,21 @@ require(["jquery", "moment", "jhapi"], function ($, moment, JHAPI) {
     } else {
       window.location.href = "./spawn/" + user + "/" + serverName;
     }
+  }
+
+  function startServer() {
+    var row = getRow($(this));
+    var serverName = row.data("server-name");
+
+    // before request
+    disableRow(row);
+
+    // request
+    api.start_named_server(user, serverName, {
+      success: function () {
+        enableRow(row, true);
+      },
+    });
   }
 
   function stopServer() {
@@ -89,33 +145,17 @@ require(["jquery", "moment", "jhapi"], function ($, moment, JHAPI) {
   }
 
   // initial state: hook up click events
-  $("#stop").click(function () {
-    $("#start")
-      .attr("disabled", true)
-      .attr("title", "Your server is stopping")
-      .click(function () {
-        return false;
-      });
-    api.stop_server(user, {
-      success: function () {
-        $("#stop").hide();
-        $("#start")
-          .text("Start My Server")
-          .attr("title", "Start your default server")
-          .attr("disabled", false)
-          .attr("href", base_url + "spawn/" + user)
-          .off("click");
-      },
-    });
-  });
+  $(".start-default").click(startDefault);
+  $(".stop-default").click(stopDefault);
 
-  $(".new-server-btn").click(startServer);
+  $(".new-server-btn").click(newServer);
   $(".new-server-name").on("keypress", function (e) {
     if (e.which === 13) {
-      startServer.call(this);
+      newServer.call(this);
     }
   });
 
+  $(".start-server").click(startServer);
   $(".stop-server").click(stopServer);
   $(".delete-server").click(deleteServer);
 
