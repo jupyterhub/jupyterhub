@@ -11,7 +11,7 @@
         <a role="button"
            class="stop-default btn btn-lg btn-danger{% if not default_server.ready %} hidden{% endif %}"
            id="stop-default">Stop My Server</a>
-        {% if (not default_spawner.allowed_images and default_spawner.image) or default_server.user_options.image %}
+        {% if (not default_spawner.allowed_images and default_spawner.image) or (default_server.user_options|list)[0] %}
           <a role="button"
              class="start-default btn btn-lg btn-primary {% if default_server.ready %}hidden{% endif %} {% if default_server.pending %}disabled{% endif %}"
              id="start-default">
@@ -87,7 +87,7 @@
                   {# stop is available if anything is happening _except_ rename #}
                   class="stop-server btn btn-xs btn-danger{% if not spawner.ready or spawner.pending == "rename" %} hidden{% endif %}"
                 id="stop-{{ spawner.name }}">stop</a>
-                {% if (not spawner.allowed_images and (spawner.image or default_spawner.image)) or spawner.user_options.image %}
+                {% if (not spawner.allowed_images and (spawner.image or default_spawner.image)) or (spawner.user_options|list)[0] %}
                   <a role="button"
                      class="start-server btn btn-xs btn-primary {% if spawner.ready %}hidden{% endif %} {% if spawner.pending %}disabled{% endif %}"
                      id="start-{{ spawner.name }}">
