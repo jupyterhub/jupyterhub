@@ -529,8 +529,8 @@ which will look like:
  'iat': 1793318246,
  'scopes': ['access:services!service=oauth2-proxy'],
  'iss': 'http://127.0.0.1:8000/hub',
- 'sub': 'user/test',
- 'name': 'test',
+ 'sub': 'test',
+ 'username': 'test',
  'kind': 'user',
  'exp': 1793321846}
 ```

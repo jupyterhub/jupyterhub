@@ -543,7 +543,7 @@ class BaseHandler(RequestHandler):
         jwt_claims = self.get_jwt_claims()
         if not jwt_claims:
             return None
-        name = jwt_claims["name"]
+        name = jwt_claims["username"]
         match jwt_claims["kind"]:
             case "user":
                 orm_user = orm.User.find(db=self.db, name=name)

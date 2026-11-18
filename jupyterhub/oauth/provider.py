@@ -834,8 +834,20 @@ class JupyterHubRequestValidator(RequestValidator):
         """
         kid, private_key = next(iter(self.token_signing_keys.items()))
         id_token["iss"] = self.issuer
-        id_token["sub"] = f"{request.user.kind}/{request.user.name}"
-        id_token["name"] = request.user.name
+        # must be unique across services and users
+        # choice:
+        # 1. `username` for users and `services/servicename` for services
+        # 2. always `{kind}/{name}`
+        if request.user.kind == "user":
+            sub = request.user.name
+        else:
+            # collisions are not possible because `/` is illegal in usernames
+            sub = f"{request.user.kind}/{request.user.name}"
+        id_token["sub"] = sub
+        # our user model uses 'name' for this,
+        # but OIDC defines 'name' in the 'profile' claims as name for display
+        # 'username' here will also be the name of the service when it's a service
+        id_token["username"] = request.user.name
         id_token["kind"] = request.user.kind
         # configurable expiration for id token?
         expires_in = token["expires_in"] or 1209600

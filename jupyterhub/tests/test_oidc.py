@@ -150,6 +150,8 @@ async def test_token_exchange_scopes(
     if expect_scopes == "error":
         assert r.status_code == 403
         return
+    assert jwt_claims["sub"] == user.name
+    assert jwt_claims["username"] == user.name
     assert sorted(jwt_claims["scopes"]) == sorted(expect_scopes)
     # now make another request with this token
     r = await api_request(app, "user", headers={"Authorization": f"Bearer {token}"})
@@ -166,6 +168,7 @@ async def test_token_exchange_hub(app, create_user_with_scopes, admin_user):
         app, token, audience="jupyterhub", scopes=["read:users:name"]
     )
     assert jwt_claims["scopes"] == ["read:users:name"]
+    assert jwt_claims["sub"] == user.name
     # now make another request with this token
     r = await api_request(app, "user", headers={"Authorization": f"Bearer {token}"})
     assert r.ok
