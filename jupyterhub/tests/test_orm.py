@@ -3,6 +3,7 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import os
+import secrets
 import socket
 from datetime import timedelta
 from unittest import mock
@@ -330,10 +331,15 @@ def test_spawner_delete_cascade(db):
     db.add(spawner)
     spawner.user = user
     db.commit()
+    spawner.oauth_client = oauth_client = orm.OAuthClient(
+        identifier=secrets.token_urlsafe(32)
+    )
+    db.commit()
     spawner.server = server = orm.Server()
     db.commit()
     db.delete(spawner)
     server_id = server.id
+    oauth_client_id = oauth_client.id
 
     # delete the user
     db.delete(spawner)
@@ -342,6 +348,8 @@ def test_spawner_delete_cascade(db):
     # verify that server gets deleted
     assert_not_found(db, orm.Server, server_id)
     assert user.orm_spawners == {}
+    # verify oauth client gets deleted
+    assert_not_found(db, orm.OAuthClient, oauth_client_id)
 
 
 def test_user_delete_cascade(db):

@@ -242,6 +242,13 @@ def admin_user(app, username):
     yield user
 
 
+@fixture
+def user_needs_escaping(app):
+    """User with name that needs escaping"""
+    user = add_user(app.db, app, name=new_username("testuser<'&\">"))
+    yield user
+
+
 _groupname_counter = 0
 _rolename_counter = 0
 

@@ -516,7 +516,7 @@ async def test_spawner_oauth_scopes(app, user):
     await spawner.user.spawn()
     oauth_client = spawner.orm_spawner.oauth_client
     assert sorted(oauth_client.allowed_scopes) == sorted(
-        allowed_scopes + list(access_scopes(oauth_client))
+        allowed_scopes + list(access_scopes(oauth_client)) + ["openid"]
     )
     await spawner.user.stop()
 

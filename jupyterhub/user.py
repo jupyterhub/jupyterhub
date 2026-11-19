@@ -2,9 +2,10 @@
 # Distributed under the terms of the Modified BSD License.
 import asyncio
 import json
+import secrets
 import warnings
 from collections import defaultdict
-from urllib.parse import quote, urlparse, urlunparse
+from urllib.parse import urlparse, urlunparse
 
 from sqlalchemy import inspect
 from tornado import web
@@ -16,6 +17,7 @@ from ._version import __version__, _check_version
 from .crypto import CryptKeeper, EncryptionUnavailable, InvalidToken, decrypt, encrypt
 from .metrics import RUNNING_SERVERS, TOTAL_USERS
 from .objects import Server
+from .scopes import Scope
 from .slugs import is_valid_display_name, is_valid_safe_slug
 from .spawner import LocalProcessSpawner, SpawnException
 from .utils import (
@@ -562,9 +564,10 @@ class User:
 
         # use fully quoted name for client_id because it will be used in cookie-name
         # self.escaped_name may contain @ which is legal in URLs but not cookie keys
-        client_id = f'jupyterhub-user-{quote(self.name)}'
-        if server_name:
-            client_id = f'{client_id}-{quote(server_name)}'
+        if orm_spawner.oauth_client:
+            client_id = orm_spawner.oauth_client.identifier
+        else:
+            client_id = f"jupyterhub-user-{secrets.token_urlsafe(16)}"
 
         trusted_alt_names = []
         trusted_alt_names.extend(self.settings.get('trusted_alt_names', []))
@@ -615,6 +618,22 @@ class User:
         # update with kwargs. Mainly for testing.
         spawn_kwargs.update(kwargs)
         spawner = spawner_class(**spawn_kwargs)
+        # ensure oauth client exists
+        oauth_client = orm_spawner.oauth_client
+        if oauth_client is None:
+            # register new oauth client
+            # this will be a partial record until the server has started,
+            # but the client id is permanent.
+            oauth_client = orm.OAuthClient(
+                identifier=client_id,
+                secret="",
+                allowed_scopes=[],
+            )
+            orm_spawner.oauth_client = oauth_client
+            self.db.add(oauth_client)
+            self.db.commit()
+
+        # load state
         spawner.load_state(orm_spawner.state or {})
         return spawner
 
@@ -875,7 +894,7 @@ class User:
         }
         # ensure activity scope is requested, since activity doesn't work without
         activity_scope = "users:activity!user"
-        if not {activity_scope, "users:activity", "inherit"}.intersection(
+        if not {activity_scope, "users:activity", Scope.inherit}.intersection(
             requested_scopes
         ):
             self.log.warning(
@@ -884,7 +903,7 @@ class User:
             requested_scopes |= {activity_scope}
 
         have_scopes = roles.roles_to_scopes(roles.get_roles_for(self.orm_user))
-        have_scopes |= {"inherit"}
+        have_scopes |= Scope.ALWAYS_SCOPES
         jupyterhub_client = (
             db.query(orm.OAuthClient)
             .filter_by(
@@ -934,6 +953,8 @@ class User:
         oauth_provider = self.settings.get('oauth_provider')
         if oauth_provider:
             allowed_scopes = await spawner._get_oauth_client_allowed_scopes()
+            # this client already exists, but will be updated in-place
+            # to set client_secret, scopes, etc.
             oauth_client = oauth_provider.add_client(
                 client_id,
                 api_token,
@@ -941,7 +962,6 @@ class User:
                 allowed_scopes=allowed_scopes,
                 description=f"Server at {url_path_join(self.base_url, server_name, '/')}",
             )
-            spawner.orm_spawner.oauth_client = oauth_client
         db.commit()
 
         # trigger pre-spawn hook on authenticator
@@ -1171,18 +1191,37 @@ class User:
             )
             # remove server entry from db
             spawner.server = None
+
+            # clear any codes & api tokens issued by the oauth client.
+            # we used to do this by deleting the OAuthClient altogether,
+            # but this way ensures the client object exists even when it's not running
+            oauth_client = spawner.orm_spawner.oauth_client
+            deleted = (
+                self.db.query(orm.OAuthCode)
+                .filter_by(
+                    client=oauth_client,
+                )
+                .delete()
+            )
+            self.log.debug(
+                "Deleted %i oauth codes for %s", deleted, oauth_client.identifier
+            )
+            deleted = (
+                self.db.query(orm.APIToken)
+                .filter_by(
+                    oauth_client=oauth_client,
+                )
+                .delete()
+            )
+            self.log.debug(
+                "Deleted %i oauth tokens for %s", deleted, oauth_client.identifier
+            )
             if not spawner.will_resume:
                 # find and remove the API token and oauth client if the spawner isn't
                 # going to re-use it next time
                 orm_token = orm.APIToken.find(self.db, api_token)
                 if orm_token:
                     self.db.delete(orm_token)
-                # remove oauth client as well
-                for oauth_client in self.db.query(orm.OAuthClient).filter_by(
-                    identifier=spawner.oauth_client_id,
-                ):
-                    self.log.debug("Deleting oauth client %s", oauth_client.identifier)
-                    self.db.delete(oauth_client)
             self.db.commit()
             self.log.debug("Finished stopping %s", spawner._log_name)
             RUNNING_SERVERS.dec()

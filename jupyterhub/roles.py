@@ -61,7 +61,7 @@ def get_default_roles():
         {
             'name': 'token',
             'description': 'Token with same permissions as its owner',
-            'scopes': ['inherit'],
+            'scopes': [scopes.Scope.inherit],
         },
     ]
     return default_roles
