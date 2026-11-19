@@ -25,7 +25,7 @@ require(["jquery", "moment", "jhapi", "utils"], function (
   function disableRow(row) {
     row.find(".btn").attr("disabled", true).off("click");
     row.find(".start-server").prop("disabled", true).addClass("disabled");
-    row.find(".start-server").text("pend");
+    row.find(".start-server").text("Server is pending");
   }
 
   function enableRow(row, running) {
@@ -46,7 +46,7 @@ require(["jquery", "moment", "jhapi", "utils"], function (
       row.find(".server-link").removeClass("hidden");
     } else {
       row.find(".start-server").prop("disabled", false).removeClass("disabled");
-      row.find(".start-server").text("start");
+      row.find(".start-server").text("Start Server");
       row.find(".start-server").removeClass("hidden");
       row.find(".spawn-server").removeClass("hidden");
       row.find(".delete-server").removeClass("hidden");
