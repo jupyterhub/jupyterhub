@@ -11,7 +11,7 @@ from aiohttp import TCPConnector
 from aiohttp.client_exceptions import UnixClientConnectorError
 from aiohttp.client_proto import ResponseHandler
 from aiohttp.helpers import ceil_timeout
-from traitlets import Dict
+from traitlets import Dict, Type
 from traitlets.config import SingletonConfigurable
 
 
@@ -83,6 +83,37 @@ class JupyterHubHTTPClient(SingletonConfigurable):
         """,
     )
 
+    resolver_class = Type(
+        default_value=None,
+        allow_none=True,
+        config=True,
+        help="""
+        aiohttp DNS Resolver class to use.
+
+        If specified, will be instantiated and passed to TCPConnector options.
+
+        Use `resolver_options` to pass keyword arguments to the constructor.
+
+        Typical choices are:
+
+        - `aiohttp.resolver.AsyncResolver` (uses aiodns)
+        - `aiohttp.resolver.ThreadedResolver` (uses stlib asyncio DNS APIs)
+
+        .. versionadded:: 6.2.0
+        """,
+    )
+    resolver_options = Dict(
+        config=True,
+        help="""
+        Options to pass to the resolver_class constructor.
+
+        If specified, resolver_class must also be specified,
+        typically to `aiohttp.resolver.AsyncResolver`.
+
+        .. versionadded:: 6.2.0
+        """,
+    )
+
     _internal_connector_options = Dict(
         # not config, overrides user options, e.g. internal_ssl options
         help="""
@@ -115,6 +146,13 @@ class JupyterHubHTTPClient(SingletonConfigurable):
         options = {}
         options.update(self.connector_options)
         options.update(self._internal_connector_options)
+        if self.resolver_class:
+            options["resolver"] = self.resolver_class(**self.resolver_options)
+        elif self.resolver_options:
+            clsname = self.__class__.__name__
+            raise ValueError(
+                f"{clsname}.resolver_options set, {clsname}.resolver_class must also be set."
+            )
         return _HTTPUnixConnector(**options)
 
     def _new_session(self):
