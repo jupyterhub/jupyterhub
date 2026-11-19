@@ -21,10 +21,12 @@
             {% endif %}
           </a>
         {% endif %}
-        <a role="button"
-           class="spawn-default btn btn-lg btn-light {% if default_server.active %}hidden{% endif %}"
-           id="spawn-default"
-           href="{{ base_url }}spawn/{{ user.name }}">Spawn Page</a>
+        {% if default_server.allowed_images or default_server.options_form or (default_server.user_options|list)[0] %}
+          <a role="button"
+             class="spawn-default btn btn-lg btn-light {% if default_server.active %}hidden{% endif %}"
+             id="spawn-default"
+             href="{{ base_url }}spawn/{{ user.name }}">Spawn Page</a>
+        {% endif %}
         <a role="button"
            class="access-default btn btn-lg btn-primary {% if not default_server.active %}hidden{% endif %}"
            id="access-default"
@@ -108,10 +110,12 @@
                     {% endif %}
                   </a>
                 {% endif %}
-                <a role="button"
-                   class="spawn-server btn btn-xs btn-light {% if spawner.active %}hidden{% endif %}"
-                   id="spawn-{{ spawner.name }}"
-                   href="{{ base_url }}spawn/{{ user.name }}/{{ spawner.name }}">Spawn Page</a>
+                {% if spawner.allowed_images or spawner.options_form or (spawner.user_options|list)[0] %}
+                  <a role="button"
+                     class="spawn-server btn btn-xs btn-light {% if spawner.active %}hidden{% endif %}"
+                     id="spawn-{{ spawner.name }}"
+                     href="{{ base_url }}spawn/{{ user.name }}/{{ spawner.name }}">Spawn Page</a>
+                {% endif %}
                 <a role="button"
                    class="access-server btn btn-xs btn-primary {% if not spawner.active %}hidden{% endif %}"
                    id="access-{{ spawner.name }}"
