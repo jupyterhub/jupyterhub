@@ -21,7 +21,7 @@
             {% endif %}
           </a>
         {% endif %}
-        {% if default_server.allowed_images or default_server.options_form or (default_server.user_options|list)[0] %}
+        {% if default_server.allowed_images or default_server.options_form %}
           <a role="button"
              class="spawn-default btn btn-lg btn-light {% if default_server.active %}hidden{% endif %}"
              id="spawn-default"
@@ -110,7 +110,7 @@
                     {% endif %}
                   </a>
                 {% endif %}
-                {% if spawner.allowed_images or spawner.options_form or (spawner.user_options|list)[0] %}
+                {% if default_server.allowed_images or default_server.options_form %}
                   <a role="button"
                      class="spawn-server btn btn-xs btn-light {% if spawner.active %}hidden{% endif %}"
                      id="spawn-{{ spawner.name }}"
