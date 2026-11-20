@@ -58,10 +58,12 @@ define(["jquery", "utils"], function ($, utils) {
   JHAPI.prototype.start_named_server = function (user, server_name, options) {
     options = options || {};
     options = update(options, { type: "POST", dataType: null });
-    this.api_request(
-      utils.url_path_join("users", user, "servers", server_name),
-      options,
-    );
+    var url = utils.url_path_join("users", user, "servers", server_name);
+    if (server_name === "") {
+      // need trailing slash for default name
+      url = url + "/";
+    }
+    this.api_request(url, options);
   };
 
   JHAPI.prototype.create_named_server = function (user, server_name, options) {
@@ -82,10 +84,12 @@ define(["jquery", "utils"], function ($, utils) {
   JHAPI.prototype.stop_named_server = function (user, server_name, options) {
     options = options || {};
     options = update(options, { type: "DELETE", dataType: null });
-    this.api_request(
-      utils.url_path_join("users", user, "servers", server_name),
-      options,
-    );
+    var url = utils.url_path_join("users", user, "servers", server_name);
+    if (server_name === "") {
+      // ensure trailing slash for default name
+      url = url + "/";
+    }
+    this.api_request(url, options);
   };
 
   JHAPI.prototype.delete_named_server = function (user, server_name, options) {

@@ -88,6 +88,9 @@
         {% else %}
         options_form: false,
         {% endif %}
+        {% if spawner %}
+        server_name: {{ spawner.name | tojson }},
+        {% endif %}
         xsrf_token: "{{ xsrf_token }}",
       };
 

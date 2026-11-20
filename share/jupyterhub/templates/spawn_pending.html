@@ -41,6 +41,7 @@
     require(["jquery", "jhapi"], function($, JHAPI) {
       var base_url = window.jhdata ? window.jhdata.base_url : "{{ base_url }}";
       var user = window.jhdata ? window.jhdata.user : "{{ user.name }}";
+      var server_name = window.jhdata ? window.jhdata.server_name : "{{ spawner.name }}";
       var api = new JHAPI(base_url);
 
       $("#refresh").click(function() {
@@ -57,7 +58,7 @@
         statusDiv.show().removeClass('alert-success alert-danger').addClass('alert alert-info').text('Stopping server...');
 
         // Use JHAPI to stop server
-        api.stop_server(user, {
+        api.stop_named_server(user, server_name, {
           success: function() {
             statusDiv.removeClass('alert-info alert-danger').addClass('alert-success').text('Server stopped successfully!');
             // Redirect or reload after successful stop
