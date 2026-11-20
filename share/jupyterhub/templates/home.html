@@ -99,7 +99,7 @@
                    {# stop is available if anything is happening _except_ rename #}
                    class="stop-server btn btn-xs btn-danger{% if not spawner.active or spawner.pending == "rename" %} hidden{% endif %}"
                    id="stop-{{ spawner.name }}">Stop Server</a>
-                {% if (not spawner.allowed_images and (spawner.image or default_server.image)) or (spawner.user_options|list)[0] %}
+                {% if (not default_server.allowed_images and (spawner.image or default_server.image)) or (spawner.user_options|list)[0] %}
                   <a role="button"
                      class="start-server btn btn-xs btn-primary {% if spawner.active %}hidden{% endif %} {% if spawner.pending %}disabled{% endif %}"
                      id="start-{{ spawner.name }}">
