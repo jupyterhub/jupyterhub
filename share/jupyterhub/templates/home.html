@@ -7,16 +7,30 @@
     <h1 class="visually-hidden">JupyterHub home page</h1>
     <div class="row">
       <div class="text-center">
-        {% if default_server.active %}<a id="stop"
-                                         role="button"
-                                         class="btn btn-lg btn-danger">Stop My Server</a>{% endif %}
-        <a id="start"
-           role="button"
-           class="btn btn-lg btn-primary"
-           href="{{ url }}">
-          {% if not default_server.active %}Start{% endif %}
-          My Server
-        </a>
+        <a role="button"
+           class="stop-default btn btn-lg btn-danger{% if not default_server.active %} hidden{% endif %}"
+           id="stop-default">Stop My Server</a>
+        {% if (not default_server.allowed_images and default_server.image) or (default_server.user_options|list)[0] %}
+          <a role="button"
+             class="start-default btn btn-lg btn-primary {% if default_server.active %}hidden{% endif %} {% if default_server.pending %}disabled{% endif %}"
+             id="start-default">
+            {% if not default_server.pending %}
+              Start My Server
+            {% else %}
+              Server is pending
+            {% endif %}
+          </a>
+        {% endif %}
+        {% if default_server.allowed_images or default_server.options_form %}
+          <a role="button"
+             class="spawn-default btn btn-lg btn-light {% if default_server.active %}hidden{% endif %}"
+             id="spawn-default"
+             href="{{ base_url }}spawn/{{ user.name }}">Spawn Page</a>
+        {% endif %}
+        <a role="button"
+           class="access-default btn btn-lg btn-primary {% if not default_server.active %}hidden{% endif %}"
+           id="access-default"
+           href="{{ url }}">Access My Server</a>
       </div>
     </div>
     {% if allow_named_servers %}
@@ -68,7 +82,7 @@
               </td>
               {# url #}
               <td>
-                <a class="server-link {% if not spawner.ready %}hidden{% endif %}"
+                <a class="server-link {% if not spawner.active %}hidden{% endif %}"
                    href="{{ user.server_url(spawner.name) }}">{{ user.server_url(spawner.name) }}</a>
               </td>
               {# activity #}
@@ -84,14 +98,31 @@
                 <a role="button"
                    {# stop is available if anything is happening _except_ rename #}
                    class="stop-server btn btn-xs btn-danger{% if not spawner.active or spawner.pending == "rename" %} hidden{% endif %}"
-                   id="stop-{{ spawner.name }}">stop</a>
+                   id="stop-{{ spawner.name }}">Stop Server</a>
+                {% if (not default_server.allowed_images and (spawner.image or default_server.image)) or (spawner.user_options|list)[0] %}
+                  <a role="button"
+                     class="start-server btn btn-xs btn-primary {% if spawner.active %}hidden{% endif %} {% if spawner.pending %}disabled{% endif %}"
+                     id="start-{{ spawner.name }}">
+                    {% if not spawner.pending %}
+                      Start Server
+                    {% else %}
+                      Server is pending
+                    {% endif %}
+                  </a>
+                {% endif %}
+                {% if default_server.allowed_images or default_server.options_form %}
+                  <a role="button"
+                     class="spawn-server btn btn-xs btn-light {% if spawner.active %}hidden{% endif %}"
+                     id="spawn-{{ spawner.name }}"
+                     href="{{ base_url }}spawn/{{ user.name }}/{{ spawner.name }}">Spawn Page</a>
+                {% endif %}
                 <a role="button"
-                   class="start-server btn btn-xs btn-primary {% if spawner.active %}hidden{% endif %}"
-                   id="start-{{ spawner.name }}"
-                   href="{{ base_url }}spawn/{{ user.name }}/{{ spawner.name }}">start</a>
+                   class="access-server btn btn-xs btn-primary {% if not spawner.active %}hidden{% endif %}"
+                   id="access-{{ spawner.name }}"
+                   href="{{ user.server_url(spawner.name) }}">Access Server</a>
                 <button type="button"
                         class="delete-server btn btn-xs btn-danger{% if spawner.active %} hidden{% endif %}"
-                        id="delete-{{ spawner.name }}">delete</button>
+                        id="delete-{{ spawner.name }}">Delete Server</button>
               </td>
             </tr>
           {% endfor %}
