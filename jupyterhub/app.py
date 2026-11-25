@@ -1991,13 +1991,13 @@ class JupyterHub(Application):
             self.log.info("Writing %s to %s", trait_name, secret_file)
             text_secret = binascii.b2a_hex(secret).decode('ascii')
             with open(secret_file, 'w') as f:
+                if not _mswindows:  # Windows permissions don't follow POSIX rules
+                    try:
+                        os.fchmod(f, 0o600)
+                    except OSError:
+                        self.log.warning("Failed to set permissions on %s", secret_file)
                 f.write(text_secret)
                 f.write('\n')
-            if not _mswindows:  # Windows permissions don't follow POSIX rules
-                try:
-                    os.chmod(secret_file, 0o600)
-                except OSError:
-                    self.log.warning("Failed to set permissions on %s", secret_file)
         # store the loaded trait value
         self.cookie_secret = secret
 
