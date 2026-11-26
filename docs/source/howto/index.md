@@ -15,6 +15,7 @@ templates
 upgrading
 log-messages
 forced-login
+database
 ```
 
 (config-examples)=

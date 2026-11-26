@@ -3,6 +3,7 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 # Based on pgcontents.utils.migrate, used under the Apache license.
+import argparse
 import os
 import shutil
 import sys
@@ -10,9 +11,11 @@ from contextlib import contextmanager
 from datetime import datetime
 from subprocess import check_call
 from tempfile import TemporaryDirectory
+from textwrap import dedent
 from urllib.parse import urlparse
 
 from sqlalchemy import create_engine
+from traitlets.config import Application
 
 from . import orm
 
@@ -20,6 +23,11 @@ _here = os.path.abspath(os.path.dirname(__file__))
 
 ALEMBIC_INI_TEMPLATE_PATH = os.path.join(_here, 'alembic.ini')
 ALEMBIC_DIR = os.path.join(_here, 'alembic')
+
+# injected variables, populated for `script` entrypoint
+db = None
+db_url: str = None
+session_factory = None
 
 
 def write_alembic_ini(alembic_ini='alembic.ini', db_url='sqlite:///jupyterhub.sqlite'):
@@ -174,27 +182,103 @@ def upgrade_if_needed(db_url, *, db_kwargs=None, backup=True, log=None):
     upgrade(db_url)
 
 
-def shell(args=None):
-    """Start an IPython shell hooked up to the jupyterhub database"""
+_banner = """
+JupyterHub database utility shell
+
+Interpreter: {interpreter_name}
+
+Available variables:
+
+  db_url: {db_url!r}
+  db: open database session
+  session_factory: factory function for database sessions
+  orm: imported `jupyterhub.orm` module
+"""
+
+
+def _load_hub(args=None):
+    """Instantiate JupyterHub and load config
+
+    Minimal initialization to get to db_url and db_kwargs
+    """
     from .app import JupyterHub
 
-    hub = JupyterHub()
+    hub = JupyterHub.instance()
+    if args:
+        hub.parse_command_line(args)
     hub.load_config_file(hub.config_file)
+    return hub
+
+
+def _load_ns(args=None):
+    """Load the JupyterHub db utility namespace
+
+    Defines `db`, `db_url`, `session_factory`
+    """
+    hub = _load_hub(args)
     db_url = hub.db_url
-    db = orm.new_session_factory(db_url, **hub.db_kwargs)()
-    ns = {'db': db, 'db_url': db_url, 'orm': orm}
-
-    import IPython
-
-    IPython.start_ipython(args, user_ns=ns)
+    session_factory = orm.new_session_factory(db_url, **hub.db_kwargs)
+    db = session_factory()
+    ns = {'db': db, 'db_url': db_url, 'orm': orm, 'session_factory': session_factory}
+    return ns
 
 
-def _alembic(args):
+def shell(args=None, *, hub_args=None):
+    """Start an IPython shell hooked up to the jupyterhub database"""
+    ns = _load_ns(hub_args)
+
+    try:
+        import IPython
+    except ImportError:
+        # fallback on stdlib
+        if args:
+            print(f"ignoring args: {args}", file=sys.stderr)
+        from code import interact
+
+        interact(
+            banner=_banner.format(
+                interpreter_name="stdlib (install IPython for a nicer shell)",
+                **ns,
+            ),
+            local=ns,
+        )
+    else:
+        from .app import JupyterHub
+
+        # avoid clash on Application.instance
+        # allow setting IPython config in jupyterhub config
+        config = JupyterHub.instance().config
+        Application._instance = None
+        config.InteractiveShell.banner1 = _banner.format(
+            interpreter_name="IPython",
+            **ns,
+        )
+        IPython.start_ipython(args, config=config, user_ns=ns)
+
+
+def script(fname, *, hub_args=None, args=None):
+    """Run a script after connecting to the jupyterhub database
+
+    If fname='-', get script from stdin.
+    """
+    ns = _load_ns(hub_args)
+    # allow `from jupyterhub.dbutil import db` for lintable scripts
+    globals().update(ns)
+    if args:
+        sys.argv = [fname, *args]
+    if fname == "-":
+        # run stdout
+        script = sys.stdin.read()
+        exec(script, ns)
+    else:
+        import runpy
+
+        runpy.run_path(fname, init_globals=ns, run_name="__main__")
+
+
+def _alembic(args, *, hub_args=None):
     """Run an alembic command with a temporary alembic.ini"""
-    from .app import JupyterHub
-
-    hub = JupyterHub()
-    hub.load_config_file(hub.config_file)
+    hub = _load_hub(hub_args)
     db_url = hub.db_url
     with _temp_alembic_ini(db_url) as alembic_ini:
         check_call(['alembic', '-c', alembic_ini] + args)
@@ -204,17 +288,92 @@ def main(args=None):
     if args is None:
         args = sys.argv[1:]
     # dumb option parsing, since we want to pass things through
-    # to subcommands
-    choices = ['shell', 'alembic']
-    if not args or args[0] not in choices:
-        print("Select a command from: {}".format(', '.join(choices)))
-        return 1
-    cmd, args = args[0], args[1:]
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        description=dedent("""
+        JupyterHub database utilities
+        
+        Launch a shell or run a script after loading JupyterHub configuration
+        and connecting to the database.
+        For scripts and shells, a db session will be open as `db`,
+        and `db_url` and `session_factory` will be available for constructing new connections.
 
-    if cmd == 'shell':
-        shell(args)
-    elif cmd == 'alembic':
-        _alembic(args)
+        Any arguments passed before the subcommand name will be handled by jupyterhub itself,
+        such as `-f config_file.py` or `--debug`, etc.
+        Arguments _after_ the command will be handled by the command,
+        e.g. shell will pass startup arguments to IPython,
+        or script will pass them to your script.
+        """),
+        epilog=dedent("""
+        Examples:
+            
+            python3 -m jupyterhub.dbutil shell
+            python3 -m jupyterhub.dbutil alembic show head
+            python3 -m jupyterhub.dbutil script ./myscript.py [script args]
+            cat myscript.py | kubectl exec -i hub-... -c hub -- python3 -m jupyterhub.dbutil --debug -f /usr/local/etc/jupyterhub_config.py script -
+        """),
+    )
+    # subcommand not found
+    subparsers = parser.add_subparsers(
+        required=True,
+        help="The subcommand to launch. Any arguments before the subcommand will be passed along to JupyterHub (such as `-f my_hub_config.py`)",
+    )
+    script_parser = subparsers.add_parser('script', help='run a Python script')
+    script_parser.add_argument(
+        'path', type=str, help="The script to run. Use '-' to read from stdin."
+    )
+    script_parser.add_argument(
+        "args",
+        nargs=argparse.REMAINDER,
+        help="Remaining args are passed to the script.",
+    )
+    script_parser.set_defaults(command=script)
+
+    shell_parser = subparsers.add_parser(
+        'shell', help='Launch an interactive shell (IPython, if available)'
+    )
+    shell_parser.add_argument(
+        "args", nargs=argparse.REMAINDER, help="Remaining args are passed to IPython."
+    )
+    shell_parser.set_defaults(command=shell)
+
+    alembic_parser = subparsers.add_parser(
+        'alembic',
+        help='Run alembic commands against the JupyterHub database',
+    )
+    alembic_parser.add_argument(
+        "args", nargs=argparse.REMAINDER, help="Remaining args are passed to alembic"
+    )
+    alembic_parser.set_defaults(command=_alembic)
+
+    # locate command
+    commands = {
+        "script": script,
+        "alembic": _alembic,
+        "shell": shell,
+    }
+    command = None
+    # partition on command, _before_ doing any parsing
+    for i, arg in enumerate(args):
+        if arg in commands:
+            command = commands[arg]
+            break
+
+    if command is None:
+        # this will always fail with the informative argparse error
+        # because command hasn't been given
+        parser.parse_args(args)
+        return 1
+
+    # split hub_args before command
+    hub_args = args[:i]
+    command_args = args[i:]
+
+    opts = parser.parse_args(command_args)
+    if opts.command is script:
+        opts.command(opts.path, args=opts.args, hub_args=hub_args)
+    else:
+        opts.command(args=opts.args, hub_args=hub_args)
 
 
 if __name__ == '__main__':
